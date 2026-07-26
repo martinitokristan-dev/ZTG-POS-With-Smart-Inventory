@@ -295,7 +295,7 @@ export default function CartSidebar({
                         setShowCheckoutModal(true);
                     }}
                     style={{ 
-                        width: '100%', padding: '12px', fontSize: '14.5px', fontWeight: '700', borderRadius: '8px', 
+                        width: '100%', minHeight: '44px', padding: '12px', fontSize: '14.5px', fontWeight: '700', borderRadius: '8px', 
                         background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)', color: '#fff', border: 'none', 
                         boxShadow: '0 4px 12px rgba(37,99,235,0.2)', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' 
                     }}

@@ -42,6 +42,8 @@ export default function POS() {
                             onClick={() => setActiveTab('catalogue')}
                             style={{
                                 flex: 1,
+                                height: '44px',
+                                minHeight: '44px',
                                 padding: '10px 12px',
                                 borderRadius: '8px',
                                 border: 'none',
@@ -50,16 +52,21 @@ export default function POS() {
                                 cursor: 'pointer',
                                 transition: 'all 0.2s ease',
                                 backgroundColor: activeTab === 'catalogue' ? 'var(--primary)' : '#F1F5F9',
-                                color: activeTab === 'catalogue' ? '#FFFFFF' : '#475569'
+                                color: activeTab === 'catalogue' ? '#FFFFFF' : '#475569',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
                             }}
                         >
-                            📦 Product Catalogue
+                            Product Catalogue
                         </button>
                         <button
                             type="button"
                             onClick={() => setActiveTab('cart')}
                             style={{
                                 flex: 1,
+                                height: '44px',
+                                minHeight: '44px',
                                 padding: '10px 12px',
                                 borderRadius: '8px',
                                 border: 'none',
@@ -75,7 +82,7 @@ export default function POS() {
                                 gap: '6px'
                             }}
                         >
-                            🛒 Cart ({cartItemCount})
+                            Cart ({cartItemCount})
                         </button>
                     </div>
                 )}

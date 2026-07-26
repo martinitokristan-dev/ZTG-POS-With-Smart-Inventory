@@ -9,6 +9,7 @@ export const useProducts = () => useContext(ProductContext);
 export const ProductProvider = ({ children }) => {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [initialLoading, setInitialLoading] = useState(true);
     
     // Tracks { [id]: { time: number, action: 'update' | 'delete' } }
     const optimisticTimestamps = useRef({});
@@ -82,6 +83,8 @@ export const ProductProvider = ({ children }) => {
             });
         } catch (err) {
             console.error("Failed to load products/categories:", err);
+        } finally {
+            setInitialLoading(false);
         }
     }, []);
 
@@ -293,6 +296,7 @@ export const ProductProvider = ({ children }) => {
         <ProductContext.Provider value={{ 
             products, 
             categories, 
+            initialLoading,
             optimisticUpdateProduct, 
             optimisticDeleteProduct, 
             optimisticUpdateCategory,

@@ -10,7 +10,7 @@ import api from '../../../../shared/api';
 const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
 
 export default function usePOS() {
-    const { products: contextProducts, categories: backendCategories, searchPosProducts } = useProducts();
+    const { products: contextProducts, categories: backendCategories, searchPosProducts, initialLoading: contextLoading } = useProducts();
     
     // Explicit loading state — NOT tied to products.length which caused infinite spinner
     const [loadingProducts, setLoadingProducts] = useState(true);
@@ -59,14 +59,14 @@ export default function usePOS() {
 
     // Modals
 
-    // When context boots with initial 25 products, adopt them
+    // When context finishes initial fetch, adopt products and stop loading spinner immediately!
     useEffect(() => {
-        if (contextProducts.length > 0 && isInitialLoad.current) {
+        if (!contextLoading && isInitialLoad.current) {
             isInitialLoad.current = false;
             setPosProducts(contextProducts);
             setLoadingProducts(false);
         }
-    }, [contextProducts]);
+    }, [contextProducts, contextLoading]);
 
     // Debounced server search — fires 250ms after the cashier stops typing
     useEffect(() => {
