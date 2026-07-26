@@ -30,7 +30,19 @@ export default function CustomerDirectoryTable({ loading, customers, fmtDate }) 
                             <td style={{ padding: '16px 24px', fontWeight: '600' }}>{c.name}</td>
                             <td style={{ padding: '16px 24px', color: 'var(--text-secondary)' }}>{c.contact || c.contact_number || 'N/A'}</td>
                             <td style={{ padding: '16px 24px', textAlign: 'center' }}>
-                                <span style={{ background: 'var(--primary)', color: 'white', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
+                                <span style={{ 
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    whiteSpace: 'nowrap',
+                                    background: 'var(--primary)', 
+                                    color: 'white', 
+                                    padding: '5px 12px', 
+                                    borderRadius: '20px', 
+                                    fontSize: '12px', 
+                                    fontWeight: '600',
+                                    lineHeight: '1.2'
+                                }}>
                                     {(c.tx_count !== undefined ? c.tx_count : (c.total_purchases || c.totalPurchases || 0))} items
                                 </span>
                             </td>

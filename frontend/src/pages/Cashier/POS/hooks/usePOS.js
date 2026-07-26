@@ -333,7 +333,10 @@ export default function usePOS() {
         const preVatSubtotal = Math.round((netPayable / 1.12) * 100) / 100;
         const tax = Math.round((netPayable - preVatSubtotal) * 100) / 100;
 
+        const itemCount = cart.reduce((sum, item) => sum + (parseInt(item.qty, 10) || 0), 0);
+
         return {
+            itemCount,
             rawSubtotal,
             itemDiscountsTotal,
             afterItemDiscounts,

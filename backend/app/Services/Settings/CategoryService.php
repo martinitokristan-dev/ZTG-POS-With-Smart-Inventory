@@ -4,6 +4,7 @@ namespace App\Services\Settings;
 
 use App\Models\Category;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CategoryService
@@ -25,8 +26,8 @@ class CategoryService
      */
     public function getTopSelling(int $limit = 5): Collection
     {
-        // Join with products and transaction_items to count total units sold per category
-        return Category::select('categories.*')
+        $topCategoryIds = DB::table('categories')
+            ->select('categories.id')
             ->selectRaw('COALESCE(SUM(ti.qty), 0) as total_sold')
             ->leftJoin('products', function ($join) {
                 $join->on('products.category_id', '=', 'categories.id')
@@ -39,9 +40,20 @@ class CategoryService
             })
             ->groupBy('categories.id')
             ->orderByDesc('total_sold')
-            ->orderBy('categories.name')
+            ->orderBy('categories.id')
             ->limit($limit)
-            ->get();
+            ->pluck('id');
+
+        if ($topCategoryIds->isEmpty()) {
+            return Category::take($limit)->get();
+        }
+
+        $idOrderMap = array_flip($topCategoryIds->toArray());
+
+        return Category::whereIn('id', $topCategoryIds)
+            ->get()
+            ->sortBy(fn($cat) => $idOrderMap[$cat->id] ?? 999)
+            ->values();
     }
 
     /**

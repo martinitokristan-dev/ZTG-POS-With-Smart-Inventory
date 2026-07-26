@@ -19,6 +19,19 @@ export default function useReservations() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
+    const [page, setPage] = useState(1);
+    const [pagination, setPagination] = useState({ currentPage: 1, lastPage: 1, total: 0 });
+
+    /* ── Reset page when search or statusFilter changes ── */
+    const handleSearchChange = (val) => {
+        setSearch(val);
+        setPage(1);
+    };
+
+    const handleStatusChange = (val) => {
+        setStatusFilter(val);
+        setPage(1);
+    };
 
     /* ── Modal Visibility ── */
     const [showAddModal, setShowAddModal] = useState(false);
@@ -63,14 +76,23 @@ export default function useReservations() {
     const loadReservations = useCallback(async () => {
         try {
             setLoading(true);
-            const data = await fetchReservations(search, statusFilter);
-            setReservations(data);
+            const res = await fetchReservations(search, statusFilter, page);
+            if (res && res.data) {
+                setReservations(res.data);
+                setPagination({
+                    currentPage: res.currentPage || 1,
+                    lastPage: res.lastPage || 1,
+                    total: res.total || 0
+                });
+            } else {
+                setReservations(Array.isArray(res) ? res : []);
+            }
         } catch (e) {
             console.error('Failed to load reservations:', e);
         } finally {
             setLoading(false);
         }
-    }, [search, statusFilter]);
+    }, [search, statusFilter, page]);
 
     useEffect(() => { loadReservations(); }, [loadReservations]);
 
@@ -327,9 +349,10 @@ export default function useReservations() {
         // Formating
         fmt, fmtDate,
 
-        // Filters
-        search, setSearch,
-        statusFilter, setStatusFilter,
+        // Filters & Pagination
+        search, setSearch, handleSearchChange,
+        statusFilter, setStatusFilter, handleStatusChange,
+        page, setPage, pagination,
 
         // Modal Controls
         showAddModal, setShowAddModal,

@@ -5,8 +5,9 @@ import IOSSelect from '../../../shared/components/IOSSelect';
 
 export default function ReservationsTable({
     reservations, loading,
-    search, setSearch,
-    statusFilter, setStatusFilter,
+    search, setSearch, handleSearchChange,
+    statusFilter, setStatusFilter, handleStatusChange,
+    page, setPage, pagination,
     fmt, fmtDate,
     openFulfill, openCancel
 }) {
@@ -22,13 +23,13 @@ export default function ReservationsTable({
                             style={{ padding: '8px 12px', fontSize: '13px' }}
                             placeholder="Search by customer name, phone, or reserved item..."
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => handleSearchChange ? handleSearchChange(e.target.value) : setSearch(e.target.value)}
                         />
                     </div>
                     <div style={{ flex: '1 1 180px', minWidth: '140px' }}>
                         <IOSSelect
                             value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
+                            onChange={(e) => handleStatusChange ? handleStatusChange(e.target.value) : setStatusFilter(e.target.value)}
                             options={[
                                 { value: 'All', label: 'All Statuses' },
                                 { value: 'Pending', label: 'Pending Pickup' },
@@ -103,6 +104,35 @@ export default function ReservationsTable({
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {pagination && pagination.lastPage > 1 && (
+                    <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                            Showing page <strong>{pagination.currentPage}</strong> of <strong>{pagination.lastPage}</strong> ({pagination.total ? pagination.total.toLocaleString() : 0} total orders)
+                        </span>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                                type="button"
+                                className="btn btn-outline btn-sm"
+                                disabled={pagination.currentPage <= 1}
+                                onClick={() => setPage && setPage(prev => Math.max(1, prev - 1))}
+                                style={{ minHeight: '44px', padding: '0 16px', fontWeight: '600' }}
+                            >
+                                Previous
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-outline btn-sm"
+                                disabled={pagination.currentPage >= pagination.lastPage}
+                                onClick={() => setPage && setPage(prev => Math.min(pagination.lastPage, prev + 1))}
+                                style={{ minHeight: '44px', padding: '0 16px', fontWeight: '600' }}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </>
     );

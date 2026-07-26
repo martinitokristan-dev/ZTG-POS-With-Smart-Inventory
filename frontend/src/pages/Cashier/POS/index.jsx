@@ -159,51 +159,7 @@ export default function POS() {
                     </div>
                 </div>
 
-                {/* Mobile Floating Sticky Cart Bar (< 900px) when on Catalogue View and items exist */}
-                {isMobile && activeTab === 'catalogue' && cartItemCount > 0 && (
-                    <div style={{
-                        position: 'sticky',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        background: '#0F172A',
-                        padding: '12px 16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justify: 'space-between',
-                        boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
-                        zIndex: 80
-                    }}>
-                        <div>
-                            <div style={{ color: '#94A3B8', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>
-                                {cartItemCount} {cartItemCount === 1 ? 'item' : 'items'} in cart
-                            </div>
-                            <div style={{ color: '#10B981', fontSize: 16, fontWeight: 800 }}>
-                                {pos.fmt(cartGrandTotal)}
-                            </div>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab('cart')}
-                            style={{
-                                backgroundColor: '#10B981',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                padding: '10px 20px',
-                                borderRadius: '8px',
-                                fontWeight: '700',
-                                fontSize: 14,
-                                cursor: 'pointer',
-                                minHeight: '44px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px'
-                            }}
-                        >
-                            View Cart & Checkout →
-                        </button>
-                    </div>
-                )}
+
             </div>
 
             <CheckoutModal 

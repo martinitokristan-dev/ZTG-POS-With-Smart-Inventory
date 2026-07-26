@@ -35,8 +35,13 @@ export default function Reservations() {
                         loading={res.loading}
                         search={res.search}
                         setSearch={res.setSearch}
+                        handleSearchChange={res.handleSearchChange}
                         statusFilter={res.statusFilter}
                         setStatusFilter={res.setStatusFilter}
+                        handleStatusChange={res.handleStatusChange}
+                        page={res.page}
+                        setPage={res.setPage}
+                        pagination={res.pagination}
                         fmt={res.fmt}
                         fmtDate={res.fmtDate}
                         openFulfill={res.openFulfill}

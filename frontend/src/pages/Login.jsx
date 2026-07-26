@@ -2,6 +2,31 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../shared/api';
 
+const fixImageUrl = (url) => {
+    if (!url) return null;
+    if (typeof url !== 'string') return url;
+    let cleanUrl = url.trim();
+    if (cleanUrl.includes('localhost') || cleanUrl.includes('127.0.0.1')) {
+        if (cleanUrl.includes('/api/media/')) {
+            const mediaPath = cleanUrl.split('/api/media/')[1];
+            const backendBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : '';
+            return `${backendBase}/api/media/${mediaPath}`;
+        }
+        if (cleanUrl.includes('/storage/')) {
+            return '/storage/' + cleanUrl.split('/storage/')[1];
+        }
+    }
+    if (cleanUrl.includes('r2.dev/') || cleanUrl.includes('cloudflarestorage.com/')) {
+        const match = cleanUrl.match(/(avatars|logos|products)\/.+$/);
+        if (match) {
+            const mediaPath = match[0];
+            const backendBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : '';
+            return `${backendBase}/api/media/${mediaPath}`;
+        }
+    }
+    return cleanUrl;
+};
+
 function Login() {
     const [role, setRole] = useState('Admin');
     const [loginId, setLoginId] = useState('');
@@ -11,7 +36,7 @@ function Login() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [logoUrl, setLogoUrl] = useState(() => {
-        return localStorage.getItem('cached_business_logo') || null;
+        return fixImageUrl(localStorage.getItem('cached_business_logo')) || null;
     });
     const [businessName, setBusinessName] = useState(() => {
         return localStorage.getItem('cached_business_name') || '';
@@ -100,13 +125,18 @@ function Login() {
             <div className="login-card">
                 <div style={{ display: 'flex', justifyContent: 'center', marginTop: '-15px', marginBottom: '0px' }}>
                     <img 
-                        src={logoUrl || "/ztg-logo.png"} 
+                        src={fixImageUrl(logoUrl) || "/ztg-logo.png"} 
                         alt="ZTG Heavy Equipment Parts" 
+                        onError={(e) => {
+                            if (!e.currentTarget.dataset.failed) {
+                                e.currentTarget.dataset.failed = "true";
+                                e.currentTarget.src = "/ztg-logo.png";
+                            }
+                        }}
                         style={{ 
                             height: '175px', 
-                            objectFit: 'contain', 
-                            mixBlendMode: 'multiply',
-                            filter: 'contrast(1.05)'
+                            maxWidth: '100%',
+                            objectFit: 'contain'
                         }} 
                     />
                 </div>
