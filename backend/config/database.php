@@ -60,9 +60,11 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA') && file_exists(base_path(env('MYSQL_ATTR_SSL_CA')))
-                    ? realpath(base_path(env('MYSQL_ATTR_SSL_CA')))
-                    : null,
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA') ? (
+                    file_exists(env('MYSQL_ATTR_SSL_CA')) ? realpath(env('MYSQL_ATTR_SSL_CA')) : (
+                        file_exists(base_path(env('MYSQL_ATTR_SSL_CA'))) ? realpath(base_path(env('MYSQL_ATTR_SSL_CA'))) : env('MYSQL_ATTR_SSL_CA')
+                    )
+                ) : null,
             ]) : [],
         ],
 
@@ -82,9 +84,11 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA') && file_exists(base_path(env('MYSQL_ATTR_SSL_CA')))
-                    ? realpath(base_path(env('MYSQL_ATTR_SSL_CA')))
-                    : null,
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA') ? (
+                    file_exists(env('MYSQL_ATTR_SSL_CA')) ? realpath(env('MYSQL_ATTR_SSL_CA')) : (
+                        file_exists(base_path(env('MYSQL_ATTR_SSL_CA'))) ? realpath(base_path(env('MYSQL_ATTR_SSL_CA'))) : env('MYSQL_ATTR_SSL_CA')
+                    )
+                ) : null,
             ]) : [],
         ],
 
