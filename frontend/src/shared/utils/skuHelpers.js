@@ -92,6 +92,8 @@ export function flattenToSellableSKUs(products, statusFilter = null) {
                 name: displayName,
                 displayName,
                 chinese_name: p.chinese_name || null,
+                category: p.category || null,
+                category_id: p.category_id || null,
                 sku: p.part_no || p.partNo || 'N/A'
             });
         }
@@ -114,6 +116,8 @@ export function flattenToSellableSKUs(products, statusFilter = null) {
                     name: displayName,
                     displayName,
                     chinese_name: v.chinese_name || p.chinese_name || null,
+                    category: v.category || p.category || null,
+                    category_id: v.category_id || p.category_id || null,
                     sku: v.part_no || v.partNo || 'N/A'
                 });
             });

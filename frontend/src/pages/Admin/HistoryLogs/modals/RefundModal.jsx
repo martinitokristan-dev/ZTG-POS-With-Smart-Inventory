@@ -22,6 +22,9 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
     const [searchSiNo, setSearchSiNo] = useState('');
     const [loadedTx, setLoadedTx] = useState(transaction);
 
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+
     useEffect(() => {
         if (isOpen) {
             setLoadedTx(transaction);
@@ -35,6 +38,8 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
             setApprover('Manager');
             setApprovalCode('');
             setInternalNotes('');
+            setIsSubmitting(false);
+            setErrorMessage('');
             
             if (transaction && transaction.items) {
                 const initialSelected = {};
@@ -52,11 +57,13 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
     if (!isOpen) return null;
 
     const txToUse = loadedTx;
+    const isAlreadyProcessed = txToUse && ['Refund', 'Refunded', 'Return', 'Returned', 'Void', 'Voided'].includes(txToUse.status);
+    const displayError = errorMessage || (isAlreadyProcessed ? `Transaction ${txToUse.si_no || ''} has already been ${txToUse.status}ed and cannot be processed again.` : '');
 
     const handleSearch = async () => {
         if (!searchSiNo.trim()) return;
+        setErrorMessage('');
         try {
-            // Assume we can fetch by si_no if we pass it, or we rely on onSearchTransaction passed from parent
             if (onSearchTransaction) {
                 const found = await onSearchTransaction(searchSiNo);
                 if (found) {
@@ -67,11 +74,15 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                         initialSelected[item.id] = { selected: true, qty: item.qty };
                     });
                     setSelectedItems(initialSelected);
+
+                    if (['Refund', 'Refunded', 'Return', 'Returned', 'Void', 'Voided'].includes(found.status)) {
+                        setErrorMessage(`Transaction ${found.si_no || searchSiNo} has already been ${found.status}ed and cannot be processed again.`);
+                    }
                 } else {
-                    alert("Transaction not found.");
+                    setErrorMessage("Transaction not found.");
                 }
             } else {
-                alert("Search functionality not wired up.");
+                setErrorMessage("Search functionality not wired up.");
             }
         } catch (err) {
             console.error(err);
@@ -97,7 +108,7 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
     };
 
     const txItems = txToUse && Array.isArray(txToUse.items) ? txToUse.items : [];
-    
+
     let subtotal = 0;
     txItems.forEach(item => {
         if (selectedItems[item.id]?.selected) {
@@ -105,13 +116,19 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
         }
     });
     
-    const tax = subtotal * 0.12;
-    const totalRefund = subtotal + tax;
+    const totalRefund = subtotal;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        setErrorMessage('');
+
         if (!txToUse) {
-            alert("No transaction selected.");
+            setErrorMessage("No transaction selected.");
+            return;
+        }
+
+        if (isAlreadyProcessed) {
+            setErrorMessage(`Transaction ${txToUse.si_no || ''} has already been ${txToUse.status}ed and cannot be processed again.`);
             return;
         }
         
@@ -121,6 +138,11 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                 item_id: parseInt(id),
                 qty: selectedItems[id].qty
             }));
+
+        if (itemsToRefund.length === 0) {
+            setErrorMessage("Please select at least one item to process.");
+            return;
+        }
 
         const approverId = currentUser?.id || 1;
 
@@ -138,7 +160,15 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
             items: itemsToRefund
         };
         
-        onSubmit(payload);
+        setIsSubmitting(true);
+        try {
+            await onSubmit(payload);
+        } catch (err) {
+            const serverMsg = err.response?.data?.message || err.response?.data?.error || err.message || "Failed to process refund.";
+            setErrorMessage(serverMsg);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -153,6 +183,16 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                     </div>
 
                     <div className="modal-body">
+                        {displayError && (
+                            <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <svg viewBox="0 0 24 24" style={{ width: '18px', height: '18px', fill: 'none', stroke: '#DC2626', strokeWidth: 2, flexShrink: 0 }}>
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="8" x2="12" y2="12" />
+                                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                                </svg>
+                                <span>{displayError}</span>
+                            </div>
+                        )}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.1fr', gap: '32px' }}>
                             {/* Left Column */}
                             <div className="refund-column" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -302,15 +342,7 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                 <div>
                                     <h4 style={{ fontSize: '11px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px' }}>Refund Amount</h4>
                                     <div style={{ backgroundColor: '#FEE2E2', borderRadius: '6px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#DC2626' }}>
-                                            <span>Items Total</span>
-                                            <span>{fmt(subtotal)}</span>
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#DC2626' }}>
-                                            <span>Tax Refund (12%)</span>
-                                            <span>{fmt(tax)}</span>
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: '700', color: '#DC2626', borderTop: '1px solid rgba(220, 38, 38, 0.2)', paddingTop: '12px', marginTop: '4px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: '700', color: '#DC2626' }}>
                                             <span>Total Refund Amount</span>
                                             <span>{fmt(totalRefund)}</span>
                                         </div>
@@ -359,7 +391,34 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
 
                     <div className="modal-footer" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #E5E7EB', backgroundColor: '#FFFFFF' }}>
                         <button type="button" className="btn" onClick={onClose} style={{ backgroundColor: '#F3F4F6', color: '#374151', border: 'none', padding: '10px 24px', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
-                        <button type="submit" className="btn" style={{ backgroundColor: '#DC2626', color: '#FFFFFF', border: 'none', padding: '10px 24px', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Process Refund</button>
+                        <button 
+                            type="submit" 
+                            disabled={isSubmitting || isAlreadyProcessed} 
+                            className="btn" 
+                            style={{ 
+                                backgroundColor: isAlreadyProcessed ? '#9CA3AF' : '#DC2626', 
+                                color: '#FFFFFF', 
+                                border: 'none', 
+                                padding: '10px 24px', 
+                                borderRadius: '6px', 
+                                fontSize: '14px', 
+                                fontWeight: '600', 
+                                cursor: (isSubmitting || isAlreadyProcessed) ? 'not-allowed' : 'pointer',
+                                opacity: (isSubmitting || isAlreadyProcessed) ? 0.7 : 1,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <span style={{ width: '14px', height: '14px', border: '2px solid #FFF', borderRightColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.75s linear infinite' }}></span>
+                                    Processing Refund...
+                                </>
+                            ) : (
+                                'Process Refund'
+                            )}
+                        </button>
                     </div>
                 </form>
             </div>

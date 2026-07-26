@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../../shared/api';
 import { useProducts } from '../../../../contexts/ProductContext';
 import { resetDashboardCache } from '../../../../shared/hooks/useDashboardCache';
@@ -180,7 +181,6 @@ export default function useProductManagement() {
             if (['Admin', 'Supervisor'].includes(user.role)) {
                  productChannel = echo.private('products')
                     .listen('.ProductUpdated', (e) => {
-                        console.log('[Echo Debug] ProductManagement ProductUpdated event received:', e);
                         const updateProductRecursively = (products) => {
                             return products.map(p => {
                                 if (p.id === e.productId) {
@@ -197,7 +197,6 @@ export default function useProductManagement() {
 
                  inventoryChannel = echo.private('inventory')
                     .listen('.InventoryUpdated', (e) => {
-                        console.log('[Echo Debug] ProductManagement InventoryUpdated event received:', e);
                         const updateProductRecursively = (products) => {
                             return products.map(p => {
                                 if (p.id === e.productId) {
@@ -282,7 +281,46 @@ export default function useProductManagement() {
         return { itemsCount, unitsCount };
     };
 
+    const navigate = useNavigate();
+    const [pendingNavigation, setPendingNavigation] = useState(null);
+
     const { itemsCount: restockItemsCount, unitsCount: restockUnitsCount } = getRestockTotals();
+
+    // Flag global window state for restock pending changes
+    useEffect(() => {
+        if (viewMode === 'restock' && restockUnitsCount > 0) {
+            window.__ztg_restock_pending = true;
+        } else {
+            window.__ztg_restock_pending = false;
+        }
+        return () => {
+            window.__ztg_restock_pending = false;
+        };
+    }, [viewMode, restockUnitsCount]);
+
+    // Intercept navigation attempts across sidebar / modules
+    useEffect(() => {
+        const handleAttemptLeave = (e) => {
+            if (viewMode === 'restock' && restockUnitsCount > 0) {
+                setPendingNavigation(e.detail || null);
+                setShowLeaveConfirmModal(true);
+            }
+        };
+        window.addEventListener('ztg:attempt-leave-restock', handleAttemptLeave);
+        return () => window.removeEventListener('ztg:attempt-leave-restock', handleAttemptLeave);
+    }, [viewMode, restockUnitsCount]);
+
+    // Intercept browser tab close / refresh
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            if (viewMode === 'restock' && restockUnitsCount > 0) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [viewMode, restockUnitsCount]);
 
     const updateRestockQty = (productId, val) => {
         const value = val === '' ? '' : Math.max(0, val || 0);
@@ -303,20 +341,55 @@ export default function useProductManagement() {
     };
 
     const handleExitRestockAttempt = () => {
-        if (restockUnitsCount > 0) setShowLeaveConfirmModal(true);
-        else switchToProductsList();
+        if (restockUnitsCount > 0) {
+            setPendingNavigation(null);
+            setShowLeaveConfirmModal(true);
+        } else {
+            switchToProductsList();
+        }
     };
 
     const handleSaveDraftAndExit = () => {
         localStorage.setItem('ztg_restock_draft', JSON.stringify(restockQuantities));
+        window.__ztg_restock_pending = false;
         setShowLeaveConfirmModal(false);
-        switchToProductsList();
+
+        if (pendingNavigation) {
+            const nav = pendingNavigation;
+            setPendingNavigation(null);
+            if (nav.isLogout) {
+                localStorage.clear();
+                navigate('/login');
+            } else if (nav.targetPath) {
+                navigate(nav.targetPath);
+            } else {
+                switchToProductsList();
+            }
+        } else {
+            switchToProductsList();
+        }
     };
 
     const handleDiscardDraftAndExit = () => {
         localStorage.removeItem('ztg_restock_draft');
+        setRestockQuantities({});
+        window.__ztg_restock_pending = false;
         setShowLeaveConfirmModal(false);
-        switchToProductsList();
+
+        if (pendingNavigation) {
+            const nav = pendingNavigation;
+            setPendingNavigation(null);
+            if (nav.isLogout) {
+                localStorage.clear();
+                navigate('/login');
+            } else if (nav.targetPath) {
+                navigate(nav.targetPath);
+            } else {
+                switchToProductsList();
+            }
+        } else {
+            switchToProductsList();
+        }
     };
 
     const handleConfirmRestock = async () => {
@@ -357,6 +430,14 @@ export default function useProductManagement() {
         }
     };
 
+    const extractValidationErrorMessage = (error, defaultMsg) => {
+        if (error.response?.data?.errors) {
+            const errorList = Object.values(error.response.data.errors).flat();
+            if (errorList.length > 0) return errorList.join(' ');
+        }
+        return error.response?.data?.message || defaultMsg;
+    };
+
     // ── Product CRUD ─────────────────────────────────────────────
     const handleAddProduct = async (e) => {
         e.preventDefault();
@@ -372,7 +453,7 @@ export default function useProductManagement() {
             resetForm();
             loadProducts(); // We still load to refresh search if needed, but the context is updated
         } catch (error) {
-            setErrorMessage(error.response?.data?.message || 'Error occurred while saving product.');
+            setErrorMessage(extractValidationErrorMessage(error, 'Error occurred while saving product.'));
         } finally {
             setIsSubmitting(false);
         }
@@ -393,7 +474,7 @@ export default function useProductManagement() {
             loadProducts();
         } catch (error) {
             rollback();
-            setErrorMessage(error.response?.data?.message || 'Error occurred while updating product.');
+            setErrorMessage(extractValidationErrorMessage(error, 'Error occurred while updating product.'));
         } finally {
             setIsSubmitting(false);
         }

@@ -5,12 +5,16 @@ import api from '../../../../shared/api';
 import { resetReportsCache } from '../../../../shared/hooks/useReportsCache';
 import { exportSalesToExcel, getItemDiscountAmount } from '../../../../shared/utils/clientExcelExporter';
 import StatusBadge from '../../../../shared/components/StatusBadge';
+import { showToast } from '../../../../utils/toast';
+import CopyableText from '../../../../shared/components/CopyableText';
 
 export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtDate, isReportGenerated, setIsReportGenerated, startDate, setStartDate, endDate, setEndDate }) {
     const [confirming, setConfirming] = useState(false);
     const [hasExported, setHasExported] = useState(false);
     const [selectedCashier, setSelectedCashier] = useState('All');
     const [selectedPayment, setSelectedPayment] = useState('All');
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [modalError, setModalError] = useState('');
 
     // Extract unique Cashiers (users with Cashier role, excluding Admin role)
     const cashierOptions = useMemo(() => {
@@ -55,10 +59,13 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
         return Array.from(set);
     }, [salesSummary]);
 
-    // Filter transactions based on selected Cashier and Payment method
+    // Filter transactions based on selected Cashier and Payment method (Excluding restocks & system logs)
     const filteredTransactions = useMemo(() => {
         if (!salesSummary?.transactions) return [];
         return salesSummary.transactions.filter(tx => {
+            if (tx.status === 'RESTOCKED' || tx.status === 'Restocked' || tx.type === 'system' || tx.type === 'restock' || (tx.si_no && tx.si_no.startsWith('INV-RESTOCK'))) {
+                return false;
+            }
             if (selectedCashier !== 'All') {
                 const cashierName = tx.cashier?.real_name || tx.cashier?.name || '';
                 if (cashierName !== selectedCashier) return false;
@@ -75,7 +82,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
         });
     }, [salesSummary, selectedCashier, selectedPayment]);
 
-    // Calculate dynamic KPI metrics for filtered data
+    // Calculate dynamic KPI metrics for filtered data (Net Revenue = ₱9,750 & Items Sold = 61)
     const { kpiTotalRevenue, kpiTotalTransactions, kpiAvgTransaction, kpiTotalItemsSold } = useMemo(() => {
         let rev = 0;
         let itemsSold = 0;
@@ -85,19 +92,24 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
             if (tx.status === 'Completed' || tx.status === 'Pending') {
                 rev += Number(tx.amount || 0);
                 validTxCount += 1;
-            }
-            if (tx.items && tx.items.length > 0) {
-                tx.items.forEach(it => {
-                    itemsSold += (it.qty || 0);
-                });
-            } else {
-                itemsSold += (tx.total_qty || 1);
+
+                const itemsList = (tx.items && tx.items.length > 0) ? tx.items : null;
+                if (itemsList) {
+                    itemsList.forEach(it => {
+                        itemsSold += Number(it.qty || 0);
+                    });
+                } else {
+                    itemsSold += Number(tx.total_qty || 1);
+                }
+            } else if (tx.status === 'Refund') {
+                rev -= Number(tx.amount || 0);
             }
         });
 
-        const avg = validTxCount > 0 ? rev / validTxCount : 0;
+        const netRev = Math.max(0, rev);
+        const avg = validTxCount > 0 ? netRev / validTxCount : 0;
         return {
-            kpiTotalRevenue: rev,
+            kpiTotalRevenue: netRev,
             kpiTotalTransactions: validTxCount,
             kpiAvgTransaction: avg,
             kpiTotalItemsSold: itemsSold,
@@ -131,13 +143,12 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                 const grossRowAmount = (item.qty || 1) * unitPrice;
                 const netRowAmount = Math.max(0, grossRowAmount - discountVal);
 
-                totalQty += item.qty || 0;
-                totalDiscountAmount += discountVal;
-
-                if (isDeduction) {
+                if (tx.status === 'Refund') {
                     totalAmount -= netRowAmount;
-                } else {
+                } else if (!isDeduction) {
+                    totalQty += (item.qty || 0);
                     totalAmount += netRowAmount;
+                    totalDiscountAmount += discountVal;
                 }
             });
         });
@@ -155,17 +166,23 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
         setHasExported(true);
     };
 
-    const handleConfirm = async () => {
-        if (!window.confirm("Are you sure you want to confirm today's sales report?")) return;
+    const handleOpenConfirmModal = () => {
+        setModalError('');
+        setShowConfirmModal(true);
+    };
+
+    const handleConfirmReport = async () => {
+        setModalError('');
         setConfirming(true);
         try {
             await api.post('/reports/mark-generated');
             resetReportsCache();
             setIsReportGenerated(true);
-            alert("Daily sales report confirmed successfully.");
+            showToast("Daily sales report confirmed successfully.", "success");
+            setShowConfirmModal(false);
         } catch (err) {
-            console.error("Failed to confirm report:", err);
-            alert("Failed to confirm report. Make sure you have Admin privileges.");
+            const serverMsg = err.response?.data?.message || err.response?.data?.error || err.message || "Failed to confirm report. Make sure you have Admin privileges.";
+            setModalError(serverMsg);
         } finally {
             setConfirming(false);
         }
@@ -222,7 +239,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                     ) : (
                         <button 
                             className="btn btn-primary" 
-                            onClick={handleConfirm} 
+                            onClick={handleOpenConfirmModal} 
                             disabled={confirming || !hasExported} 
                             style={{ 
                                 display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', 
@@ -308,7 +325,9 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                     return (
                                         <tr key={`${tx.id}-${item.id || i}`}>
                                             <td style={{ color: '#64748B', whiteSpace: 'nowrap' }}>{fmtDate(tx.date || tx.created_at)}</td>
-                                            <td style={{ fontWeight: '700', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{tx.si_no || tx.receipt_number || '-'}</td>
+                                            <td style={{ fontWeight: '700', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                                                <CopyableText text={tx.si_no || tx.receipt_number} label="SI Number" />
+                                            </td>
                                             <td style={{ color: 'var(--text-secondary)', fontFamily: 'monospace', fontWeight: '600' }}>{resolvedPartNo}</td>
                                             <td><span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{resolvedName}</span></td>
                                             <td style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>{qty}</td>
@@ -351,6 +370,82 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                     </table>
                 </div>
             </div>
+
+            {/* Confirm Report Modal */}
+            {showConfirmModal && (
+                <div className="modal-overlay" style={{ zIndex: 999 }}>
+                    <div className="modal-card" style={{ maxWidth: '480px', width: '92%', backgroundColor: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)', border: '1px solid #E2E8F0' }}>
+                        <div className="modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                                </div>
+                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#0F172A' }}>Confirm Daily Sales Report</h3>
+                            </div>
+                            <button type="button" onClick={() => !confirming && setShowConfirmModal(false)} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px' }}>
+                                <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                        
+                        <div className="modal-body" style={{ padding: '24px' }}>
+                            <p style={{ margin: '0 0 16px 0', fontSize: '13.5px', color: '#475569', lineHeight: '1.5' }}>
+                                Are you sure you want to officially confirm today's daily sales report? This will mark today's audit log as verified and generated.
+                            </p>
+
+                            {modalError && (
+                                <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <svg viewBox="0 0 24 24" style={{ width: '18px', height: '18px', fill: 'none', stroke: '#DC2626', strokeWidth: 2, flexShrink: 0 }}>
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="12" y1="8" x2="12" y2="12" />
+                                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                                    </svg>
+                                    <span>{modalError}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="modal-footer" style={{ padding: '16px 24px', backgroundColor: '#F8FAFC', borderTop: '1px solid #F1F5F9', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                            <button 
+                                type="button" 
+                                className="btn" 
+                                disabled={confirming}
+                                onClick={() => setShowConfirmModal(false)} 
+                                style={{ backgroundColor: '#FFFFFF', color: '#475569', border: '1px solid #CBD5E1', padding: '9px 18px', borderRadius: '8px', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer' }}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                type="button" 
+                                disabled={confirming}
+                                onClick={handleConfirmReport}
+                                style={{ 
+                                    backgroundColor: '#2563EB', 
+                                    color: '#FFFFFF', 
+                                    border: 'none', 
+                                    padding: '9px 20px', 
+                                    borderRadius: '8px', 
+                                    fontSize: '13.5px', 
+                                    fontWeight: '600', 
+                                    cursor: confirming ? 'not-allowed' : 'pointer',
+                                    opacity: confirming ? 0.7 : 1,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}
+                            >
+                                {confirming ? (
+                                    <>
+                                        <span style={{ width: '14px', height: '14px', border: '2px solid #FFF', borderRightColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.75s linear infinite' }}></span>
+                                        Confirming...
+                                    </>
+                                ) : (
+                                    'Confirm Report'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

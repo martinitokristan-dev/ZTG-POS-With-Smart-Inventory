@@ -124,16 +124,19 @@ export const ProductProvider = ({ children }) => {
 
                 inventoryChannel = echo.private('inventory')
                     .listen('.InventoryUpdated', (e) => {
-                        console.log('[Echo Debug] ProductContext InventoryUpdated event received:', e);
-                        setProducts(prev => prev.map(p => {
-                            if (p.id === e.productId) {
-                                return {
-                                    ...p,
-                                    stock: e.newQuantity
-                                };
-                            }
-                            return p;
-                        }));
+                        const updateProductRecursively = (productsList) => {
+                            return productsList.map(p => {
+                                let updated = p;
+                                if (p.id === e.productId) {
+                                    updated = { ...updated, stock: e.newQuantity };
+                                }
+                                if (p.variants && p.variants.length > 0) {
+                                    updated = { ...updated, variants: updateProductRecursively(p.variants) };
+                                }
+                                return updated;
+                            });
+                        };
+                        setProducts(prev => updateProductRecursively(prev));
                     });
             }
         }

@@ -106,7 +106,6 @@ export default function useReservations() {
             if (['Admin', 'Supervisor', 'Cashier'].includes(user.role)) {
                 channel = echo.private('reservations')
                     .listen('.ReservationUpdated', (e) => {
-                        console.log('[Echo Debug] Reservations ReservationUpdated event received:', e);
                         resetReservationsCache();
                         loadReservations();
                     });

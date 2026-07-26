@@ -1,4 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import IOSSelect from '../../../../shared/components/IOSSelect';
+
+const generateNextVariantPartNo = (basePartNo, index) => {
+    if (!basePartNo || !basePartNo.trim()) return '';
+    const trimmed = basePartNo.trim();
+    const match = trimmed.match(/^(.*?)(\d+)$/);
+    if (match) {
+        const prefix = match[1];
+        const numStr = match[2];
+        const nextNum = parseInt(numStr, 10) + index + 1;
+        const padded = String(nextNum).padStart(numStr.length, '0');
+        return `${prefix}${padded}`;
+    }
+    return `${trimmed}-${index + 1}`;
+};
 
 const ImageUploadDropzone = ({ image, onUpload }) => (
     <div style={{ border: '2px dashed var(--border)', borderRadius: '8px', padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '16px', backgroundColor: '#F8FAFC', cursor: 'pointer', position: 'relative' }}>
@@ -30,14 +45,6 @@ export default function ProductFormModal({
     errorMessage, selectedProduct,
     isSubmitting = false
 }) {
-    if (!isOpen) return null;
-
-    const isEdit = mode === 'edit';
-    const title = isEdit ? `Edit Product: ${selectedProduct?.name}` : 'Add New Product';
-    const submitLabel = isEdit 
-        ? (isSubmitting ? 'Updating Product...' : 'Update Product') 
-        : (isSubmitting ? 'Adding Product...' : 'Add Product');
-
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (isOpen && e.key === 'Enter') {
@@ -55,25 +62,18 @@ export default function ProductFormModal({
     const [isTranslating, setIsTranslating] = useState(false);
     const [lastAutoTranslation, setLastAutoTranslation] = useState('');
 
-    // Debounced real-time automatic translation as the user types
+    // Debounced real-time automatic translation for main product name
     useEffect(() => {
+        if (!isOpen) return;
         const nameVal = formData.name?.trim();
-        if (!nameVal) {
-            // Erase Chinese name if English name is cleared
-            setFormData(prev => ({
-                ...prev,
-                chinese_name: ''
-            }));
-            setLastAutoTranslation('');
-            return;
-        }
+        if (!nameVal) return;
 
-        // Auto-translate only if Chinese Name is empty or matches the last auto-translation
         const isChineseEmpty = !formData.chinese_name || formData.chinese_name.trim() === '';
         const isMatched = formData.chinese_name === lastAutoTranslation;
 
+        let timer;
         if (isChineseEmpty || isMatched) {
-            const timer = setTimeout(async () => {
+            timer = setTimeout(async () => {
                 setIsTranslating(true);
                 try {
                     const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(nameVal)}&langpair=en|zh-CN`);
@@ -91,44 +91,21 @@ export default function ProductFormModal({
                 } finally {
                     setIsTranslating(false);
                 }
-            }, 600); // 600ms debounce
-
-            return () => clearTimeout(timer);
+            }, 600);
         }
-    }, [formData.name]);
 
-    // Debounced automatic translation for Variant Chinese Names
-    useEffect(() => {
-        if (!formData.variants || formData.variants.length === 0) return;
+        return () => {
+            if (timer) clearTimeout(timer);
+        };
+    }, [formData.name, isOpen]);
 
-        const timer = setTimeout(() => {
-            formData.variants.forEach(async (variant, idx) => {
-                const nameVal = variant.name?.trim();
-                if (nameVal && (!variant.chinese_name || variant.chinese_name.trim() === '')) {
-                    try {
-                        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(nameVal)}&langpair=en|zh-CN`);
-                        const data = await res.json();
-                        if (data?.responseData?.translatedText) {
-                            const translated = data.responseData.translatedText;
-                            setFormData(prev => {
-                                if (!prev.variants || !prev.variants[idx]) return prev;
-                                if (!prev.variants[idx].chinese_name) {
-                                    const nv = [...prev.variants];
-                                    nv[idx] = { ...nv[idx], chinese_name: translated };
-                                    return { ...prev, variants: nv };
-                                }
-                                return prev;
-                            });
-                        }
-                    } catch (err) {
-                        console.error("Variant translation failed:", err);
-                    }
-                }
-            });
-        }, 600);
+    if (!isOpen) return null;
 
-        return () => clearTimeout(timer);
-    }, [formData.variants?.map(v => v.name).join('||')]);
+    const isEdit = mode === 'edit';
+    const title = isEdit ? `Edit Product: ${selectedProduct?.name}` : 'Add New Product';
+    const submitLabel = isEdit 
+        ? (isSubmitting ? 'Updating Product...' : 'Update Product') 
+        : (isSubmitting ? 'Adding Product...' : 'Add Product');
 
     const triggerTranslation = async () => {
         const nameVal = formData.name?.trim();
@@ -157,14 +134,64 @@ export default function ProductFormModal({
         }
     };
 
+    const renderVariantOptionsForVariant = (variant, idx) => {
+        const selectedCatId = parseInt(formData.category_id);
+        if (!selectedCatId) return <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Select a category first.</div>;
+        
+        const selectedCatObj = categories.find(c => c.id === selectedCatId);
+        if (!selectedCatObj || !selectedCatObj.variants || selectedCatObj.variants.length === 0) {
+            return <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>No variant types are assigned to this category.</div>;
+        }
+        
+        const allowedTypes = selectedCatObj.variants ? selectedCatObj.variants.map(t => t.toLowerCase()) : [];
+        const filteredOptions = variantOptions?.filter(v => allowedTypes.includes(v.name.toLowerCase()));
+        if (!filteredOptions || filteredOptions.length === 0) {
+            return <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>No variant options configured for category.</div>;
+        }
+        
+        return filteredOptions.map(vType => {
+            const targetCanonicalId = vType.canonical_type_id || vType.id;
+            const siblingTypes = variantOptions?.filter(vt => (vt.canonical_type_id || vt.id) === targetCanonicalId);
+            const selectedVal = variant.option_ids?.find(id => {
+                return siblingTypes?.some(vt => vt.options.some(opt => opt.id === id));
+            }) || '';
+
+            const formattedOpts = vType.options.map(opt => ({
+                value: String(opt.id),
+                label: opt.value
+            }));
+
+            return (
+                <div className="form-group" key={vType.id} style={{ marginBottom: 0 }}>
+                    <label className="form-label" style={{ color: 'var(--primary)' }}>{vType.name} *</label>
+                    <IOSSelect
+                        value={selectedVal}
+                        placeholder={`Select ${vType.name}...`}
+                        options={formattedOpts}
+                        onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            const nv = [...formData.variants];
+                            const oldIds = nv[idx].option_ids || [];
+                            
+                            const siblingOptionIds = siblingTypes?.flatMap(vt => vt.options.map(opt => opt.id)) || [];
+                            const filteredIds = oldIds.filter(id => !siblingOptionIds.includes(id));
+                            if (!isNaN(val)) filteredIds.push(val);
+                            nv[idx].option_ids = filteredIds;
+                            setFormData({ ...formData, variants: nv });
+                        }}
+                    />
+                </div>
+            );
+        });
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         if (formData.variants && formData.variants.length > 0) {
             for (let i = 0; i < formData.variants.length; i++) {
                 const v = formData.variants[i];
                 if (!v.name || !v.name.trim()) {
-                    alert(`Variant at position ${i + 1} must have a name.`);
-                    return;
+                    v.name = formData.name?.trim() || 'Variant';
                 }
                 if (v.part_no && v.part_no.endsWith('-')) {
                     alert(`Variant part number "${v.part_no}" cannot end with a trailing dash. Please provide a suffix.`);
@@ -202,10 +229,12 @@ export default function ProductFormModal({
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Category <span style={{ color: 'red' }}>*</span></label>
-                                <select className="form-control" required value={formData.category_id} onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}>
-                                    <option value="">Select Category</option>
-                                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                </select>
+                                <IOSSelect
+                                    value={formData.category_id}
+                                    placeholder="Select Category"
+                                    options={categories.map(c => ({ value: String(c.id), label: c.name }))}
+                                    onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+                                />
                             </div>
                         </div>
                         <div className="grid-2">
@@ -308,7 +337,9 @@ export default function ProductFormModal({
                                 <button type="button" className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px' }}
                                     onClick={() => {
                                         const newVariants = [...(formData.variants || []), {
-                                            name: '', chinese_name: '', part_no: formData.part_no ? formData.part_no : '',
+                                            name: formData.name || '', 
+                                            chinese_name: formData.chinese_name || '', 
+                                            part_no: generateNextVariantPartNo(formData.part_no, formData.variants?.length || 0),
                                             price1: formData.price1 || 0, price2: formData.price2 || 0,
                                             stock: 0, alert_limit: formData.alert_limit || 5, option_ids: []
                                         }];
@@ -325,7 +356,18 @@ export default function ProductFormModal({
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {formData.variants.map((variant, idx) => (
+                                    {formData.variants.map((variant, idx) => {
+                                        const selectedOptionLabels = (variant.option_ids || []).map(id => {
+                                            for (const vt of variantOptions || []) {
+                                                const found = vt.options?.find(o => o.id === id);
+                                                if (found) return found.value;
+                                            }
+                                            return null;
+                                        }).filter(Boolean);
+
+                                        const variantDisplayName = variant.name || formData.name || 'Variant';
+
+                                        return (
                                         <div key={idx} style={{ padding: '12px', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'white', position: 'relative' }}>
                                             <button type="button" onClick={() => {
                                                 const nv = [...formData.variants];
@@ -333,10 +375,21 @@ export default function ProductFormModal({
                                                 setFormData({ ...formData, variants: nv });
                                             }} style={{ position: 'absolute', top: '8px', right: '8px', color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
                                             
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', paddingBottom: '6px', borderBottom: '1px solid #F1F5F9' }}>
+                                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>
+                                                    {variantDisplayName}
+                                                </span>
+                                                {selectedOptionLabels.length > 0 && (
+                                                    <span style={{ color: '#3B82F6', fontWeight: '600', fontSize: '13px' }}>
+                                                        ({selectedOptionLabels.join(', ')})
+                                                    </span>
+                                                )}
+                                            </div>
+
                                             <div className="grid-3" style={{ gap: '12px', marginBottom: '12px' }}>
                                                 <div className="form-group" style={{ marginBottom: 0 }}>
-                                                    <label className="form-label">Variant Name *</label>
-                                                    <input type="text" className="form-control" required placeholder="e.g. Filter (Large)" value={variant.name} onChange={(e) => {
+                                                    <label className="form-label">Variant Name</label>
+                                                    <input type="text" className="form-control" placeholder={formData.name || "Product Name"} value={variant.name} onChange={(e) => {
                                                         const nv = [...formData.variants]; nv[idx].name = e.target.value; setFormData({ ...formData, variants: nv });
                                                     }} />
                                                 </div>
@@ -397,48 +450,11 @@ export default function ProductFormModal({
                                             </div>
 
                                             <div className="grid-2" style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', marginTop: '4px' }}>
-                                                {(() => {
-                                                    const selectedCatId = parseInt(formData.category_id);
-                                                    if (!selectedCatId) return <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Select a category first.</div>;
-                                                    
-                                                    const selectedCatObj = categories.find(c => c.id === selectedCatId);
-                                                    if (!selectedCatObj || !selectedCatObj.variants || selectedCatObj.variants.length === 0) {
-                                                        return <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>No variant types are assigned to this category.</div>;
-                                                    }
-                                                    
-                                                    const allowedTypes = selectedCatObj.variants ? selectedCatObj.variants.map(t => t.toLowerCase()) : [];
-                                                    const filteredOptions = variantOptions?.filter(v => allowedTypes.includes(v.name.toLowerCase()));
-                                                    
-                                                    return filteredOptions && filteredOptions.map(vType => (
-                                                    <div className="form-group" key={vType.id} style={{ marginBottom: 0 }}>
-                                                         <label className="form-label" style={{ color: 'var(--primary)' }}>{vType.name}</label>
-                                                         <select className="form-control" style={{ backgroundColor: '#F8FAFC' }}
-                                                             value={variant.option_ids?.find(id => {
-                                                                 const targetCanonicalId = vType.canonical_type_id || vType.id;
-                                                                 const siblingTypes = variantOptions?.filter(vt => (vt.canonical_type_id || vt.id) === targetCanonicalId);
-                                                                 return siblingTypes?.some(vt => vt.options.some(opt => opt.id === id));
-                                                             }) || ''}
-                                                             onChange={(e) => {
-                                                                 const val = parseInt(e.target.value);
-                                                                 const nv = [...formData.variants];
-                                                                 const oldIds = nv[idx].option_ids || [];
-                                                                 
-                                                                 const targetCanonicalId = vType.canonical_type_id || vType.id;
-                                                                 const siblingTypes = variantOptions?.filter(vt => (vt.canonical_type_id || vt.id) === targetCanonicalId);
-                                                                 const siblingOptionIds = siblingTypes?.flatMap(vt => vt.options.map(opt => opt.id)) || [];
-                                                                 
-                                                                 const filteredIds = oldIds.filter(id => !siblingOptionIds.includes(id));
-                                                                 if (!isNaN(val)) filteredIds.push(val);
-                                                                 nv[idx].option_ids = filteredIds;
-                                                                 setFormData({ ...formData, variants: nv });
-                                                             }}>
-                                                            {vType.options.map(opt => <option key={opt.id} value={opt.id}>{opt.value}</option>)}
-                                                        </select>
-                                                    </div>
-                                                ))})()}
+                                                {renderVariantOptionsForVariant(variant, idx)}
                                             </div>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

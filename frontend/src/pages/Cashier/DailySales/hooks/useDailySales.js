@@ -27,7 +27,7 @@ export default function useDailySales() {
         'daily-sales',
         '/transactions',
         {
-            status: 'Completed,Paid,Refund,Return',
+            status: 'Completed,Paid,Refund,Return,Pending',
             date_from: getTodayISO()
         }
     );
@@ -39,14 +39,15 @@ export default function useDailySales() {
 
         if (token && userStr) {
             const user = JSON.parse(userStr);
-            if (['Admin', 'Supervisor', 'Cashier'].includes(user.role)) {
+            const userRole = typeof user.role === 'object' ? (user.role.value || user.role.name) : user.role;
+            if (['Admin', 'Supervisor', 'Cashier', 'Checker'].includes(userRole)) {
                 channel = echo.private('transactions')
                     .listen('.TransactionCreated', (e) => {
-                        console.log('[Echo Debug] DailySales TransactionCreated event received:', e);
+                        invalidateCachePage('daily-sales', page);
                         refetch();
                     })
                     .listen('.TransactionUpdated', (e) => {
-                        console.log('[Echo Debug] DailySales TransactionUpdated event received:', e);
+                        invalidateCachePage('daily-sales', page);
                         refetch();
                     });
             }
@@ -57,7 +58,7 @@ export default function useDailySales() {
                 echo.leaveChannel('private-transactions');
             }
         };
-    }, [refetch]);
+    }, [refetch, page]);
 
     // Flatten transactions into line items for the Sales Ledger display
     const flattenedItems = useMemo(() => {

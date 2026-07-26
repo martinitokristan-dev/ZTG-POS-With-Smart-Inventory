@@ -171,7 +171,11 @@ export default function ProductsTable({
                     <div className="flex items-center justify-center gap-1.5" style={{ position: 'relative' }}>
                         {/* Inline View Button */}
                         <button 
-                            onClick={() => onView(product)} 
+                            onClick={() => onView(isVariantSubRow ? {
+                                ...product,
+                                category: product.category || parentProduct?.category,
+                                category_id: product.category_id || parentProduct?.category_id
+                            } : product)} 
                             className="action-trigger-btn" 
                             aria-label="View Product Details" 
                             data-tooltip="View Details"

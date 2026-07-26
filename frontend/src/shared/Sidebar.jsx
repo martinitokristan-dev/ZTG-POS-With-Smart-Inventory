@@ -346,7 +346,16 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
                                 <li key={item.path} style={{ marginBottom: 4 }}>
                                     <RouterNavLink
                                         to={item.path}
-                                        onClick={() => { if (isMobile) onClose(); }}
+                                        onClick={(e) => {
+                                            if (window.__ztg_restock_pending) {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                window.dispatchEvent(new CustomEvent('ztg:attempt-leave-restock', { detail: { targetPath: item.path } }));
+                                                if (isMobile) onClose();
+                                                return;
+                                            }
+                                            if (isMobile) onClose();
+                                        }}
                                         style={({ isActive }) => ({
                                             display: 'flex',
                                             alignItems: 'center',
@@ -441,7 +450,16 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
 
                 {/* Sign Out Button */}
                 <button
-                    onClick={handleLogout}
+                    onClick={(e) => {
+                        if (window.__ztg_restock_pending) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.dispatchEvent(new CustomEvent('ztg:attempt-leave-restock', { detail: { isLogout: true } }));
+                            if (isMobile) onClose();
+                            return;
+                        }
+                        handleLogout();
+                    }}
                     style={{
                         display: 'flex',
                         alignItems: 'center',

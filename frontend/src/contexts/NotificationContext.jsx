@@ -103,7 +103,6 @@ export const NotificationProvider = ({ children }) => {
             if (['Admin', 'Supervisor'].includes(user.role)) {
                 channel = echo.private('notifications')
                     .listen('.NotificationSent', (e) => {
-                        console.log('[Echo Debug] NotificationSent event received:', e);
                         setNotifications(prev => {
                             if (prev.some(n => n.id === e.notification.id)) {
                                 return prev;

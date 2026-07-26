@@ -53,14 +53,15 @@ export default function useHistoryLogs() {
 
         if (token && userStr) {
             const user = JSON.parse(userStr);
-            if (['Admin', 'Supervisor', 'Cashier'].includes(user.role)) {
+            const userRole = typeof user.role === 'object' ? (user.role.value || user.role.name) : user.role;
+            if (['Admin', 'Supervisor', 'Cashier', 'Checker'].includes(userRole)) {
                 channel = echo.private('transactions')
                     .listen('.TransactionCreated', (e) => {
-                        console.log('[Echo Debug] HistoryLogs TransactionCreated event received:', e);
+                        invalidateCachePage('history', page);
                         refetch();
                     })
                     .listen('.TransactionUpdated', (e) => {
-                        console.log('[Echo Debug] HistoryLogs TransactionUpdated event received:', e);
+                        invalidateCachePage('history', page);
                         refetch();
                     });
             }
@@ -71,7 +72,7 @@ export default function useHistoryLogs() {
                 echo.leaveChannel('private-transactions');
             }
         };
-    }, [refetch]);
+    }, [refetch, page]);
 
     const loadHistory = () => {
         invalidateCachePage('history', page);
@@ -102,7 +103,7 @@ export default function useHistoryLogs() {
             loadHistory();
         } catch (err) {
             console.error("Refund failed:", err);
-            alert("Action failed: " + (err.response?.data?.message || err.message));
+            throw err;
         }
     };
 
@@ -133,7 +134,7 @@ export default function useHistoryLogs() {
             loadHistory();
         } catch (err) {
             console.error("Void failed:", err);
-            alert("Void failed: " + (err.response?.data?.message || err.message));
+            throw err;
         }
     };
 

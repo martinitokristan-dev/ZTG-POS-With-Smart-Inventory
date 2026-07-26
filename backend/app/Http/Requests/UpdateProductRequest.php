@@ -55,8 +55,10 @@ class UpdateProductRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'variants.*.part_no.different' => 'A variant cannot have the same part number as the main product.',
-            'variants.*.part_no.distinct'  => 'Each variant must have a unique part number.',
+            'variants.*.part_no.different'      => 'A variant cannot have the same part number as the main product.',
+            'variants.*.part_no.distinct'       => 'Each variant must have a unique part number.',
+            'variants.*.option_ids.required_with'=> 'Please select a variant option for each added variant.',
+            'variants.*.option_ids.required'     => 'Please select a variant option for each added variant.',
         ];
     }
 }

@@ -87,7 +87,6 @@ export function useInventory() {
             if (['Admin', 'Supervisor', 'Cashier', 'Checker'].includes(user.role)) {
                 productChannel = echo.private('products')
                     .listen('.ProductUpdated', (e) => {
-                        console.log('[Echo Debug] useInventory ProductUpdated event received:', e);
                         const updateProductRecursively = (products) => {
                             return products.map(p => {
                                 if (p.id === e.productId) {
@@ -104,7 +103,6 @@ export function useInventory() {
 
                 inventoryChannel = echo.private('inventory')
                     .listen('.InventoryUpdated', (e) => {
-                        console.log('[Echo Debug] useInventory InventoryUpdated event received:', e);
                         const updateProductRecursively = (products) => {
                             return products.map(p => {
                                 if (p.id === e.productId) {

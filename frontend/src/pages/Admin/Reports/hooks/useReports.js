@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../../../shared/api';
 import { fetchReportsData } from '../../../../shared/hooks/useReportsCache';
 
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+const fmtDate = (d) => d ? new Date(d).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
 
 export default function useReports() {
@@ -16,12 +16,14 @@ export default function useReports() {
     const [isReportGenerated, setIsReportGenerated] = useState(false);
     const [employees, setEmployees] = useState([]);
 
-    // Global Date Range State
+    // Global Date Range State (Defaults to yesterday through today to cover overnight/past midnight sales)
     const today = new Date();
     const tzOffset = today.getTimezoneOffset() * 60000;
-    const localISOTime = (new Date(Date.now() - tzOffset)).toISOString().slice(0, 10);
-    const [startDate, setStartDate] = useState(localISOTime);
-    const [endDate, setEndDate] = useState(localISOTime);
+    const todayStr = (new Date(Date.now() - tzOffset)).toISOString().slice(0, 10);
+    const yesterdayStr = (new Date(Date.now() - 86400000 - tzOffset)).toISOString().slice(0, 10);
+    
+    const [startDate, setStartDate] = useState(yesterdayStr);
+    const [endDate, setEndDate] = useState(todayStr);
 
     const loadReports = async () => {
         try {

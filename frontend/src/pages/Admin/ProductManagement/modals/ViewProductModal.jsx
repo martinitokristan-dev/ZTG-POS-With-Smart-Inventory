@@ -1,11 +1,15 @@
 import React from 'react';
 import CopyableText from '../../../../shared/components/CopyableText';
 
-export default function ViewProductModal({ isOpen, onClose, product }) {
+export default function ViewProductModal({ isOpen, onClose, product, categories = [] }) {
     if (!isOpen || !product) return null;
 
     const variants = product.variants || [];
     const hasVariants = variants.length > 0;
+
+    const categoryName = product.category?.name 
+        || (categories && categories.find(c => Number(c.id) === Number(product.category_id))?.name)
+        || 'N/A';
 
     return (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9999] flex items-center justify-center transition-opacity" onClick={onClose}>
@@ -39,7 +43,7 @@ export default function ViewProductModal({ isOpen, onClose, product }) {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category</span>
-                            <span style={{ fontWeight: '500', color: '#334155', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>{product.category?.name || 'N/A'}</span>
+                            <span style={{ fontWeight: '500', color: '#334155', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>{categoryName}</span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Warehouse Location</span>

@@ -59,14 +59,18 @@ export default function usePOS() {
 
     // Modals
 
-    // When context finishes initial fetch, adopt products and stop loading spinner immediately!
+    // When context finishes initial fetch or updates via real-time Echo, keep posProducts in sync
     useEffect(() => {
-        if (!contextLoading && isInitialLoad.current) {
-            isInitialLoad.current = false;
-            setPosProducts(contextProducts);
-            setLoadingProducts(false);
+        if (!contextLoading) {
+            if (isInitialLoad.current) {
+                isInitialLoad.current = false;
+                setLoadingProducts(false);
+            }
+            if (!searchQuery.trim() && categoryFilter === 'All') {
+                setPosProducts(contextProducts);
+            }
         }
-    }, [contextProducts, contextLoading]);
+    }, [contextProducts, contextLoading, searchQuery, categoryFilter]);
 
     // Debounced server search — fires 250ms after the cashier stops typing
     useEffect(() => {

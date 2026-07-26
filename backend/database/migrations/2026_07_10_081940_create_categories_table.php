@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('prefix', 10)->nullable();
             $table->string('chinese_name', 100)->nullable();
             $table->boolean('allow_variants')->default(false);
+            $table->json('variants')->nullable();
             $table->timestamps();
         });
     }

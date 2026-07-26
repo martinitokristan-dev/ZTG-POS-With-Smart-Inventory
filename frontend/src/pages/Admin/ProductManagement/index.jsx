@@ -35,22 +35,16 @@ function ProductManagement() {
                     <div className="top-bar-actions">
                         {pm.viewMode === 'list' ? (
                             <>
-                                <button onClick={pm.switchToRestock} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', fill: 'none', stroke: 'currentColor', strokeWidth: 2 }}>
-                                        <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                                    </svg>
+                                <button onClick={pm.switchToRestock} className="btn btn-secondary">
                                     Restock
                                 </button>
-                                <button onClick={() => { pm.resetForm(); pm.setShowAddModal(true); }} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', fill: 'none', stroke: 'currentColor', strokeWidth: 2 }}>
-                                        <path d="M12 4v16m-8-8h16" />
-                                    </svg>
+                                <button onClick={() => { pm.resetForm(); pm.setShowAddModal(true); }} className="btn btn-primary">
                                     Add Product
                                 </button>
                             </>
                         ) : (
                             <button onClick={pm.handleExitRestockAttempt} className="btn btn-secondary">
-                                ← Back to Products
+                                Back to Products
                             </button>
                         )}
                     </div>
@@ -176,6 +170,7 @@ function ProductManagement() {
                 isOpen={pm.showViewModal}
                 onClose={() => pm.setShowViewModal(false)}
                 product={pm.selectedProduct}
+                categories={pm.categories}
                 DEFAULT_PLACEHOLDER_IMAGE={pm.DEFAULT_PLACEHOLDER_IMAGE}
             />
 
@@ -196,7 +191,7 @@ function ProductManagement() {
                 isOpen={pm.showReviewRestockModal}
                 onClose={() => pm.setShowReviewRestockModal(false)}
                 onConfirm={pm.handleConfirmRestock}
-                products={pm.products}
+                products={flattenToSellableSKUs(pm.restockProducts)}
                 restockQuantities={pm.restockQuantities}
                 restockItemsCount={pm.restockItemsCount}
                 restockUnitsCount={pm.restockUnitsCount}

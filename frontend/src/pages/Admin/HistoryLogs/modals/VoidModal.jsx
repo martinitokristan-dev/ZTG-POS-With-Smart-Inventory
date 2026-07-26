@@ -7,6 +7,8 @@ export default function VoidModal({ isOpen, onClose, onSubmit, transaction, fmtD
     const [adminName, setAdminName] = useState('Administrator');
     const [adminPin, setAdminPin] = useState('');
     const [showPin, setShowPin] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
         if (isOpen) {
@@ -15,14 +17,22 @@ export default function VoidModal({ isOpen, onClose, onSubmit, transaction, fmtD
             setAdminName('Administrator');
             setAdminPin('');
             setShowPin(false);
+            setIsSubmitting(false);
+            setErrorMessage('');
         }
     }, [isOpen]);
 
     if (!isOpen || !transaction) return null;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        setErrorMessage('');
         
+        if (!adminPin || adminPin.length < 4) {
+            setErrorMessage("Please enter a valid 4-digit Admin Approval PIN.");
+            return;
+        }
+
         const user = (() => { try { return JSON.parse(localStorage.getItem('auth_user')); } catch { return null; } })();
         const adminId = user?.id || 1;
 
@@ -33,7 +43,15 @@ export default function VoidModal({ isOpen, onClose, onSubmit, transaction, fmtD
             admin_pin: adminPin
         };
 
-        onSubmit(transaction.id, payload);
+        setIsSubmitting(true);
+        try {
+            await onSubmit(transaction.id, payload);
+        } catch (err) {
+            const msg = err.response?.data?.message || err.response?.data?.error || err.message || "Failed to void transaction.";
+            setErrorMessage(msg);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -64,6 +82,16 @@ export default function VoidModal({ isOpen, onClose, onSubmit, transaction, fmtD
                     </div>
     
                     <div className="modal-body" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '75vh', overflowY: 'auto' }}>
+                        {errorMessage && (
+                            <div style={{ backgroundColor: '#FEF2F2', borderLeft: '4px solid #EF4444', color: '#991B1B', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <svg viewBox="0 0 24 24" style={{ width: '18px', height: '18px', fill: 'none', stroke: 'currentColor', strokeWidth: 2, flexShrink: 0 }}>
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="8" x2="12" y2="12" />
+                                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                                </svg>
+                                <span>{errorMessage}</span>
+                            </div>
+                        )}
     
                         {/* Warning Banner */}
                         <div style={{ background: '#FFF5F5', border: '1px solid #FEE2E2', borderRadius: '8px', padding: '12px 16px', fontSize: '12.5px', color: '#991B1B' }}>
@@ -162,9 +190,37 @@ export default function VoidModal({ isOpen, onClose, onSubmit, transaction, fmtD
     
                     <div className="modal-footer" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #F1F5F9', background: '#FFFFFF' }}>
                         <button type="button" className="btn btn-secondary" onClick={onClose} style={{ borderRadius: '8px', fontWeight: '500', fontSize: '13.5px', height: '38px', padding: '0 20px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#475569', cursor: 'pointer' }}>Cancel</button>
-                        <button type="submit" className="btn btn-danger" style={{ background: '#EF4444', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13.5px', height: '38px', padding: '0 20px', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                            Process Void
+                        <button 
+                            type="submit" 
+                            disabled={isSubmitting} 
+                            className="btn btn-danger" 
+                            style={{ 
+                                background: '#EF4444', 
+                                border: 'none', 
+                                borderRadius: '8px', 
+                                fontWeight: '600', 
+                                fontSize: '13.5px', 
+                                height: '38px', 
+                                padding: '0 20px', 
+                                color: 'white', 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                gap: '6px', 
+                                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                opacity: isSubmitting ? 0.7 : 1
+                            }}
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <span style={{ width: '14px', height: '14px', border: '2px solid #FFF', borderRightColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.75s linear infinite' }}></span>
+                                    Processing Void...
+                                </>
+                            ) : (
+                                <>
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                    Process Void
+                                </>
+                            )}
                         </button>
                     </div>
                 </form>

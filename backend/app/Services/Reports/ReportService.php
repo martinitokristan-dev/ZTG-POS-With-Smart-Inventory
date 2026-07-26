@@ -46,22 +46,30 @@ class ReportService
             : ($endDate ? Carbon::createFromFormat('Y-m-d H:i:s', $endDate . $endSuffix, 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s') : null);
 
         $completedQuery = Transaction::whereIn('status', ['Completed', 'Pending']);
+        $refundQuery = Transaction::whereIn('status', ['Refund', 'Return', 'Void']);
 
         if ($utcStart && $utcEnd) {
             $completedQuery->whereBetween('date', [$utcStart, $utcEnd]);
+            $refundQuery->whereBetween('date', [$utcStart, $utcEnd]);
         }
 
-        $totalRevenue = (float) $completedQuery->sum('amount');
+        $grossRevenue = (float) $completedQuery->sum('amount');
+        $refundedAmount = (float) $refundQuery->sum('amount');
+        $totalRevenue = max(0, $grossRevenue - $refundedAmount);
         $txCount = $completedQuery->count();
         $averageTx = $txCount > 0 ? round($totalRevenue / $txCount, 2) : 0.00;
 
-        // Total items sold
-        $itemsQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+        // Total items sold (Net of refunded/returned quantities)
+        $completedItemsQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
             ->whereIn('transactions.status', ['Completed', 'Pending']);
+        $refundedItemsQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+            ->whereIn('transactions.status', ['Refund', 'Return', 'Void']);
+
         if ($utcStart && $utcEnd) {
-            $itemsQuery->whereBetween('transactions.date', [$utcStart, $utcEnd]);
+            $completedItemsQuery->whereBetween('transactions.date', [$utcStart, $utcEnd]);
+            $refundedItemsQuery->whereBetween('transactions.date', [$utcStart, $utcEnd]);
         }
-        $totalItemsSold = (int) $itemsQuery->sum('transaction_items.qty');
+        $totalItemsSold = max(0, (int) $completedItemsQuery->sum('transaction_items.qty') - (int) $refundedItemsQuery->sum('transaction_items.qty'));
 
         // Top cashier
         $topCashierQuery = Transaction::with(['cashier'])->select('cashier_id', DB::raw('SUM(amount) as total_sales'))
@@ -188,8 +196,11 @@ class ReportService
             }
         }
 
-        // Transactions list for the table
-        $transactionsQuery = Transaction::with(['items.product', 'customer', 'cashier', 'checker']);
+        // Transactions list for the sales report table (Excluding inventory restocks and system logs)
+        $transactionsQuery = Transaction::with(['items.product', 'customer', 'cashier', 'checker'])
+            ->whereNotIn('status', ['RESTOCKED', 'Restocked', 'Security Alert'])
+            ->whereNotIn('type', ['system', 'restock']);
+
         if ($utcStart && $utcEnd) {
             $transactionsQuery->whereBetween('date', [$utcStart, $utcEnd]);
         }

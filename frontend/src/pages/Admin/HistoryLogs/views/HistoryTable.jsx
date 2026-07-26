@@ -116,6 +116,13 @@ export default function HistoryTable({
 
                             const isBottomRow = idx >= transactions.length - 2 && transactions.length > 2;
 
+                            const isRestock = tx.status === 'RESTOCKED' || tx.status === 'Restocked' || tx.type === 'inventory' || tx.type === 'restock' || (tx.si_no && tx.si_no.startsWith('INV-RESTOCK'));
+                            const customerVal = isRestock ? '—' : (tx.customer?.name || tx.customer_name || 'Walk-in');
+                            const paymentVal = (isRestock || tx.payment_method === 'N/A') ? '—' : (tx.payment_method || '—');
+                            const reasonVal = isRestock 
+                                ? (tx.refund_reason || tx.notes || 'Restocking item(s)') 
+                                : (tx.status === 'Refund' || tx.status === 'Return' ? (tx.refund_reason || '—') : tx.status === 'Void' ? (tx.void_reason || '—') : '—');
+
                             return (
                                 <tr key={tx.id} style={{ borderBottom: '1px solid var(--border)' }}>
                                     <td style={{ padding: '16px' }}>
@@ -130,15 +137,14 @@ export default function HistoryTable({
                                         />
                                         {reservationDisplay}
                                     </td>
-                                    <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>{tx.customer?.name || 'Walk-in'}</td>
+                                    <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>{customerVal}</td>
                                     <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>{tx.checker?.name || tx.cashier?.name || '—'}</td>
-                                    <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>{tx.payment_method || '—'}</td>
+                                    <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>{paymentVal}</td>
                                     <td style={{ padding: '16px' }}>
                                         <StatusBadge status={tx.status || 'Completed'} />
                                     </td>
                                     <td style={{ padding: '16px', color: '#64748B', fontSize: '12px' }}>
-                                        {tx.status === 'Refund' || tx.status === 'Return' ? (tx.refund_reason || '—') : 
-                                         tx.status === 'Void' ? (tx.void_reason || '—') : '—'}
+                                        {reasonVal}
                                     </td>
                                     <td style={{ padding: '16px', textAlign: 'center', verticalAlign: 'middle' }}>
                                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>

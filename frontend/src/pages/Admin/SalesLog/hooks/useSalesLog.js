@@ -85,14 +85,15 @@ export default function useSalesLog() {
 
         if (token && userStr) {
             const user = JSON.parse(userStr);
-            if (['Admin', 'Supervisor', 'Cashier'].includes(user.role)) {
+            const userRole = typeof user.role === 'object' ? (user.role.value || user.role.name) : user.role;
+            if (['Admin', 'Supervisor', 'Cashier', 'Checker'].includes(userRole)) {
                 channel = echo.private('transactions')
                     .listen('.TransactionCreated', (e) => {
-                        console.log('[Echo Debug] SalesLog TransactionCreated event received:', e);
+                        invalidateCachePage('sales', page);
                         refetch();
                     })
                     .listen('.TransactionUpdated', (e) => {
-                        console.log('[Echo Debug] SalesLog TransactionUpdated event received:', e);
+                        invalidateCachePage('sales', page);
                         refetch();
                     });
             }
@@ -103,7 +104,7 @@ export default function useSalesLog() {
                 echo.leaveChannel('private-transactions');
             }
         };
-    }, [refetch]);
+    }, [refetch, page]);
 
     // Flatten transactions into items to match the Sales Log mockup
     let flattenedItems = [];
