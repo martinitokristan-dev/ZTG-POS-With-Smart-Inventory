@@ -19,7 +19,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (config('app.env') === 'production' || str_contains(config('app.url'), 'https://') || request()->server('HTTP_X_FORWARDED_PROTO') === 'https') {
+        // Force HTTPS on production (Render reverse proxy).
+        // Avoid request()->server() here — unsafe during config:cache boot on PHP 8.2
+        if (app()->environment('production') || str_contains((string) config('app.url'), 'https://')) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
 
