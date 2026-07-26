@@ -5,6 +5,12 @@ const fixImageUrl = (url) => {
     if (!url) return null;
     if (typeof url !== 'string') return url;
     let cleanUrl = url.trim();
+
+    // Automatically upgrade http to https for production URLs to avoid Mixed Content errors
+    if (cleanUrl.startsWith('http://') && !cleanUrl.includes('localhost') && !cleanUrl.includes('127.0.0.1')) {
+        cleanUrl = cleanUrl.replace(/^http:\/\//i, 'https://');
+    }
+
     if (cleanUrl.includes('localhost') || cleanUrl.includes('127.0.0.1')) {
         if (cleanUrl.includes('/storage/')) {
             cleanUrl = '/storage/' + cleanUrl.split('/storage/')[1];
