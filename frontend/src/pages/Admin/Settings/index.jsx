@@ -35,7 +35,12 @@ export default function SettingsView() {
         checkers, showCheckerModal, setShowCheckerModal, checkerForm, setCheckerForm, selectedChecker, setSelectedChecker, handleCheckerSubmit, openEditChecker, openAddChecker
     } = useSettings();
 
-    const isCashier = profileData?.role === 'Cashier';
+    const authUser = React.useMemo(() => {
+        const stored = localStorage.getItem('auth_user');
+        return stored ? JSON.parse(stored) : null;
+    }, []);
+
+    const isCashier = profileData?.role === 'Cashier' || authUser?.role === 'Cashier';
 
     // Force active tab to profile if cashier
     React.useEffect(() => {
@@ -48,7 +53,9 @@ export default function SettingsView() {
         <>
             <div className="top-bar">
                 <div>
-                    <h1 id="settingsPageTitle" style={{ fontSize: '20px', marginBottom: '2px' }}>System Settings</h1>
+                    <h1 id="settingsPageTitle" style={{ fontSize: '20px', marginBottom: '2px' }}>
+                        {isCashier ? 'My Profile' : 'System Settings'}
+                    </h1>
                     <div id="settingsPageDesc" className="page-description" style={{ marginTop: 0, fontSize: '12px' }}>
                         {isCashier ? 'Manage your personal details, photo, and account security.' : 'Configure inventory thresholds, categories, alerts, and employee access.'}
                     </div>
@@ -58,7 +65,7 @@ export default function SettingsView() {
 
             <div className="content-body settings-page-body">
                 {loading ? (
-                    <LoadingSpinner text="Loading settings..." />
+                    <LoadingSpinner text={isCashier ? 'Loading profile...' : 'Loading settings...'} />
                 ) : (
                     <div className="settings-tabs-wrap" style={{ paddingBottom: '60px' }}>
                     {/* Navigation Tabs Header (Hidden for Cashiers) */}

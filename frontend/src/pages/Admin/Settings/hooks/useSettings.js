@@ -190,6 +190,8 @@ export default function useSettings() {
     const loadSettingsData = async () => {
         setLoading(true);
         try {
+            let currentRole = profileData.role || (localStorage.getItem('auth_user') ? JSON.parse(localStorage.getItem('auth_user')).role : '');
+            
             // Load user profile
             const profileDataResponse = await fetchSettingData('user', '/user');
             if (profileDataResponse?.user) {
@@ -205,6 +207,9 @@ export default function useSettings() {
                 };
                 setProfileData(loadedProfile);
                 setInitialProfileData(loadedProfile);
+                if (loadedProfile.role) {
+                    currentRole = loadedProfile.role;
+                }
 
                 const stored = localStorage.getItem('auth_user');
                 if (stored) {
@@ -232,11 +237,13 @@ export default function useSettings() {
                 });
             }
 
-            // Load nested assets
+            // Load nested assets (only fetch Admin-only endpoints if user is Admin)
             loadCategories();
             loadVariants();
-            loadAlertRules();
-            loadEmployees();
+            if (currentRole && currentRole.toLowerCase() === 'admin') {
+                loadAlertRules();
+                loadEmployees();
+            }
             loadCheckers();
         } catch (err) {
             showToast('Failed to load system settings configurations.', 'error');
@@ -267,7 +274,9 @@ export default function useSettings() {
             const data = await fetchSettingData('alertRules', '/alert-rules');
             setAlertRules(data || []);
         } catch (e) {
-            console.error(e);
+            if (e.response?.status !== 403) {
+                console.error(e);
+            }
         }
     };
 
@@ -276,7 +285,9 @@ export default function useSettings() {
             const data = await fetchSettingData('employees', '/employees');
             setEmployees(data || []);
         } catch (e) {
-            console.error(e);
+            if (e.response?.status !== 403) {
+                console.error(e);
+            }
         }
     };
 
