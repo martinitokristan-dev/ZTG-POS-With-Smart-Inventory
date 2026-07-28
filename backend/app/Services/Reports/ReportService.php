@@ -202,14 +202,14 @@ class ReportService
         }
 
         // Transactions list for the sales report table (Excluding inventory restocks and system logs)
-        $transactionsQuery = Transaction::with(['items.product', 'customer', 'cashier', 'checker'])
+        $transactionsQuery = Transaction::with(['items', 'customer', 'cashier', 'checker'])
             ->whereNotIn('status', ['RESTOCKED', 'Restocked', 'Security Alert'])
             ->whereNotIn('type', ['system', 'restock']);
 
         if ($utcStart && $utcEnd) {
             $transactionsQuery->whereBetween('date', [$utcStart, $utcEnd]);
         }
-        $transactions = $transactionsQuery->orderByDesc('date')->limit(200)->get();
+        $transactions = $transactionsQuery->orderByDesc('date')->get();
 
         return [
             'total_revenue'      => $totalRevenue,
@@ -267,7 +267,7 @@ class ReportService
             })
             ->toArray();
 
-        // Revenue per product (from Completed transactions)
+        // Revenue per product (from Completed transactions) - Top 50 by revenue
         $revenuePerProductQuery = TransactionItem::select('product_id', DB::raw('SUM(transaction_items.price * transaction_items.qty) as revenue'))
             ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
             ->whereIn('transactions.status', ['Completed', 'Pending']);
@@ -276,6 +276,7 @@ class ReportService
         }
         $revenuePerProduct = $revenuePerProductQuery->groupBy('product_id')
             ->orderByDesc('revenue')
+            ->limit(50)
             ->get()
             ->map(function ($row) {
                 $prod = Product::find($row->product_id);
@@ -288,7 +289,7 @@ class ReportService
             })
             ->toArray();
 
-        // Dead stock (sales_count = 0 and created before X days)
+        // Dead stock (sales_count = 0 and created before X days) - Top 100 items
         $deadStock = Product::whereDoesntHave('transactionItems', function($q) {
                 $q->whereHas('transaction', function($tq) {
                     $tq->whereIn('status', ['Completed', 'Pending']);
@@ -296,6 +297,7 @@ class ReportService
             })
             ->where('created_at', '<', now()->subDays($deadStockDays))
             ->orderBy('name')
+            ->limit(100)
             ->get(['id', 'name', 'part_no', 'stock', 'created_at'])
             ->toArray();
 
