@@ -204,7 +204,7 @@ class ReportService
         }
 
         // Transactions list for the sales report table (Excluding inventory restocks and system logs)
-        $transactionsQuery = Transaction::with(['items', 'customer', 'cashier', 'checker'])
+        $transactionsQuery = Transaction::with(['items.product', 'customer', 'cashier', 'checker'])
             ->whereNotIn('status', ['RESTOCKED', 'Restocked', 'Security Alert'])
             ->whereNotIn('type', ['system', 'restock']);
 
