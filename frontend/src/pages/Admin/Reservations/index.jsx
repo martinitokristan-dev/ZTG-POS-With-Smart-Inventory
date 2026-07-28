@@ -54,6 +54,7 @@ export default function Reservations() {
             <AddReservationModal
                 isOpen={res.showAddModal}
                 onClose={() => { res.setShowAddModal(false); res.resetAddForm(); }}
+                onOpen={() => res.refreshProducts && res.refreshProducts()}
                 onSubmit={res.handleAddReservation}
                 custName={res.custName} setCustName={res.setCustName}
                 custPhone={res.custPhone} setCustPhone={res.setCustPhone}

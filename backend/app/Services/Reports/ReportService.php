@@ -127,7 +127,7 @@ class ReportService
                 $trendMap[$localHour] = ($trendMap[$localHour] ?? 0) + $tx->amount;
             }
 
-            for ($h = 8; $h <= 17; $h++) {
+            for ($h = 0; $h <= 23; $h++) {
                 $ampm = $h >= 12 ? ($h === 12 ? '12 PM' : ($h - 12) . ' PM') : ($h === 0 ? '12 AM' : $h . ' AM');
                 $last7Days[] = [
                     'date' => today('Asia/Manila')->format('Y-m-d') . ' ' . sprintf('%02d:00:00', $h),

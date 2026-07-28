@@ -4,7 +4,7 @@ import IOSTimePicker from '../../../../shared/components/IOSTimePicker';
 import IOSSelect from '../../../../shared/components/IOSSelect';
 
 export default function AddReservationModal({
-    isOpen, onClose, onSubmit,
+    isOpen, onClose, onOpen, onSubmit,
     custName, setCustName, custPhone, setCustPhone, custEmail, setCustEmail,
     pickupDate, setPickupDate, pickupTime, setPickupTime, notes, setNotes,
     paymentType, setPaymentType, paymentMethod, setPaymentMethod,
@@ -16,7 +16,6 @@ export default function AddReservationModal({
         const handleKeyDown = (e) => {
             if (isOpen && e.key === 'Enter') {
                 if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') return;
-                // prevent default to avoid double firing if focused on the form input
                 e.preventDefault();
                 const btn = document.getElementById('submitReservationBtn');
                 if (btn) btn.click();
@@ -24,6 +23,10 @@ export default function AddReservationModal({
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (isOpen && onOpen) onOpen();
     }, [isOpen]);
 
     if (!isOpen) return null;

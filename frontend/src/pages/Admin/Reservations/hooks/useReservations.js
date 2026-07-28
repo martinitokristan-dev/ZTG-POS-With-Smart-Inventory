@@ -8,7 +8,7 @@ const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
 
 export default function useReservations() {
-    const { products } = useProducts();
+    const { products, refetch: refreshProducts, searchPosProducts } = useProducts();
 
     /* ── User Session ── */
     const user = (() => { try { return JSON.parse(localStorage.getItem('auth_user')); } catch { return null; } })();
@@ -127,63 +127,59 @@ export default function useReservations() {
         setProductSearch(val);
         clearTimeout(searchTimeout.current);
         if (!val.trim()) { setSuggestions([]); return; }
-        searchTimeout.current = setTimeout(() => {
-            const q = val.toLowerCase();
-            
-            // Flatten products to include parent products and child variants
-            const searchableItems = [];
-            products.forEach(p => {
-                const basePartNo = p.part_no || p.partNo || '';
-                const opts = p.variant_options || p.variantOptions;
-                const optLabel = Array.isArray(opts) && opts.length > 0 ? opts.map(o => o.value).join(', ') : null;
+        searchTimeout.current = setTimeout(async () => {
+            try {
+                // Use server-side search so all 70k+ products are searchable
+                const raw = await searchPosProducts(val.trim());
+                const results = [];
+                raw.forEach(p => {
+                    const basePartNo = p.part_no || p.partNo || 'N/A';
+                    const opts = p.variant_options || p.variantOptions;
+                    const optLabel = Array.isArray(opts) && opts.length > 0 ? opts.map(o => o.value).join(', ') : null;
 
-                if (!p.variants || p.variants.length === 0) {
-                    searchableItems.push({
-                        id: p.id,
-                        name: optLabel && !p.name.includes(optLabel) ? `${p.name} (${optLabel})` : p.name,
-                        part_no: basePartNo || 'N/A',
-                        stock: p.stock,
-                        price1: p.price1,
-                        price2: p.price2 || p.price1,
-                    });
-                } else {
-                    // Include parent product if stock > 0
-                    if (p.stock > 0) {
-                        searchableItems.push({
+                    if (!p.variants || p.variants.length === 0) {
+                        results.push({
                             id: p.id,
-                            name: p.name,
-                            part_no: basePartNo || 'N/A',
+                            name: optLabel && !p.name.includes(optLabel) ? `${p.name} (${optLabel})` : p.name,
+                            part_no: basePartNo,
                             stock: p.stock,
                             price1: p.price1,
                             price2: p.price2 || p.price1,
                         });
-                    }
-                    // Include child variants
-                    p.variants.forEach(v => {
-                        const vOpts = v.variant_options || v.variantOptions;
-                        const vOptLabel = Array.isArray(vOpts) && vOpts.length > 0 ? vOpts.map(o => o.value).join(', ') : null;
-                        const vName = vOptLabel && !(v.name || p.name).includes(vOptLabel)
-                            ? `${v.name || p.name} (${vOptLabel})`
-                            : (v.name || p.name);
-
-                        searchableItems.push({
-                            id: v.id,
-                            name: vName,
-                            part_no: v.part_no || v.partNo || basePartNo || 'N/A',
-                            stock: v.stock,
-                            price1: v.price1 || p.price1,
-                            price2: v.price2 || v.price2 || p.price1,
+                    } else {
+                        if (p.stock > 0) {
+                            results.push({
+                                id: p.id,
+                                name: p.name,
+                                part_no: basePartNo,
+                                stock: p.stock,
+                                price1: p.price1,
+                                price2: p.price2 || p.price1,
+                            });
+                        }
+                        p.variants.forEach(v => {
+                            const vOpts = v.variant_options || v.variantOptions;
+                            const vOptLabel = Array.isArray(vOpts) && vOpts.length > 0 ? vOpts.map(o => o.value).join(', ') : null;
+                            const vName = vOptLabel && !(v.name || p.name).includes(vOptLabel)
+                                ? `${v.name || p.name} (${vOptLabel})`
+                                : (v.name || p.name);
+                            results.push({
+                                id: v.id,
+                                name: vName,
+                                part_no: v.part_no || v.partNo || basePartNo,
+                                stock: v.stock,
+                                price1: v.price1 || p.price1,
+                                price2: v.price2 || p.price2 || p.price1,
+                            });
                         });
-                    });
-                }
-            });
-
-            const results = searchableItems.filter(p => 
-                (p.name || '').toLowerCase().includes(q) ||
-                (p.part_no || '').toLowerCase().includes(q)
-            ).slice(0, 15);
-            setSuggestions(results);
-        }, 150);
+                    }
+                });
+                setSuggestions(results.slice(0, 15));
+            } catch (err) {
+                console.error('Reservation product search failed:', err);
+                setSuggestions([]);
+            }
+        }, 300);
     };
 
     const addToCart = (product, priceTier = 'price2') => {
@@ -382,7 +378,7 @@ export default function useReservations() {
         paymentType, setPaymentType, paymentMethod, setPaymentMethod,
         cartItems, productSearch, suggestions, addError, addLoading,
         handleProductSearch, addToCart, removeFromCart, updateQty, updateCartItemPriceTier,
-        resetAddForm, handleAddReservation,
+        resetAddForm, handleAddReservation, refreshProducts,
         subtotal, tax, total, depositAmt, balance,
 
         // Fulfill Modal State & Handlers
