@@ -229,25 +229,28 @@ class ReportService
         $startSuffix = ' 00:00:00';
         $endSuffix = ' 23:59:59';
 
+        $actualStart = ($startDate && strpos($startDate, ' ') !== false) ? $startDate : ($startDate ? $startDate . $startSuffix : null);
+        $actualEnd = ($endDate && strpos($endDate, ' ') !== false) ? $endDate : ($endDate ? $endDate . $endSuffix : null);
+
         // Top 10 selling products (computed from transactions in date range)
         $topSellersQuery = TransactionItem::select('product_id', DB::raw('SUM(qty) as sales_count'))
             ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
             ->where('transactions.status', 'Completed');
-        if ($startDate && $endDate) {
-            $topSellersQuery->whereBetween('transactions.date', [$startDate . $startSuffix, $endDate . $endSuffix]);
+        if ($actualStart && $actualEnd) {
+            $topSellersQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
         }
         $topSellers = $topSellersQuery->groupBy('product_id')
             ->orderByDesc('sales_count')
             ->limit(10)
             ->get()
-            ->map(function ($row) use ($startDate, $endDate, $startSuffix, $endSuffix) {
+            ->map(function ($row) use ($actualStart, $actualEnd) {
                 $prod = Product::find($row->product_id);
                 
                 // Get returns and refunds for this product in the date range
                 $retRefQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
                     ->where('product_id', $row->product_id);
-                if ($startDate && $endDate) {
-                    $retRefQuery->whereBetween('transactions.date', [$startDate . $startSuffix, $endDate . $endSuffix]);
+                if ($actualStart && $actualEnd) {
+                    $retRefQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
                 }
                 
                 $returns = (clone $retRefQuery)->where('transactions.status', 'Return')->sum('qty');
@@ -271,8 +274,8 @@ class ReportService
         $revenuePerProductQuery = TransactionItem::select('product_id', DB::raw('SUM(transaction_items.price * transaction_items.qty) as revenue'))
             ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
             ->whereIn('transactions.status', ['Completed', 'Pending']);
-        if ($startDate && $endDate) {
-            $revenuePerProductQuery->whereBetween('transactions.date', [$startDate . $startSuffix, $endDate . $endSuffix]);
+        if ($actualStart && $actualEnd) {
+            $revenuePerProductQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
         }
         $revenuePerProduct = $revenuePerProductQuery->groupBy('product_id')
             ->orderByDesc('revenue')
@@ -301,20 +304,18 @@ class ReportService
             ->get(['id', 'name', 'part_no', 'stock', 'created_at'])
             ->toArray();
 
-
-
         // Calculate store-wide totals for items (not transactions)
         $returnsQtyQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
             ->where('transactions.status', 'Return');
-        if ($startDate && $endDate) {
-            $returnsQtyQuery->whereBetween('transactions.date', [$startDate . $startSuffix, $endDate . $endSuffix]);
+        if ($actualStart && $actualEnd) {
+            $returnsQtyQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
         }
         $totalReturnsQty = (int) $returnsQtyQuery->sum('transaction_items.qty');
 
         $refundsQtyQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
             ->where('transactions.status', 'Refund');
-        if ($startDate && $endDate) {
-            $refundsQtyQuery->whereBetween('transactions.date', [$startDate . $startSuffix, $endDate . $endSuffix]);
+        if ($actualStart && $actualEnd) {
+            $refundsQtyQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
         }
         $totalRefundsQty = (int) $refundsQtyQuery->sum('transaction_items.qty');
 
