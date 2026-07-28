@@ -73,12 +73,28 @@ class TransactionService
             $query->where('cashier_id', $filters['cashier_id']);
         }
 
-        if (!empty($filters['date_from'])) {
-            $query->whereDate('date', '>=', $filters['date_from']);
-        }
-
-        if (!empty($filters['date_to'])) {
-            $query->whereDate('date', '<=', $filters['date_to']);
+        // Timeframe / Date filters in local timezone (Asia/Manila)
+        $timeframe = $filters['timeframe'] ?? $filters['time_filter'] ?? null;
+        if ($timeframe && strtolower($timeframe) !== 'all') {
+            $norm = str_replace([' ', '_'], '', strtolower($timeframe));
+            $nowLocal = \Carbon\Carbon::now('Asia/Manila');
+            [$startDate, $endDate] = match ($norm) {
+                'today'     => [$nowLocal->format('Y-m-d'), $nowLocal->format('Y-m-d')],
+                'thisweek'  => [$nowLocal->copy()->startOfWeek(\Carbon\Carbon::SUNDAY)->format('Y-m-d'), $nowLocal->format('Y-m-d')],
+                'thismonth' => [$nowLocal->copy()->startOfMonth()->format('Y-m-d'), $nowLocal->format('Y-m-d')],
+                default     => [null, null],
+            };
+            if ($startDate && $endDate) {
+                $utcStart = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $startDate . ' 00:00:00', 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
+                $utcEnd = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $endDate . ' 23:59:59', 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
+                $query->whereBetween('date', [$utcStart, $utcEnd]);
+            }
+        } elseif (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+            $startDate = $filters['date_from'] ?? '1970-01-01';
+            $endDate = $filters['date_to'] ?? '2099-12-31';
+            $utcStart = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $startDate . ' 00:00:00', 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
+            $utcEnd = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $endDate . ' 23:59:59', 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
+            $query->whereBetween('date', [$utcStart, $utcEnd]);
         }
 
         if (!empty($filters['search'])) {
@@ -237,6 +253,15 @@ class TransactionService
 
             $approver = User::find($approverId);
 
+            \Illuminate\Support\Facades\Log::info('[TransactionService] Processing refund/return status update', [
+                'transaction_id'  => $transaction->id,
+                'si_no'           => $transaction->si_no,
+                'previous_status' => is_object($transaction->status) ? $transaction->status->value : $transaction->status,
+                'previous_amount' => $transaction->amount,
+                'new_status'      => $refundType,
+                'refunded_amount' => $refundedAmount,
+            ]);
+
             $transaction->update([
                 'status'      => $refundType,
                 'refund_reason'=> $reason,
@@ -246,6 +271,13 @@ class TransactionService
                 'approval_code'=> $pin,
                 'or_no'       => $orNo,
                 'amount'      => $refundedAmount,
+            ]);
+
+            \Illuminate\Support\Facades\Log::info('[TransactionService] Refund/return status update completed', [
+                'transaction_id' => $transaction->id,
+                'si_no'          => $transaction->si_no,
+                'status'         => $refundType,
+                'amount'         => $refundedAmount,
             ]);
 
             return $transaction->fresh(['customer', 'cashier', 'approver', 'checker', 'items.product']);
@@ -317,6 +349,13 @@ class TransactionService
             $orNo = 'OR-VOID-' . now()->timestamp;
             $approver = User::find($adminId);
 
+            \Illuminate\Support\Facades\Log::info('[TransactionService] Processing transaction void', [
+                'transaction_id'  => $transaction->id,
+                'si_no'           => $transaction->si_no,
+                'previous_status' => is_object($transaction->status) ? $transaction->status->value : $transaction->status,
+                'amount'          => $transaction->amount,
+            ]);
+
             $transaction->update([
                 'status'        => TransactionStatus::VOID->value,
                 'void_reason'   => $voidReason,
@@ -324,6 +363,12 @@ class TransactionService
                 'approval_code' => $adminPin,
                 'or_no'         => $orNo,
                 'inv_action'    => $invAction,
+            ]);
+
+            \Illuminate\Support\Facades\Log::info('[TransactionService] Transaction void completed', [
+                'transaction_id' => $transaction->id,
+                'si_no'          => $transaction->si_no,
+                'status'         => TransactionStatus::VOID->value,
             ]);
 
             return $transaction->fresh(['customer', 'cashier', 'approver', 'checker', 'items.product']);
@@ -373,6 +418,7 @@ class TransactionService
 
             $transaction->update([
                 'status'          => TransactionStatus::COMPLETED->value,
+                'date'            => now(),
                 'payment_method'  => $paymentMethod,
                 'amount_tendered' => $amountTendered,
                 'approver_id'     => $adminId,

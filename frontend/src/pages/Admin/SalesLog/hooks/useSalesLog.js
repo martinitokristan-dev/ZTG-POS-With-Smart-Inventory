@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import usePaginatedCache from '../../../../shared/hooks/usePaginatedCache';
+import usePaginatedCache, { invalidateCachePage } from '../../../../shared/hooks/usePaginatedCache';
 import echo from '../../../../lib/echo';
 import api from '../../../../shared/api';
 
@@ -45,23 +45,31 @@ export default function useSalesLog() {
             sort_order = 'desc';
         }
 
+        const formatLocalDate = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
         let date_from = '';
         let date_to = '';
-        const today = new Date();
+        const now = new Date();
         
         if (timeFilter === 'Today') {
-            const dateStr = today.toISOString().split('T')[0];
-            date_from = dateStr;
-            date_to = dateStr;
+            const todayStr = formatLocalDate(now);
+            date_from = todayStr;
+            date_to = todayStr;
         } else if (timeFilter === 'This Week') {
-            const first = today.getDate() - today.getDay();
-            const firstDay = new Date(today.setDate(first));
-            date_from = firstDay.toISOString().split('T')[0];
-            date_to = new Date().toISOString().split('T')[0];
+            const dayOfWeek = now.getDay();
+            const sunday = new Date(now);
+            sunday.setDate(now.getDate() - dayOfWeek);
+            date_from = formatLocalDate(sunday);
+            date_to = formatLocalDate(now);
         } else if (timeFilter === 'This Month') {
-            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-            date_from = firstDay.toISOString().split('T')[0];
-            date_to = new Date().toISOString().split('T')[0];
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+            date_from = formatLocalDate(firstDay);
+            date_to = formatLocalDate(now);
         }
 
         return {
@@ -70,6 +78,7 @@ export default function useSalesLog() {
             search: searchParam,
             sort_by,
             sort_order,
+            timeframe: timeFilter,
             date_from,
             date_to,
             cashier_id: cashierFilter === 'All' ? '' : cashierFilter
@@ -120,8 +129,12 @@ export default function useSalesLog() {
         items.forEach(item => {
             const resolvedName = item.product?.name || item.name || 'Unknown Product';
             const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
+            const itemQty = Number(item.qty || 1);
+            const rawPrice = Number(item.original_price || item.price || 0);
+            const resolvedPrice = rawPrice > 0 ? rawPrice : (Number(t.amount || 0) / Math.max(1, itemQty));
             flattenedItems.push({
                 ...item,
+                price: resolvedPrice,
                 name: resolvedName,
                 part_no: resolvedPartNo,
                 _txDate: t.date || t.created_at,
@@ -131,6 +144,8 @@ export default function useSalesLog() {
                 _txChecker: t.checker?.name || '—',
                 _txPayment: t.payment_method || '—',
                 _txStatus: t.status,
+                _txAmount: t.amount,
+                _txDiscountAmount: t.discount_amount,
                 _txId: t.id
             });
         });
@@ -148,7 +163,7 @@ export default function useSalesLog() {
     let count = uniqueTxs.length;
 
     uniqueTxs.forEach(t => {
-        if (t.status === 'Completed' || t.status === 'Paid') {
+        if (['Completed', 'Paid', 'Deposit'].includes(t.status)) {
             totalSales += parseFloat(t.amount || 0);
         }
         if (t.status === 'Refund' || t.status === 'Return') {

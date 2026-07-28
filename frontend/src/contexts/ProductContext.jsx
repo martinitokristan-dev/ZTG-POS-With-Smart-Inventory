@@ -18,8 +18,12 @@ export const ProductProvider = ({ children }) => {
 
     const fetchData = useCallback(async () => {
         const token = localStorage.getItem('auth_token');
-        if (!token) return;
+        if (!token) {
+            setInitialLoading(false);
+            return;
+        }
 
+        setInitialLoading(true);
         const fetchStart = Date.now();
         try {
             const [prodRes, catRes] = await Promise.all([
@@ -96,52 +100,72 @@ export const ProductProvider = ({ children }) => {
     }, [fetchData]);
 
     useEffect(() => {
-        fetchData().finally(() => schedulePoll(300000));
-
         const token = localStorage.getItem('auth_token');
+        if (token) {
+            fetchData().finally(() => schedulePoll(300000));
+        } else {
+            setInitialLoading(false);
+        }
+
+        const handleAuthChange = () => {
+            const currentToken = localStorage.getItem('auth_token');
+            if (currentToken) {
+                fetchData();
+            }
+        };
+
+        window.addEventListener('storage', handleAuthChange);
+        window.addEventListener('auth-change', handleAuthChange);
+
         const userStr = localStorage.getItem('auth_user');
         let productChannel = null;
         let inventoryChannel = null;
 
         if (token && userStr) {
-            const user = JSON.parse(userStr);
-            if (['Admin', 'Supervisor', 'Cashier'].includes(user.role)) {
-                productChannel = echo.private('products')
-                    .listen('.ProductUpdated', (e) => {
-                        console.log('[Echo Debug] ProductUpdated event received:', e);
-                        setProducts(prev => prev.map(p => {
-                            if (p.id === e.productId) {
-                                return {
-                                    ...p,
-                                    ...e.changedFields,
-                                    price: parseFloat(e.changedFields.price1 ?? p.price1 ?? p.price),
-                                    retail_price: parseFloat(e.changedFields.price1 ?? p.price1 ?? p.retail_price)
-                                };
-                            }
-                            return p;
-                        }));
-                    });
-
-                inventoryChannel = echo.private('inventory')
-                    .listen('.InventoryUpdated', (e) => {
-                        const updateProductRecursively = (productsList) => {
-                            return productsList.map(p => {
-                                let updated = p;
+            try {
+                const user = JSON.parse(userStr);
+                if (['Admin', 'Supervisor', 'Cashier'].includes(user.role)) {
+                    productChannel = echo.private('products')
+                        .listen('.ProductUpdated', (e) => {
+                            console.log('[Echo Debug] ProductUpdated event received:', e);
+                            setProducts(prev => prev.map(p => {
                                 if (p.id === e.productId) {
-                                    updated = { ...updated, stock: e.newQuantity };
+                                    return {
+                                        ...p,
+                                        ...e.changedFields,
+                                        price: parseFloat(e.changedFields.price1 ?? p.price1 ?? p.price),
+                                        retail_price: parseFloat(e.changedFields.price1 ?? p.price1 ?? p.retail_price)
+                                    };
                                 }
-                                if (p.variants && p.variants.length > 0) {
-                                    updated = { ...updated, variants: updateProductRecursively(p.variants) };
-                                }
-                                return updated;
-                            });
-                        };
-                        setProducts(prev => updateProductRecursively(prev));
-                    });
+                                return p;
+                            }));
+                        });
+
+                    inventoryChannel = echo.private('inventory')
+                        .listen('.InventoryUpdated', (e) => {
+                            const updateProductRecursively = (productsList) => {
+                                return productsList.map(p => {
+                                    let updated = p;
+                                    if (p.id === e.productId) {
+                                        updated = { ...updated, stock: e.newQuantity };
+                                    }
+                                    if (p.variants && p.variants.length > 0) {
+                                        updated = { ...updated, variants: updateProductRecursively(p.variants) };
+                                    }
+                                    return updated;
+                                });
+                            };
+                            setProducts(prev => updateProductRecursively(prev));
+                        });
+                }
+            } catch (err) {
+                console.error("Failed to parse auth_user for Echo subscription:", err);
             }
         }
 
         return () => {
+            window.removeEventListener('storage', handleAuthChange);
+            window.removeEventListener('auth-change', handleAuthChange);
             if (pollTimer.current) clearTimeout(pollTimer.current);
             if (productChannel) {
                 echo.leaveChannel('private-products');

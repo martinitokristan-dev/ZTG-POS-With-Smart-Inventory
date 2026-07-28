@@ -90,7 +90,7 @@ export default function CheckoutModal({
             };
         } else if (paymentMethod === 'Cash') {
             if (tenderedVal < cartTotals.total) {
-                setError("Amount tendered is less than the total due.");
+                setError("Cash received is less than the total due.");
                 return;
             }
             paymentData = {
@@ -133,7 +133,7 @@ export default function CheckoutModal({
                 if (match) splitDetails += `<tr><td style="padding:2px 0 2px 8px;font-size:11px;color:#374151;">- ${match[1]}:</td><td style="padding:2px 0;font-size:11px;text-align:right;">&#8369;${match[2]}</td></tr>`;
             });
             if (completedTx.amount_tendered && completedTx.amount_tendered > 0) {
-                splitDetails += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Cash Tendered:</td><td style="padding:3px 0;font-size:11px;text-align:right;">&#8369;${Number(completedTx.amount_tendered).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;
+                splitDetails += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Cash Received:</td><td style="padding:3px 0;font-size:11px;text-align:right;">&#8369;${Number(completedTx.amount_tendered).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;
                 const cd = Math.max(0, completedTx.amount_tendered - completedTx.amount);
                 splitDetails += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Change:</td><td style="padding:3px 0;font-size:11px;text-align:right;">&#8369;${Number(cd).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;
             }
@@ -162,6 +162,7 @@ export default function CheckoutModal({
             buyerAddress: completedTx.customer?.address || '',
             items: mappedItems,
             total: completedTx.amount,
+            discountAmount: Number(completedTx.discount_amount || cartTotals.discount || 0),
             payment: completedTx.payment_method,
             tendered: completedTx.amount_tendered || 0,
             change: Math.max(0, (completedTx.amount_tendered || 0) - completedTx.amount),
@@ -294,9 +295,6 @@ export default function CheckoutModal({
                                                 <span style={{ flex: 1, paddingRight: '12px', fontWeight: '500' }}>
                                                     {item.product?.name || item.name || 'Item'}
                                                     {tierBadge}
-                                                    {(item.chinese_name || item.product?.chinese_name) && (
-                                                        <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 'normal' }}>{item.chinese_name || item.product?.chinese_name}</div>
-                                                    )}
                                                 </span>
                                                 <span style={{ color: 'var(--text-secondary)', width: '40px', textAlign: 'center' }}>x{item.qty}</span>
                                                 <span style={{ fontWeight: '600', width: '80px', textAlign: 'right' }}>₱{itemTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -307,6 +305,19 @@ export default function CheckoutModal({
                                 
                                 <div style={{ borderTop: '1px dashed var(--border)', margin: '16px 0' }}></div>
                                 
+                                {((completedTx.discount_amount && Number(completedTx.discount_amount) > 0) || cartTotals.discount > 0) && (
+                                    <>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
+                                            <span style={{ color: 'var(--text-secondary)' }}>Subtotal</span>
+                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>₱{(totalVal + Number(completedTx.discount_amount || cartTotals.discount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#2563EB', fontWeight: '600' }}>
+                                            <span>Discount</span>
+                                            <span>-₱{Number(completedTx.discount_amount || cartTotals.discount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                    </>
+                                )}
+
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '16px', color: completedTx.payment_method === 'P.O. (Pending)' ? 'var(--danger, #EF4444)' : 'var(--primary)' }}>
                                     <span>Grand Total</span>
                                     <span>₱{totalVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -323,7 +334,7 @@ export default function CheckoutModal({
                                         completedTx.payment_method === 'Cash' && (
                                             <>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                    <span>Cash Tendered:</span>
+                                                    <span>Cash Received:</span>
                                                     <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>₱{parseFloat(completedTx.amount_tendered || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </div>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -336,7 +347,7 @@ export default function CheckoutModal({
                                         <>
                                             {completedTx.amount_tendered > 0 && (
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                    <span>Cash Tendered:</span>
+                                                    <span>Cash Received:</span>
                                                     <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>₱{parseFloat(completedTx.amount_tendered || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </div>
                                             )}
@@ -627,7 +638,7 @@ export default function CheckoutModal({
                             <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                     <div className="form-group" style={{ marginBottom: 0 }}>
-                                        <label className="form-label" style={{ fontSize: '9px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Cash Tendered *</label>
+                                        <label className="form-label" style={{ fontSize: '9px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Cash Received *</label>
                                         <input type="number" className="form-control form-control-sm" placeholder="₱0.00" style={{ fontSize: '13px', fontWeight: '700', textAlign: 'right' }} value={amountTendered} onChange={e => setAmountTendered(e.target.value)} />
                                     </div>
                                     <div className="form-group" style={{ marginBottom: 0 }}>

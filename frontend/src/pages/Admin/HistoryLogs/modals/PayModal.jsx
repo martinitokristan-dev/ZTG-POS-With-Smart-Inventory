@@ -6,6 +6,8 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
     const [amountTendered, setAmountTendered] = useState('');
     const [adminPin, setAdminPin] = useState('');
     const [showPin, setShowPin] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
         if (isOpen && transaction) {
@@ -13,25 +15,38 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
             setAmountTendered('');
             setAdminPin('');
             setShowPin(false);
+            setIsSubmitting(false);
+            setErrorMessage('');
         }
     }, [isOpen, transaction]);
 
     if (!isOpen || !transaction) return null;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+
+        setErrorMessage('');
+        setIsSubmitting(true);
         
-        const user = (() => { try { return JSON.parse(localStorage.getItem('auth_user')); } catch { return null; } })();
-        const adminId = user?.id || 1;
+        try {
+            const user = (() => { try { return JSON.parse(localStorage.getItem('auth_user')); } catch { return null; } })();
+            const adminId = user?.id || 1;
 
-        const payload = {
-            payment_method: paymentMethod,
-            amount_tendered: Number(amountTendered),
-            admin_id: adminId,
-            admin_pin: adminPin
-        };
+            const payload = {
+                payment_method: paymentMethod,
+                amount_tendered: Number(amountTendered),
+                admin_id: adminId,
+                admin_pin: adminPin
+            };
 
-        onSubmit(transaction.id, payload);
+            await onSubmit(transaction.id, payload);
+        } catch (err) {
+            const msg = err.response?.data?.message || err.response?.data?.error || err.message || "Failed to process payment.";
+            setErrorMessage(msg);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const tenderedVal = parseFloat(amountTendered || 0);
@@ -43,7 +58,7 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
             <div className="modal-card" style={{ maxWidth: '500px', width: '95%', background: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.12)', border: '1px solid #E2E8F0' }}>
                 <form onSubmit={handleSubmit}>
                     <div className="modal-header" style={{ position: 'relative', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', padding: '20px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '8px' }}>
-                        <button type="button" style={{ position: 'absolute', top: '16px', right: '16px', color: '#94A3B8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', transition: 'color 0.2s' }} onClick={onClose}>
+                        <button type="button" style={{ position: 'absolute', top: '16px', right: '16px', color: '#94A3B8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', transition: 'color 0.2s' }} onClick={onClose} disabled={isSubmitting}>
                             <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                         
@@ -69,6 +84,12 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
     
                     <div className="modal-body" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '75vh', overflowY: 'auto' }}>
     
+                        {errorMessage && (
+                            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', padding: '12px 16px', color: '#DC2626', fontSize: '13px', fontWeight: '500' }}>
+                                {errorMessage}
+                            </div>
+                        )}
+
                         {/* Transaction Summary */}
                         <div style={{ background: '#F8FAFC', borderRadius: '12px', padding: '16px', border: '1px solid #E2E8F0' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -99,11 +120,12 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
                                         { value: 'GCash', label: 'GCash' },
                                         { value: 'Bank', label: 'Bank Transfer' }
                                     ]}
+                                    disabled={isSubmitting}
                                 />
                             </div>
 
                             <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Amount Tendered <span style={{ color: '#EF4444' }}>*</span></label>
+                                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Cash Received <span style={{ color: '#EF4444' }}>*</span></label>
                                 <input 
                                     type="number" 
                                     className="form-control" 
@@ -113,6 +135,7 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
                                     min={transaction.amount}
                                     step="0.01"
                                     required
+                                    disabled={isSubmitting}
                                 />
                             </div>
 
@@ -138,11 +161,13 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
                                         required
                                         maxLength={6}
                                         autoComplete="new-password"
+                                        disabled={isSubmitting}
                                     />
                                     <button 
                                         type="button" 
                                         onClick={() => setShowPin(!showPin)}
                                         style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', padding: '4px' }}
+                                        disabled={isSubmitting}
                                     >
                                         {showPin ? (
                                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
@@ -156,11 +181,11 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
                     </div>
     
                     <div className="modal-footer" style={{ padding: '20px 24px', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                        <button type="button" className="btn" style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#475569', fontWeight: '600', padding: '10px 20px', borderRadius: '8px' }} onClick={onClose}>
+                        <button type="button" className="btn" style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#475569', fontWeight: '600', padding: '10px 20px', borderRadius: '8px' }} onClick={onClose} disabled={isSubmitting}>
                             Cancel
                         </button>
-                        <button type="submit" className="btn" style={{ background: '#10B981', color: '#FFFFFF', border: 'none', fontWeight: '600', padding: '10px 24px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)' }} disabled={!adminPin || !paymentMethod || !amountTendered}>
-                            Confirm Payment
+                        <button type="submit" className="btn" style={{ background: '#10B981', color: '#FFFFFF', border: 'none', fontWeight: '600', padding: '10px 24px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)', opacity: isSubmitting ? 0.7 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer' }} disabled={!adminPin || !paymentMethod || !amountTendered || isSubmitting}>
+                            {isSubmitting ? 'Processing Payment...' : 'Confirm Payment'}
                         </button>
                     </div>
                 </form>

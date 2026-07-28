@@ -134,7 +134,7 @@ class ReservationService
                 ? TransactionStatus::PAID->value
                 : TransactionStatus::DEPOSIT->value;
 
-            Transaction::create([
+            $depositTx = Transaction::create([
                 'si_no' => $orderNo,
                 'date' => now(),
                 'customer_id' => $customer->id,
@@ -149,6 +149,20 @@ class ReservationService
                 'internal_notes' => "Reservation deposit for order {$orderNo}",
                 'business_snapshot' => Setting::getBusinessSnapshot(), // Frozen at deposit time
             ]);
+
+            // Create deposit transaction items proportional to deposit amount
+            $depositRatio = $total > 0 ? ($data['deposit_amount'] / $total) : 1;
+            foreach ($data['items'] as $item) {
+                $depositItemPrice = round($item['price'] * $depositRatio, 2);
+                TransactionItem::create([
+                    'transaction_id' => $depositTx->id,
+                    'product_id'     => $item['product_id'],
+                    'qty'            => $item['qty'],
+                    'price'          => $depositItemPrice,
+                    'price_tier'     => 'price1',
+                    'unit'           => 'pc',
+                ]);
+            }
 
             return $reservation->load(['customer', 'reservedBy', 'items.product']);
         });
@@ -252,34 +266,46 @@ class ReservationService
             $balanceAmount = max(0, $reservation->total - $reservation->deposit);
             $paymentMethod = $balanceAmount > 0 ? $data['payment_method'] : 'Pre-paid';
 
-            // 5. Create fulfillment transaction with frozen business snapshot at fulfillment time
-            $transaction = Transaction::create([
-                'si_no'             => $siNo,
-                'date'              => now(),
-                'customer_id'       => $reservation->customer_id,
-                'cashier_id'        => $fulfilledById,
-                'total_qty'         => $reservation->items->sum('qty'),
-                'amount'            => $reservation->total,
-                'amount_tendered'   => $data['balance_payment'],
-                'payment_method'    => $paymentMethod,
-                'doc_type'          => $data['doc_type'],
-                'status'            => TransactionStatus::COMPLETED->value,
-                'type'              => TransactionType::RESERVATION->value,
-                'order_ref'         => $reservation->order_no,
-                'internal_notes'    => "Fulfillment of reservation {$reservation->order_no}",
-                'business_snapshot' => Setting::getBusinessSnapshot(), // Frozen at fulfillment time
-            ]);
-
-            // 6. Create transaction items
-            foreach ($reservation->items as $item) {
-                TransactionItem::create([
-                    'transaction_id' => $transaction->id,
-                    'product_id' => $item->product_id,
-                    'qty' => $item->qty,
-                    'price' => $item->price,
-                    'price_tier' => 'price1',
-                    'unit' => 'pc',
+            // If reservation was paid in full upfront, update initial Paid transaction to Completed status
+            if ($balanceAmount == 0) {
+                Transaction::where('order_ref', $reservation->order_no)
+                    ->whereIn('status', [TransactionStatus::PAID->value, TransactionStatus::DEPOSIT->value])
+                    ->update([
+                        'status'   => TransactionStatus::COMPLETED->value,
+                        'doc_type' => $data['doc_type'],
+                    ]);
+            } else {
+                // 5. Create fulfillment transaction for remaining balance
+                $transaction = Transaction::create([
+                    'si_no'             => $siNo,
+                    'date'              => now(),
+                    'customer_id'       => $reservation->customer_id,
+                    'cashier_id'        => $fulfilledById,
+                    'total_qty'         => $reservation->items->sum('qty'),
+                    'amount'            => $balanceAmount,
+                    'amount_tendered'   => $data['balance_payment'],
+                    'payment_method'    => $paymentMethod,
+                    'doc_type'          => $data['doc_type'],
+                    'status'            => TransactionStatus::COMPLETED->value,
+                    'type'              => TransactionType::RESERVATION->value,
+                    'order_ref'         => $reservation->order_no,
+                    'internal_notes'    => "Fulfillment of reservation {$reservation->order_no}",
+                    'business_snapshot' => Setting::getBusinessSnapshot(), // Frozen at fulfillment time
                 ]);
+
+                // 6. Create transaction items proportional to fulfillment balance amount
+                $fulfillmentRatio = $reservation->total > 0 ? ($balanceAmount / $reservation->total) : 1;
+                foreach ($reservation->items as $item) {
+                    $balanceItemPrice = round($item->price * $fulfillmentRatio, 2);
+                    TransactionItem::create([
+                        'transaction_id' => $transaction->id,
+                        'product_id'     => $item->product_id,
+                        'qty'            => $item->qty,
+                        'price'          => $balanceItemPrice,
+                        'price_tier'     => 'price1',
+                        'unit'           => 'pc',
+                    ]);
+                }
             }
 
             // 7. Mark reservation as Completed

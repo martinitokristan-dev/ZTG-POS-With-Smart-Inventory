@@ -264,7 +264,7 @@ class CheckoutService
         if ($method === 'Cash') {
             if (($data['amount_tendered'] ?? 0) < $grandTotal) {
                 throw ValidationException::withMessages([
-                    'amount_tendered' => ['Cash tendered must be greater than or equal to the grand total.'],
+                    'amount_tendered' => ['Cash received must be greater than or equal to the grand total.'],
                 ]);
             }
         }

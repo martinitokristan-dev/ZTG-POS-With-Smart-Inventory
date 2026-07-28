@@ -39,7 +39,7 @@ export default function HistoryTable({
                 if (match) splitDetails += `<tr><td style="padding:2px 0 2px 8px;font-size:11px;color:#374151;">- ${match[1]}:</td><td style="padding:2px 0;font-size:11px;text-align:right;">&#8369;${match[2]}</td></tr>`;
             });
             if (tx.amount_tendered && tx.amount_tendered > 0) {
-                splitDetails += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Cash Tendered:</td><td style="padding:3px 0;font-size:11px;text-align:right;">&#8369;${Number(tx.amount_tendered).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;
+                splitDetails += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Cash Received:</td><td style="padding:3px 0;font-size:11px;text-align:right;">&#8369;${Number(tx.amount_tendered).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;
                 const cd = Math.max(0, tx.amount_tendered - tx.total_amount);
                 splitDetails += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Change:</td><td style="padding:3px 0;font-size:11px;text-align:right;">&#8369;${Number(cd).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;
             }
@@ -54,7 +54,9 @@ export default function HistoryTable({
             buyerTin: tx.customer?.tin || '',
             buyerAddress: tx.customer?.address || '',
             items: tx.items || [],
-            total: tx.total_amount,
+            total: tx.total_amount || tx.amount,
+            discountAmount: Number(tx.discount_amount || tx.discount || 0),
+            payment: tx.payment_method || 'Cash',
             tendered: tx.amount_tendered || 0,
             change: tx.change || 0,
             servedBy: tx.checker?.name || tx.cashier?.name || 'Cashier',

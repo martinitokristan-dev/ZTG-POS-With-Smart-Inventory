@@ -107,27 +107,37 @@ export default function FulfillOrderModal({
                         {/* RIGHT: Collect balance + transaction */}
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div>
-                                <h4 style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', marginBottom: '12px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Collect Balance Payment</h4>
-                                <div className="form-group" style={{ marginBottom: '12px' }}>
-                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>Payment Method <span style={{ color: 'var(--danger)' }}>*</span></label>
-                                    <IOSSelect
-                                        value={ffPaymentMethod}
-                                        onChange={(e) => setFfPaymentMethod(e.target.value)}
-                                        options={[
-                                            { value: 'Cash', label: 'Cash' },
-                                            { value: 'GCash', label: 'GCash' },
-                                            { value: 'Bank', label: 'Bank Transfer' }
-                                        ]}
-                                    />
-                                </div>
-                                <div className="form-group" style={{ marginBottom: '12px' }}>
-                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>Amount Received <span style={{ color: 'var(--danger)' }}>*</span></label>
-                                    <input type="number" className="form-control" min="0" required placeholder={`Minimum: ${fmt(ffBalanceDue)}`} value={ffAmountReceived} onChange={(e) => setFfAmountReceived(e.target.value)} style={{ fontSize: '14px', fontWeight: 600 }} />
-                                </div>
-                                <div className="form-group" style={{ marginBottom: 0 }}>
-                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>Change</label>
-                                    <input type="text" className="form-control" readOnly value={fmt(ffChange)} style={{ fontSize: '14px', fontWeight: 700, color: '#10B981', background: '#F8FAFC' }} />
-                                </div>
+                                <h4 style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', marginBottom: '12px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                                    {ffBalanceDue <= 0 ? 'Payment Status: Pre-paid' : 'Collect Balance Payment'}
+                                </h4>
+                                {ffBalanceDue <= 0 ? (
+                                    <div style={{ background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', padding: '10px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, marginBottom: '12px' }}>
+                                        ✓ This reservation was fully paid upfront. Balance due is ₱0.
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="form-group" style={{ marginBottom: '12px' }}>
+                                            <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>Payment Method <span style={{ color: 'var(--danger)' }}>*</span></label>
+                                            <IOSSelect
+                                                value={ffPaymentMethod}
+                                                onChange={(e) => setFfPaymentMethod(e.target.value)}
+                                                options={[
+                                                    { value: 'Cash', label: 'Cash' },
+                                                    { value: 'GCash', label: 'GCash' },
+                                                    { value: 'Bank', label: 'Bank Transfer' }
+                                                ]}
+                                            />
+                                        </div>
+                                        <div className="form-group" style={{ marginBottom: '12px' }}>
+                                            <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>Amount Received <span style={{ color: 'var(--danger)' }}>*</span></label>
+                                            <input type="number" className="form-control" min="0" required placeholder={`Minimum: ${fmt(ffBalanceDue)}`} value={ffAmountReceived} onChange={(e) => setFfAmountReceived(e.target.value)} style={{ fontSize: '14px', fontWeight: 600 }} />
+                                        </div>
+                                        <div className="form-group" style={{ marginBottom: 0 }}>
+                                            <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>Change</label>
+                                            <input type="text" className="form-control" readOnly value={fmt(ffChange)} style={{ fontSize: '14px', fontWeight: 700, color: '#10B981', background: '#F8FAFC' }} />
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             <div>

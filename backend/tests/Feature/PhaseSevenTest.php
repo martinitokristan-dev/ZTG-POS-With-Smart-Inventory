@@ -348,4 +348,165 @@ class PhaseSevenTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_refunding_a_sale_returns_revenue_to_original_amount_without_double_deduction()
+    {
+        $customer = Customer::create(['name' => 'Test Customer']);
+        $txDate = \Carbon\Carbon::now('Asia/Manila')->setTime(10, 0, 0)->setTimezone(config('app.timezone'));
+        
+        // 1. Initial Sale: 8500
+        $tx1 = Transaction::create([
+            'si_no'          => 'SI-INIT-1',
+            'date'           => $txDate,
+            'customer_id'    => $customer->id,
+            'cashier_id'     => $this->cashier->id,
+            'total_qty'      => 1,
+            'amount'         => 8500.00,
+            'payment_method' => 'Cash',
+            'status'         => TransactionStatus::COMPLETED->value,
+        ]);
+
+        $res1 = $this->actingAs($this->admin)->getJson('/api/reports/sales-summary?timeframe=today');
+        $res1->assertStatus(200)->assertJsonFragment(['total_revenue' => 8500.00]);
+
+        // 2. New Sale: +500 -> Total Revenue 9000
+        $tx2 = Transaction::create([
+            'si_no'          => 'SI-NEW-2',
+            'date'           => $txDate,
+            'customer_id'    => $customer->id,
+            'cashier_id'     => $this->cashier->id,
+            'total_qty'      => 1,
+            'amount'         => 500.00,
+            'payment_method' => 'Cash',
+            'status'         => TransactionStatus::COMPLETED->value,
+        ]);
+
+        $item2 = TransactionItem::create([
+            'transaction_id' => $tx2->id,
+            'product_id'     => Product::create(['name' => 'P1', 'part_no' => 'P1', 'category_id' => $this->category->id, 'stock' => 10, 'price1' => 500, 'price2' => 500, 'status' => 'Active'])->id,
+            'qty'            => 1,
+            'price'          => 500.00,
+            'price_tier'     => 'price1',
+            'unit'           => 'pc',
+        ]);
+
+        $res2 = $this->actingAs($this->admin)->getJson('/api/reports/sales-summary?timeframe=today');
+        $res2->assertStatus(200)->assertJsonFragment(['total_revenue' => 9000.00]);
+
+        // 3. Process Refund on New Sale (500)
+        $refundData = [
+            'approver_id'   => $this->admin->id,
+            'approval_pin'  => '1234',
+            'refund_type'   => 'Refund',
+            'restore_stock' => true,
+            'mark_damaged'  => false,
+            'reason'        => 'Customer Return',
+            'items'         => [
+                ['item_id' => $item2->id, 'qty' => 1]
+            ],
+        ];
+
+        $refundRes = $this->actingAs($this->admin)->postJson("/api/transactions/{$tx2->id}/refund", $refundData);
+        $refundRes->assertStatus(200);
+
+        // 4. Verify Revenue after Refund returns to 8500 (NOT 8000!)
+        $res3 = $this->actingAs($this->admin)->getJson('/api/reports/sales-summary?timeframe=today');
+        $res3->assertStatus(200)->assertJsonFragment(['total_revenue' => 8500.00]);
+    }
+
+    public function test_50_percent_deposit_records_deposit_on_reservation_date_and_balance_on_fulfillment()
+    {
+        $product = Product::create([
+            'name'        => 'Hydraulic Pump Unit',
+            'part_no'     => 'HPU-99',
+            'category_id' => $this->category->id,
+            'stock'       => 10,
+            'price1'      => 1000,
+            'price2'      => 1000,
+            'status'      => 'Active',
+        ]);
+
+        // 1. Create reservation with 50% deposit (500)
+        $resData = [
+            'customer_name'  => 'John Reserver',
+            'customer_phone' => '09170000000',
+            'payment_method' => 'Cash',
+            'payment_type'   => \App\Enums\PaymentType::DEPOSIT50->value,
+            'deposit_amount' => 500.00,
+            'pickup_date'    => now()->addDays(2)->format('Y-m-d'),
+            'items'          => [
+                ['product_id' => $product->id, 'qty' => 1, 'price' => 1000.00]
+            ],
+        ];
+
+        $createRes = $this->actingAs($this->cashier)->postJson('/api/reservations', $resData);
+        $createRes->assertStatus(201);
+        $reservationId = $createRes->json('reservation.id');
+
+        // Check Sales Summary on reservation date -> Deposit of 500 should be recorded in total_revenue
+        $sum1 = $this->actingAs($this->admin)->getJson('/api/reports/sales-summary?timeframe=thismonth');
+        $sum1->assertStatus(200)->assertJsonFragment(['total_revenue' => 500.00]);
+
+        // 2. Fulfill reservation with 500 balance payment
+        $fulfillData = [
+            'doc_type'        => 'S.I.',
+            'payment_method'  => 'Cash',
+            'balance_payment' => 500.00,
+        ];
+
+        $fulRes = $this->actingAs($this->cashier)->postJson("/api/reservations/{$reservationId}/fulfill", $fulfillData);
+        $fulRes->assertStatus(200);
+
+        // Check Sales Summary after fulfillment -> Total revenue should be 1000 (500 deposit + 500 balance)
+        $sum2 = $this->actingAs($this->admin)->getJson('/api/reports/sales-summary?timeframe=thismonth');
+        $sum2->assertStatus(200)->assertJsonFragment(['total_revenue' => 1000.00]);
+    }
+
+    public function test_100_percent_full_payment_records_revenue_on_reservation_date_and_zero_on_fulfillment()
+    {
+        $product = Product::create([
+            'name'        => 'Hydraulic Valve Unit',
+            'part_no'     => 'HVU-88',
+            'category_id' => $this->category->id,
+            'stock'       => 10,
+            'price1'      => 1500,
+            'price2'      => 1500,
+            'status'      => 'Active',
+        ]);
+
+        // 1. Create reservation with 100% full payment (1500)
+        $resData = [
+            'customer_name'  => 'Mary Fullpayer',
+            'customer_phone' => '09179999999',
+            'payment_method' => 'Cash',
+            'payment_type'   => \App\Enums\PaymentType::FULL->value,
+            'deposit_amount' => 1500.00,
+            'pickup_date'    => now()->addDays(2)->format('Y-m-d'),
+            'items'          => [
+                ['product_id' => $product->id, 'qty' => 1, 'price' => 1500.00]
+            ],
+        ];
+
+        $createRes = $this->actingAs($this->cashier)->postJson('/api/reservations', $resData);
+        $createRes->assertStatus(201);
+        $reservationId = $createRes->json('reservation.id');
+
+        // Check Sales Summary on reservation date -> Full 1500 should be recorded in total_revenue
+        $sum1 = $this->actingAs($this->admin)->getJson('/api/reports/sales-summary?timeframe=thismonth');
+        $sum1->assertStatus(200)->assertJsonFragment(['total_revenue' => 1500.00]);
+
+        // 2. Fulfill reservation with 0 balance payment (Pre-paid pickup)
+        $fulfillData = [
+            'doc_type'        => 'S.I.',
+            'payment_method'  => 'Cash',
+            'balance_payment' => 0.00,
+        ];
+
+        $fulRes = $this->actingAs($this->cashier)->postJson("/api/reservations/{$reservationId}/fulfill", $fulfillData);
+        $fulRes->assertStatus(200);
+
+        // Check Sales Summary after fulfillment -> Total revenue remains 1500 (No duplicate revenue added on pickup date)
+        $sum2 = $this->actingAs($this->admin)->getJson('/api/reports/sales-summary?timeframe=thismonth');
+        $sum2->assertStatus(200)->assertJsonFragment(['total_revenue' => 1500.00]);
+    }
 }

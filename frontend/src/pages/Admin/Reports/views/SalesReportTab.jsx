@@ -89,7 +89,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
         let validTxCount = 0;
 
         filteredTransactions.forEach(tx => {
-            if (tx.status === 'Completed' || tx.status === 'Pending') {
+            if (['Completed', 'Deposit', 'Paid'].includes(tx.status)) {
                 rev += Number(tx.amount || 0);
                 validTxCount += 1;
 
@@ -101,8 +101,6 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                 } else {
                     itemsSold += Number(tx.total_qty || 1);
                 }
-            } else if (tx.status === 'Refund') {
-                rev -= Number(tx.amount || 0);
             }
         });
 
@@ -138,14 +136,14 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                 });
 
                 const isDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void');
-                const unitPrice = Number(item.original_price || item.price || 0);
+                const qty = Number(item.qty || 1);
+                const rawPrice = Number(item.original_price || item.price || 0);
+                const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, qty));
                 const discountVal = getItemDiscountAmount(item, tx);
-                const grossRowAmount = (item.qty || 1) * unitPrice;
+                const grossRowAmount = qty * unitPrice;
                 const netRowAmount = Math.max(0, grossRowAmount - discountVal);
 
-                if (tx.status === 'Refund') {
-                    totalAmount -= netRowAmount;
-                } else if (!isDeduction) {
+                if (!isDeduction) {
                     totalQty += (item.qty || 0);
                     totalAmount += netRowAmount;
                     totalDiscountAmount += discountVal;
@@ -315,7 +313,8 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                     const resolvedName = item.product?.name || item.name || 'Unknown Product';
                                     const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
                                     const qty = Number(item.qty || 1);
-                                    const unitPrice = Number(item.original_price || item.price || 0);
+                                    const rawPrice = Number(item.original_price || item.price || 0);
+                                    const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, qty));
                                     const discountVal = getItemDiscountAmount(item, tx);
                                     const grossRowAmount = qty * unitPrice;
                                     const netRowAmount = Math.max(0, grossRowAmount - discountVal);

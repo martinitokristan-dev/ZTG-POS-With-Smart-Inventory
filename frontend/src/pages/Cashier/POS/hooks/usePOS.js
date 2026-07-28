@@ -10,7 +10,7 @@ import api from '../../../../shared/api';
 const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
 
 export default function usePOS() {
-    const { products: contextProducts, categories: backendCategories, searchPosProducts, initialLoading: contextLoading } = useProducts();
+    const { products: contextProducts, categories: backendCategories, searchPosProducts, initialLoading: contextLoading, refetch: refreshProducts } = useProducts();
     
     // Explicit loading state — NOT tied to products.length which caused infinite spinner
     const [loadingProducts, setLoadingProducts] = useState(true);
@@ -58,6 +58,14 @@ export default function usePOS() {
     }, []);
 
     // Modals
+
+    // If initial login context is empty, trigger product fetch immediately on mount
+    useEffect(() => {
+        const token = localStorage.getItem('auth_token');
+        if (token && contextProducts.length === 0 && !contextLoading && refreshProducts) {
+            refreshProducts();
+        }
+    }, [contextProducts.length, contextLoading, refreshProducts]);
 
     // When context finishes initial fetch or updates via real-time Echo, keep posProducts in sync
     useEffect(() => {

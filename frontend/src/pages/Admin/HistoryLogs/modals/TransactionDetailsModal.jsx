@@ -98,7 +98,6 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                         </td>
                                         <td style={{ padding: '10px 12px', color: '#334155' }}>
                                             <div style={{ fontWeight: '600' }}>{name}</div>
-                                            {chineseName && <div style={{ fontSize: '11px', color: '#94A3B8' }}>{chineseName}</div>}
                                         </td>
                                         <td style={{ padding: '10px 12px', textAlign: 'center', color: '#0F172A', fontWeight: '700' }}>{item.qty}</td>
                                         <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>

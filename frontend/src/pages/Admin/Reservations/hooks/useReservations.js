@@ -130,46 +130,58 @@ export default function useReservations() {
         searchTimeout.current = setTimeout(() => {
             const q = val.toLowerCase();
             
-            // Flatten products to include parent products (if no variants, or if base product itself has stock) and child variants
+            // Flatten products to include parent products and child variants
             const searchableItems = [];
             products.forEach(p => {
-                if (!p.parent_product_id) {
-                    // Base product: add if no variants OR if parent's own stock > 0
-                    if (!p.variants || p.variants.length === 0 || p.stock > 0) {
+                const basePartNo = p.part_no || p.partNo || '';
+                const opts = p.variant_options || p.variantOptions;
+                const optLabel = Array.isArray(opts) && opts.length > 0 ? opts.map(o => o.value).join(', ') : null;
+
+                if (!p.variants || p.variants.length === 0) {
+                    searchableItems.push({
+                        id: p.id,
+                        name: optLabel && !p.name.includes(optLabel) ? `${p.name} (${optLabel})` : p.name,
+                        part_no: basePartNo || 'N/A',
+                        stock: p.stock,
+                        price1: p.price1,
+                        price2: p.price2 || p.price1,
+                    });
+                } else {
+                    // Include parent product if stock > 0
+                    if (p.stock > 0) {
                         searchableItems.push({
                             id: p.id,
                             name: p.name,
-                            part_no: p.part_no || p.partNo || 'N/A',
+                            part_no: basePartNo || 'N/A',
                             stock: p.stock,
                             price1: p.price1,
                             price2: p.price2 || p.price1,
                         });
                     }
-                } else {
-                    // Variant product: add directly (since it is already flat in products list)
-                    const optionValues = Array.isArray(p.variant_options)
-                        ? p.variant_options.map(opt => opt.value).join(', ')
-                        : (Array.isArray(p.variantOptions) ? p.variantOptions.map(opt => opt.value).join(', ') : '');
-                    
-                    const displayName = optionValues && !p.name.includes(`(${optionValues})`)
-                        ? `${p.name} (${optionValues})`
-                        : p.name;
+                    // Include child variants
+                    p.variants.forEach(v => {
+                        const vOpts = v.variant_options || v.variantOptions;
+                        const vOptLabel = Array.isArray(vOpts) && vOpts.length > 0 ? vOpts.map(o => o.value).join(', ') : null;
+                        const vName = vOptLabel && !(v.name || p.name).includes(vOptLabel)
+                            ? `${v.name || p.name} (${vOptLabel})`
+                            : (v.name || p.name);
 
-                    searchableItems.push({
-                        id: p.id,
-                        name: displayName,
-                        part_no: p.part_no || p.partNo || 'N/A',
-                        stock: p.stock,
-                        price1: p.price1,
-                        price2: p.price2 || p.price1,
+                        searchableItems.push({
+                            id: v.id,
+                            name: vName,
+                            part_no: v.part_no || v.partNo || basePartNo || 'N/A',
+                            stock: v.stock,
+                            price1: v.price1 || p.price1,
+                            price2: v.price2 || v.price2 || p.price1,
+                        });
                     });
                 }
             });
 
             const results = searchableItems.filter(p => 
                 (p.name || '').toLowerCase().includes(q) ||
-                (p.part_no || p.partNo || '').toLowerCase().includes(q)
-            ).slice(0, 10); // Limit to 10 suggestions
+                (p.part_no || '').toLowerCase().includes(q)
+            ).slice(0, 15);
             setSuggestions(results);
         }, 150);
     };
@@ -279,7 +291,8 @@ export default function useReservations() {
     const openFulfill = (r) => {
         setSelected(r);
         setFfPaymentMethod('Cash');
-        setFfAmountReceived('');
+        const due = Math.max(0, Number(r?.total || 0) - Number(r?.deposit || 0));
+        setFfAmountReceived(due <= 0 ? '0' : '');
         setFfDocType('S.I.');
         setFfNotes('');
         setFfError('');
@@ -288,14 +301,15 @@ export default function useReservations() {
 
     const handleFulfill = async () => {
         setFfError('');
-        const balanceDue = Number(selected?.total || 0) - Number(selected?.deposit || 0);
-        if (!ffAmountReceived || parseFloat(ffAmountReceived) < 0) {
-            setFfError('Please enter the amount received.'); return;
+        const balanceDue = Math.max(0, Number(selected?.total || 0) - Number(selected?.deposit || 0));
+        const amountRec = parseFloat(ffAmountReceived) || 0;
+        if (balanceDue > 0 && (ffAmountReceived === '' || amountRec < balanceDue)) {
+            setFfError(`Please enter the amount received (minimum ${fmt(balanceDue)}).`); return;
         }
         setFfLoading(true);
         try {
             const res = await api.post(`/reservations/${selected.id}/fulfill`, {
-                balance_payment: parseFloat(ffAmountReceived),
+                balance_payment: balanceDue <= 0 ? 0 : amountRec,
                 payment_method: ffPaymentMethod,
                 doc_type: ffDocType,
                 notes: ffNotes,

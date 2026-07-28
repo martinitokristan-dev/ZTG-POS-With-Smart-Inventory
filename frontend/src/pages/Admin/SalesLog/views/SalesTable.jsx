@@ -42,7 +42,8 @@ export default function SalesTable({ loading, items, fmt, fmtDate }) {
                             const amountPrefix = isDeduction ? '- ' : '';
 
                             const qty = Number(item.qty || 1);
-                            const unitPrice = Number(item.original_price || item.price || 0);
+                            const rawPrice = Number(item.original_price || item.price || 0);
+                            const unitPrice = rawPrice > 0 ? rawPrice : (Number(item._txAmount || 0) / Math.max(1, qty));
                             const itemDisc = Number(item.discount || item.item_discount || 0);
                             const discountVal = itemDisc > 0 ? itemDisc * qty : Number(item._txDiscountAmount || 0);
                             const grossRow = qty * unitPrice;

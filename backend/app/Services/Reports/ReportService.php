@@ -45,7 +45,7 @@ class ReportService
             ? $endDate 
             : ($endDate ? Carbon::createFromFormat('Y-m-d H:i:s', $endDate . $endSuffix, 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s') : null);
 
-        $completedQuery = Transaction::whereIn('status', ['Completed', 'Pending']);
+        $completedQuery = Transaction::whereIn('status', ['Completed', 'Deposit', 'Paid']);
         $refundQuery = Transaction::whereIn('status', ['Refund', 'Return', 'Void']);
 
         if ($utcStart && $utcEnd) {
@@ -53,15 +53,24 @@ class ReportService
             $refundQuery->whereBetween('date', [$utcStart, $utcEnd]);
         }
 
-        $grossRevenue = (float) $completedQuery->sum('amount');
+        $completedRevenue = (float) $completedQuery->sum('amount');
         $refundedAmount = (float) $refundQuery->sum('amount');
-        $totalRevenue = max(0, $grossRevenue - $refundedAmount);
+        $grossRevenue = $completedRevenue + $refundedAmount;
+        $totalRevenue = max(0, $completedRevenue);
         $txCount = $completedQuery->count();
         $averageTx = $txCount > 0 ? round($totalRevenue / $txCount, 2) : 0.00;
 
+        \Illuminate\Support\Facades\Log::info('[ReportService] Sales summary computed', [
+            'completed_revenue' => $completedRevenue,
+            'refunded_amount'   => $refundedAmount,
+            'gross_revenue'     => $grossRevenue,
+            'total_revenue'     => $totalRevenue,
+            'tx_count'          => $txCount,
+        ]);
+
         // Total items sold (Net of refunded/returned quantities)
         $completedItemsQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-            ->whereIn('transactions.status', ['Completed', 'Pending']);
+            ->whereIn('transactions.status', ['Completed', 'Deposit', 'Paid']);
         $refundedItemsQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
             ->whereIn('transactions.status', ['Refund', 'Return', 'Void']);
 
@@ -69,11 +78,11 @@ class ReportService
             $completedItemsQuery->whereBetween('transactions.date', [$utcStart, $utcEnd]);
             $refundedItemsQuery->whereBetween('transactions.date', [$utcStart, $utcEnd]);
         }
-        $totalItemsSold = max(0, (int) $completedItemsQuery->sum('transaction_items.qty') - (int) $refundedItemsQuery->sum('transaction_items.qty'));
+        $totalItemsSold = max(0, (int) $completedItemsQuery->sum('transaction_items.qty'));
 
         // Top cashier
         $topCashierQuery = Transaction::with(['cashier'])->select('cashier_id', DB::raw('SUM(amount) as total_sales'))
-            ->whereIn('status', ['Completed', 'Pending']);
+            ->whereIn('status', ['Completed', 'Deposit', 'Paid']);
         if ($utcStart && $utcEnd) {
             $topCashierQuery->whereBetween('date', [$utcStart, $utcEnd]);
         }
@@ -94,7 +103,7 @@ class ReportService
 
         // Revenue by payment method
         $paymentMethodsQuery = Transaction::select('payment_method', DB::raw('SUM(amount) as total_sales'), DB::raw('COUNT(*) as tx_count'))
-            ->whereIn('status', ['Completed', 'Pending']);
+            ->whereIn('status', ['Completed', 'Deposit', 'Paid']);
         if ($utcStart && $utcEnd) {
             $paymentMethodsQuery->whereBetween('date', [$utcStart, $utcEnd]);
         }
@@ -112,7 +121,7 @@ class ReportService
         $last7Days = [];
 
         if ($norm === 'today') {
-            $trendRaw = Transaction::whereIn('status', ['Completed', 'Pending'])
+            $trendRaw = Transaction::whereIn('status', ['Completed', 'Deposit', 'Paid'])
                 ->whereBetween('date', [$utcStart, $utcEnd])
                 ->get();
 
@@ -131,7 +140,7 @@ class ReportService
                 ];
             }
         } elseif ($norm === 'thismonth') {
-            $trendRaw = Transaction::whereIn('status', ['Completed', 'Pending'])
+            $trendRaw = Transaction::whereIn('status', ['Completed', 'Deposit', 'Paid'])
                 ->whereBetween('date', [$utcStart, $utcEnd])
                 ->get();
 
@@ -153,7 +162,7 @@ class ReportService
                 ];
             }
         } elseif ($norm === 'thisyear') {
-            $trendRaw = Transaction::whereIn('status', ['Completed', 'Pending'])
+            $trendRaw = Transaction::whereIn('status', ['Completed', 'Deposit', 'Paid'])
                 ->whereBetween('date', [$utcStart, $utcEnd])
                 ->get();
 
@@ -173,7 +182,7 @@ class ReportService
             }
         } else {
             // Default to this week: Sunday to Saturday
-            $trendRaw = Transaction::whereIn('status', ['Completed', 'Pending'])
+            $trendRaw = Transaction::whereIn('status', ['Completed', 'Deposit', 'Paid'])
                 ->whereBetween('date', [$utcStart, $utcEnd])
                 ->get();
 

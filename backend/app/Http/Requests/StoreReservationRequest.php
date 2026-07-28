@@ -27,7 +27,7 @@ class StoreReservationRequest extends FormRequest
 
             // Reservation details
             'notes'               => 'nullable|string|max:500',
-            'pickup_date'         => 'required|date|after_or_equal:today',
+            'pickup_date'         => 'required|date',
             'pickup_time'         => 'nullable|string|max:10',
 
             // Payment

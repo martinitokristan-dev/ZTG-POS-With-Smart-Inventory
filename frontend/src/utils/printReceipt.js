@@ -111,13 +111,39 @@ export function printUnifiedReceipt(options) {
     };
     const cfg = typeConfig[type] || typeConfig['Sales'];
 
-    // Items table rows
+    // Calculate raw subtotal and total discount amount
+    const rawSubtotal = items.reduce((sum, item) => {
+        const p = Number(item.original_price || item.price || item.retail_price || 0);
+        const q = Number(item.qty || item.quantity || 1);
+        return sum + (p * q);
+    }, 0);
+
+    const txDiscount = Number(options.discountAmount || options.discount_amount || options.discount || 0);
+    const itemsDiscount = items.reduce((sum, item) => {
+        const d = Number(item.discount || item.item_discount || 0);
+        const q = Number(item.qty || item.quantity || 1);
+        return sum + (d * q);
+    }, 0);
+
+    const totalDiscount = txDiscount > 0 ? txDiscount : itemsDiscount;
+
+    const subtotalDisplay = (rawSubtotal > Number(total) && totalDiscount > 0) ? rawSubtotal : (Number(total) + totalDiscount);
+    const discountLines = totalDiscount > 0 ? `
+        <tr>
+            <td style="padding:2px 0;font-size:10px;color:#374151;font-weight:600;">Subtotal:</td>
+            <td style="padding:2px 0;font-size:10px;text-align:right;font-weight:600;">&#8369;${subtotalDisplay.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+        </tr>
+        <tr>
+            <td style="padding:2px 0;font-size:10px;color:#2563EB;font-weight:600;">Discount:</td>
+            <td style="padding:2px 0;font-size:10px;text-align:right;color:#2563EB;font-weight:700;">-&#8369;${totalDiscount.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+        </tr>
+    ` : '';
+
+    // Items table rows (Cleaned of Chinese Name and Part No)
     const itemsRows = items.map(item => `
         <tr style="border-bottom: 1px dashed #E5E7EB;">
-            <td style="padding: 5px 4px; font-size: 11px; line-height: 1.4;">
+            <td style="padding: 5px 4px; font-size: 11px; line-height: 1.4; font-weight: 600;">
                 ${item.name || item.product?.name || '—'}
-                ${(item.chinese_name || item.product?.chinese_name) ? `<br><span style="color: #4B5563; font-size: 10px;">${item.chinese_name || item.product?.chinese_name}</span>` : ''}<br>
-                <span style="color: #6B7280; font-size: 10px;">Part #: ${item.product?.part_no || item.partNo || item.part_no || '—'}</span>
             </td>
             <td style="padding: 5px 4px; text-align: center; font-size: 11px; width: 28px;">${item.unit || 'pc'}</td>
             <td style="padding: 5px 4px; text-align: center; font-size: 11px; width: 28px;">${item.qty || item.quantity}</td>
@@ -133,7 +159,7 @@ export function printUnifiedReceipt(options) {
     } else {
         paymentLines += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Payment Method:</td><td style="padding:3px 0;font-size:11px;text-align:right;font-weight:600;">${payment || '—'}</td></tr>`;
         if (tendered > 0 && type === 'Sales') {
-            paymentLines += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Cash Tendered:</td><td style="padding:3px 0;font-size:11px;text-align:right;">&#8369;${Number(tendered).toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
+            paymentLines += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Cash Received:</td><td style="padding:3px 0;font-size:11px;text-align:right;">&#8369;${Number(tendered).toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
             paymentLines += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Change:</td><td style="padding:3px 0;font-size:11px;text-align:right;">&#8369;${Number(change).toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
         }
     }
@@ -223,6 +249,7 @@ export function printUnifiedReceipt(options) {
             <!-- VAT Breakdown + Totals — uses tax_rate from businessInfo snapshot -->
             <div style="margin-bottom: 10px;">
                 <table style="width:100%; border-collapse: collapse;">
+                    ${discountLines}
                     <tr><td style="padding:2px 0;font-size:10px;color:#6B7280;">VATable Sales:</td><td style="padding:2px 0;font-size:10px;text-align:right;color:#6B7280;">&#8369;${(Number(total)/taxDivisor).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>
                     <tr><td style="padding:2px 0;font-size:10px;color:#6B7280;">VAT Amount (${taxRate}%):</td><td style="padding:2px 0;font-size:10px;text-align:right;color:#6B7280;">&#8369;${(Number(total)-Number(total)/taxDivisor).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>
                     <tr><td style="padding:2px 0;font-size:10px;color:#6B7280;">VAT-Exempt Sales:</td><td style="padding:2px 0;font-size:10px;text-align:right;color:#6B7280;">&#8369;0.00</td></tr>

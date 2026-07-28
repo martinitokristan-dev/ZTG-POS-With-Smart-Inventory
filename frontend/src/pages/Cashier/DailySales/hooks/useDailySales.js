@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import usePaginatedCache from '../../../../shared/hooks/usePaginatedCache';
+import usePaginatedCache, { invalidateCachePage } from '../../../../shared/hooks/usePaginatedCache';
 import echo from '../../../../lib/echo';
 
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';

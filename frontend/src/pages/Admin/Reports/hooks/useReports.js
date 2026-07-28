@@ -16,13 +16,18 @@ export default function useReports() {
     const [isReportGenerated, setIsReportGenerated] = useState(false);
     const [employees, setEmployees] = useState([]);
 
-    // Global Date Range State (Defaults to yesterday through today to cover overnight/past midnight sales)
-    const today = new Date();
-    const tzOffset = today.getTimezoneOffset() * 60000;
-    const todayStr = (new Date(Date.now() - tzOffset)).toISOString().slice(0, 10);
-    const yesterdayStr = (new Date(Date.now() - 86400000 - tzOffset)).toISOString().slice(0, 10);
+    // Global Date Range State (Defaults to Today)
+    const getTodayStr = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
     
-    const [startDate, setStartDate] = useState(yesterdayStr);
+    const todayStr = getTodayStr();
+    
+    const [startDate, setStartDate] = useState(todayStr);
     const [endDate, setEndDate] = useState(todayStr);
 
     const loadReports = async () => {

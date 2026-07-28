@@ -157,7 +157,7 @@ export default function useHistoryLogs() {
         } catch (err) {
             console.error("Pay failed:", err);
             showToast("Payment failed: " + (err.response?.data?.message || err.message), 'error');
-            alert("Payment failed: " + (err.response?.data?.message || err.message));
+            throw err;
         }
     };
 

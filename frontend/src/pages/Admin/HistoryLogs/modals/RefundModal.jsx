@@ -96,6 +96,15 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
         }));
     };
 
+    const handleQtyChange = (itemId, val, maxQty) => {
+        const parsed = parseInt(val, 10);
+        const newQty = isNaN(parsed) ? 1 : Math.max(1, Math.min(maxQty, parsed));
+        setSelectedItems(prev => ({
+            ...prev,
+            [itemId]: { ...prev[itemId], qty: newQty }
+        }));
+    };
+
     const handleActionTypeSelect = (type) => {
         setActionType(type);
         if (type === 'Refund') {
@@ -309,8 +318,27 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                                             <strong style={{ color: '#111827', fontSize: '13px' }}>{name}</strong>
                                                             <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>Part #: {partNo}</div>
                                                         </td>
-                                                        <td style={{ padding: '12px 8px', textAlign: 'center', verticalAlign: 'middle' }}>
-                                                            <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>{sel.qty}</span>
+                                                        <td style={{ padding: '8px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                                            <input 
+                                                                type="number"
+                                                                min="1"
+                                                                max={item.qty}
+                                                                value={sel.qty}
+                                                                disabled={!sel.selected}
+                                                                onChange={(e) => handleQtyChange(item.id, e.target.value, item.qty)}
+                                                                style={{
+                                                                    width: '58px',
+                                                                    padding: '4px 6px',
+                                                                    borderRadius: '6px',
+                                                                    border: '1px solid #CBD5E1',
+                                                                    textAlign: 'center',
+                                                                    fontSize: '13px',
+                                                                    fontWeight: '600',
+                                                                    backgroundColor: sel.selected ? '#FFFFFF' : '#F1F5F9',
+                                                                    color: sel.selected ? '#0F172A' : '#94A3B8'
+                                                                }}
+                                                            />
+                                                            <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>max {item.qty}</div>
                                                         </td>
                                                         <td style={{ textAlign: 'right', padding: '12px 8px', verticalAlign: 'middle' }}>
                                                             <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>{fmt(price)}</span>
