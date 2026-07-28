@@ -209,7 +209,7 @@ class ReportService
         if ($utcStart && $utcEnd) {
             $transactionsQuery->whereBetween('date', [$utcStart, $utcEnd]);
         }
-        $transactions = $transactionsQuery->orderByDesc('date')->get();
+        $transactions = $transactionsQuery->orderByDesc('date')->limit(200)->get();
 
         return [
             'total_revenue'      => $totalRevenue,
@@ -228,10 +228,6 @@ class ReportService
         $norm = $timeframe ? str_replace([' ', '_'], '', strtolower($timeframe)) : '';
         $startSuffix = ' 00:00:00';
         $endSuffix = ' 23:59:59';
-        if ($norm === 'today') {
-            $startSuffix = ' 08:00:00';
-            $endSuffix = ' 17:00:00';
-        }
 
         // Top 10 selling products (computed from transactions in date range)
         $topSellersQuery = TransactionItem::select('product_id', DB::raw('SUM(qty) as sales_count'))
