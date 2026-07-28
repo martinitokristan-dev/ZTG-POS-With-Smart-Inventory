@@ -253,14 +253,16 @@ class TransactionService
 
             $approver = User::find($approverId);
 
-            \Illuminate\Support\Facades\Log::info('[TransactionService] Processing refund/return status update', [
-                'transaction_id'  => $transaction->id,
-                'si_no'           => $transaction->si_no,
-                'previous_status' => is_object($transaction->status) ? $transaction->status->value : $transaction->status,
-                'previous_amount' => $transaction->amount,
-                'new_status'      => $refundType,
-                'refunded_amount' => $refundedAmount,
-            ]);
+            try {
+                \Illuminate\Support\Facades\Log::info('[TransactionService] Processing refund/return status update', [
+                    'transaction_id'  => $transaction->id,
+                    'si_no'           => $transaction->si_no,
+                    'previous_status' => is_object($transaction->status) ? $transaction->status->value : $transaction->status,
+                    'previous_amount' => $transaction->amount,
+                    'new_status'      => $refundType,
+                    'refunded_amount' => $refundedAmount,
+                ]);
+            } catch (\Throwable $logE) {}
 
             $transaction->update([
                 'status'      => $refundType,
@@ -273,12 +275,14 @@ class TransactionService
                 'amount'      => $refundedAmount,
             ]);
 
-            \Illuminate\Support\Facades\Log::info('[TransactionService] Refund/return status update completed', [
-                'transaction_id' => $transaction->id,
-                'si_no'          => $transaction->si_no,
-                'status'         => $refundType,
-                'amount'         => $refundedAmount,
-            ]);
+            try {
+                \Illuminate\Support\Facades\Log::info('[TransactionService] Refund/return status update completed', [
+                    'transaction_id' => $transaction->id,
+                    'si_no'          => $transaction->si_no,
+                    'status'         => $refundType,
+                    'amount'         => $refundedAmount,
+                ]);
+            } catch (\Throwable $logE) {}
 
             return $transaction->fresh(['customer', 'cashier', 'approver', 'checker', 'items.product']);
         });
@@ -349,12 +353,14 @@ class TransactionService
             $orNo = 'OR-VOID-' . now()->timestamp;
             $approver = User::find($adminId);
 
-            \Illuminate\Support\Facades\Log::info('[TransactionService] Processing transaction void', [
-                'transaction_id'  => $transaction->id,
-                'si_no'           => $transaction->si_no,
-                'previous_status' => is_object($transaction->status) ? $transaction->status->value : $transaction->status,
-                'amount'          => $transaction->amount,
-            ]);
+            try {
+                \Illuminate\Support\Facades\Log::info('[TransactionService] Processing transaction void', [
+                    'transaction_id'  => $transaction->id,
+                    'si_no'           => $transaction->si_no,
+                    'previous_status' => is_object($transaction->status) ? $transaction->status->value : $transaction->status,
+                    'amount'          => $transaction->amount,
+                ]);
+            } catch (\Throwable $logE) {}
 
             $transaction->update([
                 'status'        => TransactionStatus::VOID->value,
@@ -365,11 +371,13 @@ class TransactionService
                 'inv_action'    => $invAction,
             ]);
 
-            \Illuminate\Support\Facades\Log::info('[TransactionService] Transaction void completed', [
-                'transaction_id' => $transaction->id,
-                'si_no'          => $transaction->si_no,
-                'status'         => TransactionStatus::VOID->value,
-            ]);
+            try {
+                \Illuminate\Support\Facades\Log::info('[TransactionService] Transaction void completed', [
+                    'transaction_id' => $transaction->id,
+                    'si_no'          => $transaction->si_no,
+                    'status'         => TransactionStatus::VOID->value,
+                ]);
+            } catch (\Throwable $logE) {}
 
             return $transaction->fresh(['customer', 'cashier', 'approver', 'checker', 'items.product']);
         });

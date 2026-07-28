@@ -56,13 +56,15 @@ class ReportService
         $txCount = $completedQuery->count();
         $averageTx = $txCount > 0 ? round($totalRevenue / $txCount, 2) : 0.00;
 
-        \Illuminate\Support\Facades\Log::info('[ReportService] Sales summary computed', [
-            'completed_revenue' => $completedRevenue,
-            'refunded_amount'   => $refundedAmount,
-            'gross_revenue'     => $grossRevenue,
-            'total_revenue'     => $totalRevenue,
-            'tx_count'          => $txCount,
-        ]);
+        try {
+            \Illuminate\Support\Facades\Log::info('[ReportService] Sales summary computed', [
+                'completed_revenue' => $completedRevenue,
+                'refunded_amount'   => $refundedAmount,
+                'gross_revenue'     => $grossRevenue,
+                'total_revenue'     => $totalRevenue,
+                'tx_count'          => $txCount,
+            ]);
+        } catch (\Throwable $logE) {}
 
         // Total items sold (Net of refunded/returned quantities)
         $completedItemsQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')

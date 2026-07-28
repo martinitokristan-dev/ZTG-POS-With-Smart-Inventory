@@ -48,7 +48,9 @@ class ReportController extends Controller
             $data = $this->reportService->getSalesSummary($startDate, $endDate, $timeframe);
             return response()->json($data);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('[ReportController] salesSummary error: ' . $e->getMessage(), ['exception' => $e]);
+            try {
+                \Illuminate\Support\Facades\Log::error('[ReportController] salesSummary error: ' . $e->getMessage(), ['exception' => $e]);
+            } catch (\Throwable $logE) {}
             return response()->json([
                 'total_revenue'       => 0,
                 'transaction_count'   => 0,
@@ -113,7 +115,9 @@ class ReportController extends Controller
             $data = $this->reportService->getProductPerformance($deadStockDays, $utcStart, $utcEnd, $timeframe);
             return response()->json($data);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('[ReportController] productPerformance error: ' . $e->getMessage(), ['exception' => $e]);
+            try {
+                \Illuminate\Support\Facades\Log::error('[ReportController] productPerformance error: ' . $e->getMessage(), ['exception' => $e]);
+            } catch (\Throwable $logE) {}
             return response()->json([
                 'top_sellers'         => [],
                 'revenue_per_product' => [],
@@ -144,7 +148,9 @@ class ReportController extends Controller
             $data = $this->reportService->getRefundVoidAnalysis($utcStart, $utcEnd);
             return response()->json($data);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('[ReportController] refundVoidAnalysis error: ' . $e->getMessage(), ['exception' => $e]);
+            try {
+                \Illuminate\Support\Facades\Log::error('[ReportController] refundVoidAnalysis error: ' . $e->getMessage(), ['exception' => $e]);
+            } catch (\Throwable $logE) {}
             return response()->json([
                 'summary' => [],
                 'details' => [],
@@ -162,7 +168,9 @@ class ReportController extends Controller
             $data = $this->reportService->getCustomerLog();
             return response()->json($data);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('[ReportController] customerLog error: ' . $e->getMessage(), ['exception' => $e]);
+            try {
+                \Illuminate\Support\Facades\Log::error('[ReportController] customerLog error: ' . $e->getMessage(), ['exception' => $e]);
+            } catch (\Throwable $logE) {}
             return response()->json([]);
         }
     }
