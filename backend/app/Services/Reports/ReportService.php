@@ -32,10 +32,6 @@ class ReportService
 
         $startSuffix = ' 00:00:00';
         $endSuffix = ' 23:59:59';
-        if ($norm === 'today') {
-            $startSuffix = ' 08:00:00';
-            $endSuffix = ' 17:00:00';
-        }
 
         // Convert local dates to App timezone for queries
         $utcStart = ($startDate && strpos($startDate, ' ') !== false) 

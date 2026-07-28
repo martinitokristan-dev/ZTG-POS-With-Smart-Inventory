@@ -45,7 +45,12 @@ class ReservationService
         if (!empty($filters['search'])) {
             $query->where(function ($q) use ($filters) {
                 $q->where('order_no', 'like', '%' . $filters['search'] . '%')
-                    ->orWhereHas('customer', fn($cq) => $cq->where('name', 'like', '%' . $filters['search'] . '%'));
+                    ->orWhereHas('customer', fn($cq) => $cq->where('name', 'like', '%' . $filters['search'] . '%'))
+                    ->orWhereHas('items.product', fn($pq) => $pq
+                        ->where('name', 'like', '%' . $filters['search'] . '%')
+                        ->orWhere('part_no', 'like', '%' . $filters['search'] . '%')
+                        ->orWhere('variant_option', 'like', '%' . $filters['search'] . '%')
+                    );
             });
         }
 
