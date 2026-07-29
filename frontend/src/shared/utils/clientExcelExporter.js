@@ -108,7 +108,7 @@ export const exportSalesToExcel = (transactionsItems = [], options = {}) => {
     const paymentStyle = isPo ? 'color: #C00000; font-weight: bold;' : 'color: #000000;';
 
     const siDrVal = tx.si_no || tx.receipt_number || '-';
-    const serveByVal = tx.cashier?.real_name || tx.cashier?.name || tx.checker?.name || 'SYSTEM';
+    const serveByVal = tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || 'SYSTEM';
 
     tableRows += `
       <tr style="height: 24px;">
@@ -215,7 +215,7 @@ export const exportSalesToCSV = (transactionsItems = [], options = {}) => {
     const customerVal = (tx.customer_name || tx.customer?.name || (tx.customer_id ? `Customer #${tx.customer_id}` : 'WALK-IN')).replace(/"/g, '""');
     const paymentVal = formatPaymentMethod(tx.payment_method).replace(/"/g, '""');
     const siDrVal = (tx.si_no || tx.receipt_number || '-').replace(/"/g, '""');
-    const serveByVal = (tx.cashier?.real_name || tx.cashier?.name || tx.checker?.name || 'SYSTEM').replace(/"/g, '""');
+    const serveByVal = (tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || 'SYSTEM').replace(/"/g, '""');
 
     const row = [
       `"${dateVal}"`,

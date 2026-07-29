@@ -319,7 +319,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                     const grossRowAmount = qty * unitPrice;
                                     const netRowAmount = Math.max(0, grossRowAmount - discountVal);
                                     const customerVal = tx.customer_name || tx.customer?.name || (tx.customer_id ? `Customer #${tx.customer_id}` : 'WALK-IN');
-                                    const serveByVal = tx.cashier?.real_name || tx.cashier?.name || tx.checker?.name || '—';
+                                    const serveByVal = tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || '—';
 
                                     return (
                                         <tr key={`${tx.id}-${item.id || i}`}>
