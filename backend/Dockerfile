@@ -19,6 +19,10 @@ RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd pdo_pgsql
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Increase PHP upload limit to match frontend's 12MB validation limit
+RUN echo "upload_max_filesize = 15M" > /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size = 20M" >> /usr/local/etc/php/conf.d/uploads.ini
+
 # Set working directory
 WORKDIR /var/www/html
 
