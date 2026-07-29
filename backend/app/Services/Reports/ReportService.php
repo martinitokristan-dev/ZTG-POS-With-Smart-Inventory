@@ -18,15 +18,15 @@ class ReportService
     public function getSalesSummary($startDate = null, $endDate = null, $timeframe = null): array
     {
         $norm = $timeframe ? str_replace([' ', '_'], '', strtolower($timeframe)) : 'thisweek';
-        
+
         // Resolve date strings in local timezone
         if (!$startDate || !$endDate) {
             $nowLocal = now('Asia/Manila');
             [$startDate, $endDate] = match ($norm) {
-                'today'     => [$nowLocal->format('Y-m-d'), $nowLocal->format('Y-m-d')],
+                'today' => [$nowLocal->format('Y-m-d'), $nowLocal->format('Y-m-d')],
                 'thismonth' => [$nowLocal->startOfMonth()->format('Y-m-d'), now('Asia/Manila')->format('Y-m-d')],
-                'thisyear'  => [$nowLocal->startOfYear()->format('Y-m-d'), now('Asia/Manila')->format('Y-m-d')],
-                default     => [$nowLocal->startOfWeek(0)->format('Y-m-d'), now('Asia/Manila')->format('Y-m-d')],
+                'thisyear' => [$nowLocal->startOfYear()->format('Y-m-d'), now('Asia/Manila')->format('Y-m-d')],
+                default => [$nowLocal->startOfWeek(0)->format('Y-m-d'), now('Asia/Manila')->format('Y-m-d')],
             };
         }
 
@@ -34,11 +34,11 @@ class ReportService
         $endSuffix = ' 23:59:59';
 
         // Convert local dates to App timezone for queries
-        $utcStart = ($startDate && strpos($startDate, ' ') !== false) 
-            ? $startDate 
+        $utcStart = ($startDate && strpos($startDate, ' ') !== false)
+            ? $startDate
             : ($startDate ? Carbon::createFromFormat('Y-m-d H:i:s', $startDate . $startSuffix, 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s') : null);
-        $utcEnd = ($endDate && strpos($endDate, ' ') !== false) 
-            ? $endDate 
+        $utcEnd = ($endDate && strpos($endDate, ' ') !== false)
+            ? $endDate
             : ($endDate ? Carbon::createFromFormat('Y-m-d H:i:s', $endDate . $endSuffix, 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s') : null);
 
         $completedQuery = Transaction::whereIn('status', ['Completed', 'Deposit', 'Paid']);
@@ -59,12 +59,13 @@ class ReportService
         try {
             \Illuminate\Support\Facades\Log::info('[ReportService] Sales summary computed', [
                 'completed_revenue' => $completedRevenue,
-                'refunded_amount'   => $refundedAmount,
-                'gross_revenue'     => $grossRevenue,
-                'total_revenue'     => $totalRevenue,
-                'tx_count'          => $txCount,
+                'refunded_amount' => $refundedAmount,
+                'gross_revenue' => $grossRevenue,
+                'total_revenue' => $totalRevenue,
+                'tx_count' => $txCount,
             ]);
-        } catch (\Throwable $logE) {}
+        } catch (\Throwable $logE) {
+        }
 
         // Total items sold (Net of refunded/returned quantities)
         $completedItemsQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
@@ -93,8 +94,8 @@ class ReportService
         if ($topCashierRow) {
             $cashierUser = User::find($topCashierRow->cashier_id);
             $topCashier = [
-                'cashier_id'  => $topCashierRow->cashier_id,
-                'name'        => $cashierUser ? $cashierUser->name : 'Unknown',
+                'cashier_id' => $topCashierRow->cashier_id,
+                'name' => $cashierUser ? $cashierUser->name : 'Unknown',
                 'total_sales' => (float) $topCashierRow->total_sales,
             ];
         }
@@ -109,9 +110,9 @@ class ReportService
             ->groupBy('payment_method')
             ->get()
             ->map(fn($row) => [
-                'name'           => $row->payment_method,
-                'amount'         => (float) $row->total_sales,
-                'count'          => (int) $row->tx_count,
+                'name' => $row->payment_method,
+                'amount' => (float) $row->total_sales,
+                'count' => (int) $row->tx_count,
             ])
             ->toArray();
 
@@ -155,7 +156,7 @@ class ReportService
                 $dateStr = $dt->format('Y-m-d');
                 $last7Days[] = [
                     'date' => $dateStr,
-                    'day' => (string)$i,
+                    'day' => (string) $i,
                     'revenue' => (float) ($trendMap[$dateStr] ?? 0),
                 ];
             }
@@ -214,14 +215,14 @@ class ReportService
         $transactions = $transactionsQuery->orderByDesc('date')->get();
 
         return [
-            'total_revenue'      => $totalRevenue,
-            'transaction_count'  => $txCount,
-            'average_transaction'=> $averageTx,
-            'total_items_sold'   => $totalItemsSold,
-            'top_cashier'        => $topCashier,
+            'total_revenue' => $totalRevenue,
+            'transaction_count' => $txCount,
+            'average_transaction' => $averageTx,
+            'total_items_sold' => $totalItemsSold,
+            'top_cashier' => $topCashier,
             'revenue_by_payment' => $paymentMethods,
-            'last_7_days'        => $last7Days,
-            'transactions'       => $transactions,
+            'last_7_days' => $last7Days,
+            'transactions' => $transactions,
         ];
     }
 
@@ -235,7 +236,7 @@ class ReportService
         $actualEnd = ($endDate && strpos($endDate, ' ') !== false) ? $endDate : ($endDate ? $endDate . $endSuffix : null);
 
         // Top 10 selling products (computed from transactions in date range)
-        $topSellersQuery = TransactionItem::select('product_id', DB::raw('SUM(qty) as sales_count'))
+        $topSellersQuery = TransactionItem::select('product_id', DB::raw('SUM(qty) as sales_count'), DB::raw('SUM(transaction_items.price * transaction_items.qty) as revenue'))
             ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
             ->where('transactions.status', 'Completed');
         if ($actualStart && $actualEnd) {
@@ -247,24 +248,25 @@ class ReportService
             ->get()
             ->map(function ($row) use ($actualStart, $actualEnd) {
                 $prod = Product::find($row->product_id);
-                
+
                 // Get returns and refunds for this product in the date range
                 $retRefQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
                     ->where('product_id', $row->product_id);
                 if ($actualStart && $actualEnd) {
                     $retRefQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
                 }
-                
+
                 $returns = (clone $retRefQuery)->where('transactions.status', 'Return')->sum('qty');
                 $refunds = (clone $retRefQuery)->where('transactions.status', 'Refund')->sum('qty');
 
                 return [
-                    'product_id'    => $row->product_id,
-                    'name'          => $prod ? $prod->name : 'Deleted Product',
-                    'part_no'       => $prod ? $prod->part_no : 'N/A',
-                    'category'      => $prod && $prod->category ? $prod->category->name : 'Uncategorized',
-                    'sales_count'   => (int) $row->sales_count,
-                    'stock'         => $prod ? $prod->stock : 0,
+                    'product_id' => $row->product_id,
+                    'name' => $prod ? $prod->name : 'Deleted Product',
+                    'part_no' => $prod ? $prod->part_no : 'N/A',
+                    'category' => $prod && $prod->category ? $prod->category->name : 'Uncategorized',
+                    'sales_count' => (int) $row->sales_count,
+                    'revenue' => (float) $row->revenue,
+                    'stock' => $prod ? $prod->stock : 0,
                     'returns_count' => (int) $returns,
                     'refunds_count' => (int) $refunds,
                     'damaged_count' => $prod ? $prod->damaged : 0, // Using absolute damaged stock count
@@ -287,19 +289,19 @@ class ReportService
                 $prod = Product::find($row->product_id);
                 return [
                     'product_id' => $row->product_id,
-                    'name'       => $prod ? $prod->name : 'Deleted Product',
-                    'part_no'    => $prod ? $prod->part_no : 'N/A',
-                    'revenue'    => (float) $row->revenue,
+                    'name' => $prod ? $prod->name : 'Deleted Product',
+                    'part_no' => $prod ? $prod->part_no : 'N/A',
+                    'revenue' => (float) $row->revenue,
                 ];
             })
             ->toArray();
 
         // Dead stock (sales_count = 0 and created before X days) - Top 100 items
-        $deadStock = Product::whereDoesntHave('transactionItems', function($q) {
-                $q->whereHas('transaction', function($tq) {
-                    $tq->whereIn('status', ['Completed', 'Pending']);
-                });
-            })
+        $deadStock = Product::whereDoesntHave('transactionItems', function ($q) {
+            $q->whereHas('transaction', function ($tq) {
+                $tq->whereIn('status', ['Completed', 'Pending']);
+            });
+        })
             ->where('created_at', '<', now()->subDays($deadStockDays))
             ->orderBy('name')
             ->limit(100)
@@ -324,10 +326,10 @@ class ReportService
         $totalDamaged = (int) Product::sum('damaged');
 
         return [
-            'top_sellers'         => $topSellers,
+            'top_sellers' => $topSellers,
             'revenue_per_product' => $revenuePerProduct,
-            'dead_stock'          => $deadStock,
-            'totals'              => [
+            'dead_stock' => $deadStock,
+            'totals' => [
                 'returns_qty' => $totalReturnsQty,
                 'refunds_qty' => $totalRefundsQty,
                 'damaged_qty' => $totalDamaged,
@@ -382,11 +384,11 @@ class ReportService
             ->toArray();
 
         return [
-            'total_refunds'      => $refundCount,
-            'total_voids'        => $voidCount,
-            'refund_amount'      => $refundAmount,
+            'total_refunds' => $refundCount,
+            'total_voids' => $voidCount,
+            'refund_amount' => $refundAmount,
             'top_refund_reasons' => $topRefundReasons,
-            'top_void_reasons'   => $topVoidReasons,
+            'top_void_reasons' => $topVoidReasons,
         ];
     }
 
@@ -410,16 +412,16 @@ class ReportService
             ->orderByDesc('total_spent')
             ->get()
             ->map(fn($row) => [
-                'customer_id'         => $row->customer_id,
-                'name'                => $row->name,
-                'phone'               => $row->phone,
-                'contact_number'      => $row->phone,
-                'tx_count'            => (int) $row->tx_count,
-                'total_purchases'     => (int) $row->tx_count,
-                'total_spent'         => (float) $row->total_spent,
+                'customer_id' => $row->customer_id,
+                'name' => $row->name,
+                'phone' => $row->phone,
+                'contact_number' => $row->phone,
+                'tx_count' => (int) $row->tx_count,
+                'total_purchases' => (int) $row->tx_count,
+                'total_spent' => (float) $row->total_spent,
                 'first_purchase_date' => $row->first_transaction,
-                'last_purchase_date'  => $row->last_transaction,
-                'last_transaction'    => $row->last_transaction,
+                'last_purchase_date' => $row->last_transaction,
+                'last_transaction' => $row->last_transaction,
             ])
             ->toArray();
     }
@@ -432,20 +434,20 @@ class ReportService
         // 1. Calculate status counts
         $sellableQuery = Product::where(function ($q) {
             $q->whereNotNull('parent_product_id')
-              ->orWhere(function ($sub) {
-                  $sub->whereNull('parent_product_id')
-                      ->where(function ($sub2) {
-                          $sub2->where('stock', '>', 0)
-                               ->orWhereDoesntHave('variants');
-                      });
-              });
+                ->orWhere(function ($sub) {
+                    $sub->whereNull('parent_product_id')
+                        ->where(function ($sub2) {
+                            $sub2->where('stock', '>', 0)
+                                ->orWhereDoesntHave('variants');
+                        });
+                });
         });
 
         $totalProducts = (clone $sellableQuery)->count();
         $activeCount = (clone $sellableQuery)->where('status', 'Active')->count();
         $lowStockCount = (clone $sellableQuery)->where(function ($q) {
             $q->where('stock', '>', 0)
-              ->whereRaw('stock <= IFNULL(alert_limit, 5)');
+                ->whereRaw('stock <= IFNULL(alert_limit, 5)');
         })->count();
         $outOfStockCount = (clone $sellableQuery)->where('stock', 0)->count();
 
@@ -467,12 +469,14 @@ class ReportService
         }
 
         // 2. Query products with filters
-        $query = Product::with(['category', 'variants' => function($q) use ($salesSubquery, $filters) {
+        $query = Product::with([
+            'category',
+            'variants' => function ($q) use ($salesSubquery, $filters) {
                 $q->with('variantOptions.type')->select('products.*');
                 if (isset($filters['paginate']) && $filters['paginate']) {
                     $q->selectSub(clone $salesSubquery, 'sales_count');
                 }
-                
+
                 if (!empty($filters['status'])) {
                     $q->where('status', $filters['status']);
                 }
@@ -483,7 +487,9 @@ class ReportService
                             ->orWhere('part_no', 'like', '%' . $filters['search'] . '%');
                     });
                 }
-            }, 'variants.variantOptions.type'])
+            },
+            'variants.variantOptions.type'
+        ])
             ->select('products.*')
             ->whereNull('parent_product_id');
 
@@ -498,20 +504,20 @@ class ReportService
         if (!empty($filters['status'])) {
             $query->where(function ($q) use ($filters) {
                 $q->where('status', $filters['status'])
-                  ->orWhereHas('variants', function ($sub) use ($filters) {
-                      $sub->where('status', $filters['status']);
-                  });
+                    ->orWhereHas('variants', function ($sub) use ($filters) {
+                        $sub->where('status', $filters['status']);
+                    });
             });
         }
 
         if (!empty($filters['search'])) {
             $query->where(function ($q) use ($filters) {
                 $q->where('name', 'like', '%' . $filters['search'] . '%')
-                  ->orWhere('part_no', 'like', '%' . $filters['search'] . '%')
-                  ->orWhereHas('variants', function ($sub) use ($filters) {
-                      $sub->where('name', 'like', '%' . $filters['search'] . '%')
-                          ->orWhere('part_no', 'like', '%' . $filters['search'] . '%');
-                  });
+                    ->orWhere('part_no', 'like', '%' . $filters['search'] . '%')
+                    ->orWhereHas('variants', function ($sub) use ($filters) {
+                        $sub->where('name', 'like', '%' . $filters['search'] . '%')
+                            ->orWhere('part_no', 'like', '%' . $filters['search'] . '%');
+                    });
             });
         }
 
@@ -523,10 +529,10 @@ class ReportService
 
         return [
             'summary' => [
-                'total_products'      => $totalProducts,
-                'active_count'        => $activeCount,
-                'low_stock_count'     => $lowStockCount,
-                'out_of_stock_count'  => $outOfStockCount,
+                'total_products' => $totalProducts,
+                'active_count' => $activeCount,
+                'low_stock_count' => $lowStockCount,
+                'out_of_stock_count' => $outOfStockCount,
             ],
             'products' => $products,
         ];

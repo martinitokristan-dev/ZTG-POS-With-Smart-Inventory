@@ -11,7 +11,7 @@ export function useDashboard() {
     const [loading, setLoading] = useState(true);
 
     const [currentTimeRange, setCurrentTimeRange] = useState('Today');
-    
+
     // UI state
     const [stats, setStats] = useState({
         totalStock: 0,
@@ -25,7 +25,7 @@ export function useDashboard() {
     // Replace local fetch with context
     const { unreadCount: notificationsCount } = useNotifications();
     const { inventory: products } = useInventory();
-    
+
     // Top selling products state
     const [topProducts, setTopProducts] = useState([]);
 
@@ -55,7 +55,7 @@ export function useDashboard() {
                 if (topSellers.length > 0) {
                     const maxSales = topSellers[0].sales_count || 1;
                     const mapped = topSellers.slice(0, 5).map((p, idx) => {
-                        const calculatedPercentage = p.stock > 0 
+                        const calculatedPercentage = p.stock > 0
                             ? Math.min(Math.round((p.sales_count / p.stock) * 100), 100)
                             : (p.sales_count > 0 ? 100 : 0);
                         return {
@@ -64,7 +64,7 @@ export function useDashboard() {
                             partNo: p.part_no,
                             category: p.category || 'Heavy Parts',
                             unitsSold: p.sales_count,
-                            revenue: p.sales_count * (p.price1 || 1000), // Estimate revenue
+                            revenue: p.revenue || 0,
                             percentage: calculatedPercentage,
                             image: p.image || ''
                         };
