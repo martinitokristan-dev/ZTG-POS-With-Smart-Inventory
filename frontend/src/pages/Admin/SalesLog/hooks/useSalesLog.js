@@ -74,6 +74,7 @@ export default function useSalesLog() {
 
         return {
             status: statusParam,
+            type: 'sale',
             payment_method: paymentParam,
             search: searchParam,
             sort_by,
@@ -115,9 +116,14 @@ export default function useSalesLog() {
         };
     }, [refetch, page]);
 
+    // Exclude inventory/system/restock transactions at the transaction level BEFORE flattening
+    // This catches any that slip through the backend type=sale filter (e.g. via real-time WebSocket events)
+    const EXCLUDED_STATUSES = new Set(['Restocked', 'Damaged', 'Security Alert']);
+    const saleTransactions = transactions.filter(t => !EXCLUDED_STATUSES.has(t.status));
+
     // Flatten transactions into items to match the Sales Log mockup
     let flattenedItems = [];
-    transactions.forEach(t => {
+    saleTransactions.forEach(t => {
         const items = (t.items && t.items.length > 0) ? t.items : [{
             id: null,
             name: t.itemName || 'Transaction',
@@ -151,7 +157,6 @@ export default function useSalesLog() {
         });
     });
 
-    // We no longer filter client-side because backend handles it via usePaginatedCache
     let filteredItems = flattenedItems;
 
     // Dynamic Summary calculation

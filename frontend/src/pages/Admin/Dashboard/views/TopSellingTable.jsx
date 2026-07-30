@@ -18,29 +18,33 @@ export default function TopSellingTable({ topProducts }) {
                 </button>
             </div>
             <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                        <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
-                            {['Rank', 'Product', 'Part Number', 'Category', 'Units Sold', 'Revenue', 'Sales Performance'].map(h => (
-                                <th key={h} style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#64748B', fontWeight: 700, padding: '14px 16px', textAlign: 'left' }}>{h}</th>
-                            ))}
+                        <tr style={{ borderBottom: '2px solid var(--table-border)', background: 'var(--table-header-bg)' }}>
+                            <th style={{ fontSize: 13, letterSpacing: '0.02em', color: 'var(--table-text-secondary)', fontWeight: 600, padding: '12px 16px', textAlign: 'left' }}>Rank</th>
+                            <th style={{ fontSize: 13, letterSpacing: '0.02em', color: 'var(--table-text-secondary)', fontWeight: 600, padding: '12px 16px', textAlign: 'left' }}>Product</th>
+                            <th style={{ fontSize: 13, letterSpacing: '0.02em', color: 'var(--table-text-secondary)', fontWeight: 600, padding: '12px 16px', textAlign: 'left' }}>Part Number</th>
+                            <th style={{ fontSize: 13, letterSpacing: '0.02em', color: 'var(--table-text-secondary)', fontWeight: 600, padding: '12px 16px', textAlign: 'left' }}>Category</th>
+                            <th style={{ fontSize: 13, letterSpacing: '0.02em', color: 'var(--table-text-secondary)', fontWeight: 600, padding: '12px 16px', textAlign: 'right' }}>Units Sold</th>
+                            <th style={{ fontSize: 13, letterSpacing: '0.02em', color: 'var(--table-text-secondary)', fontWeight: 600, padding: '12px 16px', textAlign: 'right' }}>Revenue</th>
+                            <th style={{ fontSize: 13, letterSpacing: '0.02em', color: 'var(--table-text-secondary)', fontWeight: 600, padding: '12px 16px', textAlign: 'right' }}>Sales Performance</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody style={{ fontSize: 15 }}>
                         {topProducts.map((p) => (
-                            <tr key={p.rank} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                                <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 600, color: '#64748B' }}>{p.rank}</td>
-                                <td style={{ padding: '14px 16px', fontSize: 13, color: '#0F172A', fontWeight: 600 }}>{p.name}</td>
-                                <td style={{ padding: '14px 16px', fontSize: 13, color: '#64748B' }}>{p.partNo}</td>
-                                <td style={{ padding: '14px 16px', fontSize: 13, color: '#64748B' }}>{p.category}</td>
-                                <td style={{ padding: '14px 16px', fontSize: 13, color: '#0F172A', fontWeight: 600 }}>{p.unitsSold}</td>
-                                <td style={{ padding: '14px 16px', fontSize: 13, color: '#0F172A', fontWeight: 600 }}>₱{p.revenue.toLocaleString()}</td>
-                                <td style={{ padding: '14px 16px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, maxWidth: 200 }}>
+                            <tr key={p.rank} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '48px' }}>
+                                <td style={{ padding: '12px 16px', fontSize: 15, fontWeight: 600, color: 'var(--table-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>#{p.rank}</td>
+                                <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-primary)', fontWeight: 600 }}>{p.name}</td>
+                                <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-primary)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{p.partNo}</td>
+                                <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-secondary)', fontWeight: 500 }}>{p.category}</td>
+                                <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-primary)', fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{p.unitsSold}</td>
+                                <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-primary)', fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{p.revenue.toLocaleString()}</td>
+                                <td style={{ padding: '12px 16px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, maxWidth: 200, marginLeft: 'auto' }}>
                                         <div style={{ flex: 1, height: 6, backgroundColor: '#E2E8F0', borderRadius: 4, overflow: 'hidden' }}>
                                             <div style={{ width: `${p.percentage}%`, height: '100%', backgroundColor: '#3B82F6', borderRadius: 4, transition: 'width 0.4s ease' }} />
                                         </div>
-                                        <span style={{ fontSize: 12, fontWeight: 600, color: '#475569', minWidth: '32px', textAlign: 'right' }}>
+                                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--table-text-secondary)', minWidth: '36px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                                             {p.percentage}%
                                         </span>
                                     </div>

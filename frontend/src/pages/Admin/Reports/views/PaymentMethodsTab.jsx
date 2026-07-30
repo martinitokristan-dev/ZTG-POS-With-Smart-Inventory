@@ -132,39 +132,39 @@ export default function PaymentMethodsTab({ salesSummary, employees = [], fmt, s
             <div className="section-card">
                 <div className="section-card-header">Payment Methods Breakdown</div>
                 <div style={{ overflowX: 'auto' }}>
-                    <table className="reports-table">
-                        <thead>
+                    <table className="reports-table data-table">
+                        <thead style={{ fontSize: '13px', color: 'var(--table-text-secondary)', background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)' }}>
                             <tr>
-                                <th>PAYMENT METHOD</th>
-                                <th>TRANSACTIONS</th>
-                                <th>TOTAL AMOUNT</th>
-                                <th>% OF TOTAL SALES</th>
+                                <th style={{ fontWeight: '600', letterSpacing: '0.02em' }}>Payment Method</th>
+                                <th style={{ textAlign: 'right', fontWeight: '600', letterSpacing: '0.02em' }}>Transactions</th>
+                                <th style={{ textAlign: 'right', fontWeight: '600', letterSpacing: '0.02em' }}>Total Amount</th>
+                                <th style={{ textAlign: 'right', fontWeight: '600', letterSpacing: '0.02em' }}>% of Total Sales</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody style={{ fontSize: '15px' }}>
                             {methods.length === 0 ? (
-                                <tr><td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No payment methods found for the selected date range.</td></tr>
+                                <tr><td colSpan="4" style={{ textAlign: 'center', color: 'var(--table-text-muted)', fontSize: '15px' }}>No payment methods found for the selected date range.</td></tr>
                             ) : methods.map((m, i) => {
                                 const percentage = totalRev > 0 ? ((m.amount / totalRev) * 100).toFixed(1) : 0;
                                 return (
-                                    <tr key={i}>
-                                        <td>
+                                    <tr key={i} style={{ minHeight: '48px' }}>
+                                        <td style={{ fontSize: '15px', fontWeight: '600', color: 'var(--table-text-primary)' }}>
                                             <strong>{m.name}</strong>
                                             {i === 0 && m.amount > 0 && <span className="badge badge-success" style={{ marginLeft: '8px' }}>Top</span>}
                                         </td>
-                                        <td>{m.count}</td>
-                                        <td style={{ fontWeight: '700' }}>{fmt(m.amount)}</td>
-                                        <td>{percentage}%</td>
+                                        <td style={{ textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{m.count}</td>
+                                        <td style={{ fontWeight: '600', textAlign: 'right', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{fmt(m.amount)}</td>
+                                        <td style={{ textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{percentage}%</td>
                                     </tr>
                                 );
                             })}
                         </tbody>
                         <tfoot>
-                            <tr style={{ background: '#F8FAFC', fontWeight: '700', borderTop: '2px solid var(--border)' }}>
-                                <td style={{ padding: '14px 16px' }}>TOTAL</td>
-                                <td style={{ padding: '14px 16px' }}>{methods.reduce((sum, m) => sum + m.count, 0)}</td>
-                                <td style={{ padding: '14px 16px' }}>{fmt(methods.reduce((sum, m) => sum + m.amount, 0))}</td>
-                                <td style={{ padding: '14px 16px' }}>{totalRev > 0 ? '100%' : '—'}</td>
+                            <tr style={{ background: 'var(--table-header-bg)', fontWeight: '600', borderTop: '2px solid var(--table-border)', fontSize: '15px' }}>
+                                <td style={{ padding: '14px 16px', fontWeight: '600', color: 'var(--table-text-primary)' }}>Total</td>
+                                <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{methods.reduce((sum, m) => sum + m.count, 0)}</td>
+                                <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{fmt(methods.reduce((sum, m) => sum + m.amount, 0))}</td>
+                                <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{totalRev > 0 ? '100%' : '—'}</td>
                             </tr>
                         </tfoot>
                     </table>

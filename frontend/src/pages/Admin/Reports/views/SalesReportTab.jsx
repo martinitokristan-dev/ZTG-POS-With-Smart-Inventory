@@ -279,27 +279,27 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
             <div className="section-card">
                 <div className="section-card-header">Sales Transactions</div>
                 <div style={{ overflowX: 'auto' }}>
-                    <table className="reports-table">
-                        <thead>
+                    <table className="reports-table data-table">
+                        <thead style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B', background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)' }}>
                             <tr>
-                                <th>DATE</th>
-                                <th>S.I./C.I./D.R.</th>
-                                <th>PART NO.</th>
-                                <th>PRODUCT</th>
-                                <th style={{ textAlign: 'center' }}>QTY</th>
-                                <th style={{ textAlign: 'right' }}>PRICE</th>
-                                <th style={{ textAlign: 'right' }}>SALES</th>
-                                <th>CUSTOMER NAME</th>
-                                <th>PAYMENT</th>
-                                <th style={{ textAlign: 'center' }}>DISCOUNTED</th>
-                                <th>SERVE BY</th>
-                                <th>STATUS</th>
+                                <th style={{ fontWeight: '600' }}>Date</th>
+                                <th style={{ fontWeight: '600' }}>S.I./C.I./D.R.</th>
+                                <th style={{ fontWeight: '600' }}>Part No.</th>
+                                <th style={{ fontWeight: '600' }}>Product</th>
+                                <th style={{ textAlign: 'center', fontWeight: '600' }}>Qty</th>
+                                <th style={{ textAlign: 'right', fontWeight: '600' }}>Price</th>
+                                <th style={{ textAlign: 'right', fontWeight: '600' }}>Sales</th>
+                                <th style={{ fontWeight: '600' }}>Customer Name</th>
+                                <th style={{ fontWeight: '600' }}>Payment</th>
+                                <th style={{ textAlign: 'right', fontWeight: '600' }}>Discounted</th>
+                                <th style={{ fontWeight: '600' }}>Served By</th>
+                                <th style={{ fontWeight: '600' }}>Status</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody style={{ fontSize: '15px' }}>
                             {flattenedTransactionsItems.length === 0 ? (
                                 <tr>
-                                    <td colSpan="12" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                    <td colSpan="12" style={{ textAlign: 'center', color: 'var(--table-text-muted)', fontSize: '15px' }}>
                                         No transactions found for the selected date range.
                                     </td>
                                 </tr>
@@ -322,21 +322,21 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                     const serveByVal = tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || '—';
 
                                     return (
-                                        <tr key={`${tx.id}-${item.id || i}`}>
-                                            <td style={{ color: '#64748B', whiteSpace: 'nowrap' }}>{fmtDate(tx.date || tx.created_at)}</td>
-                                            <td style={{ fontWeight: '700', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                                        <tr key={`${tx.id}-${item.id || i}`} style={{ minHeight: '48px' }}>
+                                            <td style={{ color: 'var(--table-text-secondary)', whiteSpace: 'nowrap', fontSize: '15px', fontWeight: '500' }}>{fmtDate(tx.date || tx.created_at)}</td>
+                                            <td style={{ fontWeight: '600', color: 'var(--table-text-primary)', whiteSpace: 'nowrap', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>
                                                 <CopyableText text={tx.si_no || tx.receipt_number} label="SI Number" />
                                             </td>
-                                            <td style={{ color: 'var(--text-secondary)', fontFamily: 'monospace', fontWeight: '600' }}>{resolvedPartNo}</td>
-                                            <td><span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{resolvedName}</span></td>
-                                            <td style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>{qty}</td>
-                                            <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
+                                            <td style={{ color: 'var(--table-text-primary)', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{resolvedPartNo}</td>
+                                            <td><span style={{ fontWeight: '600', color: 'var(--table-text-primary)', fontSize: '15px' }}>{resolvedName}</span></td>
+                                            <td style={{ color: 'var(--table-text-primary)', textAlign: 'center', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{qty}</td>
+                                            <td style={{ textAlign: 'right', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
                                                 {fmt(unitPrice)}
                                             </td>
-                                            <td style={{ fontWeight: '700', textAlign: 'right', color: amountColor }}>{amountPrefix}{fmt(netRowAmount)}</td>
-                                            <td style={{ color: 'var(--text-primary)', fontWeight: '500' }}>{customerVal}</td>
-                                            <td style={{ fontWeight: tx.payment_method?.startsWith('P.O') ? '700' : '400', color: tx.payment_method?.startsWith('P.O') ? '#C00000' : 'var(--text-secondary)' }}>{tx.payment_method || 'CASH'}</td>
-                                            <td style={{ textAlign: 'center', color: discountVal > 0 ? '#2563EB' : '#94A3B8', fontWeight: discountVal > 0 ? '700' : '400' }}>
+                                            <td style={{ fontWeight: '600', textAlign: 'right', color: amountColor, fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{amountPrefix}{fmt(netRowAmount)}</td>
+                                            <td style={{ color: 'var(--table-text-primary)', fontWeight: '500', fontSize: '15px' }}>{customerVal}</td>
+                                            <td style={{ fontWeight: tx.payment_method?.startsWith('P.O') ? '600' : '500', color: tx.payment_method?.startsWith('P.O') ? '#C00000' : 'var(--table-text-secondary)', fontSize: '15px' }}>{tx.payment_method || 'CASH'}</td>
+                                            <td style={{ textAlign: 'right', color: discountVal > 0 ? '#2563EB' : 'var(--table-text-muted)', fontWeight: discountVal > 0 ? '600' : '500', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>
                                                 {discountVal > 0 ? `-${fmt(discountVal)}` : '—'}
                                             </td>
                                             <td style={{ color: 'var(--text-secondary)' }}>{serveByVal.split(' ')[0]}</td>

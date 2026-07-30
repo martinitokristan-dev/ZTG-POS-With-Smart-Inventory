@@ -179,9 +179,8 @@ export default function useSettings() {
     const [showCheckerModal, setShowCheckerModal] = useState(false);
     const [selectedChecker, setSelectedChecker] = useState(null);
     const [checkerForm, setCheckerForm] = useState({
-        checker_name: '',
-        contact_number: '',
-        assignment_area: 'Warehouse'
+        name: '',
+        status: 'Active'
     });
 
     // ------------------------------------------------------------------------
@@ -865,16 +864,15 @@ export default function useSettings() {
     // ------------------------------------------------------------------------
     const openAddChecker = () => {
         setSelectedChecker(null);
-        setCheckerForm({ checker_name: '', contact_number: '', assignment_area: 'Warehouse' });
+        setCheckerForm({ name: '', status: 'Active' });
         setShowCheckerModal(true);
     };
 
     const openEditChecker = (chk) => {
         setSelectedChecker(chk);
         setCheckerForm({
-            checker_name: chk.checker_name,
-            contact_number: chk.contact_number || '',
-            assignment_area: chk.assignment_area || 'Warehouse'
+            name: chk.name || chk.checker_name || '',
+            status: chk.status || 'Active'
         });
         setShowCheckerModal(true);
     };
@@ -882,13 +880,19 @@ export default function useSettings() {
     const handleCheckerSubmit = async (e) => {
         e.preventDefault();
         try {
+            const payload = {
+                name: checkerForm.name.trim(),
+                status: checkerForm.status || 'Active'
+            };
             if (selectedChecker) {
-                const res = await api.put(`/checkers/${selectedChecker.id}`, checkerForm);
-                setCheckers(prev => prev.map(c => c.id === selectedChecker.id ? res.data : c));
+                const res = await api.put(`/checkers/${selectedChecker.id}`, payload);
+                const updated = res.data?.checker || res.data;
+                setCheckers(prev => prev.map(c => c.id === selectedChecker.id ? updated : c));
                 showToast('Product checker updated successfully!', 'success');
             } else {
-                const res = await api.post('/checkers', checkerForm);
-                setCheckers(prev => [res.data, ...prev]);
+                const res = await api.post('/checkers', payload);
+                const newChecker = res.data?.checker || res.data;
+                setCheckers(prev => [...prev, newChecker]);
                 showToast('New product checker registered!', 'success');
             }
             setShowCheckerModal(false);

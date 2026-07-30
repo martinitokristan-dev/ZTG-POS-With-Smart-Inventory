@@ -58,20 +58,20 @@ export default function ReviewRestockModal({
                     {/* Restock Items Table */}
                     <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
                         <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                            <table className="modal-table data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                 <thead>
-                                    <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    <tr style={{ backgroundColor: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)', fontSize: '13px', fontWeight: '600', color: 'var(--table-text-secondary)', letterSpacing: '0.02em' }}>
                                         <th style={{ padding: '12px 16px' }}>Product</th>
-                                        <th style={{ padding: '12px 16px', textAlign: 'center' }}>Current Stock</th>
-                                        <th style={{ padding: '12px 16px', textAlign: 'center' }}>Adding Qty</th>
-                                        <th style={{ padding: '12px 16px', textAlign: 'center' }}>New Stock</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'right' }}>Current Stock</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'right' }}>Adding Qty</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'right' }}>New Stock</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody style={{ fontSize: '15px' }}>
                                     {restockItems.map(p => {
                                         const adding = restockQuantities[p.id] || 0;
                                         return (
-                                            <tr key={p.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                                            <tr key={p.id} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '48px' }}>
                                                 <td style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                     <img 
                                                         src={p.image || DEFAULT_PLACEHOLDER_IMAGE} 
@@ -80,20 +80,20 @@ export default function ReviewRestockModal({
                                                         onError={(e) => { e.target.src = DEFAULT_PLACEHOLDER_IMAGE; }} 
                                                     />
                                                     <div>
-                                                        <span style={{ fontSize: '13.5px', fontWeight: '700', color: '#1E293B', display: 'block', lineHeight: '1.3' }}>{p.name}</span>
-                                                        {p.chinese_name && <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '500', display: 'block', marginTop: '2px' }}>{p.chinese_name}</span>}
-                                                        <span style={{ fontSize: '11.5px', fontWeight: '600', color: '#475569', fontFamily: 'monospace', display: 'block', marginTop: '3px' }}>PART NO: {p.part_no}</span>
+                                                        <span style={{ fontSize: '15px', fontWeight: '600', color: 'var(--table-text-primary)', display: 'block', lineHeight: '1.3' }}>{p.name}</span>
+                                                        {p.chinese_name && <span style={{ fontSize: '12px', color: 'var(--table-text-secondary)', fontWeight: '500', display: 'block', marginTop: '2px' }}>{p.chinese_name}</span>}
+                                                        <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--table-text-secondary)', display: 'block', marginTop: '3px', fontVariantNumeric: 'tabular-nums' }}>PART NO: {p.part_no}</span>
                                                     </div>
                                                 </td>
-                                                <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: '13px', fontWeight: '600', color: '#475569' }}>
+                                                <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '15px', fontWeight: '600', color: 'var(--table-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
                                                     {p.stock} units
                                                 </td>
-                                                <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                                                    <span style={{ backgroundColor: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', padding: '4px 10px', borderRadius: '20px', fontWeight: '800', fontSize: '12.5px', display: 'inline-block' }}>
+                                                <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                                                    <span style={{ backgroundColor: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', padding: '4px 10px', borderRadius: '20px', fontWeight: '600', fontSize: '13px', display: 'inline-block', fontVariantNumeric: 'tabular-nums' }}>
                                                         +{adding}
                                                     </span>
                                                 </td>
-                                                <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: '13.5px', fontWeight: '700', color: '#0F172A' }}>
+                                                <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '15px', fontWeight: '600', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
                                                     {p.stock + adding} units
                                                 </td>
                                             </tr>

@@ -10,29 +10,29 @@ export default function CustomerLeaderboard({ customerLog, fmt, fmtDate }) {
                 <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Highest total purchase value</p>
             </div>
             <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead style={{ background: '#F8FAFC', fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead style={{ background: 'var(--table-header-bg)', fontSize: '13px', color: 'var(--table-text-secondary)', borderBottom: '2px solid var(--table-border)' }}>
                         <tr>
-                            <th style={{ padding: '12px 20px', fontWeight: '600' }}>Rank</th>
-                            <th style={{ padding: '12px 20px', fontWeight: '600' }}>Customer</th>
-                            <th style={{ padding: '12px 20px', fontWeight: '600', textAlign: 'center' }}>Total Transactions</th>
-                            <th style={{ padding: '12px 20px', fontWeight: '600' }}>Last Purchase</th>
-                            <th style={{ padding: '12px 20px', fontWeight: '600', textAlign: 'right' }}>Lifetime Value</th>
+                            <th style={{ padding: '12px 20px', fontWeight: '600', letterSpacing: '0.02em' }}>Rank</th>
+                            <th style={{ padding: '12px 20px', fontWeight: '600', letterSpacing: '0.02em' }}>Customer</th>
+                            <th style={{ padding: '12px 20px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'right' }}>Total Transactions</th>
+                            <th style={{ padding: '12px 20px', fontWeight: '600', letterSpacing: '0.02em' }}>Last Purchase</th>
+                            <th style={{ padding: '12px 20px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'right' }}>Lifetime Value</th>
                         </tr>
                     </thead>
-                    <tbody style={{ fontSize: '13px' }}>
+                    <tbody style={{ fontSize: '15px' }}>
                         {customerLog.slice(0, 10).map((c, i) => (
-                            <tr key={c.customer_id} style={{ borderBottom: i === Math.min(customerLog.length, 10) - 1 ? 'none' : '1px solid var(--border)' }}>
-                                <td style={{ padding: '12px 20px', fontWeight: '700', color: i < 3 ? 'var(--primary)' : 'var(--text-secondary)' }}>
+                            <tr key={c.customer_id} style={{ borderBottom: i === Math.min(customerLog.length, 10) - 1 ? 'none' : '1px solid var(--table-border-subtle)', minHeight: '48px' }}>
+                                <td style={{ padding: '12px 20px', fontWeight: '600', color: i < 3 ? 'var(--primary)' : 'var(--table-text-secondary)', fontVariantNumeric: 'tabular-nums', fontSize: '15px' }}>
                                     #{i + 1}
                                 </td>
                                 <td style={{ padding: '12px 20px' }}>
-                                    <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{c.name}</div>
-                                    <div style={{ fontSize: '11px', color: '#64748B' }}>{c.phone || 'No phone'}</div>
+                                    <div style={{ fontWeight: '600', color: 'var(--table-text-primary)', fontSize: '15px' }}>{c.name}</div>
+                                    <div style={{ fontSize: '13px', color: 'var(--table-text-secondary)', fontWeight: '500', fontVariantNumeric: 'tabular-nums' }}>{c.phone || 'No phone'}</div>
                                 </td>
-                                <td style={{ padding: '12px 20px', textAlign: 'center', fontWeight: '600' }}>{c.tx_count}</td>
-                                <td style={{ padding: '12px 20px', color: '#64748B' }}>{fmtDate(c.last_transaction)}</td>
-                                <td style={{ padding: '12px 20px', textAlign: 'right', fontWeight: '700', color: 'var(--primary)' }}>{fmt(c.total_spent)}</td>
+                                <td style={{ padding: '12px 20px', textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{c.tx_count}</td>
+                                <td style={{ padding: '12px 20px', color: 'var(--table-text-secondary)', fontWeight: '500', fontSize: '15px' }}>{fmtDate(c.last_transaction)}</td>
+                                <td style={{ padding: '12px 20px', textAlign: 'right', fontWeight: '600', color: 'var(--primary)', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{fmt(c.total_spent)}</td>
                             </tr>
                         ))}
                     </tbody>

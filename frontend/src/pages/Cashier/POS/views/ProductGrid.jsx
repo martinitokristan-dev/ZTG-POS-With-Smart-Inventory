@@ -73,16 +73,16 @@ export default function ProductGrid({
                     <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif', margin: 0 }}>Catalogue Picker</h3>
                 </div>
                 <div style={{ overflowY: 'auto', overflowX: 'auto', flex: 1 }}>
-                    <table className="pos-table" style={{ width: '100%', minWidth: '650px', borderCollapse: 'collapse' }}>
-                        <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#FFFFFF' }}>
+                    <table className="pos-table data-table" style={{ width: '100%', minWidth: '650px', borderCollapse: 'collapse' }}>
+                        <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--table-header-bg)' }}>
                             <tr>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>Product</th>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>Part No.</th>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>Category</th>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>Address</th>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>Stock</th>
-                                <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>Original Price</th>
-                                <th style={{ textAlign: 'right', padding: '12px 20px', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }}>Retail Price</th>
+                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', borderBottom: '2px solid var(--table-border)' }}>Product</th>
+                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', borderBottom: '2px solid var(--table-border)' }}>Part No.</th>
+                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', borderBottom: '2px solid var(--table-border)' }}>Category</th>
+                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', borderBottom: '2px solid var(--table-border)' }}>Address</th>
+                                <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', borderBottom: '2px solid var(--table-border)' }}>Stock</th>
+                                <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', borderBottom: '2px solid var(--table-border)' }}>Original Price</th>
+                                <th style={{ textAlign: 'right', padding: '12px 20px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', borderBottom: '2px solid var(--table-border)' }}>Retail Price</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -91,7 +91,7 @@ export default function ProductGrid({
                             ) : searchLoading ? (
                                 <tr><td colSpan="7" style={{ padding: '20px' }}><LoadingSpinner text="Searching..." minHeight="60px" /></td></tr>
                             ) : products.length === 0 ? (
-                                <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px 20px', color: '#64748B' }}>No products found.</td></tr>
+                                <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--table-text-muted)', fontSize: '15px' }}>No products found.</td></tr>
                             ) : products.map(p => {
                                 const isLow = p.stock > 0 && p.stock <= 5;
                                 const isOut = p.stock <= 0;
@@ -101,10 +101,10 @@ export default function ProductGrid({
                                     <tr 
                                         key={p.id} 
                                         onClick={() => !isOut && addToCart(p, 'price1')}
-                                        style={{ borderBottom: '1px solid #F1F5F9', cursor: isOut ? 'not-allowed' : 'pointer', opacity: isOut ? 0.5 : 1 }}
+                                        style={{ borderBottom: '1px solid var(--table-border-subtle)', cursor: isOut ? 'not-allowed' : 'pointer', opacity: isOut ? 0.5 : 1, minHeight: '48px' }}
                                         className="hover-row"
                                     >
-                                        <td style={{ padding: '12px 14px', fontSize: '13px' }}>
+                                        <td style={{ padding: '12px 14px', fontSize: '15px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <img 
                                                     src={p.image || DEFAULT_PLACEHOLDER_IMAGE} 
@@ -117,26 +117,26 @@ export default function ProductGrid({
                                                     onError={(e) => { e.currentTarget.src = DEFAULT_PLACEHOLDER_IMAGE; }}
                                                 />
                                                 <div>
-                                                    <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
+                                                    <div style={{ fontWeight: '600', color: 'var(--table-text-primary)', fontSize: '15px' }}>
                                                         {p.name}
                                                     </div>
-                                                    {showChineseNames && p.chinese_name && <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'normal', marginTop: '2px' }}>{p.chinese_name}</div>}
+                                                    {showChineseNames && p.chinese_name && <div style={{ fontSize: '12px', color: 'var(--table-text-secondary)', fontWeight: '500', marginTop: '2px' }}>{p.chinese_name}</div>}
                                                 </div>
                                             </div>
                                         </td>
-                                        <td style={{ padding: '12px 14px', fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '700' }}>{p.part_no || p.partNo || 'N/A'}</td>
-                                        <td style={{ padding: '12px 14px', fontSize: '13px', color: 'var(--text-secondary)' }}>{p.category?.name || p.category || 'Uncategorized'}</td>
-                                        <td style={{ padding: '12px 14px', fontSize: '13px', color: 'var(--text-secondary)' }}>{p.address || '—'}</td>
-                                        <td style={{ padding: '12px 14px' }}>
+                                        <td style={{ padding: '12px 14px', fontSize: '15px', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{p.part_no || p.partNo || 'N/A'}</td>
+                                        <td style={{ padding: '12px 14px', fontSize: '15px', color: 'var(--table-text-secondary)', fontWeight: '500' }}>{p.category?.name || p.category || 'Uncategorized'}</td>
+                                        <td style={{ padding: '12px 14px', fontSize: '15px', color: 'var(--table-text-secondary)', fontWeight: '500' }}>{p.address || '—'}</td>
+                                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                                             <span style={{ 
                                                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', 
-                                                width: '24px', height: '24px', borderRadius: '50%', fontWeight: '700', fontSize: '11px',
-                                                backgroundColor: stockClass.bg, color: stockClass.color
+                                                minWidth: '28px', height: '28px', padding: '0 8px', borderRadius: '14px', fontWeight: '600', fontSize: '13px',
+                                                backgroundColor: stockClass.bg, color: stockClass.color, fontVariantNumeric: 'tabular-nums'
                                             }}>
                                                 {p.stock}
                                             </span>
                                         </td>
-                                        <td style={{ padding: '12px 14px', fontSize: '13px', fontWeight: '700', textAlign: 'right', color: '#64748B' }}>
+                                        <td style={{ padding: '12px 14px', fontSize: '15px', fontWeight: '600', textAlign: 'right', color: 'var(--table-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
                                             {!isOut ? (
                                                 <span 
                                                     onClick={(e) => { e.stopPropagation(); addToCart(p, 'price1'); }} 
@@ -150,7 +150,7 @@ export default function ProductGrid({
                                                 <span>{fmt(p.price1)}</span>
                                             )}
                                         </td>
-                                        <td style={{ padding: '12px 20px', fontSize: '13px', fontWeight: '700', textAlign: 'right', color: 'var(--primary)' }}>
+                                        <td style={{ padding: '12px 20px', fontSize: '15px', fontWeight: '600', textAlign: 'right', color: 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>
                                             {!isOut ? (
                                                 <span 
                                                     onClick={(e) => { e.stopPropagation(); addToCart(p, 'price2'); }} 

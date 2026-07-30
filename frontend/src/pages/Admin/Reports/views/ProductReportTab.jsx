@@ -115,34 +115,34 @@ export default function ProductReportTab({ productPerformance, refundVoidAnalysi
             <div className="section-card">
                 <div className="section-card-header">Product Movement</div>
                 <div style={{ overflowX: 'auto' }}>
-                    <table className="reports-table">
-                        <thead>
+                    <table className="reports-table data-table">
+                        <thead style={{ fontSize: '13px', color: 'var(--table-text-secondary)', background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)' }}>
                             <tr>
-                                <th>PART NO.</th>
-                                <th>PRODUCT NAME</th>
-                                <th>CATEGORY</th>
-                                <th>QTY SOLD</th>
-                                <th>RETURNS</th>
-                                <th>REFUNDS</th>
-                                <th>DAMAGED</th>
-                                <th>CURRENT STOCK</th>
-                                <th>STATUS</th>
+                                <th style={{ fontWeight: '600', letterSpacing: '0.02em' }}>Part No.</th>
+                                <th style={{ fontWeight: '600', letterSpacing: '0.02em' }}>Product Name</th>
+                                <th style={{ fontWeight: '600', letterSpacing: '0.02em' }}>Category</th>
+                                <th style={{ textAlign: 'right', fontWeight: '600', letterSpacing: '0.02em' }}>Qty Sold</th>
+                                <th style={{ textAlign: 'right', fontWeight: '600', letterSpacing: '0.02em' }}>Returns</th>
+                                <th style={{ textAlign: 'right', fontWeight: '600', letterSpacing: '0.02em' }}>Refunds</th>
+                                <th style={{ textAlign: 'right', fontWeight: '600', letterSpacing: '0.02em' }}>Damaged</th>
+                                <th style={{ textAlign: 'right', fontWeight: '600', letterSpacing: '0.02em' }}>Current Stock</th>
+                                <th style={{ fontWeight: '600', letterSpacing: '0.02em' }}>Status</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody style={{ fontSize: '15px' }}>
                             {filteredTopSellers.length === 0 ? (
-                                <tr><td colSpan="9" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No product movement for the selected date range.</td></tr>
+                                <tr><td colSpan="9" style={{ textAlign: 'center', color: 'var(--table-text-muted)', fontSize: '15px' }}>No product movement for the selected date range.</td></tr>
                             ) : filteredTopSellers.map((p, i) => (
-                                <tr key={i}>
-                                    <td>{p.part_no || 'N/A'}</td>
-                                    <td>{p.name}</td>
-                                    <td>{p.category || 'Uncategorized'}</td>
-                                    <td>{p.sales_count}</td>
-                                    <td>{p.returns_count || 0}</td>
-                                    <td>{p.refunds_count || 0}</td>
-                                    <td>{p.damaged_count || 0}</td>
-                                    <td>{p.stock}</td>
-                                    <td>{p.stock > 0 ? 'In Stock' : 'Out of Stock'}</td>
+                                <tr key={i} style={{ minHeight: '48px' }}>
+                                    <td style={{ fontWeight: '600', fontSize: '15px', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{p.part_no || 'N/A'}</td>
+                                    <td style={{ fontWeight: '600', fontSize: '15px', color: 'var(--table-text-primary)' }}>{p.name}</td>
+                                    <td style={{ fontWeight: '500', fontSize: '15px', color: 'var(--table-text-secondary)' }}>{p.category || 'Uncategorized'}</td>
+                                    <td style={{ textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{p.sales_count}</td>
+                                    <td style={{ textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{p.returns_count || 0}</td>
+                                    <td style={{ textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{p.refunds_count || 0}</td>
+                                    <td style={{ textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{p.damaged_count || 0}</td>
+                                    <td style={{ textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{p.stock}</td>
+                                    <td style={{ fontWeight: '500', fontSize: '15px' }}>{p.stock > 0 ? 'In Stock' : 'Out of Stock'}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -154,24 +154,24 @@ export default function ProductReportTab({ productPerformance, refundVoidAnalysi
                 <div className="section-card">
                     <div className="section-card-header" style={{ color: '#DC2626' }}>Dead Stock (No Sales)</div>
                     <div style={{ overflowX: 'auto' }}>
-                        <table className="reports-table">
-                            <thead>
+                        <table className="reports-table data-table">
+                            <thead style={{ fontSize: '13px', color: 'var(--table-text-secondary)', background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)' }}>
                                 <tr>
-                                    <th>PART NO.</th>
-                                    <th>PRODUCT NAME</th>
-                                    <th>CATEGORY</th>
-                                    <th>CURRENT STOCK</th>
-                                    <th>STATUS</th>
+                                    <th style={{ fontWeight: '600', letterSpacing: '0.02em' }}>Part No.</th>
+                                    <th style={{ fontWeight: '600', letterSpacing: '0.02em' }}>Product Name</th>
+                                    <th style={{ fontWeight: '600', letterSpacing: '0.02em' }}>Category</th>
+                                    <th style={{ textAlign: 'right', fontWeight: '600', letterSpacing: '0.02em' }}>Current Stock</th>
+                                    <th style={{ fontWeight: '600', letterSpacing: '0.02em' }}>Status</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody style={{ fontSize: '15px' }}>
                                 {filteredDeadStock.map((p, i) => (
-                                    <tr key={i}>
-                                        <td>{p.part_no || 'N/A'}</td>
-                                        <td>{p.name}</td>
-                                        <td>{p.category || 'Uncategorized'}</td>
-                                        <td>{p.stock}</td>
-                                        <td><span style={{ color: '#DC2626', fontWeight: '600' }}>Dead Stock</span></td>
+                                    <tr key={i} style={{ minHeight: '48px' }}>
+                                        <td style={{ fontWeight: '600', fontSize: '15px', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{p.part_no || 'N/A'}</td>
+                                        <td style={{ fontWeight: '600', fontSize: '15px', color: 'var(--table-text-primary)' }}>{p.name}</td>
+                                        <td style={{ fontWeight: '500', fontSize: '15px', color: 'var(--table-text-secondary)' }}>{p.category || 'Uncategorized'}</td>
+                                        <td style={{ textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{p.stock}</td>
+                                        <td><span style={{ color: '#DC2626', fontWeight: '600', fontSize: '15px' }}>Dead Stock</span></td>
                                     </tr>
                                 ))}
                             </tbody>

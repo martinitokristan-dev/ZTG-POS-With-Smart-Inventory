@@ -13,6 +13,19 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
     let statusColor = '#334155';
     let itemsBlock = null;
 
+    // Parse restock line items from internal_notes JSON
+    let restockEntries = [];
+    if (status === 'Restocked' && tx.internal_notes) {
+        try {
+            const parsed = typeof tx.internal_notes === 'string'
+                ? JSON.parse(tx.internal_notes)
+                : tx.internal_notes;
+            restockEntries = Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            restockEntries = [];
+        }
+    }
+
     if (status === 'Restocked') {
         title = 'Restock Details';
         subtitle = 'Inventory restock record';
@@ -73,18 +86,18 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
             <div className="audit-detail-section" style={{ marginTop: '14px' }}>
                 <span className="audit-detail-section-title" style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', marginBottom: '8px', display: 'block', letterSpacing: '0.5px' }}>Items Purchased</span>
                 <div style={{ border: '1px solid #E2E8F0', borderRadius: '10px', overflow: 'hidden', background: '#FFFFFF', maxHeight: '250px', overflowY: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12.5px' }}>
-                        <thead style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', fontSize: '10px', textTransform: 'uppercase', color: '#64748B' }}>
+                    <table className="modal-table data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+                        <thead style={{ background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)', fontSize: '13px', color: 'var(--table-text-secondary)' }}>
                             <tr>
-                                <th style={{ padding: '8px 12px', fontWeight: '600' }}>Part No.</th>
-                                <th style={{ padding: '8px 12px', fontWeight: '600' }}>Product</th>
-                                <th style={{ padding: '8px 12px', fontWeight: '600', textAlign: 'center', width: '50px' }}>Qty</th>
-                                <th style={{ padding: '8px 12px', fontWeight: '600', textAlign: 'right', width: '90px' }}>Price</th>
-                                <th style={{ padding: '8px 12px', fontWeight: '600', textAlign: 'center', width: '95px' }}>Discounted</th>
-                                <th style={{ padding: '8px 12px', fontWeight: '600', textAlign: 'right', width: '100px' }}>Total</th>
+                                <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em' }}>Part No.</th>
+                                <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em' }}>Product</th>
+                                <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'center', width: '60px' }}>Qty</th>
+                                <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'right', width: '100px' }}>Price</th>
+                                <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'right', width: '105px' }}>Discounted</th>
+                                <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'right', width: '110px' }}>Total</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody style={{ fontSize: '14px' }}>
                              {processedItems.map((item, index) => {
                                 const partNo = item.product?.part_no || item.part_no || '—';
                                 const name = item.product?.name || item.name || 'Unknown Part';
@@ -92,21 +105,21 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 const itemDiscTotal = item.itemDisc * item.qty;
 
                                 return (
-                                    <tr key={index} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                                        <td style={{ padding: '10px 12px' }}>
-                                            <CopyableText text={partNo} label="Part No." />
+                                    <tr key={index} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '44px' }}>
+                                        <td style={{ padding: '10px 12px', fontVariantNumeric: 'tabular-nums', fontWeight: '600' }}>
+                                            <CopyableText text={partNo} label="Part No." codeStyle={{ fontSize: '14px', fontWeight: '600' }} />
                                         </td>
-                                        <td style={{ padding: '10px 12px', color: '#334155' }}>
-                                            <div style={{ fontWeight: '600' }}>{name}</div>
+                                        <td style={{ padding: '10px 12px', color: 'var(--table-text-primary)' }}>
+                                            <div style={{ fontWeight: '600', fontSize: '14px' }}>{name}</div>
                                         </td>
-                                        <td style={{ padding: '10px 12px', textAlign: 'center', color: '#0F172A', fontWeight: '700' }}>{item.qty}</td>
-                                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>
+                                        <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.qty}</td>
+                                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--table-text-secondary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
                                             {fmt(item.unitPrice)}
                                         </td>
-                                        <td style={{ padding: '10px 12px', textAlign: 'center', color: itemDiscTotal > 0 ? '#2563EB' : '#94A3B8', fontWeight: itemDiscTotal > 0 ? '700' : '400' }}>
+                                        <td style={{ padding: '10px 12px', textAlign: 'right', color: itemDiscTotal > 0 ? '#2563EB' : 'var(--table-text-muted)', fontWeight: itemDiscTotal > 0 ? '600' : '500', fontVariantNumeric: 'tabular-nums' }}>
                                             {itemDiscTotal > 0 ? `-${fmt(itemDiscTotal)}` : '—'}
                                         </td>
-                                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#0F172A', fontWeight: '700' }}>
+                                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
                                             {fmt(item.lineNet)}
                                         </td>
                                     </tr>
@@ -154,8 +167,54 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 {auditDetailRow('Invoice No.', tx.si_no || '—')}
                                 {auditDetailRow('Date & Time', fmtDate(tx.date || tx.created_at))}
                                 {auditDetailRow('Verified By', tx.cashier?.name || '—')}
-                                {auditDetailRow('Source', tx.customer_name || tx.customer?.name || 'SUPPLIER RESTOCK')}
+                                {auditDetailRow('Total Units Added', String(tx.total_qty || restockEntries.reduce((s, e) => s + (e.qty || 0), 0)))}
                                 {auditDetailRow('Status', status, { color: statusColor, fontWeight: '700' })}
+
+                                {restockEntries.length > 0 && (
+                                    <div style={{ marginTop: '16px' }}>
+                                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '10px' }}>Restocked Items</span>
+                                        <div style={{ border: '1px solid #E2E8F0', borderRadius: '10px', overflow: 'hidden', background: '#FFFFFF', maxHeight: '300px', overflowY: 'auto' }}>
+                                            <table className="modal-table data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                                <thead style={{ background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B' }}>
+                                                    <tr>
+                                                        <th style={{ padding: '10px 14px', fontWeight: '600' }}>Part No.</th>
+                                                        <th style={{ padding: '10px 14px', fontWeight: '600' }}>Product</th>
+                                                        <th style={{ padding: '10px 14px', fontWeight: '600', textAlign: 'right', width: '90px' }}>Prev. Stock</th>
+                                                        <th style={{ padding: '10px 14px', fontWeight: '600', textAlign: 'right', width: '80px' }}>Added</th>
+                                                        <th style={{ padding: '10px 14px', fontWeight: '600', textAlign: 'right', width: '90px' }}>New Stock</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody style={{ fontSize: '14px' }}>
+                                                    {restockEntries.map((entry, idx) => {
+                                                        const prevStock = (entry.new_stock || 0) - (entry.qty || 0);
+                                                        return (
+                                                            <tr key={idx} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '44px' }}>
+                                                                <td style={{ padding: '10px 14px', fontWeight: '600', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums', fontSize: '14px' }}>
+                                                                    <CopyableText text={entry.part_no || '—'} label="Part No." codeStyle={{ fontSize: '14px', fontWeight: '600' }} />
+                                                                </td>
+                                                                <td style={{ padding: '10px 14px', color: 'var(--table-text-primary)' }}>
+                                                                    <div style={{ fontWeight: '600', fontSize: '14px' }}>{entry.name || '—'}</div>
+                                                                    {entry.category && <div style={{ fontSize: '12px', color: 'var(--table-text-muted)', marginTop: '2px' }}>{entry.category}{entry.address ? ` · ${entry.address}` : ''}</div>}
+                                                                </td>
+                                                                <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--table-text-secondary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums', fontSize: '14px' }}>
+                                                                    {prevStock}
+                                                                </td>
+                                                                <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '700', fontVariantNumeric: 'tabular-nums', fontSize: '14px' }}>
+                                                                    <span style={{ color: '#059669', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '2px 8px', borderRadius: '12px', fontSize: '13px' }}>
+                                                                        +{entry.qty || 0}
+                                                                    </span>
+                                                                </td>
+                                                                <td style={{ padding: '10px 14px', textAlign: 'right', color: '#0F172A', fontWeight: '700', fontVariantNumeric: 'tabular-nums', fontSize: '14px' }}>
+                                                                    {entry.new_stock || 0}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
                             </>
                         )}
                         

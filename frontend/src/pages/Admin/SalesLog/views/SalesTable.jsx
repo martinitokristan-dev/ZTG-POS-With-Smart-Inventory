@@ -17,24 +17,24 @@ export default function SalesTable({ loading, items, fmt, fmtDate }) {
     return (
         <div className="card table-card" style={{ background: '#FFFFFF', borderRadius: '10px', border: '1px solid var(--border)' }}>
             <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead style={{ borderBottom: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead style={{ borderBottom: '2px solid var(--table-border)', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', background: 'var(--table-header-bg)' }}>
                         <tr>
-                            <th style={{ padding: '12px 16px', fontWeight: '700' }}>DATE</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '700' }}>S.I./C.I./D.R.</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '700' }}>PART NO.</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '700' }}>PRODUCT</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '700', textAlign: 'center' }}>QTY</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '700', textAlign: 'right' }}>PRICE</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '700', textAlign: 'right' }}>AMOUNT</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '700' }}>CUSTOMER</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '700' }}>PAYMENT</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '700', textAlign: 'center' }}>DISCOUNTED</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '700' }}>SERVED BY</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '700' }}>STATUS</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Date</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>S.I./C.I./D.R.</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Part No.</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Product</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'center' }}>Qty</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right' }}>Price</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right' }}>Amount</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Customer</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Payment</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right' }}>Discounted</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Served By</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Status</th>
                         </tr>
                     </thead>
-                    <tbody style={{ fontSize: '13px' }}>
+                    <tbody style={{ fontSize: '15px' }}>
                         {items.map((item, i) => {
                             const isDeduction = (item._txStatus === 'Refund' || item._txStatus === 'Return' || item._txStatus === 'Void');
                             const isPending = item._txStatus === 'Pending';
@@ -50,25 +50,25 @@ export default function SalesTable({ loading, items, fmt, fmtDate }) {
                             const netRowAmount = Math.max(0, grossRow - discountVal);
 
                             return (
-                                <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                                    <td style={{ padding: '16px', color: '#64748B' }}>{fmtDate(item._txDate)}</td>
-                                    <td style={{ padding: '16px' }}>
-                                        <CopyableText text={item._txReceipt} label="S.I./C.I./D.R." codeStyle={{ fontSize: '13px', color: 'var(--text-primary)' }} />
+                                <tr key={i} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '48px' }}>
+                                    <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '500' }}>{fmtDate(item._txDate)}</td>
+                                    <td style={{ padding: '12px 16px', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
+                                        <CopyableText text={item._txReceipt} label="S.I./C.I./D.R." codeStyle={{ fontSize: '15px', color: 'var(--table-text-primary)', fontWeight: '600' }} />
                                     </td>
-                                    <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>{item.part_no || item.partNo || 'N/A'}</td>
-                                    <td style={{ padding: '16px' }}>
-                                        <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{item.name}</span>
+                                    <td style={{ padding: '12px 16px', color: 'var(--table-text-primary)', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.part_no || item.partNo || 'N/A'}</td>
+                                    <td style={{ padding: '12px 16px' }}>
+                                        <span style={{ fontWeight: '600', color: 'var(--table-text-primary)', fontSize: '15px' }}>{item.name}</span>
                                     </td>
-                                    <td style={{ padding: '16px', color: 'var(--text-secondary)', textAlign: 'center' }}>{qty}</td>
-                                    <td style={{ padding: '16px', color: 'var(--text-secondary)', textAlign: 'right' }}>{fmt(unitPrice)}</td>
-                                    <td style={{ padding: '16px', fontWeight: '700', textAlign: 'right', color: amountColor }}>{amountPrefix}{fmt(netRowAmount)}</td>
-                                    <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>{item._txCustomer}</td>
-                                    <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>{item._txPayment}</td>
-                                    <td style={{ padding: '16px', textAlign: 'center', color: discountVal > 0 ? '#2563EB' : '#94A3B8', fontWeight: discountVal > 0 ? '700' : '400' }}>
+                                    <td style={{ padding: '12px 16px', color: 'var(--table-text-primary)', textAlign: 'center', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{qty}</td>
+                                    <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', textAlign: 'right', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{fmt(unitPrice)}</td>
+                                    <td style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right', color: amountColor, fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{amountPrefix}{fmt(netRowAmount)}</td>
+                                    <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '500' }}>{item._txCustomer}</td>
+                                    <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '500' }}>{item._txPayment}</td>
+                                    <td style={{ padding: '12px 16px', textAlign: 'right', color: discountVal > 0 ? '#2563EB' : 'var(--table-text-muted)', fontWeight: discountVal > 0 ? '600' : '500', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>
                                         {discountVal > 0 ? `-${fmt(discountVal)}` : '—'}
                                     </td>
-                                    <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>{(item._txChecker || '—').split(' ')[0]}</td>
-                                    <td style={{ padding: '16px' }}><StatusBadge status={item._txStatus} /></td>
+                                    <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '500' }}>{(item._txChecker || '—').split(' ')[0]}</td>
+                                    <td style={{ padding: '12px 16px' }}><StatusBadge status={item._txStatus} /></td>
                                 </tr>
                             );
                         })}

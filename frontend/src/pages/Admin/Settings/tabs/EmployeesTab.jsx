@@ -12,33 +12,33 @@ export default function EmployeesTab({
                 </h3>
                 
                 <div style={{ overflowX: 'auto', marginBottom: '16px' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                        <thead>
+                    <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <thead style={{ borderBottom: '2px solid var(--table-border)', background: 'var(--table-header-bg)' }}>
                             <tr>
-                                <th style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Employee Name</th>
-                                <th style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Role</th>
-                                <th style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Employee ID</th>
-                                <th style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Status</th>
-                                <th style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', textAlign: 'center' }}>Actions</th>
+                                <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--table-text-secondary)', letterSpacing: '0.02em' }}>Employee Name</th>
+                                <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--table-text-secondary)', letterSpacing: '0.02em' }}>Role</th>
+                                <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--table-text-secondary)', letterSpacing: '0.02em' }}>Employee ID</th>
+                                <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--table-text-secondary)', letterSpacing: '0.02em' }}>Status</th>
+                                <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--table-text-secondary)', letterSpacing: '0.02em', textAlign: 'center' }}>Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody style={{ fontSize: '15px' }}>
                             {employees.map(emp => (
-                                <tr key={emp.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                    <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                <tr key={emp.id} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '48px' }}>
+                                    <td style={{ padding: '12px 16px', fontSize: '15px', fontWeight: '600', color: 'var(--table-text-primary)' }}>
                                         {emp.real_name || emp.name}
                                     </td>
                                     <td style={{ padding: '12px 16px' }}>
-                                        <span style={{ fontSize: '11px', background: 'var(--bg-main)', color: 'var(--text-secondary)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', fontWeight: '600' }}>
+                                        <span style={{ fontSize: '12px', background: 'var(--bg-main)', color: 'var(--table-text-secondary)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', fontWeight: '600' }}>
                                             {emp.role}
                                         </span>
                                     </td>
-                                    <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                    <td style={{ padding: '12px 16px', fontSize: '15px', fontWeight: '600', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
                                         {emp.employee_id}
                                     </td>
                                     <td style={{ padding: '12px 16px' }}>
                                         <span style={{ 
-                                            fontSize: '11px', 
+                                            fontSize: '12px', 
                                             background: emp.status === 'Active' ? '#dcfce7' : '#fee2e2', 
                                             color: emp.status === 'Active' ? '#16a34a' : '#dc2626', 
                                             padding: '2px 8px', 

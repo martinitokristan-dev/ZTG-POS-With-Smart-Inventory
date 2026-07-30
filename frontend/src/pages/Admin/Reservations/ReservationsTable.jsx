@@ -44,27 +44,27 @@ export default function ReservationsTable({
             {/* Reservations Table */}
             <div className="card table-card">
                 <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                    <table style={{ minWidth: '850px', width: '100%' }}>
+                    <table className="data-table" style={{ minWidth: '850px', width: '100%' }}>
                         <thead>
                             <tr>
-                                <th>Customer Name</th>
-                                <th>Contact Phone</th>
-                                <th>Product</th>
-                                <th>Qty</th>
-                                <th>Deposit Amount</th>
-                                <th>Total Price</th>
-                                <th>Date Placed</th>
-                                <th>Expected Pickup</th>
-                                <th>Reserved by</th>
-                                <th>Status</th>
+                                <th style={{ textAlign: 'left' }}>Customer Name</th>
+                                <th style={{ textAlign: 'left' }}>Contact Phone</th>
+                                <th style={{ textAlign: 'left' }}>Product</th>
+                                <th style={{ textAlign: 'right' }}>Qty</th>
+                                <th style={{ textAlign: 'right' }}>Deposit Amount</th>
+                                <th style={{ textAlign: 'right' }}>Total Price</th>
+                                <th style={{ textAlign: 'left' }}>Date Placed</th>
+                                <th style={{ textAlign: 'left' }}>Expected Pickup</th>
+                                <th style={{ textAlign: 'left' }}>Reserved By</th>
+                                <th style={{ textAlign: 'left' }}>Status</th>
                                 <th style={{ textAlign: 'center' }}>Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody style={{ fontSize: '15px' }}>
                             {loading ? (
                                 <tr><td colSpan="11" style={{ padding: '32px' }}><LoadingSpinner text="Loading reservations..." minHeight="100px" /></td></tr>
                             ) : reservations.length === 0 ? (
-                                <tr><td colSpan="11" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-secondary)' }}>No reservations found.</td></tr>
+                                <tr><td colSpan="11" style={{ textAlign: 'center', padding: '32px', color: 'var(--table-text-muted)', fontSize: '15px' }}>No reservations found.</td></tr>
                             ) : reservations.map(r => {
                                 const status = (r.status?.value || r.status || '').toLowerCase();
                                 const isPending = status === 'pending';
@@ -73,16 +73,16 @@ export default function ReservationsTable({
                                 const fulfilledByName = r.fulfilled_by ? (r.fulfilled_by.real_name || r.fulfilled_by.name) : null;
 
                                 return (
-                                    <tr key={r.id}>
-                                        <td style={{ fontWeight: 700 }}>{r.customer?.name || r.customer_name || '—'}</td>
-                                        <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{r.customer?.phone || r.customer_phone || '—'}</td>
-                                        <td>{productNames}</td>
-                                        <td>{totalQty}</td>
-                                        <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{fmt(r.deposit)}</td>
-                                        <td style={{ fontWeight: 700 }}>{fmt(r.total)}</td>
-                                        <td style={{ fontSize: '13px' }}>{fmtDate(r.date || r.created_at)}</td>
-                                        <td style={{ fontSize: '13px', fontWeight: 600 }}>{fmtDate(r.pickup_date)}</td>
-                                        <td style={{ fontSize: '12px', color: fulfilledByName ? 'var(--success)' : 'var(--text-muted)' }}>
+                                    <tr key={r.id} style={{ minHeight: '48px' }}>
+                                        <td style={{ fontWeight: 600, fontSize: '15px', color: 'var(--table-text-primary)' }}>{r.customer?.name || r.customer_name || '—'}</td>
+                                        <td style={{ fontSize: '15px', color: 'var(--table-text-secondary)', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{r.customer?.phone || r.customer_phone || '—'}</td>
+                                        <td style={{ fontSize: '15px', color: 'var(--table-text-primary)', fontWeight: 500 }}>{productNames}</td>
+                                        <td style={{ fontSize: '15px', fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{totalQty}</td>
+                                        <td style={{ fontWeight: 600, fontSize: '15px', color: 'var(--primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(r.deposit)}</td>
+                                        <td style={{ fontWeight: 600, fontSize: '15px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(r.total)}</td>
+                                        <td style={{ fontSize: '15px', fontWeight: 500, color: 'var(--table-text-secondary)' }}>{fmtDate(r.date || r.created_at)}</td>
+                                        <td style={{ fontSize: '15px', fontWeight: 600, color: 'var(--table-text-primary)' }}>{fmtDate(r.pickup_date)}</td>
+                                        <td style={{ fontSize: '13px', color: fulfilledByName ? 'var(--success)' : 'var(--table-text-secondary)', fontWeight: 500 }}>
                                             {fulfilledByName ? `Fulfilled by: ${fulfilledByName}` : (r.reserved_by?.real_name || r.reserved_by?.name || '—')}
                                         </td>
                                         <td><StatusBadge status={r.status?.value || r.status || 'Pending'} /></td>
@@ -93,7 +93,7 @@ export default function ReservationsTable({
                                                     <button className="btn btn-danger-outline btn-sm" onClick={() => openCancel(r)}>Cancel</button>
                                                 </div>
                                             ) : (
-                                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                                                <span style={{ fontSize: '13px', color: 'var(--table-text-secondary)', fontWeight: 600 }}>
                                                     {status === 'completed' ? 'Fulfilled' : 'Cancelled'}
                                                 </span>
                                             )}

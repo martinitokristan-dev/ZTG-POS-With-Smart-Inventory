@@ -25,7 +25,7 @@ export default function CheckerModal({
                             <input 
                                 type="text" 
                                 className="form-control" 
-                                value={checkerForm.name}
+                                value={checkerForm?.name || ''}
                                 onChange={e => setCheckerForm({...checkerForm, name: e.target.value})}
                                 required
                             />
@@ -35,7 +35,7 @@ export default function CheckerModal({
                             <label className="form-label">Status</label>
                             <select 
                                 className="form-control"
-                                value={checkerForm.status}
+                                value={checkerForm?.status || 'Active'}
                                 onChange={e => setCheckerForm({...checkerForm, status: e.target.value})}
                             >
                                 <option value="Active">Active</option>

@@ -53,35 +53,35 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
 
         return (
             <tr key={item.id} style={!isVariant && baseIndex > 0 ? { borderTop: '2px solid var(--border)' } : {}}>
-                <td>
+                <td style={{ fontSize: '15px' }}>
                     {isVariant ? (
                         <>
-                            <strong style={{ display: 'block' }}>
+                            <strong style={{ display: 'block', fontSize: '15px', fontWeight: 600, color: 'var(--table-text-primary)' }}>
                                 {item.name || parentProduct.name} {variantOptionText && !(item.name || '').includes(variantOptionText) && <span style={{ color: 'var(--primary)', fontWeight: 500 }}>({variantOptionText})</span>}
                             </strong>
-                            {showChineseNames && (item.chinese_name || parentProduct.chinese_name) && <span className="chinese-subtitle">{item.chinese_name || parentProduct.chinese_name}</span>}
+                            {showChineseNames && (item.chinese_name || parentProduct.chinese_name) && <span className="chinese-subtitle" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--table-text-secondary)' }}>{item.chinese_name || parentProduct.chinese_name}</span>}
                         </>
                     ) : (
                         <>
-                            <strong style={{ display: 'block' }}>{item.name}</strong>
-                            {showChineseNames && <span className="chinese-subtitle">{item.chinese_name || ''}</span>}
+                            <strong style={{ display: 'block', fontSize: '15px', fontWeight: 600, color: 'var(--table-text-primary)' }}>{item.name}</strong>
+                            {showChineseNames && <span className="chinese-subtitle" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--table-text-secondary)' }}>{item.chinese_name || ''}</span>}
                         </>
                     )}
                 </td>
-                <td>
+                <td style={{ fontSize: '15px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                     <CopyableText text={item.part_no} label="Part No." />
                 </td>
-                <td>{item.category?.name || parentProduct?.category?.name || 'Unassigned'}</td>
-                <td><code style={{ background: '#F1F5F9', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>{item.address || '—'}</code></td>
-                <td>
-                    <span className={`badge ${stockBadgeClass}`} style={stockBadgeStyle}>
-                        <span style={{ fontSize: '13px', fontWeight: 700 }}>{item.stock}</span>
-                        <span style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Units</span>
+                <td style={{ fontSize: '15px', fontWeight: 500, color: 'var(--table-text-secondary)' }}>{item.category?.name || parentProduct?.category?.name || 'Unassigned'}</td>
+                <td><code style={{ background: '#F1F5F9', padding: '2px 6px', borderRadius: '4px', fontSize: '13px', fontWeight: 500 }}>{item.address || '—'}</code></td>
+                <td style={{ textAlign: 'right' }}>
+                    <span className={`badge ${stockBadgeClass}`} style={{ ...stockBadgeStyle, fontVariantNumeric: 'tabular-nums' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 600 }}>{item.stock}</span>
+                        <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Units</span>
                     </span>
                 </td>
-                <td style={{ fontWeight: 700 }}>₱{Number(item.price1 || 0).toLocaleString('en-US')}</td>
-                <td style={{ fontWeight: 700, color: 'var(--primary)' }}>₱{Number(item.price2 || 0).toLocaleString('en-US')}</td>
-                <td style={{ whiteSpace: 'nowrap' }}>{item.sales_count || 0} sold</td>
+                <td style={{ fontWeight: 600, fontSize: '15px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(item.price1 || 0).toLocaleString('en-US')}</td>
+                <td style={{ fontWeight: 600, fontSize: '15px', color: 'var(--primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(item.price2 || 0).toLocaleString('en-US')}</td>
+                <td style={{ whiteSpace: 'nowrap', textAlign: 'right', fontSize: '15px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{item.sales_count || 0} sold</td>
                 <td>
                     <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'nowrap', alignItems: 'center' }}>
                         <span className={`badge ${stockBadgeClass}`} style={{ whiteSpace: 'nowrap', ...customStatusStyle }}>
@@ -95,9 +95,9 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                     </div>
                 </td>
                 <td style={{ textAlign: 'center' }}>
-                    <span style={damagedStyle}>
-                        <span style={{ fontSize: '13px', fontWeight: 700 }}>{item.damaged || 0}</span>
-                        <span style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Damaged</span>
+                    <span style={{ ...damagedStyle, fontVariantNumeric: 'tabular-nums' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 600 }}>{item.damaged || 0}</span>
+                        <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Damaged</span>
                     </span>
                 </td>
                 <td style={{ textAlign: 'center' }}>
@@ -117,19 +117,19 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
     return (
         <div className="card table-card">
             <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                <table style={{ minWidth: '850px', width: '100%' }}>
+                <table className="data-table" style={{ minWidth: '850px', width: '100%' }}>
                     <thead>
                         <tr>
-                            <th>Product</th>
-                            <th>Part No.</th>
-                            <th>Category</th>
-                            <th>Address</th>
-                            <th>Stock</th>
-                            <th>Original Price</th>
-                            <th>Retail Price</th>
-                            <th>Sales</th>
-                            <th>Status</th>
-                            <th>Damaged</th>
+                            <th style={{ textAlign: 'left' }}>Product</th>
+                            <th style={{ textAlign: 'left' }}>Part No.</th>
+                            <th style={{ textAlign: 'left' }}>Category</th>
+                            <th style={{ textAlign: 'left' }}>Address</th>
+                            <th style={{ textAlign: 'right' }}>Stock</th>
+                            <th style={{ textAlign: 'right' }}>Original Price</th>
+                            <th style={{ textAlign: 'right' }}>Retail Price</th>
+                            <th style={{ textAlign: 'right' }}>Sales</th>
+                            <th style={{ textAlign: 'left' }}>Status</th>
+                            <th style={{ textAlign: 'center' }}>Damaged</th>
                             <th style={{ textAlign: 'center' }}>View</th>
                         </tr>
                     </thead>

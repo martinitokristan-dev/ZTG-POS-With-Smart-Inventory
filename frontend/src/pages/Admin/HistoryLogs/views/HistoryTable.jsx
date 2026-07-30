@@ -86,20 +86,20 @@ export default function HistoryTable({
     return (
         <div className="card table-card" style={{ minHeight: '280px', paddingBottom: openDropdownId ? '80px' : '0px', transition: 'padding-bottom 0.15s ease-out' }}>
             <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', minHeight: '280px', paddingBottom: openDropdownId ? '80px' : '0px' }}>
-                <table style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead style={{ borderBottom: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                <table className="data-table" style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead style={{ borderBottom: '2px solid var(--table-border)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B', background: 'var(--table-header-bg)' }}>
                         <tr>
-                            <th style={{ padding: '16px', fontWeight: '700' }}>TRANSACTION DATE & TIME</th>
-                            <th style={{ padding: '16px', fontWeight: '700' }}>RECEIPT/INVOICE</th>
-                            <th style={{ padding: '16px', fontWeight: '700' }}>CUSTOMER NAME</th>
-                            <th style={{ padding: '16px', fontWeight: '700' }}>SERVED BY</th>
-                            <th style={{ padding: '16px', fontWeight: '700' }}>PAYMENT METHOD</th>
-                            <th style={{ padding: '16px', fontWeight: '700' }}>STATUS</th>
-                            <th style={{ padding: '16px', fontWeight: '700' }}>REASON</th>
-                            <th style={{ padding: '16px', fontWeight: '700', textAlign: 'center' }}>ACTIONS</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Transaction Date & Time</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Receipt/Invoice</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Customer Name</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Served By</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Payment Method</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Status</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Reason</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'center' }}>Actions</th>
                         </tr>
                     </thead>
-                    <tbody style={{ fontSize: '13px' }}>
+                    <tbody style={{ fontSize: '15px' }}>
                         {transactions.map((tx, idx) => {
                             // Date formatting
                             const fullDate = fmtDate(tx.date || tx.created_at) || '';
@@ -109,11 +109,11 @@ export default function HistoryTable({
                             // Linked reservation badge
                             let reservationDisplay = null;
                             if (tx.status === 'Deposit') {
-                                reservationDisplay = <span style={{display: 'block', fontSize: '10px', color: '#D97706', fontWeight: '700', marginTop: '3px'}}>50% Deposit</span>;
+                                reservationDisplay = <span style={{display: 'block', fontSize: '11px', color: '#D97706', fontWeight: '600', marginTop: '3px'}}>50% Deposit</span>;
                             } else if (tx.status === 'Paid' && tx.order_ref) {
-                                reservationDisplay = <span style={{display: 'block', fontSize: '10px', color: '#059669', fontWeight: '700', marginTop: '3px'}}>Full Payment</span>;
+                                reservationDisplay = <span style={{display: 'block', fontSize: '11px', color: '#059669', fontWeight: '600', marginTop: '3px'}}>Full Payment</span>;
                             } else if (tx.order_ref && tx.status === 'Completed') {
-                                reservationDisplay = <span style={{display: 'block', fontSize: '10px', color: 'var(--primary)', fontWeight: '700', marginTop: '3px'}}>Pickup · {tx.order_ref}</span>;
+                                reservationDisplay = <span style={{display: 'block', fontSize: '11px', color: 'var(--primary)', fontWeight: '600', marginTop: '3px'}}>Pickup · {tx.order_ref}</span>;
                             }
 
                             const isBottomRow = idx >= transactions.length - 2 && transactions.length > 2;
@@ -126,16 +126,16 @@ export default function HistoryTable({
                                 : (tx.status === 'Refund' || tx.status === 'Return' ? (tx.refund_reason || '—') : tx.status === 'Void' ? (tx.void_reason || '—') : '—');
 
                             return (
-                                <tr key={tx.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                    <td style={{ padding: '16px' }}>
-                                        <span style={{ display: 'block', color: 'var(--text-primary)', fontSize: '13px' }}>{displayDate}</span>
-                                        {displayTime && <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)' }}>{displayTime}</span>}
+                                <tr key={tx.id} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '48px' }}>
+                                    <td style={{ padding: '12px 16px' }}>
+                                        <span style={{ display: 'block', color: 'var(--table-text-primary)', fontSize: '15px', fontWeight: '500' }}>{displayDate}</span>
+                                        {displayTime && <span style={{ display: 'block', fontSize: '13px', color: 'var(--table-text-secondary)', fontWeight: '500' }}>{displayTime}</span>}
                                     </td>
-                                    <td style={{ padding: '16px' }}>
+                                    <td style={{ padding: '12px 16px' }}>
                                         <CopyableText 
                                             text={tx.si_no || tx.receipt_number || 'N/A'} 
                                             label="Receipt/Invoice No." 
-                                            codeStyle={{ fontSize: '13px', color: 'var(--text-primary)' }} 
+                                            codeStyle={{ fontSize: '15px', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }} 
                                         />
                                         {reservationDisplay}
                                     </td>

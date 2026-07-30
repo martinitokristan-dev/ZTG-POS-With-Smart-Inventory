@@ -95,7 +95,6 @@ export default function CriticalStockAlerts() {
                                 <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.name}>
                                     {item.name}
                                 </div>
-                                {item.chineseName && <div style={{ fontSize: 11, color: '#64748B', fontWeight: 400, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.chineseName}</div>}
                                 <div style={{ fontSize: 11, color: '#94A3B8', fontWeight: 500, marginTop: 1 }}>{item.sku}</div>
                             </div>
                             <span style={{
