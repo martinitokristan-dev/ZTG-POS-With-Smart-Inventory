@@ -396,8 +396,11 @@ export default function usePOS() {
             });
 
             if (res.status === 201 || res.status === 200) {
-                // Invalidate customer cache page to force fresh data load
+                // Invalidate sales, history, daily-sales, and customer caches to force instant data refresh
                 invalidateCachePage('/customer-log');
+                invalidateCachePage('sales', 1);
+                invalidateCachePage('history', 1);
+                invalidateCachePage('daily-sales', 1);
 
                 // Only reset customer cache if a new customer was registered
                 const registeredNewCustomer = !selectedCustomer && newCustomerName.trim() !== '';

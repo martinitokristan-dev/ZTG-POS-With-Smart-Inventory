@@ -330,14 +330,21 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                     const customerVal = tx.customer_name || tx.customer?.name || (tx.customer_id ? `Customer #${tx.customer_id}` : 'WALK-IN');
                                     const serveByVal = tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || '—';
 
-                                    return (
-                                        <tr key={`${tx.id}-${item.id || i}`} style={{ minHeight: '48px', whiteSpace: 'nowrap' }}>
-                                            <td style={{ color: 'var(--table-text-secondary)', whiteSpace: 'nowrap', fontSize: '15px', fontWeight: '500' }}>{fmtDate(tx.date || tx.created_at)}</td>
+                                     const fullDate = fmtDate(tx.date || tx.created_at) || '';
+                                     const [displayDate, ...timeParts] = fullDate.split(', ');
+                                     const displayTime = timeParts.join(', ');
+
+                                     return (
+                                         <tr key={`${tx.id}-${item.id || i}`} style={{ minHeight: '48px', whiteSpace: 'nowrap' }}>
+                                             <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                                                 <span style={{ display: 'block', color: 'var(--table-text-primary)', fontSize: '15px', fontWeight: '500' }}>{displayDate}</span>
+                                                 {displayTime && <span style={{ display: 'block', fontSize: '13px', color: 'var(--table-text-secondary)', fontWeight: '500' }}>{displayTime}</span>}
+                                             </td>
                                             <td style={{ fontWeight: '600', color: 'var(--table-text-primary)', whiteSpace: 'nowrap', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>
                                                 <CopyableText text={tx.si_no || tx.receipt_number} label="SI Number" />
                                             </td>
                                             <td style={{ color: 'var(--table-text-primary)', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{resolvedPartNo}</td>
-                                            <td><span style={{ fontSize: '15px' }}><FormattedProductName name={resolvedName} /></span></td>
+                                            <td><span style={{ fontSize: '15px' }}><FormattedProductName name={resolvedName} variantOption={item.variant_option || item.variant || item.variantOption} blockVariant={true} /></span></td>
                                             <td style={{ color: 'var(--table-text-primary)', textAlign: 'center', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{qty}</td>
                                             <td style={{ textAlign: 'right', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
                                                 {fmt(unitPrice)}

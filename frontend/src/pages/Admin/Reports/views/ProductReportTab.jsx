@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import IOSDatePicker from '../../../../shared/components/IOSDatePicker';
 import IOSSelect from '../../../../shared/components/IOSSelect';
+import FormattedProductName from '../../../../shared/components/FormattedProductName';
 
 export default function ProductReportTab({ productPerformance, refundVoidAnalysis, startDate, setStartDate, endDate, setEndDate }) {
     const { top_sellers = [], dead_stock = [], totals = {} } = productPerformance || {};
@@ -135,7 +136,7 @@ export default function ProductReportTab({ productPerformance, refundVoidAnalysi
                             ) : filteredTopSellers.map((p, i) => (
                                 <tr key={i} style={{ minHeight: '48px' }}>
                                     <td style={{ fontWeight: '600', fontSize: '15px', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{p.part_no || 'N/A'}</td>
-                                    <td style={{ fontWeight: '600', fontSize: '15px', color: 'var(--table-text-primary)' }}>{p.name}</td>
+                                    <td><FormattedProductName name={p.name} blockVariant={true} /></td>
                                     <td style={{ fontWeight: '500', fontSize: '15px', color: 'var(--table-text-secondary)' }}>{p.category || 'Uncategorized'}</td>
                                     <td style={{ textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{p.sales_count}</td>
                                     <td style={{ textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{p.returns_count || 0}</td>
@@ -168,7 +169,7 @@ export default function ProductReportTab({ productPerformance, refundVoidAnalysi
                                 {filteredDeadStock.map((p, i) => (
                                     <tr key={i} style={{ minHeight: '48px' }}>
                                         <td style={{ fontWeight: '600', fontSize: '15px', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{p.part_no || 'N/A'}</td>
-                                        <td style={{ fontWeight: '600', fontSize: '15px', color: 'var(--table-text-primary)' }}>{p.name}</td>
+                                        <td><FormattedProductName name={p.name} blockVariant={true} /></td>
                                         <td style={{ fontWeight: '500', fontSize: '15px', color: 'var(--table-text-secondary)' }}>{p.category || 'Uncategorized'}</td>
                                         <td style={{ textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{p.stock}</td>
                                         <td><span style={{ color: '#DC2626', fontWeight: '600', fontSize: '15px' }}>Dead Stock</span></td>

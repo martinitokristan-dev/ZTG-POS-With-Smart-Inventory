@@ -52,15 +52,22 @@ export default function SalesTable({ loading, items, fmt, fmtDate }) {
                             const grossRow = qty * salesUnitPrice;
                             const netRowAmount = Math.max(0, grossRow - discountVal);
 
+                            const fullDate = fmtDate(item._txDate) || '';
+                            const [displayDate, ...timeParts] = fullDate.split(', ');
+                            const displayTime = timeParts.join(', ');
+
                             return (
                                 <tr key={i} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '48px', whiteSpace: 'nowrap' }}>
-                                    <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '500' }}>{fmtDate(item._txDate)}</td>
+                                    <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                                        <span style={{ display: 'block', color: 'var(--table-text-primary)', fontSize: '15px', fontWeight: '500' }}>{displayDate}</span>
+                                        {displayTime && <span style={{ display: 'block', fontSize: '13px', color: 'var(--table-text-secondary)', fontWeight: '500' }}>{displayTime}</span>}
+                                    </td>
                                     <td style={{ padding: '12px 16px', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
                                         <CopyableText text={item._txReceipt} label="S.I./C.I./D.R." codeStyle={{ fontSize: '15px', color: 'var(--table-text-primary)', fontWeight: '600' }} />
                                     </td>
                                     <td style={{ padding: '12px 16px', color: 'var(--table-text-primary)', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.part_no || item.partNo || 'N/A'}</td>
                                     <td style={{ padding: '12px 16px' }}>
-                                        <FormattedProductName name={item.name} />
+                                        <FormattedProductName name={item.name} blockVariant={true} />
                                     </td>
                                     <td style={{ padding: '12px 16px', color: 'var(--table-text-primary)', textAlign: 'center', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{qty}</td>
                                     <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', textAlign: 'right', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{fmt(unitPrice)}</td>

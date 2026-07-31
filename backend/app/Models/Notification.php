@@ -9,10 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
-    use HasFactory;
-
     public $timestamps = false;
-
     protected $fillable = [
         'type',
         'sub_type',
@@ -30,6 +27,8 @@ class Notification extends Model
         return [
             'type' => NotificationType::class,
             'is_read' => 'boolean',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
         ];
     }
 

@@ -35,7 +35,7 @@ class ReservationService
      */
     public function getAll(array $filters = []): LengthAwarePaginator
     {
-        $query = Reservation::with(['customer', 'reservedBy', 'fulfilledBy', 'items.product'])
+        $query = Reservation::with(['customer', 'reservedBy', 'fulfilledBy', 'items.product.parent', 'items.product.variantOptions'])
             ->latest('date');
 
         if (!empty($filters['status'])) {
@@ -54,7 +54,27 @@ class ReservationService
             });
         }
 
-        return $query->paginate(20);
+        $paginator = $query->paginate(20);
+        $paginator->getCollection()->transform(function ($r) {
+            if ($r->items) {
+                $r->items->transform(function ($item) {
+                    if ($item->product) {
+                        $prod = $item->product;
+                        $baseName = $prod->parent ? $prod->parent->name : $prod->name;
+                        $optionValues = $prod->variantOptions ? $prod->variantOptions->pluck('value')->join(' - ') : '';
+                        if ($optionValues) {
+                            $item->product->name = "{$baseName} ({$optionValues})";
+                        } elseif ($prod->parent && strpos($prod->name, '(') === false) {
+                            $item->product->name = "{$prod->parent->name} ({$prod->name})";
+                        }
+                    }
+                    return $item;
+                });
+            }
+            return $r;
+        });
+
+        return $paginator;
     }
 
     /**
@@ -62,8 +82,26 @@ class ReservationService
      */
     public function show(int $id): Reservation
     {
-        return Reservation::with(['customer', 'reservedBy', 'fulfilledBy', 'items.product'])
+        $res = Reservation::with(['customer', 'reservedBy', 'fulfilledBy', 'items.product.parent', 'items.product.variantOptions'])
             ->findOrFail($id);
+
+        if ($res->items) {
+            $res->items->transform(function ($item) {
+                if ($item->product) {
+                    $prod = $item->product;
+                    $baseName = $prod->parent ? $prod->parent->name : $prod->name;
+                    $optionValues = $prod->variantOptions ? $prod->variantOptions->pluck('value')->join(' - ') : '';
+                    if ($optionValues) {
+                        $item->product->name = "{$baseName} ({$optionValues})";
+                    } elseif ($prod->parent && strpos($prod->name, '(') === false) {
+                        $item->product->name = "{$prod->parent->name} ({$prod->name})";
+                    }
+                }
+                return $item;
+            });
+        }
+
+        return $res;
     }
 
     /**

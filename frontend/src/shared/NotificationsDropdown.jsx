@@ -28,12 +28,15 @@ function getNotifIcon(n) {
 }
 
 function timeAgo(timestamp) {
-    const mins = Math.floor((Date.now() - timestamp) / 60000);
-    if (mins > 60) {
-        const hours = Math.floor(mins / 60);
-        return hours >= 24 ? `${Math.floor(hours / 24)}d ago` : `${hours}h ago`;
-    }
-    return mins > 0 ? `${mins}m ago` : 'Just now';
+    if (!timestamp) return 'Just now';
+    const diffMs = Math.max(0, Date.now() - timestamp);
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

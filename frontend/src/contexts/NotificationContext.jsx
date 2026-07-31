@@ -38,13 +38,31 @@ export const NotificationProvider = ({ children }) => {
             const res = await api.get('/notifications');
             const notifs = Array.isArray(res.data) ? res.data : (res.data?.data || []);
 
+            const parseNotifDate = (dateVal) => {
+                if (!dateVal) return Date.now();
+                if (typeof dateVal === 'number') return dateVal;
+                let str = String(dateVal).trim();
+                if (str.includes(' ') && !str.includes('T')) {
+                    str = str.replace(' ', 'T');
+                }
+                let parsed = new Date(str);
+                if (isNaN(parsed.getTime())) return Date.now();
+                let ts = parsed.getTime();
+                // Check if timezone parsing caused offset skew
+                if (ts > Date.now() + 5000 && !str.endsWith('Z')) {
+                    const utcParsed = new Date(str + 'Z');
+                    if (!isNaN(utcParsed.getTime())) ts = utcParsed.getTime();
+                }
+                return Math.min(ts, Date.now());
+            };
+
             const mappedNotifs = notifs.map(n => ({
                 id: n.id,
                 type: n.type || 'system',
                 sub_type: n.sub_type,
                 title: n.title,
                 message: n.message,
-                timestamp: new Date(n.created_at || n.timestamp).getTime(),
+                timestamp: parseNotifDate(n.created_at || n.timestamp),
                 read: n.is_read || n.read || false
             }));
 

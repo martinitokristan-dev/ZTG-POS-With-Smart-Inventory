@@ -89,7 +89,7 @@ export default function ReservationsTable({
                                         <td style={{ fontWeight: 600, fontSize: '15px', color: 'var(--table-text-primary)' }}>{r.customer?.name || r.customer_name || '—'}</td>
                                         <td style={{ fontSize: '15px', color: 'var(--table-text-secondary)', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{r.customer?.phone || r.customer_phone || '—'}</td>
                                         <td style={{ fontSize: '15px', color: 'var(--table-text-primary)' }}>
-                                            <FormattedProductName name={productNames} />
+                                            <FormattedProductName name={productNames} blockVariant={true} />
                                         </td>
                                         <td style={{ fontSize: '15px', fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{totalQty}</td>
                                         <td style={{ fontWeight: 600, fontSize: '15px', color: 'var(--primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(r.deposit)}</td>

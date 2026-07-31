@@ -30,7 +30,7 @@ export default function ProductPerformanceTable({ productPerformance, fmt }) {
                             ) : top_sellers.map((p, i) => (
                                 <tr key={p.id} style={{ borderBottom: i === top_sellers.length - 1 ? 'none' : '1px solid var(--border)' }}>
                                     <td style={{ padding: '12px 20px' }}>
-                                        <div style={{ color: 'var(--text-primary)' }}><FormattedProductName name={p.name} /></div>
+                                        <div style={{ color: 'var(--text-primary)' }}><FormattedProductName name={p.name} blockVariant={true} /></div>
                                         {p.chinese_name && <div style={{ fontSize: '11px', color: '#94A3B8' }}>{p.chinese_name}</div>}
                                         <div style={{ fontSize: '11px', color: '#64748B' }}>{p.part_no}</div>
                                     </td>
@@ -63,7 +63,7 @@ export default function ProductPerformanceTable({ productPerformance, fmt }) {
                             ) : revenue_per_product.slice(0, 10).map((p, i) => (
                                 <tr key={p.product_id} style={{ borderBottom: i === Math.min(revenue_per_product.length, 10) - 1 ? 'none' : '1px solid var(--border)' }}>
                                     <td style={{ padding: '12px 20px' }}>
-                                        <div style={{ color: 'var(--text-primary)' }}><FormattedProductName name={p.name} /></div>
+                                        <div style={{ color: 'var(--text-primary)' }}><FormattedProductName name={p.name} blockVariant={true} /></div>
                                         {p.chinese_name && <div style={{ fontSize: '11px', color: '#94A3B8' }}>{p.chinese_name}</div>}
                                         <div style={{ fontSize: '11px', color: '#64748B' }}>{p.part_no}</div>
                                     </td>
@@ -95,7 +95,7 @@ export default function ProductPerformanceTable({ productPerformance, fmt }) {
                             ) : dead_stock.slice(0, 5).map((p, i) => (
                                 <tr key={p.id} style={{ borderBottom: i === Math.min(dead_stock.length, 5) - 1 ? 'none' : '1px solid var(--border)' }}>
                                     <td style={{ padding: '12px 20px' }}>
-                                        <div style={{ color: 'var(--text-primary)' }}><FormattedProductName name={p.name} /></div>
+                                        <div style={{ color: 'var(--text-primary)' }}><FormattedProductName name={p.name} blockVariant={true} /></div>
                                         {p.chinese_name && <div style={{ fontSize: '11px', color: '#94A3B8' }}>{p.chinese_name}</div>}
                                         <div style={{ fontSize: '11px', color: '#64748B' }}>{p.part_no}</div>
                                     </td>

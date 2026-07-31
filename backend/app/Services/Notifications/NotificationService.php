@@ -98,6 +98,7 @@ class NotificationService
                     'message'    => "Product '{$displayName}' is {$statusMsg}. Current quantity {$product->stock}.",
                     'product_id' => $product->id,
                     'link'       => "/products/{$product->id}",
+                    'created_at' => now(),
                 ]);
                 event(new NotificationSent($notification));
             }
@@ -177,6 +178,7 @@ class NotificationService
             'message'        => $message,
             'transaction_id' => $transaction->id,
             'link'           => "/transactions/{$transaction->id}",
+            'created_at'     => now(),
         ]);
         event(new NotificationSent($notification));
     }

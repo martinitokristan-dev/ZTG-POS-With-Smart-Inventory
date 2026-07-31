@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../../../../shared/api';
 import { useProducts } from '../../../../contexts/ProductContext';
 import { fetchReservations, resetReservationsCache } from '../../../../shared/hooks/useReservationsCache';
+import { invalidateCachePage } from '../../../../shared/hooks/usePaginatedCache';
 import echo from '../../../../lib/echo';
 
 const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
@@ -283,6 +284,9 @@ export default function useReservations() {
             setShowSuccessModal(true);
             resetAddForm();
             resetReservationsCache();
+            invalidateCachePage('sales', 1);
+            invalidateCachePage('history', 1);
+            invalidateCachePage('daily-sales', 1);
             loadReservations();
         } catch (err) {
             setAddError(err.response?.data?.message || 'Failed to create reservation.');
@@ -324,6 +328,9 @@ export default function useReservations() {
             setShowFulfillModal(false);
             setShowSuccessModal(true);
             resetReservationsCache();
+            invalidateCachePage('sales', 1);
+            invalidateCachePage('history', 1);
+            invalidateCachePage('daily-sales', 1);
             loadReservations();
         } catch (err) {
             console.error("Fulfill error:", err.response?.data);
@@ -347,6 +354,9 @@ export default function useReservations() {
             await api.post(`/reservations/${selected.id}/cancel`, { reason: cancelReason });
             setShowCancelModal(false);
             resetReservationsCache();
+            invalidateCachePage('sales', 1);
+            invalidateCachePage('history', 1);
+            invalidateCachePage('daily-sales', 1);
             loadReservations();
         } catch (err) {
             console.error('Failed to cancel:', err);

@@ -94,7 +94,11 @@ export const exportSalesToExcel = (transactionsItems = [], options = {}) => {
     // Mirror SalesReportTab: reservation transactions (deposit OR fulfillment) use item.price
     // for the SALES column (the portion actually collected), while PRICE shows original_price.
     const isReservationTx = tx.type === 'reservation';
-    const resolvedName = item.product?.name || item.name || 'Unknown Product';
+    let resolvedName = item.product?.name || item.name || 'Unknown Product';
+    const variantOpt = item.variant_option || item.variant || item.variant_name || item.variantOption;
+    if (variantOpt && !resolvedName.toLowerCase().includes(String(variantOpt).toLowerCase())) {
+        resolvedName = `${resolvedName} (${variantOpt})`;
+    }
     const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
     const qty = Number(item.qty || 1);
     const rawPrice = Number(item.original_price || item.price || 0);

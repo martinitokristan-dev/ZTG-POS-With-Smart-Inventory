@@ -205,7 +205,7 @@ class ReportService
         }
 
         // Transactions list for the sales report table (Excluding inventory restocks and system logs)
-        $transactionsQuery = Transaction::with(['items.product', 'customer', 'cashier', 'checker'])
+        $transactionsQuery = Transaction::with(['items.product.parent', 'items.product.variantOptions', 'customer', 'cashier', 'checker'])
             ->whereNotIn('status', ['RESTOCKED', 'Restocked', 'Security Alert'])
             ->whereNotIn('type', ['system', 'restock']);
 
@@ -213,6 +213,23 @@ class ReportService
             $transactionsQuery->whereBetween('date', [$utcStart, $utcEnd]);
         }
         $transactions = $transactionsQuery->orderByDesc('date')->get();
+
+        $transactions->each(function ($tx) {
+            if ($tx->items) {
+                $tx->items->each(function ($item) {
+                    if ($item->product) {
+                        $prod = $item->product;
+                        $baseName = $prod->parent ? $prod->parent->name : $prod->name;
+                        $optionValues = $prod->variantOptions ? $prod->variantOptions->pluck('value')->join(' - ') : '';
+                        if ($optionValues) {
+                            $item->product->name = "{$baseName} ({$optionValues})";
+                        } elseif ($prod->parent && strpos($prod->name, '(') === false) {
+                            $item->product->name = "{$prod->parent->name} ({$prod->name})";
+                        }
+                    }
+                });
+            }
+        });
 
         return [
             'total_revenue' => $totalRevenue,

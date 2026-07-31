@@ -32,7 +32,7 @@ class TransactionService
      */
     public function getAll(array $filters = []): LengthAwarePaginator
     {
-        $query = Transaction::with(['customer', 'cashier', 'approver', 'checker', 'items.product', 'reservation']);
+        $query = Transaction::with(['customer', 'cashier', 'approver', 'checker', 'items.product.parent', 'items.product.variantOptions', 'reservation']);
 
         $sortBy = $filters['sort_by'] ?? 'date';
         $sortOrder = $filters['sort_order'] ?? 'desc';
@@ -108,7 +108,27 @@ class TransactionService
             });
         }
 
-        return $query->paginate(20);
+        $paginator = $query->paginate(20);
+        $paginator->getCollection()->transform(function ($tx) {
+            if ($tx->items) {
+                $tx->items->transform(function ($item) {
+                    if ($item->product) {
+                        $prod = $item->product;
+                        $baseName = $prod->parent ? $prod->parent->name : $prod->name;
+                        $optionValues = $prod->variantOptions ? $prod->variantOptions->pluck('value')->join(' - ') : '';
+                        if ($optionValues) {
+                            $item->product->name = "{$baseName} ({$optionValues})";
+                        } elseif ($prod->parent && strpos($prod->name, '(') === false) {
+                            $item->product->name = "{$prod->parent->name} ({$prod->name})";
+                        }
+                    }
+                    return $item;
+                });
+            }
+            return $tx;
+        });
+
+        return $paginator;
     }
 
     /**

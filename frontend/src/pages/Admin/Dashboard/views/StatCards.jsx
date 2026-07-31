@@ -1,4 +1,5 @@
 import React from 'react';
+import FormattedProductName from '../../../../shared/components/FormattedProductName';
 
 // Trending-up icon: zigzag line with arrowhead (like a stock chart going up)
 function TrendingUpIcon({ color = '#10B981', size = 16 }) {
@@ -58,8 +59,8 @@ export default function StatCards({ stats, currentTimeRange = 'Today' }) {
             {/* Card 4: Top Product */}
             <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 12, padding: 24, boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)', boxSizing: 'border-box', minWidth: 0 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Top Product</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#0F172A', marginTop: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={stats.topProduct?.name || '-'}>
-                    {stats.topProduct?.name || '-'}
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#0F172A', marginTop: 8 }}>
+                    <FormattedProductName name={stats.topProduct?.name} blockVariant={true} />
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: '#10B981', marginTop: 8 }}>
                     {stats.topProduct?.qty || 0} units sold
