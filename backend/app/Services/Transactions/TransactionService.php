@@ -44,7 +44,8 @@ class TransactionService
         }
 
         if (!empty($filters['type'])) {
-            $query->where('type', $filters['type']);
+            $types = array_map('trim', explode(',', $filters['type']));
+            $query->whereIn('type', $types);
         }
 
         // tx_type is the dedicated param sent by the History Log frontend

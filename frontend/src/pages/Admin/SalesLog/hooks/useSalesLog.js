@@ -29,7 +29,7 @@ export default function useSalesLog() {
     }, []);
     const statusParam = activeTab === 'All' ? '' : 
         (activeTab === 'Refund' ? 'Refund,Return' : 
-        (activeTab === 'Completed' ? 'Completed,Paid' : activeTab));
+        (activeTab === 'Completed' ? 'Completed,Paid,Deposit' : activeTab));
     const paymentParam = paymentFilter === 'All' ? '' : paymentFilter;
     const searchParam = searchQuery.trim();
 
@@ -74,7 +74,7 @@ export default function useSalesLog() {
 
         return {
             status: statusParam,
-            type: 'sale',
+            type: 'sale,reservation',
             payment_method: paymentParam,
             search: searchParam,
             sort_by,

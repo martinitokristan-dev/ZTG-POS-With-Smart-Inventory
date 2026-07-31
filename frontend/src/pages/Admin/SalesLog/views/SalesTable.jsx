@@ -2,6 +2,7 @@ import React from 'react';
 import LoadingSpinner from '../../../../shared/components/LoadingSpinner';
 import StatusBadge from '../../../../shared/components/StatusBadge';
 import CopyableText from '../../../../shared/components/CopyableText';
+import FormattedProductName from '../../../../shared/components/FormattedProductName';
 
 export default function SalesTable({ loading, items, fmt, fmtDate }) {
     if (loading) return <LoadingSpinner text="Loading sales data..." minHeight="200px" />;
@@ -57,7 +58,7 @@ export default function SalesTable({ loading, items, fmt, fmtDate }) {
                                     </td>
                                     <td style={{ padding: '12px 16px', color: 'var(--table-text-primary)', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.part_no || item.partNo || 'N/A'}</td>
                                     <td style={{ padding: '12px 16px' }}>
-                                        <span style={{ fontWeight: '600', color: 'var(--table-text-primary)', fontSize: '15px' }}>{item.name}</span>
+                                        <FormattedProductName name={item.name} />
                                     </td>
                                     <td style={{ padding: '12px 16px', color: 'var(--table-text-primary)', textAlign: 'center', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{qty}</td>
                                     <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', textAlign: 'right', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{fmt(unitPrice)}</td>
