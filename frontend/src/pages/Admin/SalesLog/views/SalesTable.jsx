@@ -19,7 +19,7 @@ export default function SalesTable({ loading, items, fmt, fmtDate }) {
         <div className="card table-card" style={{ background: '#FFFFFF', borderRadius: '10px', border: '1px solid var(--border)' }}>
             <div style={{ overflowX: 'auto' }}>
                 <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead style={{ borderBottom: '2px solid var(--table-border)', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', background: 'var(--table-header-bg)' }}>
+                    <thead style={{ borderBottom: '2px solid var(--table-border)', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', background: 'var(--table-header-bg)', whiteSpace: 'nowrap' }}>
                         <tr>
                             <th style={{ padding: '12px 16px', fontWeight: '600' }}>Date</th>
                             <th style={{ padding: '12px 16px', fontWeight: '600' }}>S.I./C.I./D.R.</th>
@@ -51,7 +51,7 @@ export default function SalesTable({ loading, items, fmt, fmtDate }) {
                             const netRowAmount = Math.max(0, grossRow - discountVal);
 
                             return (
-                                <tr key={i} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '48px' }}>
+                                <tr key={i} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '48px', whiteSpace: 'nowrap' }}>
                                     <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '500' }}>{fmtDate(item._txDate)}</td>
                                     <td style={{ padding: '12px 16px', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
                                         <CopyableText text={item._txReceipt} label="S.I./C.I./D.R." codeStyle={{ fontSize: '15px', color: 'var(--table-text-primary)', fontWeight: '600' }} />

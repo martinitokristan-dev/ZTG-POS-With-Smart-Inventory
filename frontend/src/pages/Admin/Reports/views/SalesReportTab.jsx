@@ -285,7 +285,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                 <div className="section-card-header">Sales Transactions</div>
                 <div style={{ overflowX: 'auto' }}>
                     <table className="reports-table data-table">
-                        <thead style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B', background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)' }}>
+                        <thead style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B', background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)', whiteSpace: 'nowrap' }}>
                             <tr>
                                 <th style={{ fontWeight: '600' }}>Date</th>
                                 <th style={{ fontWeight: '600' }}>S.I./C.I./D.R.</th>
@@ -331,7 +331,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                     const serveByVal = tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || '—';
 
                                     return (
-                                        <tr key={`${tx.id}-${item.id || i}`} style={{ minHeight: '48px' }}>
+                                        <tr key={`${tx.id}-${item.id || i}`} style={{ minHeight: '48px', whiteSpace: 'nowrap' }}>
                                             <td style={{ color: 'var(--table-text-secondary)', whiteSpace: 'nowrap', fontSize: '15px', fontWeight: '500' }}>{fmtDate(tx.date || tx.created_at)}</td>
                                             <td style={{ fontWeight: '600', color: 'var(--table-text-primary)', whiteSpace: 'nowrap', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>
                                                 <CopyableText text={tx.si_no || tx.receipt_number} label="SI Number" />
