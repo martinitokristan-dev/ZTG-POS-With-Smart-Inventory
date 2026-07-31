@@ -138,11 +138,14 @@ export default function useSalesLog() {
             const itemQty = Number(item.qty || 1);
             const rawPrice = Number(item.original_price || item.price || 0);
             const resolvedPrice = rawPrice > 0 ? rawPrice : (Number(t.amount || 0) / Math.max(1, itemQty));
+            const isResTx = t.type === 'reservation' || t.status === 'Deposit' || t.status === 'Paid' || (t.order_ref && t.order_ref.startsWith('RS-'));
             flattenedItems.push({
                 ...item,
                 price: resolvedPrice,
                 name: resolvedName,
                 part_no: resolvedPartNo,
+                _isReservationTx: isResTx,
+                _itemCashPrice: Number(item.price || 0),
                 _txDate: t.date || t.created_at,
                 _txReceipt: t.si_no || t.receipt_number,
                 _txCustomer: t.customer?.name || 'Guest',

@@ -42,12 +42,14 @@ export default function SalesTable({ loading, items, fmt, fmtDate }) {
                             const amountColor = (isDeduction || isPending) ? 'var(--danger, #DC2626)' : 'var(--success, #16A34A)';
                             const amountPrefix = isDeduction ? '- ' : '';
 
+                            const isReservationTx = item._isReservationTx || item._txStatus === 'Deposit' || item._txStatus === 'Paid' || (item._txReceipt && item._txReceipt.startsWith('RS-'));
                             const qty = Number(item.qty || 1);
                             const rawPrice = Number(item.original_price || item.price || 0);
                             const unitPrice = rawPrice > 0 ? rawPrice : (Number(item._txAmount || 0) / Math.max(1, qty));
                             const itemDisc = Number(item.discount || item.item_discount || 0);
                             const discountVal = itemDisc > 0 ? itemDisc * qty : Number(item._txDiscountAmount || 0);
-                            const grossRow = qty * unitPrice;
+                            const salesUnitPrice = isReservationTx ? (item._itemCashPrice || Number(item.price || 0)) : unitPrice;
+                            const grossRow = qty * salesUnitPrice;
                             const netRowAmount = Math.max(0, grossRow - discountVal);
 
                             return (
