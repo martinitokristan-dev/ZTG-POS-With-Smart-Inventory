@@ -238,7 +238,7 @@ class ReportService
         // Top 10 selling products (computed from transactions in date range)
         $topSellersQuery = TransactionItem::select('product_id', DB::raw('SUM(qty) as sales_count'), DB::raw('SUM(transaction_items.price * transaction_items.qty) as revenue'))
             ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-            ->where('transactions.status', 'Completed');
+            ->whereIn('transactions.status', ['Completed', 'Deposit', 'Paid']);
         if ($actualStart && $actualEnd) {
             $topSellersQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
         }
@@ -247,7 +247,24 @@ class ReportService
             ->limit(10)
             ->get()
             ->map(function ($row) use ($actualStart, $actualEnd) {
-                $prod = Product::find($row->product_id);
+                $prod = Product::with(['category', 'variantOptions'])->find($row->product_id);
+
+                $variantStr = '';
+                if ($prod) {
+                    if ($prod->variantOptions && $prod->variantOptions->count() > 0) {
+                        $variantStr = $prod->variantOptions->pluck('value')->implode(', ');
+                    } elseif (!empty($prod->variant_options)) {
+                        if (is_array($prod->variant_options)) {
+                            $variantStr = implode(', ', array_filter(array_column($prod->variant_options, 'value')));
+                        } elseif (is_string($prod->variant_options)) {
+                            $variantStr = $prod->variant_options;
+                        }
+                    }
+                }
+
+                $displayName = $prod
+                    ? ($variantStr ? "{$prod->name} ({$variantStr})" : $prod->name)
+                    : 'Deleted Product';
 
                 // Get returns and refunds for this product in the date range
                 $retRefQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
@@ -261,7 +278,7 @@ class ReportService
 
                 return [
                     'product_id' => $row->product_id,
-                    'name' => $prod ? $prod->name : 'Deleted Product',
+                    'name' => $displayName,
                     'part_no' => $prod ? $prod->part_no : 'N/A',
                     'category' => $prod && $prod->category ? $prod->category->name : 'Uncategorized',
                     'sales_count' => (int) $row->sales_count,
@@ -274,10 +291,10 @@ class ReportService
             })
             ->toArray();
 
-        // Revenue per product (from Completed transactions) - Top 50 by revenue
+        // Revenue per product (from Completed/Deposit/Paid transactions) - Top 50 by revenue
         $revenuePerProductQuery = TransactionItem::select('product_id', DB::raw('SUM(transaction_items.price * transaction_items.qty) as revenue'))
             ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-            ->whereIn('transactions.status', ['Completed', 'Pending']);
+            ->whereIn('transactions.status', ['Completed', 'Deposit', 'Paid']);
         if ($actualStart && $actualEnd) {
             $revenuePerProductQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
         }

@@ -106,7 +106,7 @@ class PhaseSixTest extends TestCase
         $customer = Customer::create(['name' => 'Test Customer', 'phone' => '09170000000']);
 
         $reservation = Reservation::create([
-            'order_no'       => 'ORD-' . now()->timestamp,
+            'order_no'       => 'RS-2026-001',
             'customer_id'    => $customer->id,
             'payment_method' => 'Cash',
             'payment_type'   => 'deposit50',

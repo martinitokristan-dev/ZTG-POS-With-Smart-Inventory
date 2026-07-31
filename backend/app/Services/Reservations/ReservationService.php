@@ -105,8 +105,8 @@ class ReservationService
                 ]
             );
 
-            // 4. Generate Order No
-            $orderNo = 'ORD-' . now()->timestamp;
+            // 4. Generate Order No (Format: RS-YYYY-XXX)
+            $orderNo = $this->generateReservationNo();
 
             // 5. Save reservation
             $reservation = Reservation::create([
@@ -156,6 +156,9 @@ class ReservationService
             ]);
 
             // Create deposit transaction items proportional to deposit amount
+            // original_price stores the FULL product unit price so the Sales Report
+            // can show the real product value in the PRICE column (e.g. ₱200),
+            // while item.price stores the deposit portion (e.g. ₱100) for the SALES column.
             $depositRatio = $total > 0 ? ($data['deposit_amount'] / $total) : 1;
             foreach ($data['items'] as $item) {
                 $depositItemPrice = round($item['price'] * $depositRatio, 2);
@@ -163,7 +166,8 @@ class ReservationService
                     'transaction_id' => $depositTx->id,
                     'product_id'     => $item['product_id'],
                     'qty'            => $item['qty'],
-                    'price'          => $depositItemPrice,
+                    'price'          => $depositItemPrice,  // deposit portion (shown in SALES)
+                    'original_price' => $item['price'],     // full unit price  (shown in PRICE)
                     'price_tier'     => 'price1',
                     'unit'           => 'pc',
                 ]);
@@ -299,6 +303,8 @@ class ReservationService
                 ]);
 
                 // 6. Create transaction items proportional to fulfillment balance amount
+                // original_price stores the FULL product unit price so the Sales Report
+                // PRICE column shows ₱300 while SALES shows only the balance (₱150) paid.
                 $fulfillmentRatio = $reservation->total > 0 ? ($balanceAmount / $reservation->total) : 1;
                 foreach ($reservation->items as $item) {
                     $balanceItemPrice = round($item->price * $fulfillmentRatio, 2);
@@ -306,7 +312,8 @@ class ReservationService
                         'transaction_id' => $transaction->id,
                         'product_id'     => $item->product_id,
                         'qty'            => $item->qty,
-                        'price'          => $balanceItemPrice,
+                        'price'          => $balanceItemPrice,  // balance portion (shown in SALES)
+                        'original_price' => $item->price,       // full unit price  (shown in PRICE)
                         'price_tier'     => 'price1',
                         'unit'           => 'pc',
                     ]);
@@ -394,5 +401,40 @@ class ReservationService
         event(new ReservationUpdated($cancelled));
 
         return $cancelled;
+    }
+
+    /**
+     * Generate sequential reservation number.
+     * Format: RS-{YEAR}-{SEQUENCE} (e.g. RS-2026-001, RS-2026-002)
+     */
+    public function generateReservationNo(): string
+    {
+        $year = now()->year;
+        $prefix = "RS-{$year}-";
+
+        $existingOrderNos = Reservation::where('order_no', 'like', "{$prefix}%")
+            ->pluck('order_no');
+
+        $maxSeq = 0;
+        foreach ($existingOrderNos as $no) {
+            if (preg_match('/RS-\d{4}-(\d+)/', $no, $matches)) {
+                $seq = (int)$matches[1];
+                if ($seq > $maxSeq) {
+                    $maxSeq = $seq;
+                }
+            }
+        }
+
+        $nextNum = $maxSeq + 1;
+        $sequenceStr = str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+        $candidate = "{$prefix}{$sequenceStr}";
+
+        while (Reservation::where('order_no', $candidate)->exists()) {
+            $nextNum++;
+            $sequenceStr = str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+            $candidate = "{$prefix}{$sequenceStr}";
+        }
+
+        return $candidate;
     }
 }

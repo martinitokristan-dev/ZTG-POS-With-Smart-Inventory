@@ -42,7 +42,7 @@ export default function FulfillOrderModal({
                                 <table style={{ width: '100%', fontSize: '13px', color: '#334155' }}>
                                     <tbody>
                                         {[
-                                            ['Order Number', selected.order_no || `ORD-${String(selected.id).padStart(3, '0')}`],
+                                            ['Order Number', selected.order_no || `RS-${String(selected.id).padStart(3, '0')}`],
                                             ['Customer', selected.customer?.name || selected.customer_name || '—'],
                                             ['Contact', selected.customer?.phone || selected.customer_phone || '—'],
                                             ['Order Date', fmtDate(selected.date || selected.created_at)],

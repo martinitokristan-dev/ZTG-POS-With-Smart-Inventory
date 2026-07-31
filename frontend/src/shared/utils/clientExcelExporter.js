@@ -91,13 +91,19 @@ export const exportSalesToExcel = (transactionsItems = [], options = {}) => {
   transactionsItems.forEach((item) => {
     const tx = item.tx || {};
     const isDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void');
+    // Mirror SalesReportTab: reservation transactions (deposit OR fulfillment) use item.price
+    // for the SALES column (the portion actually collected), while PRICE shows original_price.
+    const isReservationTx = tx.type === 'reservation';
     const resolvedName = item.product?.name || item.name || 'Unknown Product';
     const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
     const qty = Number(item.qty || 1);
     const rawPrice = Number(item.original_price || item.price || 0);
     const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, qty));
     const discountVal = getItemDiscountAmount(item, tx);
-    const grossSalesAmount = qty * unitPrice;
+    // PRICE column: always full product price (unitPrice)
+    // SALES column: for reservations use item.price × qty; for regular sales use unitPrice × qty
+    const salesUnitPrice = isReservationTx ? Number(item.price || 0) : unitPrice;
+    const grossSalesAmount = qty * salesUnitPrice;
     const netSalesAmount = Math.max(0, grossSalesAmount - discountVal);
     const finalSalesAmount = isDeduction ? -netSalesAmount : netSalesAmount;
 

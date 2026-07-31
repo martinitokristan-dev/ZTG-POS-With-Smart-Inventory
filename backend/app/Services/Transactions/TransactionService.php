@@ -32,7 +32,7 @@ class TransactionService
      */
     public function getAll(array $filters = []): LengthAwarePaginator
     {
-        $query = Transaction::with(['customer', 'cashier', 'approver', 'checker', 'items.product']);
+        $query = Transaction::with(['customer', 'cashier', 'approver', 'checker', 'items.product', 'reservation']);
 
         $sortBy = $filters['sort_by'] ?? 'date';
         $sortOrder = $filters['sort_order'] ?? 'desc';
@@ -115,7 +115,7 @@ class TransactionService
      */
     public function show(int $id): Transaction
     {
-        return Transaction::with(['customer', 'cashier', 'approver', 'checker', 'items.product'])
+        return Transaction::with(['customer', 'cashier', 'approver', 'checker', 'items.product', 'reservation'])
             ->findOrFail($id);
     }
 

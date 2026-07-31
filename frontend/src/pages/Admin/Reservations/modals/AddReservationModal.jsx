@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import IOSDatePicker from '../../../../shared/components/IOSDatePicker';
 import IOSTimePicker from '../../../../shared/components/IOSTimePicker';
 import IOSSelect from '../../../../shared/components/IOSSelect';
+import FormattedProductName from '../../../../shared/components/FormattedProductName';
 
 export default function AddReservationModal({
     isOpen, onClose, onOpen, onSubmit,
@@ -139,7 +140,9 @@ export default function AddReservationModal({
                                             ) : cartItems.map(c => (
                                                 <tr key={c.product_id} style={{ borderBottom: '1px solid #F1F5F9' }}>
                                                     <td style={{ padding: '10px 16px' }}>
-                                                        <strong style={{ display: 'block', fontSize: '12px' }}>{c.name}</strong>
+                                                        <div style={{ display: 'block', fontSize: '12px' }}>
+                                                            <FormattedProductName name={c.name} />
+                                                        </div>
                                                         {c.chinese_name && <span style={{ fontSize: '11px', color: '#94A3B8', display: 'block' }}>{c.chinese_name}</span>}
                                                         <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{c.part_no}</span>
                                                     </td>

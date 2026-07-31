@@ -58,9 +58,18 @@ export function useDashboard() {
                         const calculatedPercentage = p.stock > 0
                             ? Math.min(Math.round((p.sales_count / p.stock) * 100), 100)
                             : (p.sales_count > 0 ? 100 : 0);
+
+                        const varOption = Array.isArray(p.variant_options)
+                            ? p.variant_options.map(o => o.value || o).join(', ')
+                            : (p.variant_option || (typeof p.variant_options === 'string' ? p.variant_options : '') || p.variant_name || '');
+
+                        const nameWithVariant = varOption && !p.name.includes(`(${varOption})`)
+                            ? `${p.name} (${varOption})`
+                            : p.name;
+
                         return {
                             rank: idx + 1,
-                            name: p.name,
+                            name: nameWithVariant,
                             partNo: p.part_no,
                             category: p.category || 'Heavy Parts',
                             unitsSold: p.sales_count,

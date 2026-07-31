@@ -7,6 +7,7 @@ import { exportSalesToExcel, getItemDiscountAmount } from '../../../../shared/ut
 import StatusBadge from '../../../../shared/components/StatusBadge';
 import { showToast } from '../../../../utils/toast';
 import CopyableText from '../../../../shared/components/CopyableText';
+import FormattedProductName from '../../../../shared/components/FormattedProductName';
 
 export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtDate, isReportGenerated, setIsReportGenerated, startDate, setStartDate, endDate, setEndDate }) {
     const [confirming, setConfirming] = useState(false);
@@ -136,11 +137,15 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                 });
 
                 const isDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void');
+                // Any reservation transaction (deposit OR fulfillment) uses partial-payment display:
+                // PRICE = original_price (full product price), SALES = item.price × qty (portion paid)
+                const isReservationTx = tx.type === 'reservation';
                 const qty = Number(item.qty || 1);
                 const rawPrice = Number(item.original_price || item.price || 0);
                 const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, qty));
                 const discountVal = getItemDiscountAmount(item, tx);
-                const grossRowAmount = qty * unitPrice;
+                const salesUnitPrice = isReservationTx ? Number(item.price || 0) : unitPrice;
+                const grossRowAmount = qty * salesUnitPrice;
                 const netRowAmount = Math.max(0, grossRowAmount - discountVal);
 
                 if (!isDeduction) {
@@ -308,6 +313,9 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                     const tx = item.tx || {};
                                     const isDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void');
                                     const isPending = tx.status === 'Pending';
+                                    // Any reservation transaction uses partial-payment display:
+                                    // PRICE = original_price (full product price), SALES = item.price × qty (portion paid)
+                                    const isReservationTx = tx.type === 'reservation';
                                     const amountColor = (isDeduction || isPending) ? 'var(--danger, #DC2626)' : 'var(--success, #16A34A)';
                                     const amountPrefix = isDeduction ? '- ' : '';
                                     const resolvedName = item.product?.name || item.name || 'Unknown Product';
@@ -316,7 +324,8 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                     const rawPrice = Number(item.original_price || item.price || 0);
                                     const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, qty));
                                     const discountVal = getItemDiscountAmount(item, tx);
-                                    const grossRowAmount = qty * unitPrice;
+                                    const salesUnitPrice = isReservationTx ? Number(item.price || 0) : unitPrice;
+                                    const grossRowAmount = qty * salesUnitPrice;
                                     const netRowAmount = Math.max(0, grossRowAmount - discountVal);
                                     const customerVal = tx.customer_name || tx.customer?.name || (tx.customer_id ? `Customer #${tx.customer_id}` : 'WALK-IN');
                                     const serveByVal = tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || '—';
@@ -328,7 +337,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                                 <CopyableText text={tx.si_no || tx.receipt_number} label="SI Number" />
                                             </td>
                                             <td style={{ color: 'var(--table-text-primary)', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{resolvedPartNo}</td>
-                                            <td><span style={{ fontWeight: '600', color: 'var(--table-text-primary)', fontSize: '15px' }}>{resolvedName}</span></td>
+                                            <td><span style={{ fontSize: '15px' }}><FormattedProductName name={resolvedName} /></span></td>
                                             <td style={{ color: 'var(--table-text-primary)', textAlign: 'center', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{qty}</td>
                                             <td style={{ textAlign: 'right', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
                                                 {fmt(unitPrice)}
@@ -340,7 +349,21 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                                 {discountVal > 0 ? `-${fmt(discountVal)}` : '—'}
                                             </td>
                                             <td style={{ color: 'var(--text-secondary)' }}>{serveByVal.split(' ')[0]}</td>
-                                            <td><StatusBadge status={tx.status} /></td>
+                                            <td>
+                                                {isReservationTx && tx.status === 'Completed' ? (
+                                                    <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                                        <StatusBadge status={tx.status} />
+                                                        <span style={{ fontSize: '9px', fontWeight: '600', color: '#10B981', letterSpacing: '0.4px', textTransform: 'uppercase', opacity: 0.8 }}>Balance Payment</span>
+                                                    </span>
+                                                ) : isReservationTx && (tx.status === 'Deposit' || tx.status === 'Paid') ? (
+                                                    <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                                        <StatusBadge status={tx.status} />
+                                                        <span style={{ fontSize: '9px', fontWeight: '600', color: '#2563EB', letterSpacing: '0.4px', textTransform: 'uppercase', opacity: 0.8 }}>Partial Payment</span>
+                                                    </span>
+                                                ) : (
+                                                    <StatusBadge status={tx.status} />
+                                                )}
+                                             </td>
                                         </tr>
                                     );
                                 })

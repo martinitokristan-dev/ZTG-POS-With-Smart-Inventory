@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import LoadingSpinner from '../../../../shared/components/LoadingSpinner';
 import useDisplayChineseNames from '../../../../shared/hooks/useDisplayChineseNames';
+import FormattedProductName from '../../../../shared/components/FormattedProductName';
 
 const DEFAULT_PLACEHOLDER_IMAGE = "/ztg-icon.png";
 
@@ -117,8 +118,8 @@ export default function ProductGrid({
                                                     onError={(e) => { e.currentTarget.src = DEFAULT_PLACEHOLDER_IMAGE; }}
                                                 />
                                                 <div>
-                                                    <div style={{ fontWeight: '600', color: 'var(--table-text-primary)', fontSize: '15px' }}>
-                                                        {p.name}
+                                                    <div style={{ fontSize: '15px' }}>
+                                                        <FormattedProductName name={p.name} />
                                                     </div>
                                                     {showChineseNames && p.chinese_name && <div style={{ fontSize: '12px', color: 'var(--table-text-secondary)', fontWeight: '500', marginTop: '2px' }}>{p.chinese_name}</div>}
                                                 </div>

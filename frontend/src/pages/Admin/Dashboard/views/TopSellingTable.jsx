@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import FormattedProductName from '../../../../shared/components/FormattedProductName';
 
 export default function TopSellingTable({ topProducts }) {
     const navigate = useNavigate();
@@ -34,7 +35,9 @@ export default function TopSellingTable({ topProducts }) {
                         {topProducts.map((p) => (
                             <tr key={p.rank} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '48px' }}>
                                 <td style={{ padding: '12px 16px', fontSize: 15, fontWeight: 600, color: 'var(--table-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>#{p.rank}</td>
-                                <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-primary)', fontWeight: 600 }}>{p.name}</td>
+                                <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-primary)' }}>
+                                    <FormattedProductName name={p.name} />
+                                </td>
                                 <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-primary)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{p.partNo}</td>
                                 <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-secondary)', fontWeight: 500 }}>{p.category}</td>
                                 <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-primary)', fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{p.unitsSold}</td>

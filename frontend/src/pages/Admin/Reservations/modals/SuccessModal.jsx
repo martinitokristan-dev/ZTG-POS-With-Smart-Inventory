@@ -25,7 +25,7 @@ export default function SuccessModal({
                     {successData && (
                         <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', marginBottom: '24px', textAlign: 'left' }}>
                             {[
-                                ['Order No.', successData.order_no || `ORD-${String(successData.id).padStart(3, '0')}`],
+                                ['Order No.', successData.order_no || `RS-${String(successData.id).padStart(3, '0')}`],
                                 ['Total', fmt(successData.total)],
                                 ['Deposit', fmt(successData.deposit)],
                                 ['Pickup Date', fmtDate(successData.pickup_date)],

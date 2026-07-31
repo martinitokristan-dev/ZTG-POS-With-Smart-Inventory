@@ -38,10 +38,17 @@ export default function useReservations() {
     const [showFulfillModal, setShowFulfillModal] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-    /* ── Selected reservation (for fulfill / cancel) ── */
+    /* ── Selected reservation (for fulfill / cancel / details) ── */
     const [selected, setSelected] = useState(null);
+    const [detailsReservation, setDetailsReservation] = useState(null);
     const [successData, setSuccessData] = useState(null);
+
+    const openDetails = (r) => {
+        setDetailsReservation(r);
+        setShowDetailsModal(true);
+    };
 
     /* ── Add-Order form state ── */
     const [custName, setCustName] = useState('');
@@ -213,8 +220,11 @@ export default function useReservations() {
             const item = next[index];
             const matchIndex = next.findIndex((c, i) => i !== index && c.product_id === productId && (c.priceTier || 'price2') === newTier);
 
-            const matchingProduct = products.find(p => p.id === productId);
-            const price = newTier === 'price1' ? parseFloat(matchingProduct?.price1 || 0) : parseFloat(matchingProduct?.price2 || matchingProduct?.price1 || 0);
+            // Use price1/price2 already stored on the cart item at addToCart time
+            // (avoids looking up products state which may not contain this product)
+            const price = newTier === 'price1'
+                ? parseFloat(item.price1 || 0)
+                : parseFloat(item.price2 || item.price1 || 0);
 
             if (matchIndex !== -1) {
                 const targetItem = next[matchIndex];
@@ -368,9 +378,10 @@ export default function useReservations() {
         showFulfillModal, setShowFulfillModal,
         showCancelModal, setShowCancelModal,
         showSuccessModal, setShowSuccessModal,
+        showDetailsModal, setShowDetailsModal,
 
         // Selection
-        selected, successData,
+        selected, detailsReservation, openDetails, successData,
 
         // Add Modal State & Handlers
         custName, setCustName, custPhone, setCustPhone, custEmail, setCustEmail,

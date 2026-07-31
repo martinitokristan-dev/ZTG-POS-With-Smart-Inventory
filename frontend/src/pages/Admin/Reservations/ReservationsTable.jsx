@@ -2,6 +2,7 @@ import React from 'react';
 import LoadingSpinner from '../../../shared/components/LoadingSpinner';
 import StatusBadge from '../../../shared/components/StatusBadge';
 import IOSSelect from '../../../shared/components/IOSSelect';
+import FormattedProductName from '../../../shared/components/FormattedProductName';
 
 export default function ReservationsTable({
     reservations, loading,
@@ -9,7 +10,7 @@ export default function ReservationsTable({
     statusFilter, setStatusFilter, handleStatusChange,
     page, setPage, pagination,
     fmt, fmtDate,
-    openFulfill, openCancel
+    openFulfill, openCancel, openDetails
 }) {
     return (
         <>
@@ -33,7 +34,7 @@ export default function ReservationsTable({
                             options={[
                                 { value: 'All', label: 'All Statuses' },
                                 { value: 'Pending', label: 'Pending Pickup' },
-                                { value: 'Completed', label: 'Completed Pickups' },
+                                { value: 'Completed', label: 'Fully Paid / Completed' },
                                 { value: 'Cancelled', label: 'Cancelled' }
                             ]}
                         />
@@ -66,17 +67,30 @@ export default function ReservationsTable({
                             ) : reservations.length === 0 ? (
                                 <tr><td colSpan="11" style={{ textAlign: 'center', padding: '32px', color: 'var(--table-text-muted)', fontSize: '15px' }}>No reservations found.</td></tr>
                             ) : reservations.map(r => {
-                                const status = (r.status?.value || r.status || '').toLowerCase();
-                                const isPending = status === 'pending';
+                                const rawStatus = (r.status?.value || r.status || '').toLowerCase();
+                                const isPending = rawStatus === 'pending';
                                 const productNames = r.items?.map(i => i.product?.name || i.name || '—').join(', ') || r.product_name || '—';
                                 const totalQty = r.items?.reduce((s, i) => s + (i.qty || 0), 0) || r.qty || '—';
                                 const fulfilledByName = r.fulfilled_by ? (r.fulfilled_by.real_name || r.fulfilled_by.name) : null;
+
+                                const depositVal = Number(r.deposit || 0);
+                                const totalVal = Number(r.total || 0);
+                                let badgeStatus = 'pending';
+                                if (rawStatus === 'completed') {
+                                    badgeStatus = 'fully paid';
+                                } else if (rawStatus === 'cancelled') {
+                                    badgeStatus = 'cancelled';
+                                } else {
+                                    badgeStatus = (depositVal > 0 && depositVal < totalVal) ? 'deposit' : 'fully paid';
+                                }
 
                                 return (
                                     <tr key={r.id} style={{ minHeight: '48px' }}>
                                         <td style={{ fontWeight: 600, fontSize: '15px', color: 'var(--table-text-primary)' }}>{r.customer?.name || r.customer_name || '—'}</td>
                                         <td style={{ fontSize: '15px', color: 'var(--table-text-secondary)', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{r.customer?.phone || r.customer_phone || '—'}</td>
-                                        <td style={{ fontSize: '15px', color: 'var(--table-text-primary)', fontWeight: 500 }}>{productNames}</td>
+                                        <td style={{ fontSize: '15px', color: 'var(--table-text-primary)' }}>
+                                            <FormattedProductName name={productNames} />
+                                        </td>
                                         <td style={{ fontSize: '15px', fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{totalQty}</td>
                                         <td style={{ fontWeight: 600, fontSize: '15px', color: 'var(--primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(r.deposit)}</td>
                                         <td style={{ fontWeight: 600, fontSize: '15px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(r.total)}</td>
@@ -85,18 +99,27 @@ export default function ReservationsTable({
                                         <td style={{ fontSize: '13px', color: fulfilledByName ? 'var(--success)' : 'var(--table-text-secondary)', fontWeight: 500 }}>
                                             {fulfilledByName ? `Fulfilled by: ${fulfilledByName}` : (r.reserved_by?.real_name || r.reserved_by?.name || '—')}
                                         </td>
-                                        <td><StatusBadge status={r.status?.value || r.status || 'Pending'} /></td>
+                                        <td><StatusBadge status={badgeStatus} /></td>
                                         <td style={{ textAlign: 'center' }}>
-                                            {isPending ? (
-                                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+                                                <button 
+                                                    className="action-trigger-btn" 
+                                                    aria-label="View Details" 
+                                                    data-tooltip="View Details" 
+                                                    onClick={() => openDetails && openDetails(r)}
+                                                >
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                        <circle cx="12" cy="12" r="3"></circle>
+                                                    </svg>
+                                                </button>
+                                                {isPending && (
                                                     <button className="btn btn-success btn-sm" onClick={() => openFulfill(r)}>Fulfill</button>
+                                                )}
+                                                {isPending && (
                                                     <button className="btn btn-danger-outline btn-sm" onClick={() => openCancel(r)}>Cancel</button>
-                                                </div>
-                                            ) : (
-                                                <span style={{ fontSize: '13px', color: 'var(--table-text-secondary)', fontWeight: 600 }}>
-                                                    {status === 'completed' ? 'Fulfilled' : 'Cancelled'}
-                                                </span>
-                                            )}
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 );

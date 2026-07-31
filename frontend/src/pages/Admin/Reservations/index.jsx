@@ -5,6 +5,7 @@ import AddReservationModal from './modals/AddReservationModal';
 import FulfillOrderModal from './modals/FulfillOrderModal';
 import CancelReservationModal from './modals/CancelReservationModal';
 import SuccessModal from './modals/SuccessModal';
+import ReservationDetailsModal from './modals/ReservationDetailsModal';
 
 export default function Reservations() {
     const res = useReservations();
@@ -46,6 +47,7 @@ export default function Reservations() {
                         fmtDate={res.fmtDate}
                         openFulfill={res.openFulfill}
                         openCancel={res.openCancel}
+                        openDetails={res.openDetails}
                     />
                 </div>
             </div>
@@ -114,6 +116,14 @@ export default function Reservations() {
                 isOpen={res.showSuccessModal}
                 onClose={() => res.setShowSuccessModal(false)}
                 successData={res.successData}
+                fmt={res.fmt}
+                fmtDate={res.fmtDate}
+            />
+
+            <ReservationDetailsModal
+                isOpen={res.showDetailsModal}
+                onClose={() => res.setShowDetailsModal(false)}
+                reservation={res.detailsReservation}
                 fmt={res.fmt}
                 fmtDate={res.fmtDate}
             />

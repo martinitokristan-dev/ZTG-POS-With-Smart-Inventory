@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import FormattedProductName from '../../../../shared/components/FormattedProductName';
 
 export default function CartSidebar({ 
     cart, 
@@ -203,7 +204,9 @@ export default function CartSidebar({
                         return (
                             <div key={`${item.id}-${item.priceTier}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid var(--border)', alignItems: 'center' }}>
                                 <div style={{ flex: 1, marginRight: '12px' }}>
-                                    <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '2px' }}>{item.name}</div>
+                                    <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '2px' }}>
+                                        <FormattedProductName name={item.name} />
+                                    </div>
                                     {item.chinese_name && <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>{item.chinese_name}</div>}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                                         <span style={{ fontSize: '10px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Price:</span>

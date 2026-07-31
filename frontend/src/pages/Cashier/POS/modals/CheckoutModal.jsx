@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import FormattedProductName from '../../../../shared/components/FormattedProductName';
 import { printUnifiedReceipt } from '../../../../utils/printReceipt';
 import api from '../../../../shared/api';
 
@@ -454,8 +455,8 @@ export default function CheckoutModal({
                                     <div key={`${item.id}-${item.priceTier}`} style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px 12px', background: '#FFFFFF', border: itemDisc > 0 ? '1px solid #3B82F6' : '1px solid var(--border)', borderRadius: '8px' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
-                                                    {item.name}
+                                                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
+                                                    <FormattedProductName name={item.name} />
                                                     <span style={{ fontSize: '10px', marginLeft: '6px', padding: '2px 6px', borderRadius: '4px', fontWeight: '700', backgroundColor: item.priceTier === 'price2' ? '#F5F3FF' : '#EFF6FF', color: item.priceTier === 'price2' ? '#7C3AED' : '#2563EB' }}>
                                                         {item.priceTier === 'price2' ? 'P2' : 'P1'}
                                                     </span>

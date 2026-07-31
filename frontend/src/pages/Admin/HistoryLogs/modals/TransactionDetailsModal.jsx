@@ -1,5 +1,6 @@
 import React from 'react';
 import CopyableText from '../../../../shared/components/CopyableText';
+import FormattedProductName from '../../../../shared/components/FormattedProductName';
 
 export default function TransactionDetailsModal({ isOpen, onClose, transaction, fmtDate, fmt }) {
     if (!isOpen || !transaction) return null;
@@ -45,6 +46,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
     }
 
     const txItems = Array.isArray(tx.items) ? tx.items : [];
+    const isReservationTx = tx.type === 'reservation' || status === 'Deposit' || status === 'Paid' || (tx.order_ref && (tx.order_ref.startsWith('RS-') || tx.order_ref.startsWith('ORD-')));
 
     // Calculate overall financial totals across transaction items
     let grossSubtotal = 0;
@@ -55,15 +57,16 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
         let origPrice = Number(item.original_price || item.price || 0);
         let itemDisc = Number(item.discount || item.item_discount || 0);
 
-        // Fallback for older records where price was saved as net price instead of orig price
-        if (item.original_price && Number(item.original_price) > Number(item.price) && itemDisc === 0) {
+        // Fallback for older regular sale records where price was saved as net price instead of orig price
+        if (!isReservationTx && item.original_price && Number(item.original_price) > Number(item.price) && itemDisc === 0) {
             origPrice = Number(item.original_price);
             itemDisc = origPrice - Number(item.price);
         }
 
         const lineGross = qty * origPrice;
         const lineDisc = qty * itemDisc;
-        const lineNet = Math.max(0, lineGross - lineDisc);
+        // For reservation transactions, lineNet is the deposit/balance amount saved in item.price
+        const lineNet = isReservationTx ? (qty * Number(item.price || 0)) : Math.max(0, lineGross - lineDisc);
 
         grossSubtotal += lineGross;
         itemDiscountsTotal += lineDisc;
@@ -77,7 +80,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
         };
     });
 
-    const orderDiscountAmt = Number(tx.discount_amount || 0);
+    const orderDiscountAmt = isReservationTx ? 0 : Number(tx.discount_amount || 0);
     const totalDiscounts = itemDiscountsTotal + orderDiscountAmt;
     const discountTypeLabel = tx.discount_type ? ` (${tx.discount_type})` : '';
 
@@ -110,7 +113,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                             <CopyableText text={partNo} label="Part No." codeStyle={{ fontSize: '14px', fontWeight: '600' }} />
                                         </td>
                                         <td style={{ padding: '10px 12px', color: 'var(--table-text-primary)' }}>
-                                            <div style={{ fontWeight: '600', fontSize: '14px' }}>{name}</div>
+                                            <div style={{ fontSize: '14px' }}><FormattedProductName name={name} /></div>
                                         </td>
                                         <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.qty}</td>
                                         <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--table-text-secondary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
@@ -239,9 +242,9 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 {auditDetailRow('Date & Time', fmtDate(tx.date || tx.created_at))}
                                 {auditDetailRow('Customer', tx.customer_name || tx.customer?.name || 'Walk-in')}
                                 {auditDetailRow('Payment Method', tx.payment_method || '—')}
-                                {auditDetailRow('Subtotal (Gross)', fmt(grossSubtotal > 0 ? grossSubtotal : (tx.amount || tx.total)))}
+                                {auditDetailRow('Product Value (Full)', fmt(grossSubtotal > 0 ? grossSubtotal : (tx.amount || tx.total)))}
                                 {totalDiscounts > 0 && auditDetailRow(`Total Discounts${discountTypeLabel}`, `-${fmt(totalDiscounts)}`, { color: '#2563EB', fontWeight: '700' })}
-                                {auditDetailRow('Amount', fmt(tx.amount || tx.total))}
+                                {auditDetailRow(status === 'Deposit' ? 'Deposit Amount Collected' : 'Payment Collected', fmt(tx.amount || tx.total), { color: '#0F172A', fontWeight: '700' })}
                                 {auditDetailRow('Served By', tx.checker?.name || tx.cashier?.name || '—')}
                                 {auditDetailRow('Status', status, { color: statusColor, fontWeight: '700' })}
                             </>
@@ -250,15 +253,19 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                         {status !== 'Restocked' && status !== 'Void' && status !== 'Deposit' && status !== 'Paid' && (
                             <>
                                 {auditDetailRow('Invoice No.', tx.si_no || '—')}
-                                {auditDetailRow('Date & Time', fmtDate(tx.date || tx.created_at))}
+                                {tx.order_ref && auditDetailRow('Reservation Ref', tx.order_ref)}
+                                {tx.reservation && (tx.reservation.date || tx.reservation.created_at) && (
+                                    auditDetailRow('Date Reserved / Deposit Date', fmtDate(tx.reservation.date || tx.reservation.created_at))
+                                )}
+                                {auditDetailRow(isReservationTx ? 'Fulfillment / Pickup Date' : 'Date & Time', fmtDate(tx.date || tx.created_at))}
                                 {auditDetailRow('Customer', tx.customer_name || tx.customer?.name || (tx.customer_id ? `Customer #${tx.customer_id}` : 'Walk-in'))}
                                 {(tx.customer?.phone || tx.customer_phone) && auditDetailRow('Contact Phone', tx.customer?.phone || tx.customer_phone)}
                                 {auditDetailRow('Payment Method', tx.payment_method || 'Cash')}
-                                {grossSubtotal > 0 && auditDetailRow('Subtotal (Gross)', fmt(grossSubtotal))}
-                                {itemDiscountsTotal > 0 && auditDetailRow('Item Discounts', `-${fmt(itemDiscountsTotal)}`, { color: '#2563EB', fontWeight: '700' })}
-                                {orderDiscountAmt > 0 && auditDetailRow(`Order Discount${discountTypeLabel}`, `-${fmt(orderDiscountAmt)}`, { color: '#2563EB', fontWeight: '700' })}
-                                {totalDiscounts > 0 && itemDiscountsTotal > 0 && orderDiscountAmt > 0 && auditDetailRow('Total Discounts', `-${fmt(totalDiscounts)}`, { color: '#2563EB', fontWeight: '700' })}
-                                {auditDetailRow('Net Amount Paid', fmt(tx.amount || tx.total), { color: '#0F172A', fontWeight: '700', fontSize: '15px' })}
+                                {grossSubtotal > 0 && auditDetailRow(isReservationTx ? 'Product Value (Full)' : 'Subtotal (Gross)', fmt(grossSubtotal))}
+                                {!isReservationTx && itemDiscountsTotal > 0 && auditDetailRow('Item Discounts', `-${fmt(itemDiscountsTotal)}`, { color: '#2563EB', fontWeight: '700' })}
+                                {!isReservationTx && orderDiscountAmt > 0 && auditDetailRow(`Order Discount${discountTypeLabel}`, `-${fmt(orderDiscountAmt)}`, { color: '#2563EB', fontWeight: '700' })}
+                                {!isReservationTx && totalDiscounts > 0 && itemDiscountsTotal > 0 && orderDiscountAmt > 0 && auditDetailRow('Total Discounts', `-${fmt(totalDiscounts)}`, { color: '#2563EB', fontWeight: '700' })}
+                                {auditDetailRow(isReservationTx ? 'Balance Paid at Pickup' : 'Net Amount Paid', fmt(tx.amount || tx.total), { color: '#0F172A', fontWeight: '700', fontSize: '15px' })}
                                 {auditDetailRow('Served By', tx.checker?.name || tx.cashier?.name || '—')}
                                 {auditDetailRow('Status', status, { color: statusColor, fontWeight: '700' })}
                                 {(status === 'Refund' || status === 'Return' || reason !== '—') && auditDetailRow('Reason', reason)}

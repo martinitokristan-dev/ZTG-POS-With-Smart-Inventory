@@ -82,4 +82,9 @@ class Transaction extends Model
     {
         return $this->hasMany(Notification::class);
     }
+
+    public function reservation(): BelongsTo
+    {
+        return $this->belongsTo(Reservation::class, 'order_ref', 'order_no');
+    }
 }

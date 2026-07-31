@@ -6,12 +6,6 @@ export default function CategoryModal({
     categoryVariants, setCategoryVariants, getOptionsForType,
     handleCategorySubmit, categorySubmitting = false
 }) {
-    if (!showCategoryModal) return null;
-
-    const submitLabel = categorySubmitting 
-        ? (selectedCategory ? 'Updating Category...' : 'Saving Category...') 
-        : (selectedCategory ? 'Update Category' : 'Save Category');
-
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (showCategoryModal && e.key === 'Enter') {
@@ -25,6 +19,12 @@ export default function CategoryModal({
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [showCategoryModal]);
+
+    if (!showCategoryModal) return null;
+
+    const submitLabel = categorySubmitting 
+        ? (selectedCategory ? 'Updating Category...' : 'Saving Category...') 
+        : (selectedCategory ? 'Update Category' : 'Save Category');
 
     const toggleVariant = (key) => {
         setCategoryVariants(prev => {
