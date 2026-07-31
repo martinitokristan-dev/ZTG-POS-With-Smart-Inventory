@@ -20,6 +20,7 @@ class Notification extends Model
         'transaction_id',
         'is_read',
         'user_id',
+        'created_at',
     ];
 
     protected function casts(): array

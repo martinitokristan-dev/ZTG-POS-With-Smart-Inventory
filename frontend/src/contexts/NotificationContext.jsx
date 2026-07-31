@@ -45,14 +45,13 @@ export const NotificationProvider = ({ children }) => {
                 if (str.includes(' ') && !str.includes('T')) {
                     str = str.replace(' ', 'T');
                 }
+                // Append Z if string has no explicit timezone offset so JavaScript parses as UTC
+                if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
+                    str += 'Z';
+                }
                 let parsed = new Date(str);
                 if (isNaN(parsed.getTime())) return Date.now();
                 let ts = parsed.getTime();
-                // Check if timezone parsing caused offset skew
-                if (ts > Date.now() + 5000 && !str.endsWith('Z')) {
-                    const utcParsed = new Date(str + 'Z');
-                    if (!isNaN(utcParsed.getTime())) ts = utcParsed.getTime();
-                }
                 return Math.min(ts, Date.now());
             };
 
