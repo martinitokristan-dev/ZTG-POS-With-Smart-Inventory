@@ -23,14 +23,21 @@ export function useDashboard() {
 
     // Replace local fetch with context
     const { unreadCount: notificationsCount } = useNotifications();
-    const { inventory: products } = useInventory();
+    const { inventory: products, refetch: refetchInventory } = useInventory();
 
     // Top selling products state
     const [topProducts, setTopProducts] = useState([]);
 
-    // Separate effect to instantly calculate inventory counts so it doesn't wait for API
+    // Always fetch fresh inventory data on dashboard load
     useEffect(() => {
-        if (!products || products.length === 0) return;
+        if (typeof refetchInventory === 'function') {
+            refetchInventory();
+        }
+    }, [refetchInventory]);
+
+    // Instantly calculate total stock & product metrics whenever products update
+    useEffect(() => {
+        if (!products) return;
         
         const sellableSKUs = flattenToSellableSKUs(products);
         const totalStock = sellableSKUs.reduce((sum, item) => sum + (item.stock || 0), 0);

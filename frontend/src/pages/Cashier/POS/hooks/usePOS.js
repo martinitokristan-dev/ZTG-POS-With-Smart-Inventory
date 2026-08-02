@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useProducts } from '../../../../contexts/ProductContext';
+import { useInventory } from '../../../../contexts/InventoryContext';
 import { invalidateCachePage } from '../../../../shared/hooks/usePaginatedCache';
 import useCustomerCache, { resetCustomerCache } from '../../../../shared/hooks/useCustomerCache';
 import { resetDashboardCache } from '../../../../shared/hooks/useDashboardCache';
@@ -11,6 +12,7 @@ const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
 
 export default function usePOS() {
     const { products: contextProducts, categories: backendCategories, searchPosProducts, initialLoading: contextLoading, refetch: refreshProducts } = useProducts();
+    const { refetch: refetchInventory } = useInventory();
     
     // Explicit loading state — NOT tied to products.length which caused infinite spinner
     const [loadingProducts, setLoadingProducts] = useState(true);
@@ -410,6 +412,8 @@ export default function usePOS() {
 
                 resetDashboardCache();
                 resetReportsCache();
+                if (typeof refreshProducts === 'function') refreshProducts();
+                if (typeof refetchInventory === 'function') refetchInventory();
                 clearCart();
                 setSelectedCustomer(null);
                 setNewCustomerName('');

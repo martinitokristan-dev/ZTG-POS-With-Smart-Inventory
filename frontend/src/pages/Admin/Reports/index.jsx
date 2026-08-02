@@ -16,7 +16,7 @@ export default function Reports() {
                 <div className="top-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                         <h1 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '4px', fontFamily: '"Outfit", sans-serif', color: 'var(--text-primary)' }}>Reports</h1>
-                        <div className="page-description" style={{ marginTop: '0', fontSize: '13px', color: 'var(--text-secondary)' }}>Sales trends, inventory status, and employee performance reports.</div>
+                        <div className="page-description" style={{ marginTop: '0', fontSize: '13px', color: 'var(--text-secondary)' }}>Sales trends, product performance, and payment method analytics.</div>
                     </div>
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>                    </div>
                 </div>

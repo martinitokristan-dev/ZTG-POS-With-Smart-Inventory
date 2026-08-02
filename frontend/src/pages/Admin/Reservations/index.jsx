@@ -24,7 +24,7 @@ export default function Reservations() {
                     </div>
                     <div className="top-bar-actions">
                         <button className="btn btn-primary" onClick={() => { res.resetAddForm(); res.setShowAddModal(true); }}>
-                            + New Reservation
+                            New Reservation
                         </button>
                     </div>
                 </div>
