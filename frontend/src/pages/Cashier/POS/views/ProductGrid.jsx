@@ -108,12 +108,12 @@ export default function ProductGrid({
                                         <td style={{ padding: '12px 14px', fontSize: '15px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <img 
-                                                    src={p.image || DEFAULT_PLACEHOLDER_IMAGE} 
+                                                    src={p.image || p.parent_product?.image || DEFAULT_PLACEHOLDER_IMAGE} 
                                                     alt={p.name} 
                                                     className="pos-product-image"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setPreviewImage(p.image || DEFAULT_PLACEHOLDER_IMAGE);
+                                                        setPreviewImage(p.image || p.parent_product?.image || DEFAULT_PLACEHOLDER_IMAGE);
                                                     }}
                                                     onError={(e) => { e.currentTarget.src = DEFAULT_PLACEHOLDER_IMAGE; }}
                                                 />

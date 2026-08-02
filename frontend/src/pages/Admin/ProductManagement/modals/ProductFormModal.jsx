@@ -1,6 +1,63 @@
 import React, { useState, useEffect } from 'react';
 import IOSSelect from '../../../../shared/components/IOSSelect';
 import ImageUploadOverlay from '../../../../shared/components/ImageUploadOverlay';
+import api from '../../../../shared/api/api';
+
+const VariantImageUpload = ({ variant, idx, onUpdateVariantImage }) => {
+    const [uploading, setUploading] = useState(false);
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const fd = new FormData();
+        fd.append('image', file);
+        if (variant.image) {
+            fd.append('old_image', variant.image);
+        }
+
+        try {
+            setUploading(true);
+            const res = await api.post('/products/upload-image', fd, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            onUpdateVariantImage(idx, res.data.url);
+        } catch (err) {
+            console.error('Failed to upload variant image', err);
+        } finally {
+            setUploading(false);
+            e.target.value = '';
+        }
+    };
+
+    const handleRemoveImage = (e) => {
+        e.stopPropagation();
+        onUpdateVariantImage(idx, null);
+    };
+
+    return (
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
+            <ImageUploadOverlay isUploading={uploading} borderRadius="6px" spinnerSize={18} />
+            {variant.image ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <img src={variant.image} alt="Variant preview" style={{ width: '32px', height: '32px', borderRadius: '4px', objectFit: 'cover', border: '1px solid var(--border)' }} />
+                    <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        disabled={uploading}
+                        style={{ fontSize: '11px', color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                    >
+                        Remove Image
+                    </button>
+                </div>
+            ) : (
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--primary, #2563EB)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px dashed var(--primary)', padding: '3px 8px', borderRadius: '4px', backgroundColor: '#EFF6FF' }}>
+                    <input type="file" accept="image/*" onChange={handleFileChange} disabled={uploading} style={{ display: 'none' }} />
+                    + Upload Custom Image
+                </label>
+            )}
+        </div>
+    );
+};
 
 const generateNextVariantPartNo = (basePartNo, index) => {
     if (!basePartNo || !basePartNo.trim()) return '';
@@ -377,15 +434,26 @@ export default function ProductFormModal({
                                                 setFormData({ ...formData, variants: nv });
                                             }} style={{ position: 'absolute', top: '8px', right: '8px', color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
                                             
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', paddingBottom: '6px', borderBottom: '1px solid #F1F5F9' }}>
-                                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>
-                                                    {variantDisplayName}
-                                                </span>
-                                                {selectedOptionLabels.length > 0 && (
-                                                    <span style={{ color: '#3B82F6', fontWeight: '600', fontSize: '13px' }}>
-                                                        ({selectedOptionLabels.join(', ')})
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '6px', borderBottom: '1px solid #F1F5F9', paddingRight: '24px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>
+                                                        {variantDisplayName}
                                                     </span>
-                                                )}
+                                                    {selectedOptionLabels.length > 0 && (
+                                                        <span style={{ color: '#3B82F6', fontWeight: '600', fontSize: '13px' }}>
+                                                            ({selectedOptionLabels.join(', ')})
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <VariantImageUpload
+                                                    variant={variant}
+                                                    idx={idx}
+                                                    onUpdateVariantImage={(index, newUrl) => {
+                                                        const nv = [...formData.variants];
+                                                        nv[index].image = newUrl;
+                                                        setFormData({ ...formData, variants: nv });
+                                                    }}
+                                                />
                                             </div>
 
                                             <div className="grid-3" style={{ gap: '12px', marginBottom: '12px' }}>
