@@ -139,18 +139,23 @@ class ProductController extends Controller
          if ($request->hasFile('image')) {
              $file = $request->file('image');
 
-             $result = Cloudinary::upload($file->getRealPath(), [
-                 'folder'          => env('CLOUDINARY_FOLDER', 'products'),
-                 'resource_type'   => 'image',
-                 'transformation'  => [
-                     'quality' => 'auto',
-                     'fetch_format' => 'auto',
-                 ],
-             ]);
+             try {
+                 $result = Cloudinary::upload($file->getRealPath(), [
+                     'folder'          => env('CLOUDINARY_FOLDER', 'products'),
+                     'resource_type'   => 'image',
+                     'transformation'  => [
+                         'quality' => 'auto',
+                         'fetch_format' => 'auto',
+                     ],
+                 ]);
 
-             return response()->json([
-                 'url' => $result->getSecurePath()
-             ]);
+                 return response()->json([
+                     'url' => $result->getSecurePath()
+                 ]);
+             } catch (\Throwable $e) {
+                 \Illuminate\Support\Facades\Log::error('ProductController uploadImage failed', ['error' => $e->getMessage()]);
+                 return response()->json(['message' => 'Image upload failed: ' . $e->getMessage()], 500);
+             }
          }
 
          return response()->json(['message' => 'No image file uploaded.'], 400);

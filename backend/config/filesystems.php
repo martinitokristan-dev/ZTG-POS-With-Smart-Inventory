@@ -65,7 +65,7 @@ return [
             'cloud' => env('CLOUDINARY_CLOUD_NAME'),
             'key' => env('CLOUDINARY_API_KEY'),
             'secret' => env('CLOUDINARY_API_SECRET'),
-            'url' => env('CLOUDINARY_URL'),
+            'url' => env('CLOUDINARY_URL', (env('CLOUDINARY_API_KEY') && env('CLOUDINARY_API_SECRET') && env('CLOUDINARY_CLOUD_NAME')) ? 'cloudinary://'.env('CLOUDINARY_API_KEY').':'.env('CLOUDINARY_API_SECRET').'@'.env('CLOUDINARY_CLOUD_NAME') : null),
             'secure' => true,
         ],
 
