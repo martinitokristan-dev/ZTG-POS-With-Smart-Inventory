@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import IOSSelect from '../../../../shared/components/IOSSelect';
+import ImageUploadOverlay from '../../../../shared/components/ImageUploadOverlay';
 
 const generateNextVariantPartNo = (basePartNo, index) => {
     if (!basePartNo || !basePartNo.trim()) return '';
@@ -15,9 +16,10 @@ const generateNextVariantPartNo = (basePartNo, index) => {
     return `${trimmed}-${index + 1}`;
 };
 
-const ImageUploadDropzone = ({ image, onUpload }) => (
-    <div style={{ border: '2px dashed var(--border)', borderRadius: '8px', padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '16px', backgroundColor: '#F8FAFC', cursor: 'pointer', position: 'relative' }}>
-        <input type="file" accept="image/*" onChange={onUpload} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
+const ImageUploadDropzone = ({ image, onUpload, uploading = false, progress = 0 }) => (
+    <div style={{ border: '2px dashed var(--border)', borderRadius: '8px', padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '16px', backgroundColor: '#F8FAFC', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
+        <input type="file" accept="image/*" onChange={onUpload} disabled={uploading} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: uploading ? 'wait' : 'pointer', width: '100%', height: '100%', zIndex: 5 }} />
+        <ImageUploadOverlay isUploading={uploading} progress={progress} borderRadius="8px" />
         {image ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                 <img src={image} alt="Preview" style={{ maxHeight: '120px', borderRadius: '4px', objectFit: 'cover' }} />
@@ -41,7 +43,7 @@ export default function ProductFormModal({
     onClose, onSubmit,
     formData, setFormData,
     categories, variantOptions,
-    handleAddressChange, handleImageUpload,
+    handleAddressChange, handleImageUpload, uploadingImage = false, imageProgress = 0,
     errorMessage, selectedProduct,
     isSubmitting = false
 }) {
@@ -218,7 +220,7 @@ export default function ProductFormModal({
                     <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
                         {errorMessage && <div style={{ padding: '12px', background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', borderRadius: '6px', fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>{errorMessage}</div>}
 
-                        <ImageUploadDropzone image={formData.image} onUpload={handleImageUpload} />
+                        <ImageUploadDropzone image={formData.image} onUpload={handleImageUpload} uploading={uploadingImage} progress={imageProgress} />
 
                         {/* Basic Information Section */}
                         <div className="section-header">Basic Information</div>

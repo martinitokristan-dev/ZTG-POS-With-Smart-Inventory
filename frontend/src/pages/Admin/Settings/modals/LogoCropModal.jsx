@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ImageUploadOverlay from '../../../../shared/components/ImageUploadOverlay';
 
 /**
  * LogoCropModal Component
@@ -6,7 +7,7 @@ import React, { useState, useRef, useEffect } from 'react';
  * Allows user to pan (drag) and zoom (0% - 100%) inside a circular viewport.
  * Uses a clean, light modal design without dark background overlays.
  */
-function LogoCropModal({ isOpen, onClose, onConfirm, imageFile, loading }) {
+function LogoCropModal({ isOpen, onClose, onConfirm, imageFile, loading, progress = 0 }) {
     const [imageSrc, setImageSrc] = useState(null);
     const [zoomPercent, setZoomPercent] = useState(100); // 20% to 300%
     const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -131,10 +132,9 @@ function LogoCropModal({ isOpen, onClose, onConfirm, imageFile, loading }) {
                 width: '100%',
                 maxWidth: '440px',
                 boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column'
+                position: 'relative'
             }}>
+                <ImageUploadOverlay isUploading={loading} progress={progress} borderRadius="16px" />
                 {/* Header */}
                 <div style={{
                     padding: '18px 24px',

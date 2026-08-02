@@ -46,6 +46,7 @@ export default function useSettings() {
     const [showPIN, setShowPIN] = useState(false);
     const [passwordData, setPasswordData] = useState({ current_password: '', password: '', password_confirmation: '' });
     const [avatarUploading, setAvatarUploading] = useState(false);
+    const [avatarProgress, setAvatarProgress] = useState(0);
     const [avatarRemoving, setAvatarRemoving] = useState(false);
     const [confirmingRemove, setConfirmingRemove] = useState(false);
 
@@ -123,6 +124,7 @@ export default function useSettings() {
     const [logoUrl, setLogoUrl] = useState(null);
     const [sidebarLogoUrl, setSidebarLogoUrl] = useState(null);
     const [logoUploading, setLogoUploading] = useState(false);
+    const [logoProgress, setLogoProgress] = useState(0);
     const [logoRemoving, setLogoRemoving] = useState(false);
 
     // Check if general settings tab has unsaved changes
@@ -371,9 +373,16 @@ export default function useSettings() {
         formData.append('avatar', file);
 
         setAvatarUploading(true);
+        setAvatarProgress(0);
         try {
             const res = await api.post('/profile/avatar', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (progressEvent) => {
+                    if (progressEvent.total && progressEvent.total > 0) {
+                        const percent = Math.min(100, Math.max(0, Math.round((progressEvent.loaded * 100) / progressEvent.total)));
+                        setAvatarProgress(percent);
+                    }
+                }
             });
             const newPhotoUrl = res.data?.profile_photo;
             setProfileData(prev => ({ ...prev, profile_photo: newPhotoUrl }));
@@ -390,6 +399,7 @@ export default function useSettings() {
             showToast(err.response?.data?.message || 'Failed to upload photo.', 'error');
         } finally {
             setAvatarUploading(false);
+            setAvatarProgress(0);
             e.target.value = '';
         }
     };
@@ -449,9 +459,16 @@ export default function useSettings() {
         }
 
         setLogoUploading(true);
+        setLogoProgress(0);
         try {
             const res = await api.post('/settings/logo', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (progressEvent) => {
+                    if (progressEvent.total && progressEvent.total > 0) {
+                        const percent = Math.min(100, Math.max(0, Math.round((progressEvent.loaded * 100) / progressEvent.total)));
+                        setLogoProgress(percent);
+                    }
+                }
             });
             const newUrl = res.data?.logo_url || null;
             const newSidebarUrl = res.data?.sidebar_logo_url || null;
@@ -480,6 +497,7 @@ export default function useSettings() {
             showToast(err.response?.data?.message || 'Failed to upload logo.', 'error');
         } finally {
             setLogoUploading(false);
+            setLogoProgress(0);
         }
     };
 
@@ -917,14 +935,14 @@ export default function useSettings() {
         showPasswordModal, setShowPasswordModal,
         showPIN, setShowPIN,
         passwordData, setPasswordData,
-        avatarUploading, avatarRemoving, handleAvatarUpload, handleAvatarRemove,
+        avatarUploading, avatarProgress, avatarRemoving, handleAvatarUpload, handleAvatarRemove,
         confirmingRemove, handleAvatarRemoveConfirmed, handleAvatarRemoveCancel,
         handleProfileSubmit, handlePasswordSubmit,
 
         // Tab 2: General System Settings & Logo
         settings, handleSettingInputChange, handleToggleSetting, handleSaveBulkSettings,
         showConfirmSaveModal, handleConfirmSaveBulkSettings, handleCancelSaveBulkSettings,
-        logoUrl, sidebarLogoUrl, logoUploading, logoRemoving, handleLogoUpload, handleLogoUploadWithCrop, handleLogoRemove,
+        logoUrl, sidebarLogoUrl, logoUploading, logoProgress, logoRemoving, handleLogoUpload, handleLogoUploadWithCrop, handleLogoRemove,
 
         // Tab 3: Products Settings
         categories, showCategoryModal, setShowCategoryModal, selectedCategory, setSelectedCategory,

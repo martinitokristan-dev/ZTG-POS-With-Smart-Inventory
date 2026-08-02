@@ -42,12 +42,12 @@ class SettingLogoController extends Controller
         }
 
         $file = $request->file('logo');
-        $result = Cloudinary::upload($file->getRealPath(), [
+        $result = Cloudinary::uploadApi()->upload($file->getRealPath(), [
             'folder'        => 'logos',
             'resource_type' => 'image',
             'transformation' => ['quality' => 'auto', 'fetch_format' => 'auto'],
         ]);
-        $url = $result->getSecurePath();
+        $url = $result['secure_url'] ?? $result['url'];
 
         Setting::updateOrCreate(
             ['key' => 'business_logo'],
@@ -64,12 +64,12 @@ class SettingLogoController extends Controller
             }
 
             $sidebarFile = $request->file('sidebar_logo');
-            $sidebarResult = Cloudinary::upload($sidebarFile->getRealPath(), [
+            $sidebarResult = Cloudinary::uploadApi()->upload($sidebarFile->getRealPath(), [
                 'folder'        => 'logos',
                 'resource_type' => 'image',
                 'transformation' => ['quality' => 'auto', 'fetch_format' => 'auto'],
             ]);
-            $sidebarUrl = $sidebarResult->getSecurePath();
+            $sidebarUrl = $sidebarResult['secure_url'] ?? $sidebarResult['url'];
 
             Setting::updateOrCreate(
                 ['key' => 'sidebar_logo'],
@@ -119,7 +119,7 @@ class SettingLogoController extends Controller
         if (!$url || !str_contains($url, 'res.cloudinary.com')) return;
         try {
             if (preg_match('/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z]+)?$/i', $url, $matches)) {
-                Cloudinary::destroy($matches[1]);
+                Cloudinary::uploadApi()->destroy($matches[1]);
             }
         } catch (\Throwable $e) {
             Log::warning('SettingLogo: could not delete Cloudinary image.', [

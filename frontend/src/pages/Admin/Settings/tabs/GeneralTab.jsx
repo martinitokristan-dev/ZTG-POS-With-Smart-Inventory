@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import LogoCropModal from '../modals/LogoCropModal';
+import ImageUploadOverlay from '../../../../shared/components/ImageUploadOverlay';
 
 // Helper function to replace legacy localhost or blocked r2.dev image URLs with backend proxy paths
 const fixImageUrl = (url) => {
@@ -29,11 +30,12 @@ export default function GeneralTab({
     handleSaveBulkSettings, 
     logoUrl, 
     sidebarLogoUrl,
+    logoUploading, 
+    logoProgress = 0, 
+    logoRemoving,
     onLogoUpload,
     onLogoUploadWithCrop,
     onLogoRemove, 
-    logoUploading,
-    logoRemoving,
     isEditing,
     onStartEdit,
     onCancelEdit
@@ -120,9 +122,10 @@ export default function GeneralTab({
                                 width: '200px', height: '160px', border: '2px dashed var(--border)',
                                 borderRadius: '12px', display: 'flex', alignItems: 'center',
                                 justifyContent: 'center', overflow: 'hidden',
-                                background: 'var(--bg-secondary)'
+                                background: 'var(--bg-secondary)', position: 'relative'
                             }}
                         >
+                            <ImageUploadOverlay isUploading={logoUploading} progress={logoProgress} borderRadius="12px" />
                             {cleanLogoUrl && !logoError ? (
                                 <img
                                     src={cleanLogoUrl}
@@ -190,6 +193,7 @@ export default function GeneralTab({
                             onConfirm={handleCropConfirm}
                             imageFile={pendingFile}
                             loading={logoUploading}
+                            progress={logoProgress}
                         />
                     </div>
 

@@ -145,6 +145,8 @@ function ProductManagement() {
                   variantOptions={pm.variantOptions}
                 handleAddressChange={pm.handleAddressChange}
                 handleImageUpload={pm.handleImageUpload}
+                uploadingImage={pm.uploadingImage}
+                imageProgress={pm.imageProgress}
                 errorMessage={pm.errorMessage}
                 isSubmitting={pm.isSubmitting}
             />
@@ -160,6 +162,8 @@ function ProductManagement() {
                   variantOptions={pm.variantOptions}
                 handleAddressChange={pm.handleAddressChange}
                 handleImageUpload={pm.handleImageUpload}
+                uploadingImage={pm.uploadingImage}
+                imageProgress={pm.imageProgress}
                 errorMessage={pm.errorMessage}
                 selectedProduct={pm.selectedProduct}
                 isSubmitting={pm.isSubmitting}

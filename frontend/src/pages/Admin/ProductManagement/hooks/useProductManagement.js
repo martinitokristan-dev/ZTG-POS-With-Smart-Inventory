@@ -553,17 +553,36 @@ export default function useProductManagement() {
         });
     };
 
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [imageProgress, setImageProgress] = useState(0);
+
     const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const fd = new FormData();
         fd.append('image', file);
+        if (formData.image) {
+            fd.append('old_image', formData.image);
+        }
         try {
             setErrorMessage('');
-            const res = await api.post('/products/upload-image', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+            setUploadingImage(true);
+            setImageProgress(0);
+            const res = await api.post('/products/upload-image', fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (progressEvent) => {
+                    if (progressEvent.total && progressEvent.total > 0) {
+                        const percent = Math.min(100, Math.max(0, Math.round((progressEvent.loaded * 100) / progressEvent.total)));
+                        setImageProgress(percent);
+                    }
+                }
+            });
             setFormData(prev => ({ ...prev, image: res.data.url }));
         } catch (err) {
             setErrorMessage(err.response?.data?.message || 'Failed to upload image file.');
+        } finally {
+            setUploadingImage(false);
+            setImageProgress(0);
         }
     };
 
@@ -658,7 +677,7 @@ export default function useProductManagement() {
         resetForm,
         // Handlers
         handleAddProduct, handleEditProduct, handleDamageSubmit, handleDeleteProduct, handleToggleStatus,
-        handleAddressChange, handleImageUpload,
+        handleAddressChange, handleImageUpload, uploadingImage, imageProgress,
         openEdit, openDamage, openView,
     };
 }

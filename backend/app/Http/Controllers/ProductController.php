@@ -133,24 +133,30 @@ class ProductController extends Controller
      public function uploadImage(Request $request): JsonResponse
      {
          $request->validate([
-             'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp|max:5120',
+             'image'     => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp|max:5120',
+             'old_image' => 'nullable|string',
          ]);
 
          if ($request->hasFile('image')) {
              $file = $request->file('image');
 
+             // Delete old image from Cloudinary if replacing an existing image
+             if ($request->filled('old_image')) {
+                 $this->productService->deleteCloudImage($request->input('old_image'));
+             }
+
              try {
-                 $result = Cloudinary::upload($file->getRealPath(), [
-                     'folder'          => env('CLOUDINARY_FOLDER', 'products'),
-                     'resource_type'   => 'image',
-                     'transformation'  => [
-                         'quality' => 'auto',
+                 $result = Cloudinary::uploadApi()->upload($file->getRealPath(), [
+                     'folder'         => env('CLOUDINARY_FOLDER', 'products'),
+                     'resource_type'  => 'image',
+                     'transformation' => [
+                         'quality'      => 'auto',
                          'fetch_format' => 'auto',
                      ],
                  ]);
 
                  return response()->json([
-                     'url' => $result->getSecurePath()
+                     'url' => $result['secure_url'] ?? $result['url']
                  ]);
              } catch (\Throwable $e) {
                  \Illuminate\Support\Facades\Log::error('ProductController uploadImage failed', ['error' => $e->getMessage()]);

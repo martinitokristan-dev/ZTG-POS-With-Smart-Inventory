@@ -18,12 +18,12 @@ export default function SettingsView() {
         loading, isProfileDirty, isSettingsDirty, notificationsCount,
         activeTab, setActiveTab, activeSubTab, setActiveSubTab, activeAlertsSubTab, setActiveAlertsSubTab,
         editingTab, handleStartEditTab, handleCancelEditTab,
-        profileData, setProfileData, avatarUploading, avatarRemoving, handleAvatarUpload, handleAvatarRemove,
+        profileData, setProfileData, avatarUploading, avatarProgress, avatarRemoving, handleAvatarUpload, handleAvatarRemove,
         confirmingRemove, handleAvatarRemoveConfirmed, handleAvatarRemoveCancel,
         passwordData, setPasswordData, showPasswordModal, setShowPasswordModal, showPIN, setShowPIN,
         settings, handleSettingInputChange, handleToggleSetting, handleSaveBulkSettings,
         handleConfirmSaveBulkSettings, handleCancelSaveBulkSettings, showConfirmSaveModal,
-        logoUrl, sidebarLogoUrl, logoUploading, logoRemoving, handleLogoUpload, handleLogoUploadWithCrop, handleLogoRemove,
+        logoUrl, sidebarLogoUrl, logoUploading, logoProgress, logoRemoving, handleLogoUpload, handleLogoUploadWithCrop, handleLogoRemove,
         categories, showCategoryModal, setShowCategoryModal, selectedCategory, setSelectedCategory, categoryName, setCategoryName,
         categoryVariants, setCategoryVariants, categorySubmitting,
         newOptionValue, setNewOptionValue,
@@ -96,7 +96,7 @@ export default function SettingsView() {
                             <ProfileTab
                                 profileData={profileData} setProfileData={setProfileData} handleProfileSubmit={handleProfileSubmit}
                                 setShowPasswordModal={setShowPasswordModal} showPIN={showPIN} setShowPIN={setShowPIN} isProfileDirty={isProfileDirty}
-                                handleAvatarUpload={handleAvatarUpload} handleAvatarRemove={handleAvatarRemove} avatarUploading={avatarUploading}
+                                handleAvatarUpload={handleAvatarUpload} handleAvatarRemove={handleAvatarRemove} avatarUploading={avatarUploading} avatarProgress={avatarProgress}
                                 avatarRemoving={avatarRemoving}
                                 confirmingRemove={confirmingRemove}
                                 handleAvatarRemoveConfirmed={handleAvatarRemoveConfirmed}
@@ -123,6 +123,7 @@ export default function SettingsView() {
                                         onLogoUploadWithCrop={handleLogoUploadWithCrop}
                                         onLogoRemove={handleLogoRemove}
                                         logoUploading={logoUploading}
+                                        logoProgress={logoProgress}
                                         logoRemoving={logoRemoving}
                                         isEditing={editingTab === 'general'}
                                         onStartEdit={() => handleStartEditTab('general')}

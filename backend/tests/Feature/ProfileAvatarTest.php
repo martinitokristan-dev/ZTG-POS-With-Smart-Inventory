@@ -67,20 +67,34 @@ class ProfileAvatarTest extends TestCase
     }
 
     /** Return a fake Cloudinary upload result mock. */
-    private function mockCloudinaryUpload(string $url = 'https://res.cloudinary.com/test/image/upload/v1/avatars/avatar_test.jpg'): void
+    private function mockCloudinaryUpload(string ...$urls): void
     {
-        $mockResult = \Mockery::mock(CloudinaryEngine::class);
-        $mockResult->shouldReceive('getSecurePath')->andReturn($url);
+        if (empty($urls)) {
+            $urls = ['https://res.cloudinary.com/test/image/upload/v1/avatars/avatar_test.jpg'];
+        }
+        $responses = array_map(fn($url) => new \Cloudinary\Api\ApiResponse(['secure_url' => $url, 'url' => $url], []), $urls);
+        $destroyResponse = new \Cloudinary\Api\ApiResponse(['result' => 'ok'], []);
 
-        Cloudinary::shouldReceive('upload')
-            ->byDefault()
-            ->andReturn($mockResult);
+        $mockUploadApi = \Mockery::mock(\Cloudinary\Api\Upload\UploadApi::class);
+        $mockUploadApi->shouldReceive('upload')->andReturnValues($responses);
+        $mockUploadApi->shouldReceive('destroy')->andReturn($destroyResponse);
+
+        $cloudinaryMock = \Mockery::mock(\Cloudinary\Cloudinary::class);
+        $cloudinaryMock->shouldReceive('uploadApi')->andReturn($mockUploadApi);
+
+        $this->app->instance(\Cloudinary\Cloudinary::class, $cloudinaryMock);
     }
 
     /** Mock Cloudinary destroy (deletion). */
     private function mockCloudinaryDestroy(): void
     {
-        Cloudinary::shouldReceive('destroy')->andReturn(true);
+        $mockUploadApi = \Mockery::mock(\Cloudinary\Api\Upload\UploadApi::class);
+        $mockUploadApi->shouldReceive('destroy')->andReturn(new \Cloudinary\Api\ApiResponse(['result' => 'ok'], []));
+
+        $cloudinaryMock = \Mockery::mock(\Cloudinary\Cloudinary::class);
+        $cloudinaryMock->shouldReceive('uploadApi')->andReturn($mockUploadApi);
+
+        $this->app->instance(\Cloudinary\Cloudinary::class, $cloudinaryMock);
     }
 
     /** Create a fake image file that passes Laravel's 'image|mimes:jpeg' rules. */
@@ -188,15 +202,12 @@ class ProfileAvatarTest extends TestCase
         $firstUrl  = 'https://res.cloudinary.com/test/image/upload/v1/avatars/first.jpg';
         $secondUrl = 'https://res.cloudinary.com/test/image/upload/v1/avatars/second.jpg';
 
-        // First upload
-        $this->mockCloudinaryUpload($firstUrl);
+        $this->mockCloudinaryUpload($firstUrl, $secondUrl);
+
         $this->actingAs($this->user)
             ->postJson('/api/profile/avatar', ['avatar' => $this->fakeJpeg('first.jpg')]);
         $this->assertEquals($firstUrl, $this->user->fresh()->profile_photo);
 
-        // Second upload — old URL should be deleted from Cloudinary, new URL saved
-        $this->mockCloudinaryDestroy();
-        $this->mockCloudinaryUpload($secondUrl);
         $this->actingAs($this->user)
             ->postJson('/api/profile/avatar', ['avatar' => $this->fakeJpeg('second.jpg')]);
 

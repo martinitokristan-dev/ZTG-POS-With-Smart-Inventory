@@ -219,6 +219,12 @@ class ProductService
                     ? 'Disabled'
                     : $this->calculateStatus($data['stock'], $alertLimit, $data['status']);
 
+                // Delete old Cloudinary image if it's being replaced or removed
+                $newImage = $data['image'] ?? null;
+                if ($product->image && $newImage !== $product->image) {
+                    $this->deleteCloudImage($product->image);
+                }
+
                 // Update the parent product
                 $product->update([
                     'name'         => $data['name'],
@@ -232,7 +238,7 @@ class ProductService
                     'price2'       => $data['price2'],
                     'status'       => $status,
                     'notes'        => $data['notes'] ?? null,
-                    'image'        => $data['image'] ?? null,
+                    'image'        => $newImage,
                     'is_dead_stock'=> $data['is_dead_stock'] ?? false,
                     'damaged'      => $data['damaged'] ?? 0,
                 ]);
@@ -341,18 +347,14 @@ class ProductService
      * Delete image from Cloudinary storage if stored there.
      * Extracts the public_id from the Cloudinary URL and destroys it.
      */
-    private function deleteCloudImage(?string $url): void
+    public function deleteCloudImage(?string $url): void
     {
-        if (!$url) return;
-        // Only handle Cloudinary URLs (res.cloudinary.com)
-        if (!str_contains($url, 'res.cloudinary.com')) return;
+        if (!$url || !str_contains($url, 'res.cloudinary.com')) return;
         try {
-            // Extract public_id from Cloudinary URL
-            // Example: https://res.cloudinary.com/cloud/image/upload/v123456/products/abc.jpg
-            // public_id = products/abc  (no extension)
-            if (preg_match('/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z]+)?$/i', $url, $matches)) {
+            // Extract public_id from Cloudinary URL (e.g., product_images/product_12345)
+            if (preg_match('/\/upload\/(?:[^\/]+\/)*?(?:v\d+\/)?([^?\s]+?)(?:\.[a-z0-9]+)?(?:\?.*)?$/i', $url, $matches)) {
                 $publicId = $matches[1];
-                Cloudinary::destroy($publicId);
+                Cloudinary::uploadApi()->destroy($publicId);
             }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('ProductService: Could not delete Cloudinary image.', [

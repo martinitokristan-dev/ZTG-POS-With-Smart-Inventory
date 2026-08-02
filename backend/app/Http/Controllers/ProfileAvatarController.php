@@ -40,12 +40,12 @@ class ProfileAvatarController extends Controller
 
         // ── 4. Upload to Cloudinary ────────────────────────────────────────────
         $file = $request->file('avatar');
-        $result = Cloudinary::upload($file->getRealPath(), [
+        $result = Cloudinary::uploadApi()->upload($file->getRealPath(), [
             'folder'        => 'avatars',
             'resource_type' => 'image',
             'transformation' => ['quality' => 'auto', 'fetch_format' => 'auto'],
         ]);
-        $url = $result->getSecurePath();
+        $url = $result['secure_url'] ?? $result['url'];
 
         $user->update(['profile_photo' => $url]);
 
@@ -82,7 +82,7 @@ class ProfileAvatarController extends Controller
         if (!$url || !str_contains($url, 'res.cloudinary.com')) return;
         try {
             if (preg_match('/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z]+)?$/i', $url, $matches)) {
-                Cloudinary::destroy($matches[1]);
+                Cloudinary::uploadApi()->destroy($matches[1]);
             }
         } catch (\Throwable $e) {
             Log::warning('ProfileAvatar: could not delete Cloudinary image.', [

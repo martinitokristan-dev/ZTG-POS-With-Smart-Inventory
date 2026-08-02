@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import ImageUploadOverlay from '../../../../shared/components/ImageUploadOverlay';
 
 // Helper function to replace legacy localhost or blocked r2.dev image URLs with backend proxy paths
 const fixImageUrl = (url) => {
@@ -30,7 +31,7 @@ const fixImageUrl = (url) => {
 export default function ProfileTab({
     profileData, setProfileData, handleProfileSubmit,
     setShowPasswordModal, showPIN, setShowPIN, isProfileDirty,
-    handleAvatarUpload, handleAvatarRemove, avatarUploading, avatarRemoving,
+    handleAvatarUpload, handleAvatarRemove, avatarUploading, avatarProgress = 0, avatarRemoving,
     confirmingRemove, handleAvatarRemoveConfirmed, handleAvatarRemoveCancel,
     isEditing, onStartEdit, onCancelEdit
 }) {
@@ -90,7 +91,7 @@ export default function ProfileTab({
                 <section className="profile-photo-section">
                     <div className="profile-section-card profile-photo-center">
                         {/* Avatar preview */}
-                        <div className="profile-photo-preview-lg" style={{ position: 'relative' }}>
+                        <div className="profile-photo-preview-lg" style={{ position: 'relative', width: '96px', height: '96px', margin: '0 auto', borderRadius: '50%' }}>
                             {hasPhoto ? (
                                 <img
                                     src={photoUrl}
@@ -99,17 +100,11 @@ export default function ProfileTab({
                                     onError={() => setImgError(true)}
                                 />
                             ) : (
-                                <div className="profile-photo-avatar-lg user-avatar-img">
+                                <div className="profile-photo-avatar-lg user-avatar-img" style={{ width: '96px', height: '96px', borderRadius: '50%' }}>
                                     {initials}
                                 </div>
                             )}
-                            {avatarUploading && (
-                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite' }}>
-                                        <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"/>
-                                    </svg>
-                                </div>
-                            )}
+                            <ImageUploadOverlay isUploading={avatarUploading} progress={avatarProgress} borderRadius="50%" spinnerSize={24} />
                         </div>
 
                         <h2 className="profile-section-title" style={{ marginTop: '16px' }}>Profile Photo</h2>
