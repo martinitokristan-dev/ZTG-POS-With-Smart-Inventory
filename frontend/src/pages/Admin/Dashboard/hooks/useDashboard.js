@@ -18,7 +18,6 @@ export function useDashboard() {
         todayRevenue: 0,
         productCount: 0,
         variantCount: 0,
-        employeeCount: 0,
         topProduct: { name: '-', qty: 0 }
     });
 
@@ -29,27 +28,33 @@ export function useDashboard() {
     // Top selling products state
     const [topProducts, setTopProducts] = useState([]);
 
+    // Separate effect to instantly calculate inventory counts so it doesn't wait for API
+    useEffect(() => {
+        if (!products || products.length === 0) return;
+        
+        const sellableSKUs = flattenToSellableSKUs(products);
+        const totalStock = sellableSKUs.reduce((sum, item) => sum + (item.stock || 0), 0);
+        
+        setStats(prev => ({
+            ...prev,
+            totalStock: totalStock,
+            productCount: products.length,
+            variantCount: sellableSKUs.length,
+        }));
+    }, [products]);
+
     useEffect(() => {
         const loadData = async () => {
             try {
                 setLoading(true);
-                const cachedStats = await fetchDashboardData(products, currentTimeRange);
+                const cachedStats = await fetchDashboardData(currentTimeRange);
 
-                // Calculate total items on hand (sum of all stocks) and product/variant counts
-                const sellableSKUs = flattenToSellableSKUs(products);
-                const totalStock = sellableSKUs.reduce((sum, item) => sum + (item.stock || 0), 0);
-                const productCount = products.length;
-                const variantCount = sellableSKUs.length;
-
-                setStats({
-                    totalStock: totalStock,
+                setStats(prev => ({
+                    ...prev,
                     todayRevenue: cachedStats.todayRevenue,
-                    productCount: productCount,
-                    variantCount: variantCount,
-                    employeeCount: cachedStats.employeeCount,
                     topProduct: cachedStats.topProduct,
                     last7Days: cachedStats.last7Days || []
-                });
+                }));
 
                 const topSellers = cachedStats.topSellers;
                 if (topSellers.length > 0) {
@@ -90,7 +95,7 @@ export function useDashboard() {
         };
 
         loadData();
-    }, [products, currentTimeRange]);
+    }, [currentTimeRange]);
 
     return {
         name,

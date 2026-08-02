@@ -4,31 +4,24 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MediaController extends Controller
 {
     /**
-     * Serve public uploaded assets (avatars, logos, products) cleanly via backend proxy.
-     * Prevents mobile carrier ISP DNS blocking of external r2.dev subdomains.
+     * Serve public uploaded assets via backend proxy (legacy fallback).
+     * New images are served directly from Cloudinary CDN.
+     * This proxy remains only for assets uploaded before the Cloudinary migration
+     * that may still be stored on local or R2 disk.
      */
     public function show(string $path)
     {
         // Sanitize path against directory traversal
         $cleanPath = ltrim(str_replace('..', '', $path), '/');
 
-        // Check if file exists on s3 / R2 disk
-        if (Storage::disk('s3')->exists($cleanPath)) {
-            return Storage::disk('s3')->response($cleanPath, null, [
-                'Cache-Control' => 'public, max-age=31536000, immutable',
-                'Access-Control-Allow-Origin' => '*',
-            ]);
-        }
-
-        // Check local storage fallback
+        // Check local public storage (primary fallback for legacy files)
         if (Storage::disk('public')->exists($cleanPath)) {
             return Storage::disk('public')->response($cleanPath, null, [
-                'Cache-Control' => 'public, max-age=31536000, immutable',
+                'Cache-Control'              => 'public, max-age=31536000, immutable',
                 'Access-Control-Allow-Origin' => '*',
             ]);
         }

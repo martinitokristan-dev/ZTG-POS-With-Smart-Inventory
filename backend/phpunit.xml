@@ -32,5 +32,9 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="CLOUDINARY_CLOUD_NAME" value="test-cloud"/>
+        <env name="CLOUDINARY_API_KEY" value="000000000000000"/>
+        <env name="CLOUDINARY_API_SECRET" value="test-secret-for-testing-only"/>
+        <env name="CLOUDINARY_FOLDER" value="test-products"/>
     </php>
 </phpunit>

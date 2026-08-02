@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use App\Events\InventoryUpdated;
 use App\Events\TransactionCreated;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class ProductService
 {
@@ -112,7 +113,7 @@ class ProductService
      */
     public function show(int $id): Product
     {
-        $salesSubquery = \App\Models\TransactionItem::selectRaw('COALESCE(SUM(qty), 0)')
+        $salesSubquery = TransactionItem::selectRaw('COALESCE(SUM(qty), 0)')
             ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
             ->whereColumn('transaction_items.product_id', 'products.id')
             ->where('transactions.status', 'Completed');
@@ -298,7 +299,7 @@ class ProductService
                 foreach ($currentVariants as $currentVariant) {
                     if (!in_array($currentVariant->id, $payloadVariantIds)) {
                         if ($currentVariant->image) {
-                            $this->deleteR2Image($currentVariant->image);
+                            $this->deleteCloudImage($currentVariant->image);
                         }
                         $currentVariant->variantOptions()->detach();
                         $currentVariant->delete();
@@ -325,38 +326,36 @@ class ProductService
         // Clean up R2 images for variants
         foreach ($product->variants as $variant) {
             if ($variant->image) {
-                $this->deleteR2Image($variant->image);
+                $this->deleteCloudImage($variant->image);
             }
         }
         // Clean up R2 image for parent product
         if ($product->image) {
-            $this->deleteR2Image($product->image);
+            $this->deleteCloudImage($product->image);
         }
 
         $product->delete();
     }
 
     /**
-     * Delete image from Cloudflare R2 storage if stored there.
+     * Delete image from Cloudinary storage if stored there.
+     * Extracts the public_id from the Cloudinary URL and destroys it.
      */
-    private function deleteR2Image(?string $url): void
+    private function deleteCloudImage(?string $url): void
     {
         if (!$url) return;
+        // Only handle Cloudinary URLs (res.cloudinary.com)
+        if (!str_contains($url, 'res.cloudinary.com')) return;
         try {
-            $path = null;
-            if (str_starts_with($url, '/storage/')) {
-                $path = substr($url, 9);
-            } else {
-                $s3Base = rtrim(config('filesystems.disks.s3.url'), '/') . '/';
-                if ($s3Base && str_starts_with($url, $s3Base)) {
-                    $path = substr($url, strlen($s3Base));
-                }
-            }
-            if ($path && \Illuminate\Support\Facades\Storage::disk('s3')->exists($path)) {
-                \Illuminate\Support\Facades\Storage::disk('s3')->delete($path);
+            // Extract public_id from Cloudinary URL
+            // Example: https://res.cloudinary.com/cloud/image/upload/v123456/products/abc.jpg
+            // public_id = products/abc  (no extension)
+            if (preg_match('/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z]+)?$/i', $url, $matches)) {
+                $publicId = $matches[1];
+                Cloudinary::destroy($publicId);
             }
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('ProductService: Could not delete old R2 image.', [
+            \Illuminate\Support\Facades\Log::warning('ProductService: Could not delete Cloudinary image.', [
                 'url'   => $url,
                 'error' => $e->getMessage(),
             ]);

@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Events\ProductUpdated;
 use App\Events\InventoryUpdated;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class ProductController extends Controller
 {
@@ -127,7 +128,7 @@ class ProductController extends Controller
      }
 
      /**
-      * Upload product image.
+      * Upload product image to Cloudinary.
       */
      public function uploadImage(Request $request): JsonResponse
      {
@@ -137,13 +138,18 @@ class ProductController extends Controller
 
          if ($request->hasFile('image')) {
              $file = $request->file('image');
-             $ext = $file->extension();
-             $filename = 'product_' . time() . '_' . \Illuminate\Support\Str::random(12) . '.' . $ext;
-             $path = $file->storeAs('products', $filename, 's3');
-             $url = \Illuminate\Support\Facades\Storage::disk('s3')->url($path);
+
+             $result = Cloudinary::upload($file->getRealPath(), [
+                 'folder'          => env('CLOUDINARY_FOLDER', 'products'),
+                 'resource_type'   => 'image',
+                 'transformation'  => [
+                     'quality' => 'auto',
+                     'fetch_format' => 'auto',
+                 ],
+             ]);
 
              return response()->json([
-                 'url' => $url
+                 'url' => $result->getSecurePath()
              ]);
          }
 

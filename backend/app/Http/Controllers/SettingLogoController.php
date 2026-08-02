@@ -6,12 +6,11 @@ use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 /**
  * Business Logo Upload / Remove — Admin-only endpoint.
- * Mirrors ProfileAvatarController exact security and R2 storage pattern.
+ * Uploads to Cloudinary for reliable, permanent CDN URLs.
  */
 class SettingLogoController extends Controller
 {
@@ -37,26 +36,18 @@ class SettingLogoController extends Controller
 
         $existing = Setting::where('key', 'business_logo')->first();
 
-        // Delete old logo file if present
+        // Delete old logo from Cloudinary if present
         if ($existing && $existing->value) {
-            try {
-                $oldPath = $this->urlToStoragePath($existing->value);
-                if ($oldPath && Storage::disk('s3')->exists($oldPath)) {
-                    Storage::disk('s3')->delete($oldPath);
-                }
-            } catch (\Throwable $e) {
-                Log::warning('SettingLogo: could not delete old logo.', [
-                    'old_url' => $existing->value,
-                    'error'   => $e->getMessage(),
-                ]);
-            }
+            $this->deleteCloudinaryImage($existing->value);
         }
 
         $file = $request->file('logo');
-        $ext = $file->extension();
-        $filename = 'logo_' . Str::random(20) . '.' . $ext;
-        $path = $file->storeAs('logos', $filename, 's3');
-        $url = url('/api/media/' . $path);
+        $result = Cloudinary::upload($file->getRealPath(), [
+            'folder'        => 'logos',
+            'resource_type' => 'image',
+            'transformation' => ['quality' => 'auto', 'fetch_format' => 'auto'],
+        ]);
+        $url = $result->getSecurePath();
 
         Setting::updateOrCreate(
             ['key' => 'business_logo'],
@@ -69,23 +60,16 @@ class SettingLogoController extends Controller
         if ($request->hasFile('sidebar_logo')) {
             $existingSidebar = Setting::where('key', 'sidebar_logo')->first();
             if ($existingSidebar && $existingSidebar->value) {
-                try {
-                    $oldSidebarPath = $this->urlToStoragePath($existingSidebar->value);
-                    if ($oldSidebarPath && Storage::disk('s3')->exists($oldSidebarPath)) {
-                        Storage::disk('s3')->delete($oldSidebarPath);
-                    }
-                } catch (\Throwable $e) {
-                    Log::warning('SettingLogo: could not delete old sidebar logo.', [
-                        'error' => $e->getMessage(),
-                    ]);
-                }
+                $this->deleteCloudinaryImage($existingSidebar->value);
             }
 
             $sidebarFile = $request->file('sidebar_logo');
-            $sidebarExt = $sidebarFile->extension() ?: 'png';
-            $sidebarFilename = 'sidebar_logo_' . Str::random(20) . '.' . $sidebarExt;
-            $sidebarPath = $sidebarFile->storeAs('logos', $sidebarFilename, 's3');
-            $sidebarUrl = url('/api/media/' . $sidebarPath);
+            $sidebarResult = Cloudinary::upload($sidebarFile->getRealPath(), [
+                'folder'        => 'logos',
+                'resource_type' => 'image',
+                'transformation' => ['quality' => 'auto', 'fetch_format' => 'auto'],
+            ]);
+            $sidebarUrl = $sidebarResult->getSecurePath();
 
             Setting::updateOrCreate(
                 ['key' => 'sidebar_logo'],
@@ -109,35 +93,14 @@ class SettingLogoController extends Controller
     public function remove(Request $request): JsonResponse
     {
         $setting = Setting::where('key', 'business_logo')->first();
-
         if ($setting && $setting->value) {
-            try {
-                $oldPath = $this->urlToStoragePath($setting->value);
-                if ($oldPath && Storage::disk('s3')->exists($oldPath)) {
-                    Storage::disk('s3')->delete($oldPath);
-                }
-            } catch (\Throwable $e) {
-                Log::warning('SettingLogo: could not delete logo on remove.', [
-                    'error' => $e->getMessage(),
-                ]);
-            }
-
+            $this->deleteCloudinaryImage($setting->value);
             $setting->update(['value' => null]);
         }
 
         $sidebarSetting = Setting::where('key', 'sidebar_logo')->first();
         if ($sidebarSetting && $sidebarSetting->value) {
-            try {
-                $oldSidebarPath = $this->urlToStoragePath($sidebarSetting->value);
-                if ($oldSidebarPath && Storage::disk('s3')->exists($oldSidebarPath)) {
-                    Storage::disk('s3')->delete($oldSidebarPath);
-                }
-            } catch (\Throwable $e) {
-                Log::warning('SettingLogo: could not delete sidebar logo on remove.', [
-                    'error' => $e->getMessage(),
-                ]);
-            }
-
+            $this->deleteCloudinaryImage($sidebarSetting->value);
             $sidebarSetting->update(['value' => null]);
         }
 
@@ -149,26 +112,20 @@ class SettingLogoController extends Controller
     }
 
     /**
-     * Convert stored URL back to relative storage path.
+     * Delete an image from Cloudinary by extracting its public_id from the URL.
      */
-    private function urlToStoragePath(?string $url): ?string
+    private function deleteCloudinaryImage(?string $url): void
     {
-        if (!$url) return null;
-
-        if (str_starts_with($url, '/storage/')) {
-            return substr($url, 9);
+        if (!$url || !str_contains($url, 'res.cloudinary.com')) return;
+        try {
+            if (preg_match('/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z]+)?$/i', $url, $matches)) {
+                Cloudinary::destroy($matches[1]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('SettingLogo: could not delete Cloudinary image.', [
+                'url'   => $url,
+                'error' => $e->getMessage(),
+            ]);
         }
-
-        $localBase = rtrim(config('app.url'), '/') . '/storage/';
-        if (str_starts_with($url, $localBase)) {
-            return substr($url, strlen($localBase));
-        }
-
-        $s3Base = rtrim(config('filesystems.disks.s3.url'), '/') . '/';
-        if ($s3Base && str_starts_with($url, $s3Base)) {
-            return substr($url, strlen($s3Base));
-        }
-
-        return null;
     }
 }

@@ -12,7 +12,7 @@ export const resetDashboardCache = () => {
     dashboardCache = {};
 };
 
-export async function fetchDashboardData(products, timeframe = 'Today') {
+export async function fetchDashboardData(timeframe = 'Today') {
     const now = Date.now();
     const cacheKey = timeframe;
 
@@ -32,9 +32,8 @@ export async function fetchDashboardData(products, timeframe = 'Today') {
 
     dashboardCache[cacheKey].promise = Promise.all([
         api.get(`/reports/sales-summary?timeframe=${tfParam}`).catch(() => ({ data: { total_revenue: 0 } })),
-        api.get(`/reports/product-performance?timeframe=${tfParam}`).catch(() => ({ data: { top_sellers: [] } })),
-        api.get('/employees').catch(() => ({ data: [] }))
-    ]).then(([summaryRes, performanceRes, employeesRes]) => {
+        api.get(`/reports/product-performance?timeframe=${tfParam}`).catch(() => ({ data: { top_sellers: [] } }))
+    ]).then(([summaryRes, performanceRes]) => {
         const topSellers = performanceRes.data.top_sellers || [];
         const topProduct = topSellers.length > 0 
             ? { name: topSellers[0].name, qty: topSellers[0].sales_count }
@@ -42,7 +41,6 @@ export async function fetchDashboardData(products, timeframe = 'Today') {
 
         const stats = {
             todayRevenue: summaryRes.data.total_revenue || 0,
-            employeeCount: Array.isArray(employeesRes.data) ? employeesRes.data.length : 0,
             topProduct,
             topSellers,
             last7Days: summaryRes.data.last_7_days || []
