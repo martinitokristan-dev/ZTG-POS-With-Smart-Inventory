@@ -154,7 +154,6 @@ export default function HistoryTable({
                                                 className="action-trigger-btn" 
                                                 data-tooltip="View Transaction"
                                                 onClick={() => handleOpenView(tx)}
-                                                style={{ border: '1px solid #E2E8F0', background: '#fff', width: '32px', height: '32px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B' }}
                                             >
                                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -166,7 +165,6 @@ export default function HistoryTable({
                                                     className="action-trigger-btn" 
                                                     data-tooltip="More actions"
                                                     onClick={(e) => toggleDropdown(tx.id, e)}
-                                                    style={{ border: '1px solid #E2E8F0', background: '#fff', width: '32px', height: '32px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B' }}
                                                 >
                                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                                                         <circle cx="12" cy="5" r="2"></circle>
@@ -179,26 +177,26 @@ export default function HistoryTable({
                                                         position: 'absolute', right: 0,
                                                         ...(isBottomRow ? { bottom: 'calc(100% + 6px)' } : { top: 'calc(100% + 6px)' }),
                                                         zIndex: 9999,
-                                                        background: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px',
-                                                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15), 0 8px 10px -6px rgba(0,0,0,0.1)', padding: '6px', minWidth: '160px'
+                                                        background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px',
+                                                        boxShadow: 'var(--shadow-lg)', padding: '6px', minWidth: '160px'
                                                     }}>
                                                         {tx.status === 'Pending' && (
                                                             <>
-                                                                <button style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: '#10B981', borderRadius: '4px', fontWeight: '600' }} onClick={() => { handleOpenPay(tx); setOpenDropdownId(null); }} onMouseOver={e => e.currentTarget.style.backgroundColor = '#ECFDF5'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                                                <button style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--success)', borderRadius: '4px', fontWeight: '600' }} onClick={() => { handleOpenPay(tx); setOpenDropdownId(null); }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--success-light)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                                                                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                                                                     Pay P.O.
                                                                 </button>
-                                                                <div style={{ margin: '4px 0', borderTop: '1px solid #E2E8F0' }}></div>
+                                                                <div style={{ margin: '4px 0', borderTop: '1px solid var(--border)' }}></div>
                                                             </>
                                                         )}
-                                                        <button style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: '#334155', borderRadius: '4px' }} onClick={() => handleReprint(tx)} onMouseOver={e => e.currentTarget.style.backgroundColor = '#F1F5F9'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                                        <button style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', borderRadius: '4px' }} onClick={() => handleReprint(tx)} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                                                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                                                             Reprint SI
                                                         </button>
                                                         {tx.status === 'Completed' && (
                                                             <>
-                                                                <div style={{ margin: '4px 0', borderTop: '1px solid #E2E8F0' }}></div>
-                                                                <button style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: '#EF4444', borderRadius: '4px' }} onClick={() => { handleOpenVoid(tx); setOpenDropdownId(null); }} onMouseOver={e => e.currentTarget.style.backgroundColor = '#FEF2F2'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                                                <div style={{ margin: '4px 0', borderTop: '1px solid var(--border)' }}></div>
+                                                                <button style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)', borderRadius: '4px' }} onClick={() => { handleOpenVoid(tx); setOpenDropdownId(null); }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--danger-light)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                                                                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
                                                                     Void Transaction
                                                                 </button>

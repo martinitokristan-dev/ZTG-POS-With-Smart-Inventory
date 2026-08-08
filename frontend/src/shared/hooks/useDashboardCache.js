@@ -35,13 +35,11 @@ export async function fetchDashboardData(timeframe = 'Today') {
         api.get(`/reports/product-performance?timeframe=${tfParam}`).catch(() => ({ data: { top_sellers: [] } }))
     ]).then(([summaryRes, performanceRes]) => {
         const topSellers = performanceRes.data.top_sellers || [];
-        const topProduct = topSellers.length > 0 
-            ? { name: topSellers[0].name, qty: topSellers[0].sales_count }
-            : { name: '-', qty: 0 };
+        const topCategories = performanceRes.data.top_categories || [];
 
         const stats = {
             todayRevenue: summaryRes.data.total_revenue || 0,
-            topProduct,
+            topCategories,
             topSellers,
             last7Days: summaryRes.data.last_7_days || []
         };

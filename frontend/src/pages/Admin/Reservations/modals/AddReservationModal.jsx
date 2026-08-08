@@ -47,7 +47,7 @@ export default function AddReservationModal({
 
                         {/* LEFT COLUMN */}
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <div style={{ background: '#EBF5FF', color: '#1E40AF', padding: '12px 16px', borderRadius: '6px', fontSize: '11px', fontWeight: 500 }}>
+                            <div style={{ background: 'var(--primary-light)', color: 'var(--primary)', padding: '12px 16px', borderRadius: '6px', fontSize: '11px', fontWeight: 500, border: '1px solid rgba(59,130,246,0.2)' }}>
                                 Create an order for customer pickup/delivery with deposit. Items will be held until pickup date.
                             </div>
 
@@ -60,15 +60,15 @@ export default function AddReservationModal({
                             <div>
                                 <h4 style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', marginBottom: '12px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Customer Information</h4>
                                 <div className="form-group" style={{ marginBottom: '12px' }}>
-                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>Customer Name <span style={{ color: 'var(--danger)' }}>*</span></label>
+                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500 }}>Customer Name <span style={{ color: 'var(--danger)' }}>*</span></label>
                                     <input type="text" className="form-control" required placeholder="Enter customer name" value={custName} onChange={(e) => setCustName(e.target.value)} style={{ fontSize: '13px' }} />
                                 </div>
                                 <div className="form-group" style={{ marginBottom: '12px' }}>
-                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>Contact Number <span style={{ color: 'var(--danger)' }}>*</span></label>
+                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500 }}>Contact Number <span style={{ color: 'var(--danger)' }}>*</span></label>
                                     <input type="tel" className="form-control" required placeholder="09XX-XXX-XXXX" value={custPhone} onChange={(e) => setCustPhone(e.target.value)} style={{ fontSize: '13px' }} />
                                 </div>
                                 <div className="form-group" style={{ marginBottom: 0 }}>
-                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>Email Address (Optional)</label>
+                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500 }}>Email Address (Optional)</label>
                                     <input type="email" className="form-control" placeholder="customer@example.com" value={custEmail} onChange={(e) => setCustEmail(e.target.value)} style={{ fontSize: '13px' }} />
                                 </div>
                             </div>
@@ -76,11 +76,11 @@ export default function AddReservationModal({
                             <div>
                                 <h4 style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', marginBottom: '12px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Order Details</h4>
                                 <div className="form-group" style={{ marginBottom: '12px' }}>
-                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>Pickup Date <span style={{ color: 'var(--danger)' }}>*</span></label>
+                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500 }}>Pickup Date <span style={{ color: 'var(--danger)' }}>*</span></label>
                                     <IOSDatePicker value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} required placeholder="Select pickup date" />
                                 </div>
                                 <div className="form-group" style={{ marginBottom: '12px' }}>
-                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>Expected Pickup Time</label>
+                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500 }}>Expected Pickup Time</label>
                                     <IOSTimePicker value={pickupTime} onChange={(e) => setPickupTime(e.target.value)} placeholder="Select pickup time" />
                                 </div>
                                 <div className="form-group" style={{ marginBottom: 0 }}>
@@ -108,11 +108,11 @@ export default function AddReservationModal({
                                             autoComplete="off"
                                         />
                                         {suggestions.length > 0 && (
-                                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: '#fff', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: 'var(--shadow-md)', maxHeight: '200px', overflowY: 'auto', marginTop: '4px' }}>
+                                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: 'var(--shadow-md)', maxHeight: '200px', overflowY: 'auto', marginTop: '4px' }}>
                                                 {suggestions.map(p => (
-                                                    <div key={p.id} onClick={() => addToCart(p)} style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #F1F5F9', fontSize: '13px' }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.background = '#F8FAFC'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}>
+                                                    <div key={p.id} onClick={() => addToCart(p)} style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: '13px', color: 'var(--text-primary)' }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                                                         <strong style={{ display: 'block' }}>{p.name}</strong>
                                                         <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{p.part_no} · Stock: {p.stock} · {fmt(p.price2)}</span>
                                                     </div>
@@ -125,12 +125,12 @@ export default function AddReservationModal({
                                 {/* Cart table */}
                                 <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px' }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                                        <thead style={{ background: '#F8FAFC', borderBottom: '1px solid var(--border)' }}>
+                                        <thead style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
                                             <tr>
-                                                <th style={{ textAlign: 'left', padding: '10px 16px', color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>Product</th>
-                                                <th style={{ textAlign: 'center', padding: '10px 16px', color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>Qty</th>
-                                                <th style={{ textAlign: 'right', padding: '10px 16px', color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>Price</th>
-                                                <th style={{ textAlign: 'right', padding: '10px 16px', color: '#64748B', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>Total</th>
+                                                <th style={{ textAlign: 'left', padding: '10px 16px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>Product</th>
+                                                <th style={{ textAlign: 'center', padding: '10px 16px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>Qty</th>
+                                                <th style={{ textAlign: 'right', padding: '10px 16px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>Price</th>
+                                                <th style={{ textAlign: 'right', padding: '10px 16px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>Total</th>
                                                 <th style={{ width: '40px' }}></th>
                                             </tr>
                                         </thead>
@@ -138,7 +138,7 @@ export default function AddReservationModal({
                                             {cartItems.length === 0 ? (
                                                 <tr><td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: '#94A3B8' }}>No items added yet.</td></tr>
                                             ) : cartItems.map(c => (
-                                                <tr key={c.product_id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                                                <tr key={c.product_id} style={{ borderBottom: '1px solid var(--border)' }}>
                                                     <td style={{ padding: '10px 16px' }}>
                                                         <div style={{ display: 'block', fontSize: '12px' }}>
                                                             <FormattedProductName name={c.name} />
@@ -175,16 +175,16 @@ export default function AddReservationModal({
                                 </div>
 
                                 {/* Totals */}
-                                <div style={{ background: '#DBEAFE', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#3B82F6', fontSize: '12px' }}>
+                                <div style={{ background: 'var(--primary-light)', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid rgba(59,130,246,0.2)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--primary)', fontSize: '12px' }}>
                                         <span>Subtotal</span><span>{fmt(subtotal)}</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#3B82F6', fontSize: '12px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--primary)', fontSize: '12px' }}>
                                         <span>Tax (12%)</span><span>{fmt(tax)}</span>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', paddingTop: '8px', borderTop: '1px solid rgba(59,130,246,0.2)' }}>
-                                        <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E40AF' }}>Total Amount</span>
-                                        <span style={{ fontSize: '16px', fontWeight: 800, color: '#1E40AF' }}>{fmt(total)}</span>
+                                        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--primary)' }}>Total Amount</span>
+                                        <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--primary)' }}>{fmt(total)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -192,7 +192,7 @@ export default function AddReservationModal({
                             <div>
                                 <h4 style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', marginBottom: '12px', letterSpacing: '0.5px', textTransform: 'uppercase', marginTop: '8px' }}>Payment Details</h4>
                                 <div className="form-group" style={{ marginBottom: '12px' }}>
-                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>Payment Type</label>
+                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500 }}>Payment Type</label>
                                     <IOSSelect
                                         value={paymentType}
                                         onChange={(e) => setPaymentType(e.target.value)}
@@ -203,20 +203,20 @@ export default function AddReservationModal({
                                     />
                                 </div>
                                 <div className="form-group" style={{ marginBottom: '12px' }}>
-                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>
+                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500 }}>
                                         Amount Collected &nbsp;
-                                        <span style={{ background: '#FEF3C7', color: '#92400E', fontSize: '10px', fontWeight: 700, padding: '1px 6px', borderRadius: '10px' }}>
+                                        <span style={{ background: 'var(--warning-light)', color: 'var(--warning)', fontSize: '10px', fontWeight: 700, padding: '1px 6px', borderRadius: '10px' }}>
                                             {paymentType === 'full' ? '100%' : '50% Required'}
                                         </span>
                                     </label>
                                     <input type="text" className="form-control" readOnly value={fmt(depositAmt)}
-                                        style={{ fontSize: '14px', fontWeight: 700, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E', cursor: 'not-allowed' }} />
-                                    <p style={{ fontSize: '10px', color: '#92400E', margin: '4px 0 0', fontWeight: 500 }}>
+                                        style={{ fontSize: '14px', fontWeight: 700, background: 'var(--warning-light)', border: '1px solid rgba(245,158,11,0.3)', color: 'var(--warning)', cursor: 'not-allowed' }} />
+                                    <p style={{ fontSize: '10px', color: 'var(--text-secondary)', margin: '4px 0 0', fontWeight: 500 }}>
                                         {paymentType === 'full' ? 'Full payment collected upfront.' : 'Auto-calculated as 50% of total. Balance due on pickup.'}
                                     </p>
                                 </div>
                                 <div className="form-group" style={{ marginBottom: '12px' }}>
-                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>Payment Method</label>
+                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500 }}>Payment Method</label>
                                     <IOSSelect
                                         value={paymentMethod}
                                         onChange={(e) => setPaymentMethod(e.target.value)}
@@ -228,9 +228,9 @@ export default function AddReservationModal({
                                     />
                                 </div>
                                 <div className="form-group" style={{ marginBottom: 0 }}>
-                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>Balance Due</label>
+                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500 }}>Balance Due</label>
                                     <input type="text" className="form-control" readOnly value={fmt(balance)}
-                                        style={{ fontSize: '14px', fontWeight: 700, background: '#F8FAFC', border: '1px solid var(--border)', color: '#334155' }} />
+                                        style={{ fontSize: '14px', fontWeight: 700 }} />
                                 </div>
                             </div>
                         </div>

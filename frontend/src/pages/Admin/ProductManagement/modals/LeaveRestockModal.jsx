@@ -8,11 +8,11 @@ export default function LeaveRestockModal({ isOpen, onClose, onSaveDraft, onDisc
 
     return (
         <div className="modal-overlay" style={{ zIndex: 999 }}>
-            <div ref={sheetRef} className="modal-card" style={{ maxWidth: '420px', width: '90%', backgroundColor: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.18)', border: '1px solid #E2E8F0' }}>
+            <div ref={sheetRef} className="modal-card" style={{ maxWidth: '420px', width: '90%', backgroundColor: 'var(--bg-card)', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)', border: '1px solid var(--border)' }}>
                 
                 {/* Header */}
-                <div {...dragHandleProps} style={{ padding: '20px 24px 16px 24px', position: 'relative', textAlign: 'center', borderBottom: '1px solid #F1F5F9', backgroundColor: '#F8FAFC', touchAction: 'none' }}>
-                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0F172A', fontFamily: '"Outfit", sans-serif', textAlign: 'center' }}>
+                <div {...dragHandleProps} style={{ padding: '20px 24px 16px 24px', position: 'relative', textAlign: 'center', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', touchAction: 'none' }}>
+                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif', textAlign: 'center' }}>
                         Leave Restock?
                     </h3>
                     <button type="button" onClick={onClose} style={{ position: 'absolute', right: '16px', top: '16px', background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -25,7 +25,7 @@ export default function LeaveRestockModal({ isOpen, onClose, onSaveDraft, onDisc
 
                 {/* Body */}
                 <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px', textAlign: 'center' }}>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#64748B', fontWeight: '500', lineHeight: '1.5', textAlign: 'center' }}>
+                    <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '500', lineHeight: '1.5', textAlign: 'center' }}>
                         You have restock changes in progress. Save them as a draft to continue later, or discard them entirely.
                     </p>
 
@@ -40,14 +40,14 @@ export default function LeaveRestockModal({ isOpen, onClose, onSaveDraft, onDisc
                         <button
                             type="button"
                             onClick={onDiscard}
-                            style={{ width: '100%', padding: '11px', backgroundColor: '#FEF2F2', color: '#DC2626', border: '1px solid #FCA5A5', borderRadius: '8px', fontSize: '13.5px', fontWeight: '700', cursor: 'pointer' }}
+                            style={{ width: '100%', padding: '11px', backgroundColor: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', fontSize: '13.5px', fontWeight: '700', cursor: 'pointer' }}
                         >
                             Discard Changes
                         </button>
                         <button
                             type="button"
                             onClick={onClose}
-                            style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', color: '#64748B', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+                            style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', color: 'var(--text-muted)', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
                         >
                             Keep Editing
                         </button>

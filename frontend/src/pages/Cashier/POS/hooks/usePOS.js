@@ -321,7 +321,7 @@ export default function usePOS() {
             const origPrice = item.priceTier === 'price2' ? parseFloat(item.price2 || 0) : parseFloat(item.price1 || 0);
             const itemDisc = parseFloat(item.item_discount || 0);
             rawSubtotal += origPrice * item.qty;
-            itemDiscountsTotal += itemDisc * item.qty;
+            itemDiscountsTotal += itemDisc;
         });
 
         const afterItemDiscounts = Math.max(0, rawSubtotal - itemDiscountsTotal);

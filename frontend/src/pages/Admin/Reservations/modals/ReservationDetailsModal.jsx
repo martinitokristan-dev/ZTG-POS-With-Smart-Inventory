@@ -80,17 +80,17 @@ export default function ReservationDetailsModal({ isOpen, onClose, reservation, 
                         {r.notes && detailRow('Notes', r.notes)}
 
                         {/* Financials */}
-                        <div style={{ marginTop: '16px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px 16px' }}>
+                        <div style={{ marginTop: '16px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px' }}>
                             {detailRow('Total Order Price', fmt(totalVal), { fontSize: '15px', fontWeight: '700' })}
-                            {!isDirectFull && detailRow('Deposit Amount Paid', fmt(depositVal), { color: '#2563EB', fontWeight: '700' })}
+                            {!isDirectFull && detailRow('Deposit Amount Paid', fmt(depositVal), { color: 'var(--primary)', fontWeight: '700' })}
                             {!isDirectFull && rawStatus === 'completed' && (
-                                detailRow('Balance Paid at Pickup', fmt(totalVal - depositVal), { color: '#059669', fontWeight: '700' })
+                                detailRow('Balance Paid at Pickup', fmt(totalVal - depositVal), { color: 'var(--success)', fontWeight: '700' })
                             )}
                             {!isDirectFull && rawStatus !== 'completed' && balanceDue > 0 && (
-                                detailRow('Balance Due at Pickup', fmt(balanceDue), { color: '#DC2626', fontWeight: '700', fontSize: '14px' })
+                                detailRow('Balance Due at Pickup', fmt(balanceDue), { color: 'var(--danger)', fontWeight: '700', fontSize: '14px' })
                             )}
                             {isDirectFull && (
-                                detailRow('Amount Paid Upfront', fmt(totalVal), { color: '#059669', fontWeight: '700' })
+                                detailRow('Amount Paid Upfront', fmt(totalVal), { color: 'var(--success)', fontWeight: '700' })
                             )}
                         </div>
 

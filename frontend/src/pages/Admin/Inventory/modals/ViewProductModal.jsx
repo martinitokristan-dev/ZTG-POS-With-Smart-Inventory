@@ -16,7 +16,7 @@ export default function ViewProductModal({
                     </button>
                 </div>
                 <div className="modal-body">
-                    <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '18px', marginBottom: '16px' }}>
+                    <div style={{ background: 'var(--primary-light)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '8px', padding: '18px', marginBottom: '16px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px 20px' }}>
                             {[
                                 { label: 'English Name', value: selectedProduct.name },
@@ -33,8 +33,8 @@ export default function ViewProductModal({
                                 { label: 'Dead Stock', value: selectedProduct.is_dead_stock ? 'Yes' : 'No' },
                             ].map(({ label, value, mono }) => (
                                 <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <span style={{ color: '#2563EB', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
-                                    <span style={{ fontWeight: 600, color: '#1E293B', fontSize: '14px', fontFamily: mono ? 'var(--font-mono)' : undefined }}>{value}</span>
+                                    <span style={{ color: 'var(--primary)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px', fontFamily: mono ? 'var(--font-mono)' : undefined }}>{value}</span>
                                 </div>
                             ))}
                         </div>
@@ -60,7 +60,7 @@ export default function ViewProductModal({
                                             const sc = v.stock === 0 ? 'var(--danger)' : (v.stock <= (v.alert_limit || 5) ? 'var(--warning)' : 'var(--success)');
                                             const sb = v.stock === 0 ? 'var(--danger-light)' : (v.stock <= (v.alert_limit || 5) ? 'var(--warning-light)' : 'var(--success-light)');
                                             return (
-                                                <tr key={v.id} style={{ background: idx % 2 === 0 ? '#fff' : '#F8FAFC' }}>
+                                                <tr key={v.id} style={{ background: idx % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)' }}>
                                                     <td style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '12px' }}>{v.part_no}</td>
                                                     <td style={{ padding: '10px 12px' }}>{variantOptionText}</td>
                                                     <td style={{ padding: '10px 12px', textAlign: 'center' }}>

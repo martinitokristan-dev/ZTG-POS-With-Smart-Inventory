@@ -1,37 +1,26 @@
 import React from 'react';
 
 const STATUS_CONFIG = {
-    completed:    { bg: '#F0FDF4', color: '#10B981', text: 'Completed' },
-    'fully paid': { bg: '#F0FDF4', color: '#10B981', text: 'Fully Paid' },
-    fully_paid:   { bg: '#F0FDF4', color: '#10B981', text: 'Fully Paid' },
-    pending:      { bg: '#FFFBEB', color: '#D97706', text: 'Pending Order' },
-    deposit:      { bg: '#EFF6FF', color: '#2563EB', text: 'Deposit' },
-    refund:       { bg: '#FEF2F2', color: '#DC2626', text: 'Refund' },
-    return:       { bg: '#FFF7ED', color: '#EA580C', text: 'Returned' },
-    void:         { bg: '#F1F5F9', color: '#475569', text: 'Voided' },
-    cancelled:    { bg: '#F1F5F9', color: '#475569', text: 'Cancelled' },
+    completed:    { className: 'status-completed', text: 'Completed' },
+    'fully paid': { className: 'status-completed', text: 'Fully Paid' },
+    fully_paid:   { className: 'status-completed', text: 'Fully Paid' },
+    active:       { className: 'status-completed', text: 'Active' },
+    pending:      { className: 'status-pending', text: 'Pending Order' },
+    deposit:      { className: 'status-deposit', text: 'Deposit' },
+    refund:       { className: 'status-refund', text: 'Refund' },
+    return:       { className: 'status-return', text: 'Returned' },
+    void:         { className: 'status-void', text: 'Voided' },
+    cancelled:    { className: 'status-void', text: 'Cancelled' },
 };
 
 export default function StatusBadge({ status, style = {} }) {
-    const raw = status || 'Unknown';
-    const config = STATUS_CONFIG[raw.toLowerCase()] ?? { bg: '#F3F4F6', color: '#4B5563', text: raw };
+    const raw = (status || 'Unknown').toLowerCase();
+    const config = STATUS_CONFIG[raw] ?? { className: 'status-default', text: status };
 
     return (
-        <span style={{ 
-            backgroundColor: config.bg, 
-            color: config.color, 
-            padding: '2px 8px', 
-            borderRadius: '4px', 
-            fontWeight: '700',
-            fontSize: '11px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            letterSpacing: '0.3px',
-            textTransform: 'uppercase',
-            ...style
-        }}>
+        <span className={`status-badge ${config.className}`} style={style}>
             {config.text}
         </span>
     );
 }
+

@@ -88,7 +88,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
         itemsBlock = (
             <div className="audit-detail-section" style={{ marginTop: '14px' }}>
                 <span className="audit-detail-section-title" style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', marginBottom: '8px', display: 'block', letterSpacing: '0.5px' }}>Items Purchased</span>
-                <div style={{ border: '1px solid #E2E8F0', borderRadius: '10px', overflow: 'hidden', background: '#FFFFFF', maxHeight: '250px', overflowY: 'auto' }}>
+                <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', background: 'var(--bg-card)', maxHeight: '250px', overflowY: 'auto' }}>
                     <table className="modal-table data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
                         <thead style={{ background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)', fontSize: '13px', color: 'var(--table-text-secondary)' }}>
                             <tr>
@@ -138,9 +138,9 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
     const auditDetailRow = (label, value, customStyle = {}) => {
         const isCopyable = ['Invoice No.', 'Reference No.', 'OR Number'].includes(label) && value && value !== '—' && value !== 'N/A';
         return (
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F1F5F9', fontSize: '13px', alignItems: 'center' }}>
-                <span style={{ color: '#64748B', fontWeight: '500', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>{label}</span>
-                <span style={{ color: '#0F172A', textAlign: 'right', fontWeight: '600', ...customStyle }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)', fontSize: '13px', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-secondary)', fontWeight: '500', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>{label}</span>
+                <span style={{ color: 'var(--text-primary)', textAlign: 'right', fontWeight: '600', ...customStyle }}>
                     {isCopyable ? <CopyableText text={value} label={label} /> : value}
                 </span>
             </div>
@@ -151,15 +151,15 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
 
     return (
         <div className="modal-overlay" style={{ zIndex: 999 }}>
-            <div className="modal-card audit-detail-card" style={{ maxWidth: '680px', width: '95%', background: '#FFFFFF', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-                <div className="modal-header audit-detail-header" style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div className="modal-card audit-detail-card" style={{ maxWidth: '680px', width: '95%', background: 'var(--bg-card)', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' }}>
+                <div className="modal-header audit-detail-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                        <h3 className="modal-title" style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#111827' }}>{title}</h3>
-                        <p className="audit-detail-subtitle" style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#475569', fontWeight: '600' }}>
+                        <h3 className="modal-title" style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>{title}</h3>
+                        <p className="audit-detail-subtitle" style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
                             {subtitle} {resolvedCustomer ? `• Customer: ${resolvedCustomer}` : ''}
                         </p>
                     </div>
-                    <button type="button" className="modal-close" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF' }}>
+                    <button type="button" className="modal-close" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
                         <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
@@ -176,7 +176,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 {restockEntries.length > 0 && (
                                     <div style={{ marginTop: '16px' }}>
                                         <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '10px' }}>Restocked Items</span>
-                                        <div style={{ border: '1px solid #E2E8F0', borderRadius: '10px', overflow: 'hidden', background: '#FFFFFF', maxHeight: '300px', overflowY: 'auto' }}>
+                                        <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', background: 'var(--bg-card)', maxHeight: '300px', overflowY: 'auto' }}>
                                             <table className="modal-table data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                                 <thead style={{ background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B' }}>
                                                     <tr>

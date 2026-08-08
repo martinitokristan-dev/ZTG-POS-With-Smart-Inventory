@@ -173,9 +173,10 @@ export default function SalesTrendChart({ last7Days = [], timeRange = 'Today' })
                                     y1={yTick} 
                                     x2={endX} 
                                     y2={yTick} 
-                                    stroke={isBaseline ? "#94A3B8" : "#E2E8F0"} 
-                                    strokeWidth={isBaseline ? "1.5" : "1"} 
-                                    strokeDasharray={isBaseline ? "none" : "6 4"} 
+                                    stroke="var(--border, #E2E8F0)" 
+                                    strokeWidth="1" 
+                                    strokeOpacity={isBaseline ? "0.35" : "0.18"} 
+                                    strokeDasharray="none" 
                                 />
                                 <text 
                                     x={startX - 6} 

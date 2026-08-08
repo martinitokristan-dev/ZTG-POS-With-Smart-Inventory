@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import LogoCropModal from '../modals/LogoCropModal';
 import ImageUploadOverlay from '../../../../shared/components/ImageUploadOverlay';
+import useTheme from '../../../../shared/hooks/useTheme';
 
 // Helper function to replace legacy localhost or blocked r2.dev image URLs with backend proxy paths
 const fixImageUrl = (url) => {
@@ -40,7 +41,9 @@ export default function GeneralTab({
     onStartEdit,
     onCancelEdit
 }) {
+    const { theme, resolvedTheme, isDark, setTheme } = useTheme();
     const logoInputRef = useRef(null);
+
     const [pendingFile, setPendingFile] = useState(null);
     const [showCropModal, setShowCropModal] = useState(false);
     const [logoError, setLogoError] = useState(false);
@@ -406,6 +409,213 @@ export default function GeneralTab({
                             <option value="forfeit">Forfeited (keep as revenue)</option>
                             <option value="refund">Refunded (auto-void transaction)</option>
                         </select>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Theme & Global Appearance Section ── */}
+            <div className="settings-section" style={{ marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '12px', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                        <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
+                            Theme & Global Appearance
+                        </h3>
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0' }}>
+                            Toggle modern dark mode or sync with system color preference globally
+                        </p>
+                    </div>
+
+                    {/* Quick Dark Mode Switch */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                            {isDark ? 'Dark Mode Active' : 'Default Mode Active'}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const nextMode = isDark ? 'light' : 'dark';
+                                setTheme(nextMode);
+                                if (handleSettingInputChange) handleSettingInputChange('theme', nextMode);
+                            }}
+                            style={{
+                                position: 'relative',
+                                width: '48px',
+                                height: '26px',
+                                borderRadius: '13px',
+                                backgroundColor: isDark ? '#3B82F6' : '#CBD5E1',
+                                border: 'none',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s ease',
+                                padding: '3px'
+                            }}
+                            aria-label="Toggle Dark Mode"
+                        >
+                            <div style={{
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                backgroundColor: '#FFFFFF',
+                                transform: isDark ? 'translateX(22px)' : 'translateX(0)',
+                                transition: 'transform 0.2s ease',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}>
+                                {isDark ? (
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1E293B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                                    </svg>
+                                ) : (
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="5"></circle>
+                                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                                    </svg>
+                                )}
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Theme Selector Cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '20px' }}>
+                    {/* Default Mode Card */}
+                    <div
+                        onClick={() => {
+                            setTheme('light');
+                            if (handleSettingInputChange) handleSettingInputChange('theme', 'light');
+                        }}
+                        style={{
+                            border: theme === 'light' ? '2px solid #3B82F6' : '1px solid var(--border)',
+                            borderRadius: '16px',
+                            padding: '18px',
+                            backgroundColor: 'var(--bg-card)',
+                            cursor: 'pointer',
+                            transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                            position: 'relative',
+                            boxShadow: theme === 'light' ? '0 12px 24px -8px rgba(59, 130, 246, 0.25), 0 0 0 1px #3B82F6' : '0 2px 8px rgba(0,0,0,0.04)'
+                        }}
+                    >
+                        {/* Mini Dashboard Illustration Mockup */}
+                        <div style={{ height: '94px', borderRadius: '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', overflow: 'hidden', display: 'flex', marginBottom: '14px', position: 'relative' }}>
+                            {/* Mini Sidebar */}
+                            <div style={{ width: '28px', backgroundColor: '#1E293B', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '8px', gap: '6px' }}>
+                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#3B82F6' }}></div>
+                                <div style={{ width: '14px', height: '3px', backgroundColor: '#3B82F6', borderRadius: '2px' }}></div>
+                                <div style={{ width: '14px', height: '3px', backgroundColor: '#475569', borderRadius: '2px' }}></div>
+                                <div style={{ width: '14px', height: '3px', backgroundColor: '#475569', borderRadius: '2px' }}></div>
+                            </div>
+                            {/* Mini Main Workspace */}
+                            <div style={{ flex: 1, padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: '#F1F5F9' }}>
+                                {/* Top Navbar */}
+                                <div style={{ height: '14px', backgroundColor: '#FFFFFF', borderRadius: '4px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px' }}>
+                                    <div style={{ height: '3px', width: '36px', backgroundColor: '#94A3B8', borderRadius: '2px' }}></div>
+                                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#3B82F6' }}></div>
+                                </div>
+                                {/* Mini Stat Cards */}
+                                <div style={{ display: 'flex', gap: '6px', flex: 1 }}>
+                                    <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                        <div style={{ height: '3px', width: '22px', backgroundColor: '#CBD5E1', borderRadius: '2px' }}></div>
+                                        <div style={{ height: '8px', width: '30px', backgroundColor: '#0F172A', borderRadius: '2px' }}></div>
+                                    </div>
+                                    <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid #E2E8F0', padding: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                        <div style={{ height: '3px', width: '22px', backgroundColor: '#CBD5E1', borderRadius: '2px' }}></div>
+                                        <div style={{ height: '8px', width: '26px', backgroundColor: '#10B981', borderRadius: '2px' }}></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Title & Description */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span>Default</span>
+                                    <span style={{ fontSize: '11px', fontWeight: '600', color: '#64748B', backgroundColor: 'var(--bg-secondary)', padding: '2px 8px', borderRadius: '12px' }}>Light</span>
+                                </div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '3px' }}>Default bright slate theme for daylight</div>
+                            </div>
+                            {theme === 'light' && (
+                                <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(59, 130, 246, 0.4)' }}>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Dark Mode Card */}
+                    <div
+                        onClick={() => {
+                            setTheme('dark');
+                            if (handleSettingInputChange) handleSettingInputChange('theme', 'dark');
+                        }}
+                        style={{
+                            border: theme === 'dark' ? '2px solid #3B82F6' : '1px solid var(--border)',
+                            borderRadius: '16px',
+                            padding: '18px',
+                            backgroundColor: 'var(--bg-card)',
+                            cursor: 'pointer',
+                            transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                            position: 'relative',
+                            boxShadow: theme === 'dark' ? '0 12px 24px -8px rgba(59, 130, 246, 0.35), 0 0 0 1px #3B82F6' : '0 2px 8px rgba(0,0,0,0.2)'
+                        }}
+                    >
+                        {/* Mini Dark Dashboard Illustration Mockup */}
+                        <div style={{ height: '94px', borderRadius: '10px', backgroundColor: '#0B1329', border: '1px solid #263354', overflow: 'hidden', display: 'flex', marginBottom: '14px', position: 'relative' }}>
+                            {/* Mini Sidebar */}
+                            <div style={{ width: '28px', backgroundColor: '#0B1329', borderRight: '1px solid #263354', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '8px', gap: '6px' }}>
+                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#3B82F6' }}></div>
+                                <div style={{ width: '14px', height: '3px', backgroundColor: '#3B82F6', borderRadius: '2px' }}></div>
+                                <div style={{ width: '14px', height: '3px', backgroundColor: '#334155', borderRadius: '2px' }}></div>
+                                <div style={{ width: '14px', height: '3px', backgroundColor: '#334155', borderRadius: '2px' }}></div>
+                            </div>
+                            {/* Mini Main Workspace */}
+                            <div style={{ flex: 1, padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: '#0B1329' }}>
+                                {/* Top Navbar */}
+                                <div style={{ height: '14px', backgroundColor: '#151F38', borderRadius: '4px', border: '1px solid #263354', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px' }}>
+                                    <div style={{ height: '3px', width: '36px', backgroundColor: '#64748B', borderRadius: '2px' }}></div>
+                                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#60A5FA' }}></div>
+                                </div>
+                                {/* Mini Stat Cards */}
+                                <div style={{ display: 'flex', gap: '6px', flex: 1 }}>
+                                    <div style={{ flex: 1, backgroundColor: '#151F38', borderRadius: '6px', border: '1px solid #263354', padding: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                        <div style={{ height: '3px', width: '22px', backgroundColor: '#475569', borderRadius: '2px' }}></div>
+                                        <div style={{ height: '8px', width: '30px', backgroundColor: '#60A5FA', borderRadius: '2px' }}></div>
+                                    </div>
+                                    <div style={{ flex: 1, backgroundColor: '#151F38', borderRadius: '6px', border: '1px solid #263354', padding: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                        <div style={{ height: '3px', width: '22px', backgroundColor: '#475569', borderRadius: '2px' }}></div>
+                                        <div style={{ height: '8px', width: '26px', backgroundColor: '#34D399', borderRadius: '2px' }}></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Title & Description */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span>Dark Mode</span>
+                                    <span style={{ fontSize: '11px', fontWeight: '600', color: '#60A5FA', backgroundColor: 'rgba(59, 130, 246, 0.18)', padding: '2px 8px', borderRadius: '12px' }}>Dark</span>
+                                </div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '3px' }}>Sleek dark slate theme for low light</div>
+                            </div>
+                            {theme === 'dark' && (
+                                <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(59, 130, 246, 0.4)' }}>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

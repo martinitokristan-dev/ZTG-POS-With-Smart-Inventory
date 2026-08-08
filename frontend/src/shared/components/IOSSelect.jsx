@@ -32,7 +32,7 @@ export default function IOSSelect({ value, onChange, options = [], placeholder =
 
     return (
         <div ref={containerRef} style={{ position: 'relative', display: 'inline-block', width: '100%', minWidth: 0, ...style }}>
-            {/* Trigger Button matching iOS reference image */}
+            {/* Trigger Button matching Theme System */}
             <button
                 type="button"
                 disabled={disabled}
@@ -44,14 +44,14 @@ export default function IOSSelect({ value, onChange, options = [], placeholder =
                     justifyContent: 'space-between',
                     width: '100%',
                     padding: '9px 14px',
-                    border: isOpen ? '1px solid #3B82F6' : '1px solid #CBD5E1',
+                    border: isOpen ? '1px solid var(--primary)' : '1px solid var(--border)',
                     borderRadius: '12px',
-                    backgroundColor: disabled ? '#F8FAFC' : '#FFFFFF',
-                    color: selectedOption ? '#0F172A' : '#64748B',
+                    backgroundColor: disabled ? 'var(--bg-secondary)' : 'var(--bg-card)',
+                    color: selectedOption ? 'var(--text-primary)' : 'var(--text-muted)',
                     fontSize: '13px',
                     fontWeight: 600,
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Outfit", sans-serif',
-                    boxShadow: isOpen ? '0 0 0 3px rgba(59, 130, 246, 0.15)' : '0 1px 2px 0 rgba(0, 0, 0, 0.04)',
+                    boxShadow: isOpen ? '0 0 0 3px rgba(59, 130, 246, 0.15)' : 'var(--shadow-sm)',
                     cursor: disabled ? 'default' : 'pointer',
                     transition: 'all 0.2s ease',
                     minHeight: '38px',
@@ -67,7 +67,7 @@ export default function IOSSelect({ value, onChange, options = [], placeholder =
                     height="14"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="#64748B"
+                    stroke="var(--text-secondary)"
                     strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -81,7 +81,7 @@ export default function IOSSelect({ value, onChange, options = [], placeholder =
                 </svg>
             </button>
 
-            {/* iOS Floating Popover Menu matching Reference Image */}
+            {/* Floating Popover Menu matching Theme System */}
             {isOpen && (
                 <div
                     className="ios-select-menu"
@@ -91,10 +91,10 @@ export default function IOSSelect({ value, onChange, options = [], placeholder =
                         left: 0,
                         right: 0,
                         zIndex: 9999,
-                        backgroundColor: '#FFFFFF',
+                        backgroundColor: 'var(--bg-card)',
                         borderRadius: '14px',
-                        border: '1px solid #E2E8F0',
-                        boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                        border: '1px solid var(--border)',
+                        boxShadow: 'var(--shadow-lg)',
                         padding: '6px',
                         maxHeight: '260px',
                         overflowY: 'auto',
@@ -103,7 +103,7 @@ export default function IOSSelect({ value, onChange, options = [], placeholder =
                     }}
                 >
                     {normalizedOptions.length === 0 ? (
-                        <div style={{ padding: '10px 14px', fontSize: '13px', color: '#94A3B8', textAlign: 'center' }}>
+                        <div style={{ padding: '10px 14px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>
                             No options available
                         </div>
                     ) : (
@@ -119,8 +119,8 @@ export default function IOSSelect({ value, onChange, options = [], placeholder =
                                         justifyContent: 'space-between',
                                         padding: '10px 12px',
                                         borderRadius: '10px',
-                                        backgroundColor: isSelected ? '#F0F7FF' : 'transparent',
-                                        color: isSelected ? '#2563EB' : '#1E293B',
+                                        backgroundColor: isSelected ? 'var(--primary-light)' : 'transparent',
+                                        color: isSelected ? 'var(--primary)' : 'var(--text-primary)',
                                         fontSize: '13px',
                                         fontWeight: isSelected ? 700 : 500,
                                         cursor: 'pointer',
@@ -128,7 +128,7 @@ export default function IOSSelect({ value, onChange, options = [], placeholder =
                                         marginBottom: '2px',
                                     }}
                                     onMouseEnter={(e) => {
-                                        if (!isSelected) e.currentTarget.style.backgroundColor = '#F8FAFC';
+                                        if (!isSelected) e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
                                     }}
                                     onMouseLeave={(e) => {
                                         if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
@@ -138,7 +138,7 @@ export default function IOSSelect({ value, onChange, options = [], placeholder =
                                         {opt.label}
                                     </span>
                                     {isSelected && (
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                                             <polyline points="20 6 9 17 4 12"></polyline>
                                         </svg>
                                     )}

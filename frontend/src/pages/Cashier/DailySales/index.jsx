@@ -1,6 +1,7 @@
 import React from 'react';
 import useDailySales from './hooks/useDailySales';
 import MySalesTable from './views/MySalesTable';
+import IOSSelect from '../../../shared/components/IOSSelect';
 
 export default function DailySales() {
     const ds = useDailySales();
@@ -17,11 +18,11 @@ export default function DailySales() {
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>                    </div>
                 </div>
 
-                <div className="content-body" style={{ padding: '20px 24px', backgroundColor: '#F8FAFC', minHeight: 'calc(100vh - 120px)' }}>
+                <div className="content-body" style={{ padding: '20px 24px', backgroundColor: 'var(--bg-canvas)', minHeight: 'calc(100vh - 120px)' }}>
                     
                     {/* Stat Cards Row */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', marginBottom: '24px' }}>
-                        <div className="card stat-box" style={{ padding: '24px', background: '#FFFFFF', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                        <div className="card stat-box" style={{ padding: '24px', background: 'var(--bg-card)', borderRadius: '10px', border: '1px solid var(--border)' }}>
                             <div>
                                 <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Gross Sales Revenue</span>
                                 <div style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif' }}>{ds.fmt(ds.grossSales)}</div>
@@ -30,7 +31,7 @@ export default function DailySales() {
                     </div>
 
                     {/* Filters */}
-                    <div className="card" style={{ marginBottom: '24px', background: '#FFFFFF', padding: '16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                    <div className="card" style={{ marginBottom: '24px', background: 'var(--bg-card)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
                         <div className="table-filters" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
                             <div style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
                                 <input 
@@ -42,31 +43,27 @@ export default function DailySales() {
                                     onChange={(e) => ds.setSearchQuery(e.target.value)}
                                 />
                             </div>
-                            <div style={{ width: '150px' }}>
-                                <select 
-                                    className="form-control form-control-sm" 
-                                    style={{ height: '38px', padding: '8px 12px', fontSize: '13px', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', width: '100%' }}
+                            <div style={{ width: '160px' }}>
+                                <IOSSelect
                                     value={ds.timeFilter}
                                     onChange={(e) => ds.setTimeFilter(e.target.value)}
-                                >
-                                    <option value="Today">Today</option>
-                                    <option value="All">All Time</option>
-                                    <option value="This Week">This Week</option>
-                                    <option value="This Month">This Month</option>
-                                </select>
+                                    options={[
+                                        { value: 'Today', label: 'Today' },
+                                        { value: 'All', label: 'All Time' },
+                                        { value: 'This Week', label: 'This Week' },
+                                        { value: 'This Month', label: 'This Month' },
+                                    ]}
+                                />
                             </div>
-                            <div style={{ width: '150px' }}>
-                                <select 
-                                    className="form-control form-control-sm" 
-                                    style={{ height: '38px', padding: '8px 12px', fontSize: '13px', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', width: '100%' }}
+                            <div style={{ width: '160px' }}>
+                                <IOSSelect
                                     value={ds.cashierFilter}
                                     onChange={(e) => ds.setCashierFilter(e.target.value)}
-                                >
-                                    <option value="All">All Cashiers</option>
-                                    {ds.cashiersList.map(name => (
-                                        <option key={name} value={name}>{name}</option>
-                                    ))}
-                                </select>
+                                    options={[
+                                        { value: 'All', label: 'All Cashiers' },
+                                        ...ds.cashiersList.map(name => ({ value: name, label: name }))
+                                    ]}
+                                />
                             </div>
                         </div>
                     </div>

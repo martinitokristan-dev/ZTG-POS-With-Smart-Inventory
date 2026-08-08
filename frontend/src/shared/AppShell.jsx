@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import NotificationsDropdown from './NotificationsDropdown';
+import ThemeToggleButton from './ThemeToggleButton';
 
 /**
  * AppShell — persistent authenticated layout.
@@ -110,7 +111,8 @@ export default function AppShell() {
                             </span>
                         </div>
                     </div>
-                    <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', marginLeft: 'auto' }}>
+                    <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+                        <ThemeToggleButton />
                         <NotificationsDropdown />
                     </div>
                 </header>
@@ -123,7 +125,7 @@ export default function AppShell() {
                 isMobile={isMobile}
             />
 
-            {/* Notification bell — fixed top-right on desktop */}
+            {/* Theme toggle & Notification bell — fixed top-right on desktop */}
             {!isMobile && (
                 <div style={{
                     position: 'fixed',
@@ -132,7 +134,11 @@ export default function AppShell() {
                     zIndex: 100,
                     padding: '17px 24px',
                     pointerEvents: 'auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
                 }}>
+                    <ThemeToggleButton />
                     <NotificationsDropdown />
                 </div>
             )}

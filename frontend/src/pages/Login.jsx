@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../shared/api';
+import { applyGlobalTheme } from '../shared/hooks/useTheme';
 
 const fixImageUrl = (url) => {
     if (!url) return null;
@@ -50,6 +51,18 @@ function Login() {
     const navigate = useNavigate();
 
     React.useEffect(() => {
+        // Force light mode on the login page — dark theme only applies inside the app
+        document.documentElement.setAttribute('data-theme', 'light');
+        document.documentElement.classList.remove('dark-theme');
+        document.body.classList.remove('dark-theme');
+
+        return () => {
+            // Re-apply the saved theme when navigating away from login into the app
+            applyGlobalTheme();
+        };
+    }, []);
+
+    React.useEffect(() => {
         const fetchSettings = async () => {
             const token = localStorage.getItem('auth_token');
             if (!token) return; // Unauthenticated guest on login screen uses cached logo
@@ -92,6 +105,7 @@ function Login() {
             
             localStorage.setItem('auth_token', token);
             localStorage.setItem('auth_user', JSON.stringify(user));
+            window.dispatchEvent(new Event('auth_user_updated'));
 
             // Redirect based on role
             if (user.role === 'Admin' || user.role === 'Supervisor') {

@@ -86,10 +86,10 @@ export default function ProductsTable({
         return (
             <tr 
                 key={product.id} 
-                className="border-b border-slate-100 hover:bg-slate-50/50 transition-all"
-                style={isFirstInGroup ? { borderTop: '2px solid #E2E8F0' } : {}}
+                className="table-row-item"
+                style={isFirstInGroup ? { borderTop: '2px solid var(--border)' } : {}}
             >
-                <td style={{ padding: '12px 16px', borderBottom: '1px solid #F1F5F9' }}>
+                <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)' }}>
                     <div className="flex items-center gap-3">
                         <img
                             src={product.image || DEFAULT_PLACEHOLDER_IMAGE}
@@ -101,7 +101,7 @@ export default function ProductsTable({
                             {isVariantSubRow ? (
                                 <>
                                     <strong style={{ color: 'var(--table-text-primary)', fontSize: '15px', fontWeight: '600', display: 'block' }}>
-                                        {product.name || parentProduct?.name} {varLabel && !(product.name || '').includes(varLabel) && <span style={{ color: '#3B82F6', fontWeight: '500' }}>({varLabel})</span>}
+                                        {product.name || parentProduct?.name} {varLabel && !(product.name || '').includes(varLabel) && <span style={{ color: 'var(--primary)', fontWeight: '500' }}>({varLabel})</span>}
                                     </strong>
                                     {showChineseNames && product.chinese_name && <span style={{ fontSize: '12px', color: 'var(--table-text-secondary)', fontWeight: '500', marginTop: '2px', display: 'block' }}>{product.chinese_name}</span>}
                                 </>
@@ -118,16 +118,16 @@ export default function ProductsTable({
                     <CopyableText text={product.part_no} label="Part No." />
                 </td>
                 <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '500' }}>{catName}</td>
-                <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '500' }}>{product.address || '—'}</td>
+                <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)' }}><code style={{ background: 'var(--bg-secondary)', color: 'var(--primary)', padding: '3px 8px', borderRadius: '4px', fontSize: '13px', fontWeight: 500 }}>{product.address || '—'}</code></td>
                 <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', textAlign: 'right' }}>
                     <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: '1.2', padding: '4px 10px', borderRadius: '6px', backgroundColor: stockBadgeBg, color: stockColor, minWidth: '54px', fontVariantNumeric: 'tabular-nums' }}>
                         <span style={{ fontSize: '14px', fontWeight: '600' }}>{product.stock}</span>
                         <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>Units</span>
                     </div>
                 </td>
-                <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', color: 'var(--table-text-secondary)', fontWeight: '600', fontSize: '15px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(product.price1).toLocaleString('en-US')}</td>
-                <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', fontWeight: '600', fontSize: '15px', color: '#2563EB', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(product.price2).toLocaleString('en-US')}</td>
-                <td style={{ padding: '12px 16px', borderBottom: '1px solid #F1F5F9' }}>
+                <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', color: 'var(--text-primary)', fontWeight: '600', fontSize: '15px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(product.price1).toLocaleString('en-US')}</td>
+                <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', fontWeight: '600', fontSize: '15px', color: 'var(--primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(product.price2).toLocaleString('en-US')}</td>
+                <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)' }}>
                     <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'nowrap', alignItems: 'center' }}>
                         <span 
                             style={{ 

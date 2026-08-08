@@ -509,4 +509,81 @@ class PhaseSevenTest extends TestCase
         $sum2 = $this->actingAs($this->admin)->getJson('/api/reports/sales-summary?timeframe=thismonth');
         $sum2->assertStatus(200)->assertJsonFragment(['total_revenue' => 1500.00]);
     }
+
+    /* ─── Top Categories Test ─────────────────────────────── */
+
+    public function test_product_performance_returns_top_categories_with_5_categories()
+    {
+        $customer = Customer::create(['name' => 'Category Test Customer']);
+
+        // $this->category is already 'Hydraulics' (created in setUp)
+        $catHydraulics    = $this->category;
+        $catEngine        = Category::create(['name' => 'Engine Parts']);
+        $catTransmission  = Category::create(['name' => 'Transmission']);
+        $catElectrical    = Category::create(['name' => 'Electrical']);
+        $catUndercarriage = Category::create(['name' => 'Undercarriage']);
+
+        // Create 1 product per category (unique part_no for each)
+        $prodH = Product::create(['name' => 'Hydraulic Pump',       'part_no' => 'CAT-H-001', 'category_id' => $catHydraulics->id,    'stock' => 100, 'alert_limit' => 5, 'price1' => 500.00, 'price2' => 550.00]);
+        $prodE = Product::create(['name' => 'Engine Block',         'part_no' => 'CAT-E-001', 'category_id' => $catEngine->id,        'stock' => 100, 'alert_limit' => 5, 'price1' => 500.00, 'price2' => 550.00]);
+        $prodT = Product::create(['name' => 'Transmission Gear',    'part_no' => 'CAT-T-001', 'category_id' => $catTransmission->id,  'stock' => 100, 'alert_limit' => 5, 'price1' => 500.00, 'price2' => 550.00]);
+        $prodEl = Product::create(['name' => 'Alternator',          'part_no' => 'CAT-EL-001','category_id' => $catElectrical->id,    'stock' => 100, 'alert_limit' => 5, 'price1' => 500.00, 'price2' => 550.00]);
+        $prodU = Product::create(['name' => 'Track Roller',         'part_no' => 'CAT-U-001', 'category_id' => $catUndercarriage->id, 'stock' => 100, 'alert_limit' => 5, 'price1' => 500.00, 'price2' => 550.00]);
+
+        // Create completed transactions with different revenue:
+        // Hydraulics ₱50,000 (50%), Engine ₱25,000 (25%), Transmission ₱15,000 (15%), Electrical ₱7,500 (7.5%), Undercarriage ₱2,500 (2.5%)
+        $txData = [
+            ['si' => 'CAT-SI-H',  'product' => $prodH,  'qty' => 100, 'price' => 500.00],
+            ['si' => 'CAT-SI-E',  'product' => $prodE,  'qty' => 50,  'price' => 500.00],
+            ['si' => 'CAT-SI-T',  'product' => $prodT,  'qty' => 30,  'price' => 500.00],
+            ['si' => 'CAT-SI-EL', 'product' => $prodEl, 'qty' => 15,  'price' => 500.00],
+            ['si' => 'CAT-SI-U',  'product' => $prodU,  'qty' => 5,   'price' => 500.00],
+        ];
+
+        foreach ($txData as $td) {
+            $tx = Transaction::create([
+                'si_no'          => $td['si'],
+                'date'           => now(),
+                'customer_id'    => $customer->id,
+                'cashier_id'     => $this->cashier->id,
+                'total_qty'      => $td['qty'],
+                'amount'         => $td['qty'] * $td['price'],
+                'payment_method' => 'Cash',
+                'status'         => TransactionStatus::COMPLETED->value,
+            ]);
+            TransactionItem::create([
+                'transaction_id' => $tx->id,
+                'product_id'     => $td['product']->id,
+                'qty'            => $td['qty'],
+                'price'          => $td['price'],
+                'price_tier'     => 'price1',
+                'unit'           => 'pc',
+            ]);
+        }
+
+        $response = $this->actingAs($this->admin)
+            ->getJson('/api/reports/product-performance?timeframe=today');
+
+        $response->assertStatus(200)
+            ->assertJsonStructure(['top_sellers', 'revenue_per_product', 'dead_stock', 'top_categories']);
+
+        $topCategories = $response->json('top_categories');
+
+        // Must have exactly 4 items: Top 3 named + "Others"
+        $this->assertCount(4, $topCategories);
+
+        // First category must be Hydraulics (highest revenue = ₱50,000)
+        $this->assertEquals('Hydraulics', $topCategories[0]['name']);
+        $this->assertEquals(50, $topCategories[0]['percentage']);
+        $this->assertEquals(50000.0, $topCategories[0]['revenue']);
+
+        // Last item must be "Others" (aggregates Electrical + Undercarriage)
+        $lastItem = end($topCategories);
+        $this->assertEquals('Others', $lastItem['name']);
+        $this->assertEquals(10000.0, $lastItem['revenue']); // ₱7,500 + ₱2,500
+
+        // All percentages must sum to 100
+        $totalPct = array_sum(array_column($topCategories, 'percentage'));
+        $this->assertEquals(100, $totalPct);
+    }
 }

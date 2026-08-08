@@ -106,10 +106,10 @@ function NotificationBubble({ notif, onClick }) {
                 marginTop: '14px',
                 zIndex: 9999,
                 width: '320px',
-                background: '#FFFFFF',
+                background: 'var(--bg-card)',
                 borderRadius: '12px',
-                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2), 0 8px 10px -6px rgba(0,0,0,0.1)',
-                border: '1px solid #E2E8F0',
+                boxShadow: 'var(--shadow-lg)',
+                border: '1px solid var(--border)',
                 cursor: 'pointer',
                 transition: 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.34,1.56,0.64,1)',
                 opacity: visible ? 1 : 0,
@@ -124,14 +124,14 @@ function NotificationBubble({ notif, onClick }) {
                 right: '20px',
                 width: '12px',
                 height: '12px',
-                background: '#FFFFFF',
-                borderLeft: '1px solid #E2E8F0',
-                borderTop: '1px solid #E2E8F0',
+                background: 'var(--bg-card)',
+                borderLeft: '1px solid var(--border)',
+                borderTop: '1px solid var(--border)',
                 transform: 'rotate(45deg)',
                 zIndex: 1,
             }} />
 
-            <div style={{ position: 'relative', zIndex: 2, background: '#FFFFFF', borderRadius: '12px', overflow: 'hidden' }}>
+            <div style={{ position: 'relative', zIndex: 2, background: 'var(--bg-card)', borderRadius: '12px', overflow: 'hidden' }}>
                 <NotificationCard n={notif} isBubble={true} onDismiss={() => {}} />
                 
                 {/* Drain animation bar */}
@@ -216,18 +216,36 @@ export default function NotificationsDropdown() {
                 )}
 
                 {isOpen && (
-                    <div className="notif-dropdown" style={{ display: 'block', zIndex: 9999, right: 0, marginTop: '8px', position: 'absolute', width: '380px', maxWidth: 'calc(100vw - 32px)', background: '#FFFFFF', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', border: '1px solid #E2E8F0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border, #E2E8F0)', background: '#F8FAFC', borderRadius: '12px 12px 0 0' }}>
-                            <span style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text-primary, #0F172A)' }}>Notifications</span>
-                            <button onClick={handleMarkAllRead} style={{ background: 'none', border: 'none', color: 'var(--primary, #3B82F6)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: 0 }}>Mark all as read</button>
+                    <div className="notif-dropdown" style={{ display: 'block', zIndex: 9999, right: 0, marginTop: '8px', position: 'absolute', width: '380px', maxWidth: 'calc(100vw - 32px)', background: 'var(--bg-card)', borderRadius: '12px', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)', borderRadius: '12px 12px 0 0' }}>
+                            <span style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text-primary)' }}>Notifications</span>
+                            <button 
+                                type="button"
+                                className="mark-all-read-btn"
+                                onClick={handleMarkAllRead} 
+                                style={{ 
+                                    background: 'transparent', 
+                                    border: 'none', 
+                                    outline: 'none',
+                                    boxShadow: 'none',
+                                    fontSize: '12px', 
+                                    fontWeight: '600', 
+                                    cursor: 'pointer', 
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    transition: 'all 0.15s ease'
+                                }}
+                            >
+                                Mark all as read
+                            </button>
                         </div>
                         <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
                             {notifications.length === 0 ? (
-                                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted, #94A3B8)', fontSize: '13px' }}>
+                                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
                                     No notifications to display.
                                 </div>
                             ) : notifications.map(n => (
-                                <div key={n.id} onClick={() => handleMarkRead(n.id)} style={{ borderBottom: '1px solid var(--border, #E2E8F0)', cursor: 'pointer', background: n.read ? '#fff' : '#F8FAFC', transition: 'background 0.2s' }}>
+                                <div key={n.id} onClick={() => handleMarkRead(n.id)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: n.read ? 'var(--bg-card)' : 'var(--bg-secondary)', transition: 'background 0.2s' }}>
                                     <NotificationCard n={n} isBubble={false} />
                                 </div>
                             ))}

@@ -18,19 +18,19 @@ export default function ReviewRestockModal({
 
     return (
         <div className="modal-overlay" style={{ zIndex: 999 }}>
-            <div ref={sheetRef} className="modal-card" style={{ maxWidth: '820px', width: '94%', backgroundColor: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.18)', border: '1px solid #E2E8F0' }}>
+            <div ref={sheetRef} className="modal-card" style={{ maxWidth: '820px', width: '94%', backgroundColor: 'var(--bg-card)', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)', border: '1px solid var(--border)' }}>
                 
                 {/* Header */}
-                <div {...dragHandleProps} className="modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #F1F5F9', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', touchAction: 'none' }}>
+                <div {...dragHandleProps} className="modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', touchAction: 'none' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#059669', flexShrink: 0 }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'var(--success-light)', border: '1px solid rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--success)', flexShrink: 0 }}>
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
                         <div>
-                            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#0F172A', fontFamily: '"Outfit", sans-serif' }}>Review Restock Order</h3>
-                            <p style={{ margin: '3px 0 0 0', fontSize: '13px', color: '#64748B', fontWeight: '500' }}>Verify items, quantities, and supervisor approval before completing restock.</p>
+                            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif' }}>Review Restock Order</h3>
+                            <p style={{ margin: '3px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '500' }}>Verify items, quantities, and supervisor approval before completing restock.</p>
                         </div>
                     </div>
                     <button type="button" onClick={onClose} disabled={isSubmitting} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -45,8 +45,8 @@ export default function ReviewRestockModal({
                 <div className="modal-body" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '72vh', overflowY: 'auto' }}>
                     
                     {errorMessage && (
-                        <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <svg viewBox="0 0 24 24" style={{ width: '18px', height: '18px', fill: 'none', stroke: '#DC2626', strokeWidth: 2, flexShrink: 0 }}>
+                        <div style={{ backgroundColor: 'var(--danger-light)', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--danger)', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <svg viewBox="0 0 24 24" style={{ width: '18px', height: '18px', fill: 'none', stroke: 'var(--danger)', strokeWidth: 2, flexShrink: 0 }}>
                                 <circle cx="12" cy="12" r="10" />
                                 <line x1="12" y1="8" x2="12" y2="12" />
                                 <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -56,7 +56,7 @@ export default function ReviewRestockModal({
                     )}
 
                     {/* Restock Items Table */}
-                    <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+                    <div style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--bg-card)' }}>
                         <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                             <table className="modal-table data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                 <thead>
@@ -76,7 +76,7 @@ export default function ReviewRestockModal({
                                                     <img 
                                                         src={p.image || DEFAULT_PLACEHOLDER_IMAGE} 
                                                         alt={p.name}
-                                                        style={{ width: '42px', height: '42px', borderRadius: '10px', objectFit: 'cover', backgroundColor: '#F1F5F9', border: '1px solid #E2E8F0', flexShrink: 0 }}
+                                                        style={{ width: '42px', height: '42px', borderRadius: '10px', objectFit: 'cover', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', flexShrink: 0 }}
                                                         onError={(e) => { e.target.src = DEFAULT_PLACEHOLDER_IMAGE; }} 
                                                     />
                                                     <div>
@@ -89,7 +89,7 @@ export default function ReviewRestockModal({
                                                     {p.stock} units
                                                 </td>
                                                 <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                                                    <span style={{ backgroundColor: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', padding: '4px 10px', borderRadius: '20px', fontWeight: '600', fontSize: '13px', display: 'inline-block', fontVariantNumeric: 'tabular-nums' }}>
+                                                    <span style={{ backgroundColor: 'var(--success-light)', color: 'var(--success)', border: '1px solid rgba(16,185,129,0.3)', padding: '4px 10px', borderRadius: '20px', fontWeight: '600', fontSize: '13px', display: 'inline-block', fontVariantNumeric: 'tabular-nums' }}>
                                                         +{adding}
                                                     </span>
                                                 </td>
@@ -105,33 +105,33 @@ export default function ReviewRestockModal({
                     </div>
 
                     {/* Summary Card */}
-                    <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>
-                                Total Items to Restock: <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '13.5px' }}>{restockItemsCount}</span>
+                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                                Total Items to Restock: <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '13.5px' }}>{restockItemsCount}</span>
                             </div>
-                            <div style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>
-                                Supervisor / Admin: <span style={{ color: '#0F172A', fontWeight: '700', fontSize: '13.5px' }}>{restockVerifiedBy}</span>
+                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                                Supervisor / Admin: <span style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '13.5px' }}>{restockVerifiedBy}</span>
                             </div>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'right' }}>
-                            <div style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>
-                                Total Units Added: <span style={{ color: '#059669', fontWeight: '800', fontSize: '13.5px' }}>+{restockUnitsCount} units</span>
+                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                                Total Units Added: <span style={{ color: 'var(--success)', fontWeight: '800', fontSize: '13.5px' }}>+{restockUnitsCount} units</span>
                             </div>
-                            <div style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>
-                                Date & Time: <span style={{ color: '#334155', fontWeight: '600' }}>{restockDate}, {restockTime}</span>
+                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                                Date &amp; Time: <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{restockDate}, {restockTime}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="modal-footer" style={{ padding: '16px 24px', backgroundColor: '#F8FAFC', borderTop: '1px solid #F1F5F9', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <div className="modal-footer" style={{ padding: '16px 24px', backgroundColor: 'var(--bg-secondary)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                     <button 
                         type="button" 
                         onClick={onClose} 
                         disabled={isSubmitting}
-                        style={{ backgroundColor: '#FFFFFF', color: '#475569', border: '1px solid #CBD5E1', padding: '9.5px 20px', borderRadius: '8px', fontSize: '13.5px', fontWeight: '600', cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
+                        style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border)', padding: '9.5px 20px', borderRadius: '8px', fontSize: '13.5px', fontWeight: '600', cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
                     >
                         Cancel
                     </button>

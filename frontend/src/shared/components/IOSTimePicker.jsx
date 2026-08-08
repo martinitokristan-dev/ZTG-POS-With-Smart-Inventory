@@ -87,15 +87,15 @@ export default function IOSTimePicker({
                 style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
+                    justify: 'space-between',
                     padding: '8px 12px',
-                    border: isOpen ? '1.5px solid #3B82F6' : '1px solid #CBD5E1',
+                    border: isOpen ? '1.5px solid var(--primary)' : '1px solid var(--border)',
                     borderRadius: '10px',
-                    backgroundColor: '#FFFFFF',
+                    backgroundColor: 'var(--bg-card)',
                     cursor: 'pointer',
                     fontSize: '13px',
                     fontWeight: 500,
-                    color: value ? '#0F172A' : '#94A3B8',
+                    color: value ? 'var(--text-primary)' : 'var(--text-muted)',
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Outfit", sans-serif',
                     boxShadow: isOpen ? '0 0 0 3px rgba(59, 130, 246, 0.15)' : '0 1px 2px 0 rgba(0, 0, 0, 0.04)',
                     transition: 'all 0.2s ease',
@@ -104,7 +104,7 @@ export default function IOSTimePicker({
                 }}
             >
                 <span>{value ? formatDisplay(value) : placeholder}</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 8, flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 8, flexShrink: 0 }}>
                     <circle cx="12" cy="12" r="10"></circle>
                     <polyline points="12 6 12 12 16 14"></polyline>
                 </svg>
@@ -122,23 +122,23 @@ export default function IOSTimePicker({
                         ...(dropUp ? { bottom: 'calc(100% + 8px)' } : { top: 'calc(100% + 8px)' }),
                         left: 0,
                         zIndex: 99999,
-                        backgroundColor: '#FFFFFF',
+                        backgroundColor: 'var(--bg-card)',
                         borderRadius: '16px',
-                        border: '1px solid #E2E8F0',
-                        boxShadow: '0 16px 36px -4px rgba(15, 23, 42, 0.18), 0 6px 16px rgba(0, 0, 0, 0.08)',
+                        border: '1px solid var(--border)',
+                        boxShadow: '0 16px 36px -4px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.2)',
                         padding: '16px',
                         width: '260px',
                         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Outfit", sans-serif',
                         userSelect: 'none',
                     }}
                 >
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', marginBottom: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px', textAlign: 'center' }}>
                         Select Time
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center', marginBottom: '14px' }}>
                         {/* Hours */}
-                        <div style={{ flex: 1, maxHeight: '150px', overflowY: 'auto', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '4px' }}>
+                        <div style={{ flex: 1, maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '10px', padding: '4px' }}>
                             {hours.map(h => (
                                 <div
                                     key={h}
@@ -148,8 +148,8 @@ export default function IOSTimePicker({
                                         textAlign: 'center',
                                         fontSize: '13px',
                                         fontWeight: timeState.hour === h ? 700 : 500,
-                                        color: timeState.hour === h ? '#3B82F6' : '#1E293B',
-                                        backgroundColor: timeState.hour === h ? '#EBF5FF' : 'transparent',
+                                        color: timeState.hour === h ? '#3B82F6' : 'var(--text-primary)',
+                                        backgroundColor: timeState.hour === h ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
                                         borderRadius: '6px',
                                         cursor: 'pointer',
                                         marginBottom: '2px',
@@ -160,10 +160,10 @@ export default function IOSTimePicker({
                             ))}
                         </div>
 
-                        <span style={{ fontWeight: 700, fontSize: '16px', color: '#64748B' }}>:</span>
+                        <span style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text-secondary)' }}>:</span>
 
                         {/* Minutes */}
-                        <div style={{ flex: 1, maxHeight: '150px', overflowY: 'auto', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '4px' }}>
+                        <div style={{ flex: 1, maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '10px', padding: '4px' }}>
                             {minutes.map(m => (
                                 <div
                                     key={m}
@@ -173,8 +173,8 @@ export default function IOSTimePicker({
                                         textAlign: 'center',
                                         fontSize: '13px',
                                         fontWeight: timeState.minute === m ? 700 : 500,
-                                        color: timeState.minute === m ? '#3B82F6' : '#1E293B',
-                                        backgroundColor: timeState.minute === m ? '#EBF5FF' : 'transparent',
+                                        color: timeState.minute === m ? '#3B82F6' : 'var(--text-primary)',
+                                        backgroundColor: timeState.minute === m ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
                                         borderRadius: '6px',
                                         cursor: 'pointer',
                                         marginBottom: '2px',
@@ -198,8 +198,8 @@ export default function IOSTimePicker({
                                         borderRadius: '8px',
                                         fontSize: '12px',
                                         fontWeight: 700,
-                                        backgroundColor: timeState.period === p ? '#3B82F6' : '#F1F5F9',
-                                        color: timeState.period === p ? '#FFFFFF' : '#64748B',
+                                        backgroundColor: timeState.period === p ? '#3B82F6' : 'var(--bg-secondary)',
+                                        color: timeState.period === p ? '#FFFFFF' : 'var(--text-secondary)',
                                         cursor: 'pointer',
                                     }}
                                 >

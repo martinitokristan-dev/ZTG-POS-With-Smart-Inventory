@@ -64,63 +64,30 @@ export default function HistoryLogs() {
                                     ]}
                                 />
                             </div>
-                            <button className="btn" style={{ background: '#FEE2E2', color: 'var(--danger)', border: 'none', fontWeight: '600', padding: '8px 16px', borderRadius: '6px', fontSize: '13px' }} onClick={() => hl.handleOpenRefund(null)}>
+                            <button className="btn" style={{ background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.3)', fontWeight: '600', padding: '8px 16px', borderRadius: '6px', fontSize: '13px' }} onClick={() => hl.handleOpenRefund(null)}>
                                 Refund / Return
                             </button>
                         </div>
 
                         <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
-                            <button 
-                                className={`status-tab ${hl.activeTab === 'All' ? 'active' : ''}`}
-                                style={{ padding: '8px 16px', border: '1px solid var(--border)', borderRadius: '20px', background: hl.activeTab === 'All' ? 'var(--primary)' : '#fff', color: hl.activeTab === 'All' ? '#fff' : 'var(--text-secondary)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                onClick={() => hl.setActiveTab('All')}
-                            >
-                                All
-                            </button>
-                            <button 
-                                className={`status-tab ${hl.activeTab === 'Refund' ? 'active' : ''}`}
-                                style={{ padding: '8px 16px', border: '1px solid var(--border)', borderRadius: '20px', background: hl.activeTab === 'Refund' ? 'var(--primary)' : '#fff', color: hl.activeTab === 'Refund' ? '#fff' : 'var(--text-secondary)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                onClick={() => hl.setActiveTab('Refund')}
-                            >
-                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> 
-                                Refund
-                            </button>
-                            <button 
-                                className={`status-tab ${hl.activeTab === 'Return' ? 'active' : ''}`}
-                                style={{ padding: '8px 16px', border: '1px solid var(--border)', borderRadius: '20px', background: hl.activeTab === 'Return' ? 'var(--primary)' : '#fff', color: hl.activeTab === 'Return' ? '#fff' : 'var(--text-secondary)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                onClick={() => hl.setActiveTab('Return')}
-                            >
-                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> 
-                                Return
-                            </button>
-                            <button 
-                                className={`status-tab ${hl.activeTab === 'Void' ? 'active' : ''}`}
-                                style={{ padding: '8px 16px', border: '1px solid var(--border)', borderRadius: '20px', background: hl.activeTab === 'Void' ? 'var(--primary)' : '#fff', color: hl.activeTab === 'Void' ? '#fff' : 'var(--text-secondary)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                onClick={() => hl.setActiveTab('Void')}
-                            >
-                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> 
-                                Void
-                            </button>
-                            <button 
-                                className={`status-tab ${hl.activeTab === 'Reservation' ? 'active' : ''}`}
-                                style={{ padding: '8px 16px', border: '1px solid var(--border)', borderRadius: '20px', background: hl.activeTab === 'Reservation' ? 'var(--primary)' : '#fff', color: hl.activeTab === 'Reservation' ? '#fff' : 'var(--text-secondary)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                onClick={() => hl.setActiveTab('Reservation')}
-                            >
-                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                                Reservation
-                            </button>
-                            <button 
-                                className={`status-tab ${hl.activeTab === 'Pending' ? 'active' : ''}`}
-                                style={{ padding: '8px 16px', border: '1px solid var(--border)', borderRadius: '20px', background: hl.activeTab === 'Pending' ? 'var(--primary)' : '#fff', color: hl.activeTab === 'Pending' ? '#fff' : 'var(--text-secondary)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                onClick={() => hl.setActiveTab('Pending')}
-                            >
-                                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                Pending Order
-                            </button>
-
+                            {['All', 'Refund', 'Return', 'Void', 'Reservation', 'Pending'].map(tab => (
+                                <button 
+                                    key={tab}
+                                    className={`status-tab ${hl.activeTab === tab ? 'active' : ''}`}
+                                    style={{ padding: '8px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                    onClick={() => hl.setActiveTab(tab)}
+                                >
+                                    {tab === 'Refund' && <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>}
+                                    {tab === 'Return' && <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>}
+                                    {tab === 'Void' && <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>}
+                                    {tab === 'Reservation' && <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>}
+                                    {tab === 'Pending' && <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
+                                    {tab === 'Pending' ? 'Pending Order' : tab}
+                                </button>
+                            ))}
                         </div>
 
-                        <div style={{ marginTop: '12px', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '6px', padding: '10px 16px', fontSize: '11px', color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ marginTop: '12px', background: 'var(--primary-light)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '6px', padding: '10px 16px', fontSize: '11px', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', flexShrink: 0, fill: 'none', stroke: 'currentColor', strokeWidth: '2' }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                             <span><strong>Business Activity Log:</strong> Records all business transactions — sales, refunds, returns, voids, restocks, and order releases.</span>
                         </div>
@@ -142,7 +109,7 @@ export default function HistoryLogs() {
                             
                             {/* Pagination Controls */}
                             {hl.pagination && hl.pagination.last_page > 1 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', background: '#FFFFFF', padding: '12px 24px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', background: 'var(--bg-card)', padding: '12px 24px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                                     <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                                         Showing page {hl.pagination.current_page} of {hl.pagination.last_page} ({hl.pagination.total} total records)
                                     </div>

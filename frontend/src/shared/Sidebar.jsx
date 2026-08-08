@@ -30,6 +30,45 @@ const fixImageUrl = (url) => {
     return cleanUrl;
 };
 
+function SidebarTooltip({ label, top, left, visible }) {
+    if (!visible) return null;
+    return (
+        <div style={{
+            position: 'fixed',
+            left: left,
+            top: top,
+            transform: 'translateY(-50%)',
+            backgroundColor: '#0F172A',
+            color: '#FFFFFF',
+            padding: '7px 14px',
+            borderRadius: '8px',
+            fontSize: '12px',
+            fontWeight: '700',
+            letterSpacing: '0.3px',
+            whiteSpace: 'nowrap',
+            boxShadow: '0 10px 25px -5px rgba(0,0,0,0.6), 0 4px 6px -2px rgba(0,0,0,0.4)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            zIndex: 999999,
+            pointerEvents: 'none',
+            animation: 'fadeInTooltip 0.15s ease-out',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+        }}>
+            <span>{label}</span>
+            <div style={{
+                position: 'absolute',
+                right: '100%',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                borderWidth: '5px',
+                borderStyle: 'solid',
+                borderColor: 'transparent #0F172A transparent transparent'
+            }} />
+        </div>
+    );
+}
+
 function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
     const navigate = useRouterNavigate();
     const [avatarError, setAvatarError] = React.useState(false);
@@ -47,6 +86,43 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
     const [businessName, setBusinessName] = React.useState(() => {
         return localStorage.getItem('cached_business_name') || '';
     });
+
+    const [isCollapsed, setIsCollapsed] = React.useState(() => {
+        return localStorage.getItem('ztg_sidebar_collapsed') === 'true';
+    });
+
+    const [tooltipData, setTooltipData] = React.useState({
+        label: '',
+        top: 0,
+        left: 0,
+        visible: false
+    });
+
+    const effectiveCollapsed = !isMobile && isCollapsed;
+
+    const showTooltip = (e, label) => {
+        if (!effectiveCollapsed) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        setTooltipData({
+            label,
+            top: rect.top + rect.height / 2,
+            left: rect.right + 12,
+            visible: true
+        });
+    };
+
+    const hideTooltip = () => {
+        setTooltipData(prev => ({ ...prev, visible: false }));
+    };
+
+    const toggleCollapse = () => {
+        hideTooltip();
+        setIsCollapsed(prev => {
+            const next = !prev;
+            localStorage.setItem('ztg_sidebar_collapsed', String(next));
+            return next;
+        });
+    };
 
     React.useEffect(() => {
         const handleUpdate = () => {
@@ -131,6 +207,7 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
             clearEntireCache();
             localStorage.removeItem('auth_token');
             localStorage.removeItem('auth_user');
+            window.dispatchEvent(new Event('auth_user_updated'));
             navigate('/login');
         }
     };
@@ -258,48 +335,87 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
                 />
             )}
 
-            <div style={{
-                width: isMobile ? '280px' : 260,
-                flexShrink: 0,
-                backgroundColor: '#1E293B',
-                display: 'flex',
-                flexDirection: 'column',
-                height: isMobile ? 'auto' : '100%',
-                minHeight: isMobile ? '100%' : 'auto',
-                position: isMobile ? 'fixed' : 'relative',
-                top: 0,
-                bottom: isMobile ? 0 : 'auto',
-                left: isMobile ? 0 : 'auto',
-                zIndex: isMobile ? 99999 : 'auto',
-                transform: isMobile ? (isOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
-                transition: isMobile ? 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
-                borderRight: '1px solid rgba(255,255,255,0.05)',
-                boxShadow: isMobile && isOpen ? '4px 0 24px rgba(0,0,0,0.3)' : 'none',
-                userSelect: 'none',
-                boxSizing: 'border-box',
-                overflowY: isMobile ? 'auto' : 'visible',
-            }}>
+            <div 
+                className="admin-sidebar"
+                style={{
+                    width: effectiveCollapsed ? 72 : (isMobile ? '280px' : 260),
+                    flexShrink: 0,
+                    backgroundColor: 'var(--bg-sidebar, #1E293B)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: isMobile ? 'auto' : '100%',
+                    minHeight: isMobile ? '100%' : 'auto',
+                    position: isMobile ? 'fixed' : 'relative',
+                    top: 0,
+                    bottom: isMobile ? 0 : 'auto',
+                    left: isMobile ? 0 : 'auto',
+                    zIndex: isMobile ? 99999 : 'auto',
+                    transform: isMobile ? (isOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
+                    transition: isMobile 
+                        ? 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)' 
+                        : 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                    borderRight: '1px solid var(--border)',
+                    boxShadow: isMobile && isOpen ? '4px 0 24px rgba(0,0,0,0.3)' : 'none',
+                    userSelect: 'none',
+                    boxSizing: 'border-box',
+                    overflowY: isMobile ? 'auto' : 'visible',
+                }}
+            >
                 {/* Brand Header */}
-                <div style={{ padding: isMobile ? '16px 20px' : 24, borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                        <div style={{ width: isMobile ? 44 : 56, height: isMobile ? 44 : 56, borderRadius: '50%', backgroundColor: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                            <img 
-                                src={fixImageUrl(sidebarLogoUrl) || fixImageUrl(logoUrl) || "/web-browser-logo.png"} 
-                                alt="Logo" 
-                                style={{ width: '100%', height: '100%', objectFit: (sidebarLogoUrl || logoUrl) ? 'cover' : 'contain', transform: (sidebarLogoUrl || logoUrl) ? 'none' : 'scale(1.45)' }} 
-                                onError={(e) => { e.currentTarget.src = "/web-browser-logo.png"; }}
-                            />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ color: '#FFFFFF', fontSize: isMobile ? 16 : 18, fontWeight: 800, letterSpacing: '0.5px', lineHeight: '1.2' }}>
-                                {businessName ? businessName.split(' ')[0] : 'ZTG'}
-                            </span>
-                            <span style={{ color: '#94A3B8', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                {businessName && !businessName.toLowerCase().includes('heavy parts')
-                                    ? businessName.split(' ').slice(1).join(' ')
-                                    : 'Heavy Equipment Parts'}
-                            </span>
-                        </div>
+                <div 
+                    className="admin-sidebar-header"
+                    style={{
+                        padding: effectiveCollapsed ? '16px 0' : (isMobile ? '16px 20px' : '20px 24px'),
+                        justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
+                        height: '80px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: effectiveCollapsed ? 0 : 14,
+                        boxSizing: 'border-box'
+                    }}
+                >
+                    <div 
+                        style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: '50%',
+                            backgroundColor: '#FFFFFF',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden',
+                            flexShrink: 0,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                            cursor: effectiveCollapsed ? 'pointer' : 'default'
+                        }}
+                        onMouseEnter={(e) => showTooltip(e, businessName || "ZTG Heavy Parts")}
+                        onMouseLeave={hideTooltip}
+                    >
+                        <img 
+                            src={fixImageUrl(sidebarLogoUrl) || fixImageUrl(logoUrl) || "/web-browser-logo.png"} 
+                            alt="Logo" 
+                            style={{ width: '100%', height: '100%', objectFit: (sidebarLogoUrl || logoUrl) ? 'cover' : 'contain', transform: (sidebarLogoUrl || logoUrl) ? 'none' : 'scale(1.45)' }} 
+                            onError={(e) => { e.currentTarget.src = "/web-browser-logo.png"; }}
+                        />
+                    </div>
+
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        opacity: effectiveCollapsed ? 0 : 1,
+                        maxWidth: effectiveCollapsed ? 0 : 200,
+                        transition: 'opacity 0.2s ease, max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                    }}>
+                        <span style={{ color: '#FFFFFF', fontSize: isMobile ? 16 : 17, fontWeight: 800, letterSpacing: '0.5px', lineHeight: '1.2' }}>
+                            {businessName ? businessName.split(' ')[0] : 'ZTG'}
+                        </span>
+                        <span style={{ color: '#94A3B8', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            {businessName && !businessName.toLowerCase().includes('heavy parts')
+                                ? businessName.split(' ').slice(1).join(' ')
+                                : 'Heavy Equipment Parts'}
+                        </span>
                     </div>
 
                     {/* Mobile Close Button */}
@@ -313,6 +429,7 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
                                 color: '#94A3B8',
                                 cursor: 'pointer',
                                 padding: 6,
+                                marginLeft: 'auto',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -326,180 +443,317 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
                     )}
                 </div>
 
-            {/* Nav Menu */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px' }}>
-                {navSections.map((section) => (
-                    <div key={section.title} style={{ marginBottom: 24 }}>
-                        <div style={{
-                            color: '#64748B',
-                            fontSize: 11,
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            letterSpacing: 1,
-                            marginBottom: 8,
-                            paddingLeft: 12,
-                        }}>
-                            {section.title}
-                        </div>
-                        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                            {section.items.map((item) => (
-                                <li key={item.path} style={{ marginBottom: 4 }}>
-                                    <RouterNavLink
-                                        to={item.path}
-                                        onClick={(e) => {
-                                            if (window.__ztg_restock_pending) {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                window.dispatchEvent(new CustomEvent('ztg:attempt-leave-restock', { detail: { targetPath: item.path } }));
+                {/* Nav Menu */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px' }}>
+                    {navSections.map((section) => (
+                        <div key={section.title} style={{ marginBottom: 16 }}>
+                            <div style={{
+                                height: 22,
+                                marginBottom: 8,
+                                display: 'flex',
+                                alignItems: 'center',
+                                paddingLeft: effectiveCollapsed ? 0 : 12,
+                                justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
+                                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                            }}>
+                                {effectiveCollapsed ? (
+                                    <div style={{ width: 28, height: 1, backgroundColor: 'rgba(255,255,255,0.12)' }} />
+                                ) : (
+                                    <span style={{
+                                        color: '#64748B',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: 1,
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        transition: 'opacity 0.2s ease'
+                                    }}>
+                                        {section.title}
+                                    </span>
+                                )}
+                            </div>
+                            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                                {section.items.map((item) => (
+                                    <li key={item.path} style={{ marginBottom: 4 }}>
+                                        <RouterNavLink
+                                            to={item.path}
+                                            onClick={(e) => {
+                                                if (window.__ztg_restock_pending) {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    window.dispatchEvent(new CustomEvent('ztg:attempt-leave-restock', { detail: { targetPath: item.path } }));
+                                                    if (isMobile) onClose();
+                                                    return;
+                                                }
                                                 if (isMobile) onClose();
-                                                return;
-                                            }
-                                            if (isMobile) onClose();
-                                        }}
-                                        style={({ isActive }) => ({
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 10,
-                                            padding: '10px 12px',
-                                            color: isActive ? '#FFFFFF' : '#94A3B8',
-                                            textDecoration: 'none',
-                                            fontSize: 14,
-                                            fontWeight: 500,
-                                            borderRadius: 8,
-                                            transition: 'all 0.2s ease',
-                                            backgroundColor: isActive ? '#3B82F6' : 'transparent',
-                                        })}
-                                        onMouseEnter={(e) => {
-                                            const link = e.currentTarget;
-                                            if (!link.classList.contains('active')) {
-                                                link.style.backgroundColor = '#334155';
-                                                link.style.color = '#FFFFFF';
-                                                link.querySelectorAll('svg').forEach(s => s.style.stroke = '#FFFFFF');
-                                            }
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            const link = e.currentTarget;
-                                            const isActive = link.getAttribute('aria-current') === 'page';
-                                            if (!isActive) {
-                                                link.style.backgroundColor = 'transparent';
-                                                link.style.color = '#94A3B8';
-                                                link.querySelectorAll('svg').forEach(s => s.style.stroke = '#94A3B8');
-                                            }
-                                        }}
-                                    >
-                                        {item.icon}
-                                        {item.label}
-                                    </RouterNavLink>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                ))}
-            </div>
+                                            }}
+                                            style={({ isActive }) => ({
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
+                                                gap: 10,
+                                                padding: '10px 12px',
+                                                width: '100%',
+                                                height: '42px',
+                                                color: isActive ? '#FFFFFF' : '#94A3B8',
+                                                textDecoration: 'none',
+                                                fontSize: 14,
+                                                fontWeight: 500,
+                                                borderRadius: 8,
+                                                transition: 'background-color 0.2s ease, color 0.2s ease',
+                                                backgroundColor: isActive ? '#3B82F6' : 'transparent',
+                                                position: 'relative',
+                                                boxSizing: 'border-box'
+                                            })}
+                                            onMouseEnter={(e) => {
+                                                showTooltip(e, item.label);
+                                                const link = e.currentTarget;
+                                                if (!link.classList.contains('active')) {
+                                                    link.style.backgroundColor = '#334155';
+                                                    link.style.color = '#FFFFFF';
+                                                    link.querySelectorAll('svg').forEach(s => s.style.stroke = '#FFFFFF');
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                hideTooltip();
+                                                const link = e.currentTarget;
+                                                const isActive = link.getAttribute('aria-current') === 'page';
+                                                if (!isActive) {
+                                                    link.style.backgroundColor = 'transparent';
+                                                    link.style.color = '#94A3B8';
+                                                    link.querySelectorAll('svg').forEach(s => s.style.stroke = '#94A3B8');
+                                                }
+                                            }}
+                                        >
+                                            {item.icon}
+                                            <span style={{
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                opacity: effectiveCollapsed ? 0 : 1,
+                                                maxWidth: effectiveCollapsed ? 0 : 180,
+                                                transition: 'opacity 0.2s ease, max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                                                display: 'inline-block'
+                                            }}>
+                                                {item.label}
+                                            </span>
+                                        </RouterNavLink>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ))}
 
-            {/* Footer / User Profile */}
-            <div style={{
-                padding: '16px 18px',
-                borderTop: '1px solid rgba(255,255,255,0.08)',
-                backgroundColor: 'rgba(15, 23, 42, 0.6)',
-                flexShrink: 0,
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 0 }}>
-                    {/* Avatar */}
-                    <div style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: '50%',
-                        backgroundColor: (user?.profile_photo && !avatarError) ? 'transparent' : '#3B82F6',
-                        color: '#FFFFFF',
-                        fontWeight: 700,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 14,
-                        flexShrink: 0,
-                        overflow: 'hidden',
-                        border: (user?.profile_photo && !avatarError) ? '2px solid rgba(255,255,255,0.15)' : 'none',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                    }}>
-                        {(user?.profile_photo && !avatarError) ? (
-                            <img
-                                src={fixImageUrl(user.profile_photo)}
-                                alt="User Profile"
+                    {/* Collapse / Expand Toggle Button placed below System Settings / My Profile */}
+                    {!isMobile && (
+                        <div style={{ marginTop: 8, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                            <button
+                                type="button"
+                                onClick={toggleCollapse}
                                 style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
+                                    gap: 10,
+                                    padding: '10px 12px',
                                     width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover',
-                                    display: 'block'
+                                    height: '42px',
+                                    color: '#94A3B8',
+                                    backgroundColor: 'transparent',
+                                    border: 'none',
+                                    borderRadius: 8,
+                                    cursor: 'pointer',
+                                    fontSize: 14,
+                                    fontWeight: 500,
+                                    transition: 'background-color 0.2s ease, color 0.2s ease',
+                                    boxSizing: 'border-box'
                                 }}
-                                onError={() => setAvatarError(true)}
-                            />
-                        ) : (
-                            getInitials(name)
-                        )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ color: '#FFFFFF', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {name}
+                                onMouseEnter={(e) => {
+                                    showTooltip(e, effectiveCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar');
+                                    e.currentTarget.style.backgroundColor = '#334155';
+                                    e.currentTarget.style.color = '#FFFFFF';
+                                    e.currentTarget.querySelectorAll('svg').forEach(s => s.style.stroke = '#FFFFFF');
+                                }}
+                                onMouseLeave={(e) => {
+                                    hideTooltip();
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                    e.currentTarget.style.color = '#94A3B8';
+                                    e.currentTarget.querySelectorAll('svg').forEach(s => s.style.stroke = '#94A3B8');
+                                }}
+                                aria-label={effectiveCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                            >
+                                <svg style={{ width: 18, height: 18, stroke: '#94A3B8', fill: 'none', strokeWidth: 2, flexShrink: 0 }} viewBox="0 0 24 24">
+                                    {effectiveCollapsed ? (
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                                    ) : (
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7M19 19l-7-7 7-7" />
+                                    )}
+                                </svg>
+                                <span style={{
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    opacity: effectiveCollapsed ? 0 : 1,
+                                    maxWidth: effectiveCollapsed ? 0 : 140,
+                                    transition: 'opacity 0.2s ease, max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                                    display: 'inline-block'
+                                }}>
+                                    Collapse Sidebar
+                                </span>
+                            </button>
                         </div>
-                        <div style={{ color: '#94A3B8', fontSize: 11, fontWeight: 500, marginTop: '1px' }}>
-                            {role === 'Admin' ? 'Administrator' : role}
-                        </div>
-                    </div>
+                    )}
                 </div>
 
-                {/* Sign Out Button */}
-                <button
-                    onClick={(e) => {
-                        if (window.__ztg_restock_pending) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            window.dispatchEvent(new CustomEvent('ztg:attempt-leave-restock', { detail: { isLogout: true } }));
-                            if (isMobile) onClose();
-                            return;
-                        }
-                        handleLogout();
-                    }}
+                {/* Footer / User Profile */}
+                <div 
+                    className="admin-sidebar-footer"
                     style={{
+                        padding: '16px 16px',
+                        backgroundColor: 'transparent',
+                        flexShrink: 0,
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 8,
-                        marginTop: 14,
-                        padding: '10px 14px',
-                        borderRadius: '10px',
-                        width: '100%',
-                        color: '#F87171',
-                        backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                        border: '1px solid rgba(239, 68, 68, 0.25)',
-                        fontSize: 13,
-                        fontWeight: 700,
-                        letterSpacing: '0.5px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                        minHeight: '42px',
+                        flexDirection: 'column',
                         boxSizing: 'border-box'
                     }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#DC2626';
-                        e.currentTarget.style.color = '#FFFFFF';
-                        e.currentTarget.style.borderColor = '#DC2626';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.3)';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.12)';
-                        e.currentTarget.style.color = '#F87171';
-                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.25)';
-                        e.currentTarget.style.boxShadow = 'none';
-                    }}
                 >
-                    <svg style={{ width: 16, height: 16, stroke: 'currentColor', fill: 'none', strokeWidth: 2.5 }} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    <span>SIGN OUT</span>
-                </button>
+                    <div 
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            marginBottom: 0,
+                            position: 'relative',
+                            cursor: effectiveCollapsed ? 'pointer' : 'default',
+                            width: '100%'
+                        }}
+                        onMouseEnter={(e) => showTooltip(e, `${name} (${role === 'Admin' ? 'Administrator' : role})`)}
+                        onMouseLeave={hideTooltip}
+                    >
+                        {/* Avatar */}
+                        <div style={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: '50%',
+                            backgroundColor: (user?.profile_photo && !avatarError) ? 'transparent' : '#3B82F6',
+                            color: '#FFFFFF',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 14,
+                            flexShrink: 0,
+                            overflow: 'hidden',
+                            border: (user?.profile_photo && !avatarError) ? '2px solid rgba(255,255,255,0.15)' : 'none',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                        }}>
+                            {(user?.profile_photo && !avatarError) ? (
+                                <img
+                                    src={fixImageUrl(user.profile_photo)}
+                                    alt="User Profile"
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        display: 'block'
+                                    }}
+                                    onError={() => setAvatarError(true)}
+                                />
+                            ) : (
+                                getInitials(name)
+                            )}
+                        </div>
+
+                        <div style={{
+                            flex: 1,
+                            minWidth: 0,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            opacity: effectiveCollapsed ? 0 : 1,
+                            maxWidth: effectiveCollapsed ? 0 : 180,
+                            transition: 'opacity 0.2s ease, max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                        }}>
+                            <div style={{ color: '#FFFFFF', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {name}
+                            </div>
+                            <div style={{ color: '#94A3B8', fontSize: 11, fontWeight: 500, marginTop: '1px' }}>
+                                {role === 'Admin' ? 'Administrator' : role}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Sign Out Button */}
+                    <button
+                        onClick={(e) => {
+                            if (window.__ztg_restock_pending) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.dispatchEvent(new CustomEvent('ztg:attempt-leave-restock', { detail: { isLogout: true } }));
+                                if (isMobile) onClose();
+                                return;
+                            }
+                            handleLogout();
+                        }}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 8,
+                            marginTop: 14,
+                            padding: '10px 14px',
+                            borderRadius: '10px',
+                            width: '100%',
+                            height: '42px',
+                            color: '#F87171',
+                            backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                            border: '1px solid rgba(239, 68, 68, 0.25)',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            letterSpacing: '0.5px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                            minHeight: '42px',
+                            boxSizing: 'border-box'
+                        }}
+                        onMouseEnter={(e) => {
+                            showTooltip(e, 'Sign Out');
+                            e.currentTarget.style.backgroundColor = '#DC2626';
+                            e.currentTarget.style.color = '#FFFFFF';
+                            e.currentTarget.style.borderColor = '#DC2626';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.3)';
+                        }}
+                        onMouseLeave={(e) => {
+                            hideTooltip();
+                            e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.12)';
+                            e.currentTarget.style.color = '#F87171';
+                            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+                            e.currentTarget.style.boxShadow = 'none';
+                        }}
+                        aria-label="Sign Out"
+                    >
+                        <svg style={{ width: 16, height: 16, stroke: 'currentColor', fill: 'none', strokeWidth: 2.5, flexShrink: 0 }} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        <span style={{
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            opacity: effectiveCollapsed ? 0 : 1,
+                            maxWidth: effectiveCollapsed ? 0 : 100,
+                            transition: 'opacity 0.2s ease, max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                            display: 'inline-block'
+                        }}>
+                            SIGN OUT
+                        </span>
+                    </button>
+                </div>
             </div>
-        </div>
+
+            {/* Fixed Floating Tooltip Portal */}
+            <SidebarTooltip 
+                label={tooltipData.label} 
+                top={tooltipData.top} 
+                left={tooltipData.left} 
+                visible={tooltipData.visible} 
+            />
         </>
     );
 }

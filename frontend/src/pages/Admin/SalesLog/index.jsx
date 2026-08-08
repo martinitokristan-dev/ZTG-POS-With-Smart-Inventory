@@ -106,10 +106,8 @@ export default function SalesLog() {
                                     className={`status-tab ${sl.activeTab === tab ? 'active' : ''}`}
                                     onClick={() => sl.setActiveTab(tab)}
                                     style={{
-                                        padding: '8px 16px', border: '1px solid var(--border)', borderRadius: '20px', 
-                                        background: sl.activeTab === tab ? 'var(--primary)' : '#fff',
-                                        color: sl.activeTab === tab ? '#fff' : 'var(--text-secondary)',
-                                        fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s'
+                                        padding: '8px 16px', borderRadius: '20px', 
+                                        fontSize: '13px', fontWeight: '600', cursor: 'pointer'
                                     }}
                                 >
                                     {tab}

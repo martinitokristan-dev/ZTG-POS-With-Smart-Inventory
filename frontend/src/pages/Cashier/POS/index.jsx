@@ -27,7 +27,7 @@ export default function POS() {
     return (
         <div className="main-workspace-outer">
             <div className="main-workspace">
-                <div className="top-bar" style={{ borderBottom: '1px solid var(--border)', padding: isMobile ? '16px' : '24px 88px 24px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: '#FFFFFF', height: 'auto' }}>
+                <div className="top-bar" style={{ borderBottom: '1px solid var(--border)', padding: isMobile ? '16px' : '24px 140px 24px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: 'var(--bg-card)', height: 'auto' }}>
                     <div>
                         <h1 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: '700', marginBottom: '4px', fontFamily: '"Outfit", sans-serif', color: 'var(--text-primary)' }}>Point of Sale (POS)</h1>
                         <div className="page-description" style={{ marginTop: '0', fontSize: '13px', color: 'var(--text-secondary)' }}>Process cashier sales immediately. Verify inventory and process change calculations.</div>
@@ -36,7 +36,7 @@ export default function POS() {
 
                 {/* Mobile View Switcher (< 900px) */}
                 {isMobile && (
-                    <div style={{ display: 'flex', background: '#FFFFFF', borderBottom: '1px solid var(--border)', padding: '8px 16px', gap: '8px', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', padding: '8px 16px', gap: '8px', flexShrink: 0 }}>
                         <button
                             type="button"
                             onClick={() => setActiveTab('catalogue')}
@@ -51,8 +51,8 @@ export default function POS() {
                                 fontSize: '13px',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s ease',
-                                backgroundColor: activeTab === 'catalogue' ? 'var(--primary)' : '#F1F5F9',
-                                color: activeTab === 'catalogue' ? '#FFFFFF' : '#475569',
+                                backgroundColor: activeTab === 'catalogue' ? 'var(--primary)' : 'var(--bg-secondary)',
+                                color: activeTab === 'catalogue' ? '#FFFFFF' : 'var(--text-secondary)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center'
@@ -74,8 +74,8 @@ export default function POS() {
                                 fontSize: '13px',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s ease',
-                                backgroundColor: activeTab === 'cart' ? '#10B981' : '#F1F5F9',
-                                color: activeTab === 'cart' ? '#FFFFFF' : '#475569',
+                                backgroundColor: activeTab === 'cart' ? '#10B981' : 'var(--bg-secondary)',
+                                color: activeTab === 'cart' ? '#FFFFFF' : 'var(--text-secondary)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -97,7 +97,7 @@ export default function POS() {
                         minHeight: 0,
                         overflow: 'hidden',
                         padding: isMobile ? '12px' : '20px',
-                        background: '#F8FAFC'
+                        background: 'var(--bg-canvas)'
                     }}>
                         {/* Catalogue View */}
                         {(!isMobile || activeTab === 'catalogue') && (

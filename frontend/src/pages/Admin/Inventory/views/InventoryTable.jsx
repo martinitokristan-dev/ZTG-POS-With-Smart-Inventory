@@ -12,44 +12,37 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
         const isLowStock = item.stock > 0 && item.stock <= alertLevel;
 
         let stockStatusText = 'Active';
-        let stockBadgeClass = 'badge-success';
-        let customStatusStyle = {};
+        let statusBg = '#DCFCE7';
+        let statusText = '#15803D';
+        let stockBadgeBg = '#F0FDF4';
+        let stockColor = '#15803D';
 
         if (item.status === 'Disabled') {
             stockStatusText = 'Disabled';
-            stockBadgeClass = 'badge-secondary';
+            statusBg = '#F1F5F9';
+            statusText = '#64748B';
+            stockBadgeBg = '#F1F5F9';
+            stockColor = '#64748B';
         } else if (isOutOfStock) {
             stockStatusText = 'No Stock';
-            stockBadgeClass = 'badge-danger';
+            statusBg = '#FEE2E2';
+            statusText = '#B91C1C';
+            stockBadgeBg = '#FEF2F2';
+            stockColor = '#EF4444';
         } else if (isLowStock) {
             stockStatusText = 'Low Stock';
-            stockBadgeClass = 'badge-warning';
+            statusBg = '#FEF3C7';
+            statusText = '#B45309';
+            stockBadgeBg = '#FEFCE8';
+            stockColor = '#D97706';
         }
 
         const variantOptionText = item.variant_options?.map(o => o.value).join(', ')
             || item.variantOptions?.map(o => o.value).join(', ');
 
-        const stockBadgeStyle = {
-            display: 'inline-flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            lineHeight: 1.2,
-            padding: '4px 8px',
-            minWidth: '50px',
-            borderRadius: '6px',
-        };
-
-        const damagedStyle = {
-            display: 'inline-flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            lineHeight: 1.2,
-            padding: '4px 8px',
-            minWidth: '60px',
-            borderRadius: '6px',
-            backgroundColor: (item.damaged || 0) > 0 ? 'var(--danger-light)' : '#F1F5F9',
-            color: (item.damaged || 0) > 0 ? 'var(--danger)' : 'var(--text-secondary)',
-        };
+        const hasDamaged = (item.damaged || 0) > 0;
+        const damagedBg = hasDamaged ? '#FEE2E2' : 'var(--bg-secondary)';
+        const damagedColor = hasDamaged ? '#B91C1C' : 'var(--text-secondary)';
 
         return (
             <tr key={item.id} style={!isVariant && baseIndex > 0 ? { borderTop: '2px solid var(--border)' } : {}}>
@@ -72,33 +65,47 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                     <CopyableText text={item.part_no} label="Part No." />
                 </td>
                 <td style={{ fontSize: '15px', fontWeight: 500, color: 'var(--table-text-secondary)' }}>{item.category?.name || parentProduct?.category?.name || 'Unassigned'}</td>
-                <td><code style={{ background: '#F1F5F9', padding: '2px 6px', borderRadius: '4px', fontSize: '13px', fontWeight: 500 }}>{item.address || '—'}</code></td>
+                <td><code style={{ background: 'var(--bg-secondary)', color: 'var(--primary)', padding: '3px 8px', borderRadius: '4px', fontSize: '13px', fontWeight: 500 }}>{item.address || '—'}</code></td>
                 <td style={{ textAlign: 'right' }}>
-                    <span className={`badge ${stockBadgeClass}`} style={{ ...stockBadgeStyle, fontVariantNumeric: 'tabular-nums' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 600 }}>{item.stock}</span>
-                        <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Units</span>
-                    </span>
+                    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: '1.2', padding: '4px 10px', borderRadius: '6px', backgroundColor: stockBadgeBg, color: stockColor, minWidth: '54px', fontVariantNumeric: 'tabular-nums' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '600' }}>{item.stock}</span>
+                        <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>Units</span>
+                    </div>
                 </td>
                 <td style={{ fontWeight: 600, fontSize: '15px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(item.price1 || 0).toLocaleString('en-US')}</td>
                 <td style={{ fontWeight: 600, fontSize: '15px', color: 'var(--primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(item.price2 || 0).toLocaleString('en-US')}</td>
                 <td style={{ whiteSpace: 'nowrap', textAlign: 'right', fontSize: '15px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{item.sales_count || 0} sold</td>
                 <td>
                     <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'nowrap', alignItems: 'center' }}>
-                        <span className={`badge ${stockBadgeClass}`} style={{ whiteSpace: 'nowrap', ...customStatusStyle }}>
+                        <span 
+                            style={{ 
+                                backgroundColor: statusBg, 
+                                color: statusText, 
+                                padding: '4px 10px', 
+                                borderRadius: '9999px', 
+                                fontSize: '11px', 
+                                fontWeight: '700',
+                                letterSpacing: '0.3px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                whiteSpace: 'nowrap',
+                                lineHeight: 1
+                            }}
+                        >
                             {stockStatusText}
                         </span>
                         {item.is_dead_stock && (
-                            <span className="badge" style={{ backgroundColor: '#FFE4E6', color: '#BE123C', border: 'none', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                            <span className="badge" style={{ backgroundColor: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.3)', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }}>
                                 Dead Stock
                             </span>
                         )}
                     </div>
                 </td>
                 <td style={{ textAlign: 'center' }}>
-                    <span style={{ ...damagedStyle, fontVariantNumeric: 'tabular-nums' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 600 }}>{item.damaged || 0}</span>
-                        <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Damaged</span>
-                    </span>
+                    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: '1.2', padding: '4px 10px', borderRadius: '6px', backgroundColor: damagedBg, color: damagedColor, minWidth: '54px', border: '1px solid var(--border)', fontVariantNumeric: 'tabular-nums' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '600' }}>{item.damaged || 0}</span>
+                        <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>Damaged</span>
+                    </div>
                 </td>
                 <td style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>

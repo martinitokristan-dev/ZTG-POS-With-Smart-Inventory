@@ -39,7 +39,7 @@ export default function ProductGrid({
                         type="text" 
                         className="pos-search-input" 
                         placeholder="Search products by name or part number..." 
-                        style={{ width: '100%', padding: '12px 16px 12px 46px', borderRadius: '30px', border: '1px solid var(--border)', fontSize: '14px', backgroundColor: '#F8FAFC', outline: 'none' }}
+                        style={{ width: '100%', padding: '12px 16px 12px 46px', borderRadius: '30px', border: '1px solid var(--border)', fontSize: '14px', backgroundColor: 'var(--bg-canvas)', color: 'var(--text-primary)', outline: 'none' }}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -96,7 +96,7 @@ export default function ProductGrid({
                             ) : products.map(p => {
                                 const isLow = p.stock > 0 && p.stock <= 5;
                                 const isOut = p.stock <= 0;
-                                const stockClass = isOut ? { bg: '#FDE8E8', color: '#9B1C1C' } : isLow ? { bg: '#FEF3C7', color: '#92400E' } : { bg: '#DEF7EC', color: '#03543F' };
+                                const stockBadgeClass = isOut ? 'stock-badge stock-out' : isLow ? 'stock-badge stock-low' : 'stock-badge stock-in';
 
                                 return (
                                     <tr 
@@ -129,11 +129,7 @@ export default function ProductGrid({
                                         <td style={{ padding: '12px 14px', fontSize: '15px', color: 'var(--table-text-secondary)', fontWeight: '500' }}>{p.category?.name || p.category || 'Uncategorized'}</td>
                                         <td style={{ padding: '12px 14px', fontSize: '15px', color: 'var(--table-text-secondary)', fontWeight: '500' }}>{p.address || '—'}</td>
                                         <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                                            <span style={{ 
-                                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', 
-                                                minWidth: '28px', height: '28px', padding: '0 8px', borderRadius: '14px', fontWeight: '600', fontSize: '13px',
-                                                backgroundColor: stockClass.bg, color: stockClass.color, fontVariantNumeric: 'tabular-nums'
-                                            }}>
+                                            <span className={stockBadgeClass}>
                                                 {p.stock}
                                             </span>
                                         </td>

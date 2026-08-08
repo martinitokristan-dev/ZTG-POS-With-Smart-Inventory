@@ -1,7 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
+import IOSSelect from '../../../../shared/components/IOSSelect';
 import { printUnifiedReceipt } from '../../../../utils/printReceipt';
 import api from '../../../../shared/api';
+
+const docTypeOptions = [
+    { value: 'S.I.', label: 'S.I. (Sales Invoice)' },
+    { value: 'D.R.', label: 'D.R. (Delivery Receipt)' },
+    { value: 'C.I.', label: 'C.I. (Charge Invoice)' }
+];
+
+const paymentMethodOptions = [
+    { value: 'Cash', label: 'Cash' },
+    { value: 'GCash', label: 'GCash' },
+    { value: 'Bank Transfer', label: 'Bank Transfer' },
+    { value: 'Split', label: 'Split Payment' },
+    { value: 'P.O. (Pending)', label: 'P.O. (Pending)' }
+];
+
+const splitMethodOptions = [
+    { value: 'Cash', label: 'Cash' },
+    { value: 'GCash', label: 'GCash' },
+    { value: 'Bank Transfer', label: 'Bank Transfer' }
+];
 
 export default function CheckoutModal({ 
     isOpen, 
@@ -201,7 +222,7 @@ export default function CheckoutModal({
 
         return (
             <div className="modal-overlay" style={{ display: 'flex', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{
+                <div id="ztg-receipt-modal" style={{
                     background: 'white',
                     borderRadius: '20px',
                     width: '100%',
@@ -209,13 +230,14 @@ export default function CheckoutModal({
                     margin: '20px',
                     boxShadow: '0 25px 60px rgba(0,0,0,0.18)',
                     overflow: 'hidden',
-                    position: 'relative'
+                    position: 'relative',
+                    color: '#1E293B'
                 }}>
-                    {/* Success Header Banner */}
-                    <div style={{
+                    {/* Success Header Banner — always light mode */}
+                    <div className="receipt-header-banner" style={{
                         padding: '16px 24px',
                         background: '#F8FAFC',
-                        borderBottom: '1px solid var(--border)',
+                        borderBottom: '1px solid #E2E8F0',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -236,17 +258,17 @@ export default function CheckoutModal({
                             </svg>
                         </div>
                         <div>
-                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif' }}>Transaction Successful</h3>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                Receipt No: <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{completedTx.si_no || completedTx.receipt_number}</strong>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0F172A', fontFamily: '"Outfit", sans-serif' }}>Transaction Successful</h3>
+                            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748B' }}>
+                                Receipt No: <strong style={{ color: '#0F172A', fontWeight: 700 }}>{completedTx.si_no || completedTx.receipt_number}</strong>
                             </p>
                         </div>
                     </div>
 
-                    {/* Receipt Body */}
-                    <div style={{ padding: '16px 24px 20px' }}>
-                        {/* Receipt Paper */}
-                        <div style={{
+                    {/* Receipt Body — always light mode */}
+                    <div className="receipt-modal-body" style={{ padding: '16px 24px 20px', background: '#FFFFFF' }}>
+                        {/* Receipt Paper — always light mode */}
+                        <div className="receipt-paper" style={{
                             background: '#FAFAFA',
                             border: '1px solid #E8ECF0',
                             borderRadius: '12px',
@@ -254,7 +276,7 @@ export default function CheckoutModal({
                             overflow: 'hidden'
                         }}>
                             {/* Company Header */}
-                            <div style={{
+                            <div className="receipt-company-header" style={{
                                 background: '#F1F5F9',
                                 padding: '12px 20px',
                                 textAlign: 'center',
@@ -264,23 +286,23 @@ export default function CheckoutModal({
                                 <p style={{ fontSize: '11px', color: '#64748B', margin: 0 }}>Official Sales Receipt</p>
                             </div>
 
-                            {/* Receipt Content */}
-                            <div style={{ padding: '16px 20px', maxHeight: '320px', overflowY: 'auto' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px', marginBottom: '16px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                            {/* Receipt Content — all colors hardcoded to light theme */}
+                            <div className="receipt-content-area" style={{ padding: '16px 20px', maxHeight: '320px', overflowY: 'auto', background: '#FAFAFA' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px', marginBottom: '16px', fontSize: '13px', color: '#64748B' }}>
                                     <span style={{ fontWeight: '600' }}>Date:</span>
-                                    <span style={{ textAlign: 'right', color: 'var(--text-primary)' }}>{dateStr}</span>
+                                    <span style={{ textAlign: 'right', color: '#1E293B' }}>{dateStr}</span>
                                     
                                     <span style={{ fontWeight: '600' }}>Cashier:</span>
-                                    <span style={{ textAlign: 'right', color: 'var(--text-primary)' }}>{completedTx.cashier?.name || cashierName}</span>
+                                    <span style={{ textAlign: 'right', color: '#1E293B' }}>{completedTx.cashier?.name || cashierName}</span>
                                     
                                     <span style={{ fontWeight: '600' }}>Customer:</span>
-                                    <span style={{ textAlign: 'right', color: 'var(--text-primary)' }}>{completedTx.customer?.name || 'Walk-in'}</span>
+                                    <span style={{ textAlign: 'right', color: '#1E293B' }}>{completedTx.customer?.name || 'Walk-in'}</span>
                                     
                                     <span style={{ fontWeight: '600' }}>Doc Type:</span>
-                                    <span style={{ textAlign: 'right', color: 'var(--text-primary)' }}>{completedTx.doc_type || docType}</span>
+                                    <span style={{ textAlign: 'right', color: '#1E293B' }}>{completedTx.doc_type || docType}</span>
                                 </div>
                                 
-                                <div style={{ borderTop: '1px dashed var(--border)', margin: '16px 0' }}></div>
+                                <div style={{ borderTop: '1px dashed #CBD5E1', margin: '16px 0' }}></div>
                                 
                                 <div style={{ marginBottom: '16px' }}>
                                     {(completedTx.items || []).map(item => {
@@ -292,25 +314,25 @@ export default function CheckoutModal({
                                             <span key={`${item.id}-badge`} style={{ fontSize: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', padding: '1px 5px', borderRadius: '8px', fontWeight: '700', marginLeft: '4px' }}>P1</span>
                                         );
                                         return (
-                                            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
+                                            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#1E293B' }}>
                                                 <span style={{ flex: 1, paddingRight: '12px', fontWeight: '500' }}>
                                                     {item.product?.name || item.name || 'Item'}
                                                     {tierBadge}
                                                 </span>
-                                                <span style={{ color: 'var(--text-secondary)', width: '40px', textAlign: 'center' }}>x{item.qty}</span>
-                                                <span style={{ fontWeight: '600', width: '80px', textAlign: 'right' }}>₱{itemTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                <span style={{ color: '#64748B', width: '40px', textAlign: 'center' }}>x{item.qty}</span>
+                                                <span style={{ fontWeight: '600', width: '80px', textAlign: 'right', color: '#1E293B' }}>₱{itemTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                             </div>
                                         );
                                     })}
                                 </div>
                                 
-                                <div style={{ borderTop: '1px dashed var(--border)', margin: '16px 0' }}></div>
+                                <div style={{ borderTop: '1px dashed #CBD5E1', margin: '16px 0' }}></div>
                                 
                                 {((completedTx.discount_amount && Number(completedTx.discount_amount) > 0) || cartTotals.discount > 0) && (
                                     <>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
-                                            <span style={{ color: 'var(--text-secondary)' }}>Subtotal</span>
-                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>₱{(totalVal + Number(completedTx.discount_amount || cartTotals.discount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            <span style={{ color: '#64748B' }}>Subtotal</span>
+                                            <span style={{ fontWeight: '600', color: '#1E293B' }}>₱{(totalVal + Number(completedTx.discount_amount || cartTotals.discount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#2563EB', fontWeight: '600' }}>
                                             <span>Discount</span>
@@ -319,28 +341,28 @@ export default function CheckoutModal({
                                     </>
                                 )}
 
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '16px', color: completedTx.payment_method === 'P.O. (Pending)' ? 'var(--danger, #EF4444)' : 'var(--primary)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '16px', color: completedTx.payment_method === 'P.O. (Pending)' ? '#EF4444' : '#2563EB' }}>
                                     <span>Grand Total</span>
                                     <span>₱{totalVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
 
-                                <div style={{ borderTop: '1px dashed var(--border)', margin: '16px 0' }}></div>
+                                <div style={{ borderTop: '1px dashed #CBD5E1', margin: '16px 0' }}></div>
 
-                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                <div style={{ fontSize: '12px', color: '#64748B' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                                         <span>Payment Method:</span>
-                                        <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{completedTx.payment_method}</span>
+                                        <span style={{ fontWeight: '600', color: '#1E293B' }}>{completedTx.payment_method}</span>
                                     </div>
                                     {!isSplit ? (
                                         completedTx.payment_method === 'Cash' && (
                                             <>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                                                     <span>Cash Received:</span>
-                                                    <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>₱{parseFloat(completedTx.amount_tendered || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                    <span style={{ fontWeight: '600', color: '#1E293B' }}>₱{parseFloat(completedTx.amount_tendered || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </div>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                     <span>Change Due:</span>
-                                                    <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>₱{Math.max(0, parseFloat(completedTx.amount_tendered || 0) - totalVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                    <span style={{ fontWeight: '600', color: '#1E293B' }}>₱{Math.max(0, parseFloat(completedTx.amount_tendered || 0) - totalVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </div>
                                             </>
                                         )
@@ -349,13 +371,13 @@ export default function CheckoutModal({
                                             {completedTx.amount_tendered > 0 && (
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                                                     <span>Cash Received:</span>
-                                                    <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>₱{parseFloat(completedTx.amount_tendered || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                    <span style={{ fontWeight: '600', color: '#1E293B' }}>₱{parseFloat(completedTx.amount_tendered || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </div>
                                             )}
                                             {completedTx.amount_tendered > 0 && (
                                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                     <span>Change:</span>
-                                                    <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>₱{Math.max(0, parseFloat(completedTx.amount_tendered || 0) - totalVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                    <span style={{ fontWeight: '600', color: '#1E293B' }}>₱{Math.max(0, parseFloat(completedTx.amount_tendered || 0) - totalVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </div>
                                             )}
                                         </>
@@ -366,23 +388,21 @@ export default function CheckoutModal({
 
                         {/* Action Buttons */}
                         <div style={{ display: 'flex', gap: '12px' }}>
-                            <button type="button" onClick={handleCloseSuccess} style={{
+                            <button type="button" className="btn-receipt-close" onClick={handleCloseSuccess} style={{
                                 flex: 1, padding: '10px 16px', borderRadius: '8px',
-                                border: '1.5px solid #E2E8F0', background: 'white',
+                                border: '1.5px solid #E2E8F0', background: '#FFFFFF',
                                 fontSize: '13px', fontWeight: '600', color: '#64748B',
                                 cursor: 'pointer', transition: 'all 0.2s'
-                            }} onMouseOver={e => { e.currentTarget.style.background='#F8FAFC'; e.currentTarget.style.borderColor='#CBD5E1'; }}
-                               onMouseOut={e => { e.currentTarget.style.background='white'; e.currentTarget.style.borderColor='#E2E8F0'; }}>
+                            }}>
                                 Close
                             </button>
-                            <button type="button" onClick={handlePrint} style={{
+                            <button type="button" className="btn-receipt-print" onClick={handlePrint} style={{
                                 flex: 2, padding: '10px 16px', borderRadius: '8px',
                                 border: 'none', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
-                                fontSize: '13px', fontWeight: '700', color: 'white',
+                                fontSize: '13px', fontWeight: '700', color: '#FFFFFF',
                                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 gap: '8px', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(37,99,235,0.25)'
-                            }} onMouseOver={e => { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 6px 16px rgba(37,99,235,0.35)'; }}
-                               onMouseOut={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(37,99,235,0.25)'; }}>
+                            }}>
                                 <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', fill: 'none', stroke: 'white', strokeWidth: '2.5' }}>
                                     <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/>
                                 </svg>
@@ -390,6 +410,7 @@ export default function CheckoutModal({
                             </button>
                         </div>
                     </div>
+
                 </div>
             </div>
         );
@@ -445,42 +466,54 @@ export default function CheckoutModal({
                         
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', overflowY: 'auto', paddingRight: '4px' }}>
                             {cart.map(item => {
-                                const origPrice = item.priceTier === 'price2' ? parseFloat(item.price2 || 0) : parseFloat(item.price1 || 0);
+                                const isPrice2 = item.priceTier === 'price2';
+                                const origPrice = isPrice2 ? parseFloat(item.price2 || 0) : parseFloat(item.price1 || 0);
                                 const itemDisc = parseFloat(item.item_discount || 0);
-                                const finalUnitPrice = Math.max(0, origPrice - itemDisc);
-                                const lineTotal = finalUnitPrice * item.qty;
                                 const origLineTotal = origPrice * item.qty;
+                                const lineTotal = Math.max(0, origLineTotal - itemDisc);
 
                                 return (
-                                    <div key={`${item.id}-${item.priceTier}`} style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px 12px', background: '#FFFFFF', border: itemDisc > 0 ? '1px solid #3B82F6' : '1px solid var(--border)', borderRadius: '8px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
-                                                    <FormattedProductName name={item.name} />
-                                                    <span style={{ fontSize: '10px', marginLeft: '6px', padding: '2px 6px', borderRadius: '4px', fontWeight: '700', backgroundColor: item.priceTier === 'price2' ? '#F5F3FF' : '#EFF6FF', color: item.priceTier === 'price2' ? '#7C3AED' : '#2563EB' }}>
-                                                        {item.priceTier === 'price2' ? 'P2' : 'P1'}
+                                    <div 
+                                        key={`${item.id}-${item.priceTier}`} 
+                                        style={{ 
+                                            display: 'flex', 
+                                            flexDirection: 'column', 
+                                            gap: '10px', 
+                                            padding: '12px 14px', 
+                                            background: '#FFFFFF', 
+                                            border: itemDisc > 0 ? '1.5px solid #3B82F6' : '1px solid var(--border)', 
+                                            borderRadius: '10px',
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                    <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', lineHeight: 1.3 }}>
+                                                        <FormattedProductName name={item.name} />
                                                     </span>
-                                                </span>
-                                                {item.chinese_name && <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{item.chinese_name}</span>}
-                                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                                                    {item.qty} x {itemDisc > 0 ? (
-                                                        <>
-                                                            <span style={{ textDecoration: 'line-through', color: '#94A3B8', marginRight: '4px' }}>{fmt(origPrice)}</span>
-                                                            <strong style={{ color: '#2563EB' }}>{fmt(finalUnitPrice)}</strong>
-                                                        </>
-                                                    ) : (
-                                                        fmt(origPrice)
-                                                    )}
-                                                </span>
+                                                    {/* Price Tier Badge */}
+                                                    <span className={isPrice2 ? "price-badge price-tier-2" : "price-badge price-tier-1"}>
+                                                        <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'currentColor' }}></span>
+                                                        {isPrice2 ? 'Price 2' : 'Price 1'}
+                                                    </span>
+                                                </div>
+
+
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500', marginTop: '2px' }}>
+                                                    <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>{item.qty} pcs</span> × {fmt(origPrice)}
+                                                </div>
                                             </div>
-                                            <div style={{ textAlign: 'right' }}>
+
+                                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                                 {itemDisc > 0 ? (
                                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                        <span style={{ fontSize: '11px', textDecoration: 'line-through', color: '#94A3B8' }}>{fmt(origLineTotal)}</span>
-                                                        <span style={{ fontWeight: '700', fontSize: '13px', color: '#2563EB' }}>{fmt(lineTotal)}</span>
+                                                        <span style={{ fontSize: '11px', textDecoration: 'line-through', color: '#94A3B8', fontWeight: '500' }}>{fmt(origLineTotal)}</span>
+                                                        <span style={{ fontWeight: '800', fontSize: '14px', color: '#2563EB' }}>{fmt(lineTotal)}</span>
                                                     </div>
                                                 ) : (
-                                                    <div style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-primary)' }}>
+                                                    <div style={{ fontWeight: '800', fontSize: '14px', color: 'var(--text-primary)' }}>
                                                         {fmt(lineTotal)}
                                                     </div>
                                                 )}
@@ -488,22 +521,36 @@ export default function CheckoutModal({
                                         </div>
                                         
                                         {/* Per-Item Discount Input */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '4px', borderTop: '1px dashed #F1F5F9' }}>
-                                            <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>🏷️ Item Disc:</span>
-                                            <input 
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                placeholder="₱0.00 off"
-                                                value={item.item_discount || ''}
-                                                onChange={e => setItemDiscount(item.id, item.priceTier || 'price1', e.target.value)}
-                                                style={{ width: '100px', fontSize: '11px', padding: '2px 6px', height: '26px', borderRadius: '4px', border: '1px solid #CBD5E1', textAlign: 'right', fontWeight: '600' }}
-                                            />
-                                            {itemDisc > 0 && (
-                                                <button type="button" onClick={() => setItemDiscount(item.id, item.priceTier || 'price1', 0)} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '10px', fontWeight: '700', cursor: 'pointer', padding: 0 }}>
-                                                    Clear
-                                                </button>
-                                            )}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px dashed #E2E8F0' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    🏷️ Item Discount:
+                                                </span>
+                                                {itemDisc > 0 && (
+                                                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#2563EB', backgroundColor: '#EFF6FF', padding: '2px 6px', borderRadius: '4px', border: '1px solid #BFDBFE' }}>
+                                                        - {fmt(itemDisc)} off line
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                                    <span style={{ position: 'absolute', left: '8px', fontSize: '11px', fontWeight: '700', color: '#94A3B8' }}>₱</span>
+                                                    <input 
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        placeholder="0.00"
+                                                        value={item.item_discount || ''}
+                                                        onChange={e => setItemDiscount(item.id, item.priceTier || 'price1', e.target.value)}
+                                                        style={{ width: '100px', fontSize: '11px', padding: '3px 8px 3px 20px', height: '28px', borderRadius: '6px', border: itemDisc > 0 ? '1px solid #3B82F6' : '1px solid #CBD5E1', textAlign: 'right', fontWeight: '700', color: 'var(--text-primary)', backgroundColor: itemDisc > 0 ? '#F0F9FF' : '#FFFFFF' }}
+                                                    />
+                                                </div>
+                                                {itemDisc > 0 && (
+                                                    <button type="button" onClick={() => setItemDiscount(item.id, item.priceTier || 'price1', 0)} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '11px', fontWeight: '700', cursor: 'pointer', padding: '2px 4px' }}>
+                                                        Clear
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -550,24 +597,14 @@ export default function CheckoutModal({
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
                             <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Doc Type</label>
-                                <select className="form-control form-control-sm" style={{ fontWeight: '600' }} value={docType} onChange={e => setDocType(e.target.value)}>
-                                    <option value="S.I.">S.I. (Sales Invoice)</option>
-                                    <option value="D.R.">D.R. (Delivery Receipt)</option>
-                                    <option value="C.I.">C.I. (Charge Invoice)</option>
-                                </select>
+                                <IOSSelect value={docType} onChange={e => setDocType(e.target.value)} options={docTypeOptions} />
                             </div>
                         </div>
                         
                         {/* Payment Info */}
                         <div className="form-group" style={{ marginBottom: 0 }}>
                             <label className="form-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Payment Method</label>
-                            <select className="form-control form-control-sm" style={{ fontWeight: '600' }} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
-                                <option value="Cash">Cash</option>
-                                <option value="GCash">GCash</option>
-                                <option value="Bank Transfer">Bank Transfer</option>
-                                <option value="Split">Split Payment</option>
-                                <option value="P.O. (Pending)">P.O. (Pending)</option>
-                            </select>
+                            <IOSSelect value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} options={paymentMethodOptions} />
                         </div>
 
                         {/* Whole-Sale / Order Discount Controls */}
@@ -604,11 +641,14 @@ export default function CheckoutModal({
                                         step="0.01"
                                         min="0"
                                         className="form-control form-control-sm"
-                                        placeholder={orderDiscountType === 'CustomAmount' ? 'Enter discount amount (₱)' : 'Enter discount percentage (%)'}
+                                        placeholder={orderDiscountType === 'CustomAmount' ? '0.00' : '0'}
                                         value={orderDiscountVal}
                                         onChange={e => setOrderDiscountVal(e.target.value)}
                                         style={{ fontSize: '12px', fontWeight: '700' }}
                                     />
+                                    <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '500', marginTop: '4px', display: 'block' }}>
+                                        {orderDiscountType === 'CustomAmount' ? 'Enter discount amount in pesos (₱)' : 'Enter discount percentage (%)'}
+                                    </span>
                                 </div>
                             )}
                         </div>
@@ -617,19 +657,11 @@ export default function CheckoutModal({
                             <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <div style={{ fontSize: '9px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Split Payment Details</div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', alignItems: 'center' }}>
-                                    <select className="form-control form-control-sm" style={{ fontWeight: '600' }} value={splitMethod1} onChange={e => setSplitMethod1(e.target.value)}>
-                                        <option value="Cash">Cash</option>
-                                        <option value="GCash">GCash</option>
-                                        <option value="Bank Transfer">Bank Transfer</option>
-                                    </select>
+                                    <IOSSelect value={splitMethod1} onChange={e => setSplitMethod1(e.target.value)} options={splitMethodOptions} />
                                     <input type="number" className="form-control form-control-sm" placeholder="Amount 1" style={{ fontWeight: '700', textAlign: 'right' }} value={splitAmount1} onChange={e => setSplitAmount1(e.target.value)} />
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', alignItems: 'center' }}>
-                                    <select className="form-control form-control-sm" style={{ fontWeight: '600' }} value={splitMethod2} onChange={e => setSplitMethod2(e.target.value)}>
-                                        <option value="Cash">Cash</option>
-                                        <option value="GCash">GCash</option>
-                                        <option value="Bank Transfer">Bank Transfer</option>
-                                    </select>
+                                    <IOSSelect value={splitMethod2} onChange={e => setSplitMethod2(e.target.value)} options={splitMethodOptions} />
                                     <input type="number" className="form-control form-control-sm" placeholder="Amount 2" style={{ fontWeight: '700', textAlign: 'right' }} value={splitAmount2} onChange={e => setSplitAmount2(e.target.value)} />
                                 </div>
                             </div>

@@ -59,9 +59,10 @@ class CheckoutService
             foreach ($cart as $item) {
                 $product = $products->get($item['product_id']);
                 $origPrice = $item['price_tier'] === 'price2' ? $product->price2 : $product->price1;
+                $origLineTotal = $origPrice * $item['qty'];
                 $itemDiscount = (float)($item['item_discount'] ?? 0);
-                $finalPrice = max(0, $origPrice - $itemDiscount);
-                $grandTotal += $finalPrice * $item['qty'];
+                $lineTotal = max(0, $origLineTotal - $itemDiscount);
+                $grandTotal += $lineTotal;
             }
             $orderDiscount = (float)($data['discount_amount'] ?? 0);
             $grandTotal = max(0, $grandTotal - $orderDiscount);
@@ -141,7 +142,6 @@ class CheckoutService
                 $product = $products->get($item['product_id']);
                 $origPrice = $item['price_tier'] === 'price2' ? $product->price2 : $product->price1;
                 $itemDiscount = (float)($item['item_discount'] ?? 0);
-                $finalPrice = max(0, $origPrice - $itemDiscount);
 
                 TransactionItem::create([
                     'transaction_id' => $transaction->id,

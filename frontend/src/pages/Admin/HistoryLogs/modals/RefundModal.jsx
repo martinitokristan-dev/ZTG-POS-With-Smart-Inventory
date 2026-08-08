@@ -182,19 +182,19 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
 
     return (
         <div className="modal-overlay" style={{ zIndex: 999 }}>
-            <div ref={sheetRef} className="modal-card modal-card-lg" style={{ maxWidth: '1000px', width: '95%', backgroundColor: '#FFFFFF', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
+            <div ref={sheetRef} className="modal-card modal-card-lg" style={{ maxWidth: '1000px', width: '95%', backgroundColor: 'var(--bg-card)', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3), 0 10px 10px -5px rgba(0,0,0,0.15)', border: '1px solid var(--border)' }}>
                 <form onSubmit={handleSubmit}>
-                    <div {...dragHandleProps} className="modal-header" style={{ backgroundColor: '#FEE2E2', borderBottom: 'none', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', touchAction: 'none' }}>
-                        <h3 className="modal-title" style={{ color: '#DC2626', fontSize: '16px', fontWeight: '700', margin: 0 }}>Process Refund / Return</h3>
-                        <button type="button" onClick={onClose} style={{ color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                    <div {...dragHandleProps} className="modal-header" style={{ backgroundColor: 'var(--danger-light)', borderBottom: '1px solid rgba(239,68,68,0.2)', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', touchAction: 'none' }}>
+                        <h3 className="modal-title" style={{ color: 'var(--danger)', fontSize: '16px', fontWeight: '700', margin: 0 }}>Process Refund / Return</h3>
+                        <button type="button" onClick={onClose} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
                             <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' }}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
 
                     <div className="modal-body">
                         {displayError && (
-                            <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <svg viewBox="0 0 24 24" style={{ width: '18px', height: '18px', fill: 'none', stroke: '#DC2626', strokeWidth: 2, flexShrink: 0 }}>
+                            <div style={{ backgroundColor: 'var(--danger-light)', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--danger)', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <svg viewBox="0 0 24 24" style={{ width: '18px', height: '18px', fill: 'none', stroke: 'var(--danger)', strokeWidth: 2, flexShrink: 0 }}>
                                     <circle cx="12" cy="12" r="10" />
                                     <line x1="12" y1="8" x2="12" y2="12" />
                                     <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -208,10 +208,10 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                 
                                 {/* Original Transaction */}
                                 <div>
-                                    <h4 style={{ fontSize: '11px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Original Transaction</h4>
+                                    <h4 style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Original Transaction</h4>
                                     
                                     <div className="form-group" style={{ marginBottom: '16px' }}>
-                                        <label className="form-label" style={{ fontSize: '12px', fontWeight: '500', color: '#374151', marginBottom: '6px', display: 'block' }}>Search Transaction <span style={{ color: '#DC2626' }}>*</span></label>
+                                        <label className="form-label" style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-primary)', marginBottom: '6px', display: 'block' }}>Search Transaction <span style={{ color: 'var(--danger)' }}>*</span></label>
                                         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                             <input type="text" className="form-control" style={{ borderRadius: '6px', border: '1px solid #D1D5DB', padding: '10px 12px', paddingRight: '36px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} placeholder="Enter S.I. / C.I. Number..." value={searchSiNo} onChange={e => setSearchSiNo(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleSearch(); } }} />
                                             <button type="button" onClick={handleSearch} style={{ position: 'absolute', right: '8px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -220,62 +220,62 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                         </div>
                                     </div>
 
-                                    <div className="info-box" style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '0' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #F3F4F6', fontSize: '13px' }}>
-                                            <span style={{ color: '#6B7280' }}>Receipt Number</span>
-                                            <span style={{ fontWeight: '600', color: '#111827' }}>{txToUse ? (txToUse.si_no || txToUse.receipt_number || '—') : '-'}</span>
+                                    <div className="info-box" style={{ border: '1px solid var(--border)', borderRadius: '6px', padding: '0' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
+                                            <span style={{ color: 'var(--text-secondary)' }}>Receipt Number</span>
+                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{txToUse ? (txToUse.si_no || txToUse.receipt_number || '—') : '-'}</span>
                                         </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #F3F4F6', fontSize: '13px' }}>
-                                            <span style={{ color: '#6B7280' }}>Transaction Date</span>
-                                            <span style={{ fontWeight: '600', color: '#111827' }}>{txToUse ? fmtDate(txToUse.date || txToUse.created_at) : '-'}</span>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
+                                            <span style={{ color: 'var(--text-secondary)' }}>Transaction Date</span>
+                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{txToUse ? fmtDate(txToUse.date || txToUse.created_at) : '-'}</span>
                                         </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #F3F4F6', fontSize: '13px' }}>
-                                            <span style={{ color: '#6B7280' }}>Customer</span>
-                                            <span style={{ fontWeight: '600', color: '#111827' }}>{txToUse ? (txToUse.customer?.name || 'Walk-in') : '-'}</span>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
+                                            <span style={{ color: 'var(--text-secondary)' }}>Customer</span>
+                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{txToUse ? (txToUse.customer?.name || 'Walk-in') : '-'}</span>
                                         </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #F3F4F6', fontSize: '13px' }}>
-                                            <span style={{ color: '#6B7280' }}>Served By</span>
-                                            <span style={{ fontWeight: '600', color: '#111827' }}>{txToUse ? (txToUse.checker?.name || txToUse.cashier?.name || '—') : '-'}</span>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
+                                            <span style={{ color: 'var(--text-secondary)' }}>Served By</span>
+                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{txToUse ? (txToUse.checker?.name || txToUse.cashier?.name || '—') : '-'}</span>
                                         </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #F3F4F6', fontSize: '13px' }}>
-                                            <span style={{ color: '#6B7280' }}>Original Amount</span>
-                                            <span style={{ fontWeight: '600', color: '#111827' }}>{txToUse ? fmt(txToUse.amount || txToUse.total) : '-'}</span>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
+                                            <span style={{ color: 'var(--text-secondary)' }}>Original Amount</span>
+                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{txToUse ? fmt(txToUse.amount || txToUse.total) : '-'}</span>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', fontSize: '13px' }}>
-                                            <span style={{ color: '#6B7280' }}>Payment Method</span>
-                                            <span style={{ fontWeight: '600', color: '#111827' }}>{txToUse ? (txToUse.payment_method || '—') : '-'}</span>
+                                            <span style={{ color: 'var(--text-secondary)' }}>Payment Method</span>
+                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{txToUse ? (txToUse.payment_method || '—') : '-'}</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Select Type */}
                                 <div>
-                                    <h4 style={{ fontSize: '11px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Select Type</h4>
+                                    <h4 style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Select Type</h4>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                        <div onClick={() => handleActionTypeSelect('Refund')} style={{ border: actionType === 'Refund' ? '2px solid #3B82F6' : '1px solid #E5E7EB', borderRadius: '8px', padding: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '8px', transition: 'all 0.2s', backgroundColor: actionType === 'Refund' ? '#EFF6FF' : '#FFFFFF' }}>
-                                            <div style={{ fontSize: '24px', color: actionType === 'Refund' ? '#3B82F6' : '#9CA3AF', marginBottom: '4px' }}>
+                                        <div onClick={() => handleActionTypeSelect('Refund')} style={{ border: actionType === 'Refund' ? '2px solid var(--primary)' : '1px solid var(--border)', borderRadius: '8px', padding: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '8px', transition: 'all 0.2s', backgroundColor: actionType === 'Refund' ? 'rgba(59,130,246,0.12)' : 'var(--bg-secondary)' }}>
+                                            <div style={{ fontSize: '24px', color: actionType === 'Refund' ? 'var(--primary)' : 'var(--text-muted)', marginBottom: '4px' }}>
                                                 <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                                             </div>
-                                            <span style={{ fontWeight: '600', fontSize: '14px', color: '#111827' }}>Refund</span>
-                                            <span style={{ fontSize: '12px', color: '#6B7280' }}>Full money back</span>
+                                            <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' }}>Refund</span>
+                                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Full money back</span>
                                         </div>
-                                        <div onClick={() => handleActionTypeSelect('Return')} style={{ border: actionType === 'Return' ? '2px solid #3B82F6' : '1px solid #E5E7EB', borderRadius: '8px', padding: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '8px', transition: 'all 0.2s', backgroundColor: actionType === 'Return' ? '#EFF6FF' : '#FFFFFF' }}>
-                                            <div style={{ fontSize: '24px', color: actionType === 'Return' ? '#3B82F6' : '#9CA3AF', marginBottom: '4px' }}>
+                                        <div onClick={() => handleActionTypeSelect('Return')} style={{ border: actionType === 'Return' ? '2px solid var(--primary)' : '1px solid var(--border)', borderRadius: '8px', padding: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '8px', transition: 'all 0.2s', backgroundColor: actionType === 'Return' ? 'rgba(59,130,246,0.12)' : 'var(--bg-secondary)' }}>
+                                            <div style={{ fontSize: '24px', color: actionType === 'Return' ? 'var(--primary)' : 'var(--text-muted)', marginBottom: '4px' }}>
                                                 <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
                                             </div>
-                                            <span style={{ fontWeight: '600', fontSize: '14px', color: '#111827' }}>Return</span>
-                                            <span style={{ fontSize: '12px', color: '#6B7280' }}>Exchange or credit</span>
+                                            <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' }}>Return</span>
+                                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Exchange or credit</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Refund Reason */}
                                 <div>
-                                    <h4 style={{ fontSize: '11px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Refund/Return Reason <span style={{ color: '#DC2626' }}>*</span></h4>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0', border: '1px solid #E5E7EB', borderRadius: '6px', overflow: 'hidden' }}>
+                                    <h4 style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Refund/Return Reason <span style={{ color: 'var(--danger)' }}>*</span></h4>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
                                         {['Defective / Damaged Item', 'Wrong Item Dispensed', 'Customer Changed Mind', 'Other'].map((r, i) => (
-                                            <label key={r} style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', fontSize: '13px', color: '#374151', borderBottom: i < 3 ? '1px solid #F3F4F6' : 'none', background: '#FFFFFF' }}>
-                                                <input type="radio" checked={reason === r} onChange={() => setReason(r)} style={{ accentColor: '#3B82F6', width: '16px', height: '16px', margin: 0 }} />
+                                            <label key={r} style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)', borderBottom: i < 3 ? `1px solid var(--border)` : 'none', background: 'var(--bg-secondary)' }}>
+                                                <input type="radio" checked={reason === r} onChange={() => setReason(r)} style={{ accentColor: 'var(--primary)', width: '16px', height: '16px', margin: 0 }} />
                                                 <span>{r}</span>
                                             </label>
                                         ))}
@@ -289,15 +289,15 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
 
                             {/* Right Column */}
                             <div className="refund-column" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                <div style={{ borderTop: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB', maxHeight: '200px', overflowY: 'auto' }}>
+                                <div style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', maxHeight: '200px', overflowY: 'auto' }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                        <thead style={{ position: 'sticky', top: 0, background: '#FFFFFF', zIndex: 10 }}>
+                                        <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 10 }}>
                                             <tr>
-                                                <th style={{ padding: '12px 8px', fontSize: '11px', color: '#6B7280', fontWeight: '600', textTransform: 'uppercase', borderBottom: '1px solid #E5E7EB' }}>Select</th>
-                                                <th style={{ padding: '12px 8px', fontSize: '11px', color: '#6B7280', fontWeight: '600', textTransform: 'uppercase', borderBottom: '1px solid #E5E7EB' }}>Item</th>
-                                                <th style={{ padding: '12px 8px', fontSize: '11px', color: '#6B7280', fontWeight: '600', textTransform: 'uppercase', textAlign: 'center', borderBottom: '1px solid #E5E7EB' }}>Qty</th>
-                                                <th style={{ padding: '12px 8px', fontSize: '11px', color: '#6B7280', fontWeight: '600', textTransform: 'uppercase', textAlign: 'right', borderBottom: '1px solid #E5E7EB' }}>Price</th>
-                                                <th style={{ padding: '12px 8px', fontSize: '11px', color: '#6B7280', fontWeight: '600', textTransform: 'uppercase', textAlign: 'right', borderBottom: '1px solid #E5E7EB' }}>Total</th>
+                                                <th style={{ padding: '12px 8px', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>Select</th>
+                                                <th style={{ padding: '12px 8px', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>Item</th>
+                                                <th style={{ padding: '12px 8px', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>Qty</th>
+                                                <th style={{ padding: '12px 8px', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Price</th>
+                                                <th style={{ padding: '12px 8px', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Total</th>
                                             </tr>
                                         </thead>
                                         <tbody id="refundItemsTableBody">
@@ -310,13 +310,13 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                                 const sel = selectedItems[item.id] || { selected: false, qty: 0 };
                                                 const total = sel.qty * price;
                                                 return (
-                                                    <tr key={index} style={{ borderBottom: '1px solid #F3F4F6' }}>
+                                                    <tr key={index} style={{ borderBottom: '1px solid var(--border)' }}>
                                                         <td style={{ padding: '12px 8px', verticalAlign: 'middle' }}>
-                                                            <input type="checkbox" checked={sel.selected} onChange={() => handleItemToggle(item.id)} style={{ accentColor: '#3B82F6', width: '16px', height: '16px', margin: 0 }} />
+                                                            <input type="checkbox" checked={sel.selected} onChange={() => handleItemToggle(item.id)} style={{ accentColor: 'var(--primary)', width: '16px', height: '16px', margin: 0 }} />
                                                         </td>
                                                         <td style={{ padding: '12px 8px' }}>
-                                                            <strong style={{ color: '#111827', fontSize: '13px' }}>{name}</strong>
-                                                            <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>Part #: {partNo}</div>
+                                                            <strong style={{ color: 'var(--text-primary)', fontSize: '13px' }}>{name}</strong>
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>Part #: {partNo}</div>
                                                         </td>
                                                         <td style={{ padding: '8px', textAlign: 'center', verticalAlign: 'middle' }}>
                                                             <input 
@@ -330,21 +330,21 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                                                     width: '58px',
                                                                     padding: '4px 6px',
                                                                     borderRadius: '6px',
-                                                                    border: '1px solid #CBD5E1',
+                                                                    border: '1px solid var(--border)',
                                                                     textAlign: 'center',
                                                                     fontSize: '13px',
                                                                     fontWeight: '600',
-                                                                    backgroundColor: sel.selected ? '#FFFFFF' : '#F1F5F9',
-                                                                    color: sel.selected ? '#0F172A' : '#94A3B8'
+                                                                    backgroundColor: sel.selected ? 'var(--bg-card)' : 'var(--bg-secondary)',
+                                                                    color: sel.selected ? 'var(--text-primary)' : 'var(--text-muted)'
                                                                 }}
                                                             />
-                                                            <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>max {item.qty}</div>
+                                                            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>max {item.qty}</div>
                                                         </td>
                                                         <td style={{ textAlign: 'right', padding: '12px 8px', verticalAlign: 'middle' }}>
-                                                            <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>{fmt(price)}</span>
+                                                            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>{fmt(price)}</span>
                                                         </td>
                                                         <td style={{ textAlign: 'right', padding: '12px 8px', verticalAlign: 'middle' }}>
-                                                            <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>{fmt(total)}</span>
+                                                            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>{fmt(total)}</span>
                                                         </td>
                                                     </tr>
                                                 );
@@ -368,9 +368,9 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                 </div>
 
                                 <div>
-                                    <h4 style={{ fontSize: '11px', fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px' }}>Refund Amount</h4>
-                                    <div style={{ backgroundColor: '#FEE2E2', borderRadius: '6px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: '700', color: '#DC2626' }}>
+                                    <h4 style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px' }}>Refund Amount</h4>
+                                    <div style={{ backgroundColor: 'var(--danger-light)', borderRadius: '6px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', border: '1px solid rgba(239,68,68,0.2)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: '700', color: 'var(--danger)' }}>
                                             <span>Total Refund Amount</span>
                                             <span>{fmt(totalRefund)}</span>
                                         </div>
@@ -379,7 +379,7 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                     <div>
-                                        <label style={{ fontSize: '12px', color: '#4B5563', marginBottom: '4px', display: 'block' }}>Refund Method</label>
+                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Refund Method</label>
                                         <IOSSelect
                                             value={refundMethod}
                                             onChange={(e) => setRefundMethod(e.target.value)}
@@ -393,7 +393,7 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                         <div>
-                                            <label style={{ fontSize: '12px', color: '#4B5563', marginBottom: '4px', display: 'block' }}>Processed By</label>
+                                            <label style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Processed By</label>
                                             <IOSSelect
                                                 value={approver}
                                                 onChange={(e) => setApprover(e.target.value)}
@@ -404,7 +404,7 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                             />
                                         </div>
                                         <div>
-                                            <label style={{ fontSize: '12px', color: '#4B5563', marginBottom: '4px', display: 'block' }}>Approval Code (Optional)</label>
+                                            <label style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Approval Code (Optional)</label>
                                             <input type="text" className="form-control" placeholder="Enter supervisor approval code if required" value={approvalCode} onChange={(e) => setApprovalCode(e.target.value)} style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px 12px', fontSize: '13px', width: '100%' }} />
                                         </div>
                                     </div>
@@ -417,8 +417,8 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                         </div>
                     </div>
 
-                    <div className="modal-footer" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #E5E7EB', backgroundColor: '#FFFFFF' }}>
-                        <button type="button" className="btn" onClick={onClose} style={{ backgroundColor: '#F3F4F6', color: '#374151', border: 'none', padding: '10px 24px', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
+                    <div className="modal-footer" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)' }}>
+                        <button type="button" className="btn" onClick={onClose} style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border)', padding: '10px 24px', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
                         <button 
                             type="submit" 
                             disabled={isSubmitting || isAlreadyProcessed} 

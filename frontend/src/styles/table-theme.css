@@ -13,6 +13,17 @@
   --table-row-height: 48px;
 }
 
+[data-theme="dark"], html.dark-theme, body.dark-theme {
+  --table-text-primary: #F8FAFC;
+  --table-text-secondary: #94A3B8;
+  --table-text-muted: #64748B;
+  --table-header-bg: #1E293B;
+  --table-border: #334155;
+  --table-border-subtle: #263354;
+  --table-hover: rgba(59, 130, 246, 0.15);
+}
+
+
 /* Base Data Table Rules */
 table.data-table,
 table.pos-table,

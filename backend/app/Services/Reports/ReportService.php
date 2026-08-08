@@ -359,15 +359,64 @@ class ReportService
 
         $totalDamaged = (int) Product::sum('damaged');
 
+        // ── Top Categories by revenue ────────────────────────────────────────────
+        $catQuery = TransactionItem::select(
+                'categories.id as category_id',
+                'categories.name as category_name',
+                DB::raw('SUM(transaction_items.price * transaction_items.qty) as revenue')
+            )
+            ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+            ->join('products', 'transaction_items.product_id', '=', 'products.id')
+            ->join('categories', 'products.category_id', '=', 'categories.id')
+            ->whereIn('transactions.status', ['Completed', 'Deposit', 'Paid']);
+
+        if ($actualStart && $actualEnd) {
+            $catQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
+        }
+
+        $catRows = $catQuery
+            ->groupBy('categories.id', 'categories.name')
+            ->orderByDesc('revenue')
+            ->get();
+
+        $totalCatRevenue = $catRows->sum('revenue');
+        $top3 = $catRows->take(3);
+        $rest = $catRows->slice(3);
+
+        $palette = ['#3B82F6', '#10B981', '#F59E0B'];
+
+        $topCategories = $top3->values()->map(function ($row, $i) use ($totalCatRevenue, $palette) {
+            $pct = $totalCatRevenue > 0 ? round(($row->revenue / $totalCatRevenue) * 100) : 0;
+            return [
+                'name'       => $row->category_name,
+                'revenue'    => (float) $row->revenue,
+                'percentage' => $pct,
+                'color'      => $palette[$i] ?? '#64748B',
+            ];
+        })->toArray();
+
+        if ($rest->isNotEmpty()) {
+            $othersRevenue = $rest->sum('revenue');
+            $sumSoFar = array_sum(array_column($topCategories, 'percentage'));
+            $topCategories[] = [
+                'name'       => 'Others',
+                'revenue'    => (float) $othersRevenue,
+                'percentage' => max(0, 100 - $sumSoFar),
+                'color'      => '#64748B',
+            ];
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+
         return [
-            'top_sellers' => $topSellers,
+            'top_sellers'      => $topSellers,
             'revenue_per_product' => $revenuePerProduct,
-            'dead_stock' => $deadStock,
-            'totals' => [
+            'dead_stock'       => $deadStock,
+            'totals'           => [
                 'returns_qty' => $totalReturnsQty,
                 'refunds_qty' => $totalRefundsQty,
                 'damaged_qty' => $totalDamaged,
             ],
+            'top_categories'   => $topCategories,
         ];
     }
 

@@ -18,7 +18,7 @@ export function useDashboard() {
         todayRevenue: 0,
         productCount: 0,
         variantCount: 0,
-        topProduct: { name: '-', qty: 0 }
+        topCategories: []
     });
 
     // Replace local fetch with context
@@ -59,7 +59,7 @@ export function useDashboard() {
                 setStats(prev => ({
                     ...prev,
                     todayRevenue: cachedStats.todayRevenue,
-                    topProduct: cachedStats.topProduct,
+                    topCategories: cachedStats.topCategories || [],
                     last7Days: cachedStats.last7Days || []
                 }));
 
