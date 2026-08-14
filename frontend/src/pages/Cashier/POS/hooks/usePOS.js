@@ -386,6 +386,7 @@ export default function usePOS() {
                 customer_phone: customerPhone || null,
                 checker_id: selectedChecker ? selectedChecker : null,
                 payment_method: paymentMethodStr,
+                cheque_number: paymentObj.cheque_number || payload.cheque_number || null,
                 doc_type: docTypeStr,
                 amount_tendered: amountTenderedVal,
                 split_method_1: paymentObj.split?.[0]?.method || null,
@@ -398,11 +399,13 @@ export default function usePOS() {
             });
 
             if (res.status === 201 || res.status === 200) {
-                // Invalidate sales, history, daily-sales, and customer caches to force instant data refresh
+                // Invalidate sales, history, daily-sales, dashboard, and customer caches to force instant data refresh
                 invalidateCachePage('/customer-log');
                 invalidateCachePage('sales', 1);
                 invalidateCachePage('history', 1);
                 invalidateCachePage('daily-sales', 1);
+                resetDashboardCache();
+                resetReportsCache();
 
                 // Only reset customer cache if a new customer was registered
                 const registeredNewCustomer = !selectedCustomer && newCustomerName.trim() !== '';

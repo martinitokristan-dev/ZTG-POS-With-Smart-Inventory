@@ -24,7 +24,7 @@ export default function MySalesTable({ loading, items, fmt, fmtDate }) {
                     <thead style={{ borderBottom: '2px solid var(--table-border)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B', background: 'var(--table-header-bg)' }}>
                         <tr>
                             <th style={{ padding: '12px 16px', fontWeight: '600' }}>Date</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>S.I./C.I./D.R.</th>
+                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>S.I./C.R./D.R.</th>
                             <th style={{ padding: '12px 16px', fontWeight: '600' }}>Part No.</th>
                             <th style={{ padding: '12px 16px', fontWeight: '600' }}>Product</th>
                             <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'center' }}>Qty</th>
@@ -39,14 +39,13 @@ export default function MySalesTable({ loading, items, fmt, fmtDate }) {
                     </thead>
                     <tbody style={{ fontSize: '15px' }}>
                         {items.map((item, i) => {
-                            const isDeduction = (item._txStatus === 'Refund' || item._txStatus === 'Return' || item._txStatus === 'Void');
-                            const amountColor = isDeduction ? 'var(--danger, #DC2626)' : 'var(--success, #16A34A)';
-                            const amountPrefix = isDeduction ? '- ' : '';
+                            const amountColor = 'var(--success, #16A34A)';
+                            const amountPrefix = '';
 
                             const qty = Number(item.qty || 1);
                             const unitPrice = Number(item.original_price || item.price || 0);
                             const itemDisc = Number(item.discount || item.item_discount || 0);
-                            const discountVal = itemDisc > 0 ? itemDisc * qty : Number(item._txDiscountAmount || 0);
+                            const discountVal = itemDisc > 0 ? itemDisc : Number(item._txDiscountAmount || 0);
                             const grossRow = qty * unitPrice;
                             const netRowAmount = Math.max(0, grossRow - discountVal);
 
@@ -54,7 +53,7 @@ export default function MySalesTable({ loading, items, fmt, fmtDate }) {
                                 <tr key={i} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '48px' }}>
                                     <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '500' }}>{fmtDate(item._txDate)}</td>
                                     <td style={{ padding: '12px 16px', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
-                                        <CopyableText text={item._txReceipt} label="S.I./C.I./D.R." codeStyle={{ fontSize: '15px', color: 'var(--table-text-primary)', fontWeight: '600' }} />
+                                        <CopyableText text={item._txReceipt} label="S.I./C.R./D.R." codeStyle={{ fontSize: '15px', color: 'var(--table-text-primary)', fontWeight: '600' }} />
                                     </td>
                                     <td style={{ padding: '12px 16px', color: 'var(--table-text-primary)', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.part_no || item.partNo || 'N/A'}</td>
                                     <td style={{ padding: '12px 16px' }}>
@@ -69,7 +68,7 @@ export default function MySalesTable({ loading, items, fmt, fmtDate }) {
                                         {discountVal > 0 ? `-${fmt(discountVal)}` : '—'}
                                     </td>
                                     <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '500' }}>{(item._txChecker || '—').split(' ')[0]}</td>
-                                    <td style={{ padding: '12px 16px' }}><StatusBadge status={item._txStatus} /></td>
+                                    <td style={{ padding: '12px 16px' }}><StatusBadge status={item._txStatus === 'Refund' || item._txStatus === 'Return' ? 'Completed' : item._txStatus} /></td>
                                 </tr>
                             );
                         })}

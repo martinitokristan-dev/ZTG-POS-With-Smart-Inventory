@@ -391,4 +391,110 @@ class PhaseFourTest extends TestCase
         ]);
     }
 
+    public function test_checkout_with_price_tier_2()
+    {
+        $payload = [
+            'cart' => [
+                ['product_id' => $this->productA->id, 'qty' => 2, 'price_tier' => 'price2'], // 2750 * 2 = 5500
+            ],
+            'customer_name'   => 'Retail Customer',
+            'payment_method'  => 'Cash',
+            'doc_type'        => 'S.I.',
+            'amount_tendered' => 6000.00,
+            'checker_id'      => $this->checker->id,
+        ];
+
+        $response = $this->actingAs($this->cashier)
+            ->postJson('/api/pos/checkout', $payload);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('transactions', [
+            'amount' => 5500.00,
+        ]);
+        $this->assertDatabaseHas('transaction_items', [
+            'price_tier' => 'price2',
+            'price'      => 2750.00,
+        ]);
+    }
+
+    public function test_checkout_with_item_level_discount()
+    {
+        $payload = [
+            'cart' => [
+                ['product_id' => $this->productA->id, 'qty' => 1, 'price_tier' => 'price1', 'item_discount' => 500.00], // 1 * 2500 gross - 500 item disc = 2000 total
+            ],
+            'customer_name'   => 'Discounted Buyer',
+            'payment_method'  => 'Cash',
+            'doc_type'        => 'S.I.',
+            'amount_tendered' => 2000.00,
+            'checker_id'      => $this->checker->id,
+        ];
+
+        $response = $this->actingAs($this->cashier)
+            ->postJson('/api/pos/checkout', $payload);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('transactions', [
+            'amount' => 2000.00,
+        ]);
+        $this->assertDatabaseHas('transaction_items', [
+            'discount' => 500.00,
+        ]);
+    }
+
+    public function test_checkout_with_custom_amount_order_discount()
+    {
+        $payload = [
+            'cart' => [
+                ['product_id' => $this->productA->id, 'qty' => 1, 'price_tier' => 'price1'], // 2500
+            ],
+            'customer_name'   => 'VIP Customer',
+            'payment_method'  => 'Cash',
+            'doc_type'        => 'S.I.',
+            'amount_tendered' => 2000.00,
+            'checker_id'      => $this->checker->id,
+            'discount_amount' => 500.00,
+            'discount_type'   => 'CustomAmount',
+        ];
+
+        $response = $this->actingAs($this->cashier)
+            ->postJson('/api/pos/checkout', $payload);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('transactions', [
+            'amount'          => 2000.00,
+            'discount_amount' => 500.00,
+            'discount_type'   => 'CustomAmount',
+        ]);
+    }
+
+    public function test_checkout_with_custom_percent_order_discount()
+    {
+        $payload = [
+            'cart' => [
+                ['product_id' => $this->productA->id, 'qty' => 1, 'price_tier' => 'price1'], // 2500
+            ],
+            'customer_name'   => 'Senior Customer',
+            'payment_method'  => 'Cash',
+            'doc_type'        => 'S.I.',
+            'amount_tendered' => 2250.00,
+            'checker_id'      => $this->checker->id,
+            'discount_amount' => 250.00, // 10% of 2500
+            'discount_type'   => 'CustomPercent',
+            'discount_rate'   => 10.00,
+        ];
+
+        $response = $this->actingAs($this->cashier)
+            ->postJson('/api/pos/checkout', $payload);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('transactions', [
+            'amount'          => 2250.00,
+            'discount_amount' => 250.00,
+            'discount_type'   => 'CustomPercent',
+            'discount_rate'   => 10.00,
+        ]);
+    }
+
 }
+

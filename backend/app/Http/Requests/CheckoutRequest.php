@@ -33,7 +33,8 @@ class CheckoutRequest extends FormRequest
 
             // Document & payment
             'payment_method'         => 'required|string',
-            'doc_type'               => 'required|string|in:S.I.,D.R.,C.I.',
+            'cheque_number'          => 'required_if:payment_method,Cheque|nullable|string|max:100',
+            'doc_type'               => 'required|string|in:S.I.,D.R.,C.R.',
 
             // Cash payment
             'amount_tendered'        => 'required_if:payment_method,Cash|nullable|numeric|min:0',

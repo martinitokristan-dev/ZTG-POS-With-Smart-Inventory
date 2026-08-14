@@ -548,7 +548,7 @@ TRANSACTION (database transaction — all or nothing):
        amount: grand_total
        amount_tendered: tendered_value
        payment_method: "Cash" | "GCash" | "Bank" | "Split: ..."
-       doc_type: "S.I." | "D.R." | "C.I."
+       doc_type: "S.I." | "D.R." | "C.R."
        status: "Completed"
        type: "sale"
      }
@@ -568,7 +568,7 @@ TRANSACTION (database transaction — all or nothing):
 ```
 S.I. (Sales Invoice):     SI-{YEAR}-{3 random digits}
 D.R. (Delivery Receipt):  DR-{YEAR}-{3 random digits}
-C.I. (Charge Invoice):    CI-{YEAR}-{3 random digits}
+C.R. (Collection Receipt): CR-{YEAR}-{3 random digits}
 ```
 
 ### Receipt/Invoice Content (BIR/EOPT Compliant)

@@ -14,7 +14,10 @@ return new class extends Migration
         Schema::create('reservation_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('reservation_id')->constrained('reservations')->onDelete('cascade');
-            $table->foreignId('product_id')->constrained('products')->onDelete('restrict');
+            $table->foreignId('product_id')->nullable()->constrained('products')->onDelete('set null');
+            $table->string('part_no', 100)->nullable();
+            $table->string('item_name', 255)->nullable();
+            $table->string('engine_plate_number', 100)->nullable();
             $table->integer('qty');
             $table->decimal('price', 12, 2);
         });

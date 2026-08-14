@@ -7,13 +7,14 @@ import api from '../../../../shared/api';
 const docTypeOptions = [
     { value: 'S.I.', label: 'S.I. (Sales Invoice)' },
     { value: 'D.R.', label: 'D.R. (Delivery Receipt)' },
-    { value: 'C.I.', label: 'C.I. (Charge Invoice)' }
+    { value: 'C.R.', label: 'C.R. (Collection Receipt)' }
 ];
 
 const paymentMethodOptions = [
     { value: 'Cash', label: 'Cash' },
     { value: 'GCash', label: 'GCash' },
     { value: 'Bank Transfer', label: 'Bank Transfer' },
+    { value: 'Cheque', label: 'Cheque' },
     { value: 'Split', label: 'Split Payment' },
     { value: 'P.O. (Pending)', label: 'P.O. (Pending)' }
 ];
@@ -42,6 +43,9 @@ export default function CheckoutModal({
     
     // Cash Fields
     const [amountTendered, setAmountTendered] = useState('');
+    
+    // Cheque Fields
+    const [chequeNumber, setChequeNumber] = useState('');
     
     // Split Fields
     const [splitMethod1, setSplitMethod1] = useState('GCash');
@@ -119,6 +123,16 @@ export default function CheckoutModal({
                 method: 'Cash',
                 amount_tendered: tenderedVal,
                 change: changeDue
+            };
+        } else if (paymentMethod === 'Cheque') {
+            if (!chequeNumber.trim()) {
+                setError("Please enter the Cheque Number.");
+                return;
+            }
+            paymentData = {
+                method: 'Cheque',
+                cheque_number: chequeNumber.trim(),
+                amount_tendered: tenderedVal || cartTotals.total
             };
         } else {
             paymentData = { method: paymentMethod };
@@ -205,6 +219,7 @@ export default function CheckoutModal({
         setDocType('S.I.');
         setPaymentMethod('Cash');
         setAmountTendered('');
+        setChequeNumber('');
         onClose();
     };
 
@@ -351,8 +366,14 @@ export default function CheckoutModal({
                                 <div style={{ fontSize: '12px', color: '#64748B' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                                         <span>Payment Method:</span>
-                                        <span style={{ fontWeight: '600', color: '#1E293B' }}>{completedTx.payment_method}</span>
+                                        <span style={{ fontWeight: '600', color: '#1E293B' }}>{completedTx.payment_method?.replace(/\s*\([^)]*\)/g, '').trim()}</span>
                                     </div>
+                                    {completedTx.cheque_number && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                            <span>Cheque Number:</span>
+                                            <span style={{ fontWeight: '600', color: '#1E293B' }}>{completedTx.cheque_number}</span>
+                                        </div>
+                                    )}
                                     {!isSplit ? (
                                         completedTx.payment_method === 'Cash' && (
                                             <>
@@ -607,6 +628,44 @@ export default function CheckoutModal({
                             <IOSSelect value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} options={paymentMethodOptions} />
                         </div>
 
+                        {paymentMethod === 'Cheque' && (
+                            <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label className="form-label" style={{ fontSize: '9px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Cheque Number <span style={{ color: 'var(--danger, #EF4444)' }}>*</span></label>
+                                    <input type="text" className="form-control form-control-sm" placeholder="e.g. CHK-987654" style={{ fontSize: '13px', fontWeight: '700' }} value={chequeNumber} onChange={e => setChequeNumber(e.target.value)} required autoFocus />
+                                </div>
+                            </div>
+                        )}
+
+                        {paymentMethod === 'Cash' && (
+                            <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                    <div className="form-group" style={{ marginBottom: 0 }}>
+                                        <label className="form-label" style={{ fontSize: '9px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Cash Received *</label>
+                                        <input type="number" className="form-control form-control-sm" placeholder="₱0.00" style={{ fontSize: '13px', fontWeight: '700', textAlign: 'right' }} value={amountTendered} onChange={e => setAmountTendered(e.target.value)} />
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: 0 }}>
+                                        <label className="form-label" style={{ fontSize: '9px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Change Due</label>
+                                        <input type="text" className="form-control form-control-sm" placeholder="₱0.00" readOnly style={{ fontSize: '13px', fontWeight: '700', textAlign: 'right', color: changeDueColor, backgroundColor: changeDueBg }} value={fmt(changeDue)} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {paymentMethod === 'Split' && (
+                            <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ fontSize: '9px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Split Payment Details</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', alignItems: 'center' }}>
+                                    <IOSSelect value={splitMethod1} onChange={e => setSplitMethod1(e.target.value)} options={splitMethodOptions} />
+                                    <input type="number" className="form-control form-control-sm" placeholder="Amount 1" style={{ fontWeight: '700', textAlign: 'right' }} value={splitAmount1} onChange={e => setSplitAmount1(e.target.value)} />
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', alignItems: 'center' }}>
+                                    <IOSSelect value={splitMethod2} onChange={e => setSplitMethod2(e.target.value)} options={splitMethodOptions} />
+                                    <input type="number" className="form-control form-control-sm" placeholder="Amount 2" style={{ fontWeight: '700', textAlign: 'right' }} value={splitAmount2} onChange={e => setSplitAmount2(e.target.value)} />
+                                </div>
+                            </div>
+                        )}
+
                         {/* Whole-Sale / Order Discount Controls */}
                         <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Order Discount (Whole Sale)</div>
@@ -652,35 +711,6 @@ export default function CheckoutModal({
                                 </div>
                             )}
                         </div>
-
-                        {paymentMethod === 'Split' && (
-                            <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <div style={{ fontSize: '9px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Split Payment Details</div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', alignItems: 'center' }}>
-                                    <IOSSelect value={splitMethod1} onChange={e => setSplitMethod1(e.target.value)} options={splitMethodOptions} />
-                                    <input type="number" className="form-control form-control-sm" placeholder="Amount 1" style={{ fontWeight: '700', textAlign: 'right' }} value={splitAmount1} onChange={e => setSplitAmount1(e.target.value)} />
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', alignItems: 'center' }}>
-                                    <IOSSelect value={splitMethod2} onChange={e => setSplitMethod2(e.target.value)} options={splitMethodOptions} />
-                                    <input type="number" className="form-control form-control-sm" placeholder="Amount 2" style={{ fontWeight: '700', textAlign: 'right' }} value={splitAmount2} onChange={e => setSplitAmount2(e.target.value)} />
-                                </div>
-                            </div>
-                        )}
-
-                        {paymentMethod === 'Cash' && (
-                            <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                    <div className="form-group" style={{ marginBottom: 0 }}>
-                                        <label className="form-label" style={{ fontSize: '9px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Cash Received *</label>
-                                        <input type="number" className="form-control form-control-sm" placeholder="₱0.00" style={{ fontSize: '13px', fontWeight: '700', textAlign: 'right' }} value={amountTendered} onChange={e => setAmountTendered(e.target.value)} />
-                                    </div>
-                                    <div className="form-group" style={{ marginBottom: 0 }}>
-                                        <label className="form-label" style={{ fontSize: '9px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Change Due</label>
-                                        <input type="text" className="form-control form-control-sm" placeholder="₱0.00" readOnly style={{ fontSize: '13px', fontWeight: '700', textAlign: 'right', color: changeDueColor, backgroundColor: changeDueBg }} value={fmt(changeDue)} />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
                 

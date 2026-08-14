@@ -21,12 +21,17 @@ return new class extends Migration
             $table->foreignId('checker_id')->nullable()->constrained('checkers')->onDelete('set null');
             $table->integer('total_qty')->default(0);
             $table->decimal('amount', 12, 2)->default(0);
+            $table->decimal('original_amount', 12, 2)->nullable();
+            $table->decimal('refunded_amount', 12, 2)->default(0);
             $table->decimal('discount_amount', 12, 2)->default(0);
             $table->string('discount_type', 50)->nullable();
             $table->decimal('discount_rate', 5, 2)->default(0);
             $table->decimal('amount_tendered', 12, 2)->nullable();
             $table->string('payment_method', 255);
-            $table->string('doc_type', 50)->nullable(); // PHP Enum: S.I., D.R., C.I.
+            $table->string('cheque_number', 100)->nullable();
+            $table->string('cheque_bank', 100)->nullable();
+            $table->date('cheque_date')->nullable();
+            $table->string('doc_type', 50)->nullable(); // PHP Enum: S.I., D.R., C.R.
             $table->string('status', 50); // PHP Enum: Completed, Refund, Return, Void, Pending, Deposit, Paid, Restocked, Damaged, Security Alert
             $table->string('type', 50)->nullable(); // PHP Enum: sale, reservation, inventory, system
             $table->string('refund_reason', 255)->nullable();

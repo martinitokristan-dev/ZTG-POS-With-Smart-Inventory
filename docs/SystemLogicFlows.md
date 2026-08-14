@@ -215,6 +215,46 @@ auto_deduct_stock   = true
 
 ---
 
+## Phase 8 — Partial Refund & Net Sales Engine (Financial Accuracy & Auditing)
+
+> **Why eighth?** In retail heavy parts, customers frequently return only a portion of their order (e.g., 1 damaged gasket out of 5 purchased). A full transaction cancellation would wipe out valid revenue. This phase guarantees exact mathematical net sales, frozen historical audit amounts, and real-time inventory restock options.
+
+### Build Order:
+1. **Schema Enhancements:**
+   - Add `original_amount` (DECIMAL 12,2) to `transactions` (frozen gross total at checkout).
+   - Add `refunded_amount` (DECIMAL 12,2, default 0) to `transactions` (tracks cumulative refunds).
+   - Add `refunded_qty` (INT, default 0) to `transaction_items` (tracks cumulative returned units).
+   - Add `cheque_number`, `cheque_bank`, `cheque_date` to `transactions` and `reservations`.
+   - Add compound indexes: `INDEX (date, status)`, `INDEX (customer_id, date)`, `INDEX (cashier_id, date)`.
+2. **TransactionService Refactoring:**
+   - Update `processRefundOrReturn` to support partial quantity refunds per line item.
+   - Freeze `original_amount` on initial creation and never overwrite it.
+   - Increment `refunded_amount` by the refund subtotal (with VAT adjustments).
+   - Update transaction net `amount` = `original_amount - refunded_amount`.
+   - Update `transaction_items.refunded_qty` cumulatively.
+   - Support multiple sequential partial refunds against the same transaction until `refunded_qty == qty`.
+3. **ReportService Net Sales Engine:**
+   - Update `getSalesSummary` to calculate revenue from net active sales (`amount` for active transactions).
+   - Exclude 100% refunded / voided transactions from net revenue and item sold counts.
+   - Include partially refunded transactions with their net remaining revenue and net remaining items (`qty - refunded_qty`).
+   - Flag partial refunds in transaction listings (`is_partial_refund = true`, `net_qty`).
+   - Update `getProductPerformance` (Top Sellers & Top Categories) to compute sales counts and revenue net of refunded quantities.
+4. **Frontend History Logs & Sales Reports:**
+   - Update `RefundModal` with item-by-item quantity spinners (max allowable = `qty - refunded_qty`).
+   - Live calculate refund total and show net remaining balance before submission.
+   - Show `Partial Refund` badge and breakdown in `HistoryTable`, `SalesTable`, `TransactionDetailsModal`, and `SalesReportTab`.
+5. **Phase 8 Test Suite:**
+   - Comprehensive feature test `PhaseEightTest.php` covering full refunds, partial refunds, mixed scenarios, frozen `original_amount`, sequential partial refunds, and product performance net calculations.
+
+### ✅ Test Checkpoint:
+- [ ] 100 sold, 90 refunded → Sales Report shows ₱5,000 net revenue and 10 items sold.
+- [ ] Full refund → ₱0 revenue and 0 items counted in Sales Report; transaction stays in History Log for audit.
+- [ ] Multiple sequential refunds on single transaction accumulate accurately without race conditions.
+- [ ] Top Sellers & Top Categories reflect net units sold and net revenue.
+- [ ] All 10 tests in `PhaseEightTest` pass.
+
+---
+
 ## Phase Summary Timeline
 
 | Phase | Module | Depends On | Est. Duration |
@@ -226,7 +266,8 @@ auto_deduct_stock   = true
 | 5 | History Logs (Refund/Return/Void) | Phase 4 | 4-6 days |
 | 6 | Reservations | Phase 3, 4 | 4-6 days |
 | 7 | Reports, Dashboard, Notifications | Phase 3, 4, 5, 6 | 5-7 days |
-| — | **Total Estimated** | — | **29-42 days** |
+| 8 | Partial Refund & Net Sales Engine | Phase 4, 5, 7 | 4-5 days |
+| — | **Total Estimated** | — | **33-47 days** |
 
 ---
 ---
@@ -541,22 +582,39 @@ TRANSACTION (database transaction — all or nothing):
   
   4. CREATE transaction:
      {
-       si_no: "{prefix}-{year}-{random3digit}"  // SI-, DR-, or CI-
+       si_no: "{prefix}-{year}-{random3digit}"  // SI-, DR-, or CR-
        date: now()
        customer_id: customer.id (upsert customer if new)
        cashier_id: current_user.id
+       checker_id: checker_id (optional supervisor checker)
        total_qty: SUM(cart.qty)
        amount: grand_total
+       original_amount: grand_total
+       refunded_amount: 0
        amount_tendered: tendered_value
-       payment_method: "Cash" | "GCash" | "Bank" | "Split: ..."
-       doc_type: "S.I." | "D.R." | "C.I."
+       payment_method: "Cash" | "GCash" | "Bank Transfer" | "Cheque" | "Split: ..."
+       cheque_number: cheque_number (if Cheque)
+       cheque_bank: cheque_bank (if Cheque)
+       cheque_date: cheque_date (if Cheque)
+       doc_type: "S.I." | "D.R." | "C.R."
        status: "Completed"
        type: "sale"
      }
   
   5. CREATE transaction_items:
      FOR EACH item IN cart:
-       { transaction_id, product_id, qty, price, price_tier, unit }
+       { 
+         transaction_id, 
+         product_id, 
+         item_name: product.name,
+         part_no: product.part_no,
+         qty, 
+         refunded_qty: 0,
+         price, 
+         original_price: product.price1,
+         price_tier, 
+         unit 
+       }
   
   6. COMMIT
 
@@ -569,7 +627,7 @@ TRANSACTION (database transaction — all or nothing):
 ```
 S.I. (Sales Invoice):     SI-{YEAR}-{3 random digits}
 D.R. (Delivery Receipt):  DR-{YEAR}-{3 random digits}
-C.I. (Charge Invoice):    CI-{YEAR}-{3 random digits}
+C.R. (Collection Receipt): CR-{YEAR}-{3 random digits}
 ```
 
 ### Receipt/Invoice Content (BIR/EOPT Compliant)
@@ -628,36 +686,68 @@ Damaged ───────────── (standalone — inventory event)
 Security Alert ────── (standalone — failed PIN log)
 ```
 
-### Refund/Return Submit Logic
+### Refund/Return Submit Logic (Partial & Full Support)
 ```
 INPUT:
-  transaction_index, refund_type ("Refund" or "Return"),
-  selected_items[], reason, approver_id, approval_pin,
+  transaction_id, refund_type ("Refund" or "Return"),
+  items: [ { item_id, qty: refund_qty } ],
+  reason, approver_id, approval_pin,
   restore_stock (bool), mark_damaged (bool)
 
 VALIDATION:
   1. Verify approver PIN against users table
   2. Check daily void limit not exceeded
-  3. At least one item must be checked
+  3. Validate items:
+     - Each item_id belongs to transaction
+     - 1 <= refund_qty <= (item.qty - item.refunded_qty)
+  4. Ensure transaction not already fully voided or fully refunded
 
 PROCESSING (inside DB transaction):
-  FOR EACH checked item:
+  refund_subtotal = 0
+
+  FOR EACH { item_id, qty } IN items:
+    line_item = transaction.items.find(item_id)
+    line_refund_amount = line_item.price * qty
+    refund_subtotal += line_refund_amount
+
+    // Update item-level cumulative refunded units
+    line_item.refunded_qty += qty
+    line_item.save()
+
     IF restore_stock:
-      product.stock += refund_qty
+      product.stock += qty
+      product.sales_count = MAX(0, product.sales_count - qty)
+      product.status = getStockStatus(product.stock)
+      product.save()
+      
     IF mark_damaged:
-      product.damaged += refund_qty
+      product.damaged += qty
+      product.save()
   
+  // Freezes original_amount on initial state if null
+  IF transaction.original_amount IS NULL:
+    transaction.original_amount = transaction.amount
+
+  // Accumulate refunded amount
+  transaction.refunded_amount += refund_subtotal
+
+  // Recalculate net active amount
+  transaction.amount = MAX(0, transaction.original_amount - transaction.refunded_amount)
+
   UPDATE transaction:
     status = refund_type  ("Refund" or "Return")
     refund_reason = selected_reason
     action_type = "Refunded via {method}" or "Exchange / Store Credit"
-    inv_action = "Restocked to Shelf" and/or "Moved to Scrap/Damaged"
-    approver = approver.name
+    inv_action = restore_stock ? "Restocked to Shelf" : (mark_damaged ? "Moved to Damaged" : "No Stock Change")
+    approver_id = approver.id
     approval_code = pin
-    or_no = "OR-RFD-{timestamp}" or "OR-RTN-{timestamp}"
-    amount = recalculated from checked items * 1.12 (VAT inclusive)
+    or_no = "OR-RFD-" . strtoupper(uniqid())
   
-  GENERATE Official Receipt (PDF)
+  transaction.save()
+  
+  FIRE event: TransactionRefunded → real-time notifications
+  
+  RETURN updated transaction with items and net status
 ```
 
 ### Void Submit Logic

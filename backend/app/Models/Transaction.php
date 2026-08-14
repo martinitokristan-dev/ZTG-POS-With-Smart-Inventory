@@ -23,11 +23,14 @@ class Transaction extends Model
         'checker_id',
         'total_qty',
         'amount',
+        'original_amount',   // Frozen at checkout — gross sale amount before any refunds
+        'refunded_amount',   // Cumulative amount refunded — updated on Refund/Return/Void
         'discount_amount',
         'discount_type',
         'discount_rate',
         'amount_tendered',
         'payment_method',
+        'cheque_number',
         'doc_type',
         'status',
         'type',
@@ -41,6 +44,14 @@ class Transaction extends Model
         'internal_notes',
         'business_snapshot',
     ];
+
+    protected $appends = ['is_partial_refund'];
+
+    public function getIsPartialRefundAttribute(): bool
+    {
+        $status = is_object($this->status) ? $this->status->value : $this->status;
+        return in_array($status, ['Refund', 'Return']) && (float) $this->amount > 0;
+    }
 
     protected function casts(): array
     {

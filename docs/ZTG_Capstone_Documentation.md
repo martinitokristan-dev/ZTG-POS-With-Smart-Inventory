@@ -1286,6 +1286,42 @@ This pattern dynamically allows any `*.pages.dev` subdomain, including both the 
 
 ---
 
+### SPRINT 9 — Financial Precision, Cheque Processing & Enterprise Polish
+**Date: August 2026**
+
+#### 1. Phase 8: Partial Refund & Net Sales Calculation Engine
+- **Financial Precision & Audit Preservation:** Solved a critical business need where customers return a subset of items from an invoice (e.g., 90 out of 100 gasket units). 
+- **Data Architecture:** 
+  - Added frozen `original_amount` column on `transactions` table.
+  - Added cumulative `refunded_amount` on `transactions`.
+  - Added item-level `refunded_qty` on `transaction_items` table.
+- **Reporting Recalculations:** Full refunds are completely excluded from gross revenue metrics while retaining full audit records in History Logs; partial refunds display exact net sales (`original_amount - refunded_amount`) and net remaining sold units in `SalesReportTab`, `SalesLog`, and `ProductPerformance`.
+- **Sequential Partial Refunds:** Enables multiple partial refunds against the same transaction over time until all units are accounted for.
+
+#### 2. Cheque Payment Integration & Due Date Tracking
+- Enhanced POS Checkout, History Logs, and Reservations modules to support **Cheque** as a primary payment method.
+- Added database fields for `cheque_number`, `cheque_bank` (e.g., BDO, Metrobank, BPI), and `cheque_date` (issuance / maturity date) on both `transactions` and `reservations` tables.
+- Rendered bank and cheque reference metadata on printable customer invoices and transaction audit modals.
+
+#### 3. Standardized Document Classification (DocType System)
+- Implemented official Philippine commercial invoice classification:
+  - `S.I.` (Sales Invoice) — Official invoice issued for completed sales transactions.
+  - `D.R.` (Delivery Receipt) — Delivery tracking receipt for released goods.
+  - `C.R.` (Collection Receipt) — Receipt for partial collections and reservation fulfillment.
+
+#### 4. Cloudinary Independent Variant Image Management
+- Integrated Cloudinary v3 SDK with localized fallback storage for seamless variant photo uploads.
+- Provided per-variant image uploader modals with real-time uploading spinner overlays (`ImageUploadOverlay.jsx`).
+
+#### 5. Enterprise Dark Mode Theme & Design System
+- Built an end-to-end CSS variable theme system (`dark-theme.css`) with deep dark tones (`#0B1329`, `#151F38`), high-contrast tabular typography (`Inter`), and modern donut chart widgets for top categories.
+- Enforced strict vector SVG icon standards across all components, completely eliminating raw emojis from production UI.
+
+#### 6. Client-Side Excel Exporters
+- Developed `clientExcelExporter.js` and `orderFromChinaExcelExporter.js` using SheetJS (`xlsx`) for zero-latency, multi-tab financial report generation and customized purchase orders formatted for overseas parts suppliers.
+
+---
+
 ## 20. Business Details & Receipt Compliance (Business Owner's Guide)
 
 This section explains how your business information and printed receipts work in simple terms for store owners and non-technical managers.
@@ -1320,7 +1356,7 @@ The company logo works differently from text details:
 
 ---
 
-## 16. System Security & Data Protection Architecture
+## 21. System Security & Data Protection Architecture
 
 The ZTG Heavy Parts POS & Inventory system incorporates multi-layered enterprise security controls across all application layers to protect business data, safeguard user accounts, and maintain system integrity:
 
@@ -1350,7 +1386,8 @@ The ZTG Heavy Parts POS & Inventory system incorporates multi-layered enterprise
 
 ---
 
-*End of ZTG Heavy Parts Capstone Project Documentation v1.0*
+*End of ZTG Heavy Parts Capstone Project Documentation v2.0*
 
-*Document generated: July 2026*
+*Document updated: August 2026*
+
 

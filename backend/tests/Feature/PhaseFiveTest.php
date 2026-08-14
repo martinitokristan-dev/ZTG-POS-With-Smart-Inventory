@@ -391,4 +391,36 @@ class PhaseFiveTest extends TestCase
             ->assertJsonValidationErrors('limit');
     }
 
+    /* ─── Pay Pending Order Tests ──────────────────────────── */
+
+    public function test_cashier_can_pay_pending_transaction_with_cheque()
+    {
+        $pendingTx = Transaction::create([
+            'si_no'           => 'SI-2026-PENDING1',
+            'date'            => now(),
+            'customer_id'     => $this->customer->id,
+            'cashier_id'      => $this->cashier->id,
+            'total_qty'       => 1,
+            'amount'          => 500.00,
+            'amount_tendered' => 0.00,
+            'payment_method'  => 'P.O. (Pending)',
+            'status'          => TransactionStatus::PENDING->value,
+            'type'            => TransactionType::SALE->value,
+        ]);
+
+        $response = $this->actingAs($this->cashier)
+            ->postJson("/api/transactions/{$pendingTx->id}/pay", [
+                'admin_id'        => $this->admin->id,
+                'admin_pin'       => '1234',
+                'payment_method'  => 'Cheque',
+                'cheque_number'   => 'CHK-987654',
+                'amount_tendered' => 500.00,
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonFragment(['message' => 'Pending order paid successfully.'])
+            ->assertJsonPath('transaction.status', 'Completed')
+            ->assertJsonPath('transaction.cheque_number', 'CHK-987654')
+            ->assertJsonPath('transaction.payment_method', 'Cheque');
+    }
 }

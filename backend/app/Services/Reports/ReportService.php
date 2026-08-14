@@ -42,42 +42,53 @@ class ReportService
             : ($endDate ? Carbon::createFromFormat('Y-m-d H:i:s', $endDate . $endSuffix, 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s') : null);
 
         $completedQuery = Transaction::whereIn('status', ['Completed', 'Deposit', 'Paid']);
-        $refundQuery = Transaction::whereIn('status', ['Refund', 'Return', 'Void']);
+
+        // Partial refunds: status Refund/Return/Void but net amount > 0 (partial sale still occurred)
+        $partialRefundQuery = Transaction::whereIn('status', ['Refund', 'Return', 'Void'])
+            ->where('amount', '>', 0);
 
         if ($utcStart && $utcEnd) {
             $completedQuery->whereBetween('date', [$utcStart, $utcEnd]);
-            $refundQuery->whereBetween('date', [$utcStart, $utcEnd]);
+            $partialRefundQuery->whereBetween('date', [$utcStart, $utcEnd]);
         }
 
+        // Revenue = completed sales + partial refund net amounts
         $completedRevenue = (float) $completedQuery->sum('amount');
-        $refundedAmount = (float) $refundQuery->sum('amount');
-        $grossRevenue = $completedRevenue + $refundedAmount;
-        $totalRevenue = max(0, $completedRevenue);
-        $txCount = $completedQuery->count();
+        $partialRefundRevenue = (float) $partialRefundQuery->sum('amount');
+        $totalRevenue = max(0, $completedRevenue + $partialRefundRevenue);
+
+        // Transaction count includes partial refunds (they are still real net sales)
+        $txCount = $completedQuery->count() + $partialRefundQuery->count();
         $averageTx = $txCount > 0 ? round($totalRevenue / $txCount, 2) : 0.00;
 
         try {
             \Illuminate\Support\Facades\Log::info('[ReportService] Sales summary computed', [
-                'completed_revenue' => $completedRevenue,
-                'refunded_amount' => $refundedAmount,
-                'gross_revenue' => $grossRevenue,
-                'total_revenue' => $totalRevenue,
-                'tx_count' => $txCount,
+                'completed_revenue'      => $completedRevenue,
+                'partial_refund_revenue' => $partialRefundRevenue,
+                'total_revenue'          => $totalRevenue,
+                'tx_count'               => $txCount,
             ]);
         } catch (\Throwable $logE) {
         }
 
-        // Total items sold (Net of refunded/returned quantities)
+        // Total items sold
         $completedItemsQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
             ->whereIn('transactions.status', ['Completed', 'Deposit', 'Paid']);
-        $refundedItemsQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-            ->whereIn('transactions.status', ['Refund', 'Return', 'Void']);
+
+        // For partial refunds: net qty = qty - refunded_qty per line-item
+        $partialRefundItemsQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+            ->whereIn('transactions.status', ['Refund', 'Return', 'Void'])
+            ->where('transactions.amount', '>', 0);
 
         if ($utcStart && $utcEnd) {
             $completedItemsQuery->whereBetween('transactions.date', [$utcStart, $utcEnd]);
-            $refundedItemsQuery->whereBetween('transactions.date', [$utcStart, $utcEnd]);
+            $partialRefundItemsQuery->whereBetween('transactions.date', [$utcStart, $utcEnd]);
         }
-        $totalItemsSold = max(0, (int) $completedItemsQuery->sum('transaction_items.qty'));
+
+        $completedItemsSold = (int) $completedItemsQuery->sum('transaction_items.qty');
+        $partialNetQty = max(0, (int) $partialRefundItemsQuery
+            ->sum(DB::raw('transaction_items.qty - COALESCE(transaction_items.refunded_qty, 0)')));
+        $totalItemsSold = max(0, $completedItemsSold + $partialNetQty);
 
         // Top cashier
         $topCashierQuery = Transaction::with(['cashier'])->select('cashier_id', DB::raw('SUM(amount) as total_sales'))
@@ -101,16 +112,20 @@ class ReportService
         }
 
         // Revenue by payment method
-        $paymentMethodsQuery = Transaction::select('payment_method', DB::raw('SUM(amount) as total_sales'), DB::raw('COUNT(*) as tx_count'))
+        $paymentMethodsQuery = Transaction::select(
+            DB::raw("CASE WHEN payment_method LIKE 'Cheque%' THEN 'Cheque' WHEN payment_method LIKE 'Split%' THEN 'Split' ELSE payment_method END as payment_method_normalized"),
+            DB::raw('SUM(amount) as total_sales'),
+            DB::raw('COUNT(*) as tx_count')
+        )
             ->whereIn('status', ['Completed', 'Deposit', 'Paid']);
         if ($utcStart && $utcEnd) {
             $paymentMethodsQuery->whereBetween('date', [$utcStart, $utcEnd]);
         }
         $paymentMethods = $paymentMethodsQuery
-            ->groupBy('payment_method')
+            ->groupBy('payment_method_normalized')
             ->get()
             ->map(fn($row) => [
-                'name' => $row->payment_method,
+                'name' => $row->payment_method_normalized,
                 'amount' => (float) $row->total_sales,
                 'count' => (int) $row->tx_count,
             ])
@@ -215,8 +230,17 @@ class ReportService
         $transactions = $transactionsQuery->orderByDesc('date')->get();
 
         $transactions->each(function ($tx) {
+            // Flag partial refunds so frontend can render net qty/revenue correctly
+            // Note: status is cast to TransactionStatus Enum, resolve to string value for comparison
+            $statusVal = is_object($tx->status) ? $tx->status->value : $tx->status;
+            $isPartialRefund = in_array($statusVal, ['Refund', 'Return', 'Void'])
+                && (float)($tx->original_amount ?? 0) > 0
+                && (float)$tx->amount > 0;
+
+            $tx->is_partial_refund = $isPartialRefund;
+
             if ($tx->items) {
-                $tx->items->each(function ($item) {
+                $tx->items->each(function ($item) use ($isPartialRefund) {
                     if ($item->product) {
                         $prod = $item->product;
                         $baseName = $prod->parent ? $prod->parent->name : $prod->name;
@@ -227,19 +251,23 @@ class ReportService
                             $item->product->name = "{$prod->parent->name} ({$prod->name})";
                         }
                     }
+                    // For partial refunds, expose the net (sold) qty per line-item
+                    if ($isPartialRefund) {
+                        $item->net_qty = max(0, (int)$item->qty - (int)($item->refunded_qty ?? 0));
+                    }
                 });
             }
         });
 
         return [
-            'total_revenue' => $totalRevenue,
+            'total_revenue'     => $totalRevenue,
             'transaction_count' => $txCount,
-            'average_transaction' => $averageTx,
-            'total_items_sold' => $totalItemsSold,
-            'top_cashier' => $topCashier,
-            'revenue_by_payment' => $paymentMethods,
-            'last_7_days' => $last7Days,
-            'transactions' => $transactions,
+            'average_transaction'=> $averageTx,
+            'total_items_sold'  => $totalItemsSold,
+            'top_cashier'       => $topCashier,
+            'revenue_by_payment'=> $paymentMethods,
+            'last_7_days'       => $last7Days,
+            'transactions'      => $transactions,
         ];
     }
 
@@ -253,13 +281,24 @@ class ReportService
         $actualEnd = ($endDate && strpos($endDate, ' ') !== false) ? $endDate : ($endDate ? $endDate . $endSuffix : null);
 
         // Top 10 selling products (computed from transactions in date range)
-        $topSellersQuery = TransactionItem::select('product_id', DB::raw('SUM(qty) as sales_count'), DB::raw('SUM(transaction_items.price * transaction_items.qty) as revenue'))
+        $topSellersQuery = TransactionItem::select(
+                'product_id', 
+                DB::raw('SUM(transaction_items.qty - COALESCE(transaction_items.refunded_qty, 0)) as sales_count'), 
+                DB::raw('SUM((transaction_items.qty - COALESCE(transaction_items.refunded_qty, 0)) * transaction_items.price) as revenue')
+            )
             ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-            ->whereIn('transactions.status', ['Completed', 'Deposit', 'Paid']);
+            ->where(function ($query) {
+                $query->whereIn('transactions.status', ['Completed', 'Deposit', 'Paid'])
+                    ->orWhere(function ($q) {
+                        $q->whereIn('transactions.status', ['Refund', 'Return'])
+                          ->where('transactions.amount', '>', 0);
+                    });
+            });
         if ($actualStart && $actualEnd) {
             $topSellersQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
         }
         $topSellers = $topSellersQuery->groupBy('product_id')
+            ->havingRaw('sales_count > 0')
             ->orderByDesc('sales_count')
             ->limit(10)
             ->get()
@@ -308,14 +347,24 @@ class ReportService
             })
             ->toArray();
 
-        // Revenue per product (from Completed/Deposit/Paid transactions) - Top 50 by revenue
-        $revenuePerProductQuery = TransactionItem::select('product_id', DB::raw('SUM(transaction_items.price * transaction_items.qty) as revenue'))
+        // Revenue per product (from Completed/Deposit/Paid & Partial Refund transactions) - Top 50 by revenue
+        $revenuePerProductQuery = TransactionItem::select(
+                'product_id', 
+                DB::raw('SUM((transaction_items.qty - COALESCE(transaction_items.refunded_qty, 0)) * transaction_items.price) as revenue')
+            )
             ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-            ->whereIn('transactions.status', ['Completed', 'Deposit', 'Paid']);
+            ->where(function ($query) {
+                $query->whereIn('transactions.status', ['Completed', 'Deposit', 'Paid'])
+                    ->orWhere(function ($q) {
+                        $q->whereIn('transactions.status', ['Refund', 'Return'])
+                          ->where('transactions.amount', '>', 0);
+                    });
+            });
         if ($actualStart && $actualEnd) {
             $revenuePerProductQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
         }
         $revenuePerProduct = $revenuePerProductQuery->groupBy('product_id')
+            ->havingRaw('revenue > 0')
             ->orderByDesc('revenue')
             ->limit(50)
             ->get()
@@ -363,12 +412,18 @@ class ReportService
         $catQuery = TransactionItem::select(
                 'categories.id as category_id',
                 'categories.name as category_name',
-                DB::raw('SUM(transaction_items.price * transaction_items.qty) as revenue')
+                DB::raw('SUM((transaction_items.qty - COALESCE(transaction_items.refunded_qty, 0)) * transaction_items.price) as revenue')
             )
             ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
             ->join('products', 'transaction_items.product_id', '=', 'products.id')
             ->join('categories', 'products.category_id', '=', 'categories.id')
-            ->whereIn('transactions.status', ['Completed', 'Deposit', 'Paid']);
+            ->where(function ($query) {
+                $query->whereIn('transactions.status', ['Completed', 'Deposit', 'Paid'])
+                    ->orWhere(function ($q) {
+                        $q->whereIn('transactions.status', ['Refund', 'Return'])
+                          ->where('transactions.amount', '>', 0);
+                    });
+            });
 
         if ($actualStart && $actualEnd) {
             $catQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
@@ -376,6 +431,7 @@ class ReportService
 
         $catRows = $catQuery
             ->groupBy('categories.id', 'categories.name')
+            ->havingRaw('revenue > 0')
             ->orderByDesc('revenue')
             ->get();
 

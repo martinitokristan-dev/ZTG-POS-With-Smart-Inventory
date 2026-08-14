@@ -57,9 +57,12 @@ export default function ProductGrid({
                             className={`filter-pill ${categoryFilter === cat ? 'active' : ''}`}
                             onClick={() => setCategoryFilter(cat)}
                             style={{
-                                padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: '500', cursor: 'pointer', border: 'none',
-                                background: categoryFilter === cat ? 'var(--primary)' : '#F1F5F9',
-                                color: categoryFilter === cat ? '#FFFFFF' : '#475569'
+                                padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                                border: categoryFilter === cat ? '1px solid #3B82F6' : '1px solid var(--border)',
+                                background: categoryFilter === cat ? 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)' : 'var(--bg-secondary)',
+                                color: categoryFilter === cat ? '#FFFFFF' : 'var(--text-secondary)',
+                                boxShadow: categoryFilter === cat ? '0 4px 12px rgba(59, 130, 246, 0.3)' : 'none',
+                                transition: 'all 0.2s ease'
                             }}
                         >
                             {cat}
@@ -69,7 +72,7 @@ export default function ProductGrid({
             </div>
 
             {/* Catalogue Table */}
-            <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0, flex: 1, minHeight: 0, background: '#FFFFFF', border: '1px solid var(--border)', borderRadius: '0 0 10px 10px' }}>
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0, flex: 1, minHeight: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0 0 10px 10px' }}>
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
                     <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif', margin: 0 }}>Catalogue Picker</h3>
                 </div>
@@ -77,13 +80,13 @@ export default function ProductGrid({
                     <table className="pos-table data-table" style={{ width: '100%', minWidth: '650px', borderCollapse: 'collapse' }}>
                         <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--table-header-bg)' }}>
                             <tr>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', borderBottom: '2px solid var(--table-border)' }}>Product</th>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', borderBottom: '2px solid var(--table-border)' }}>Part No.</th>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', borderBottom: '2px solid var(--table-border)' }}>Category</th>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', borderBottom: '2px solid var(--table-border)' }}>Address</th>
-                                <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', borderBottom: '2px solid var(--table-border)' }}>Stock</th>
-                                <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', borderBottom: '2px solid var(--table-border)' }}>Original Price</th>
-                                <th style={{ textAlign: 'right', padding: '12px 20px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', borderBottom: '2px solid var(--table-border)' }}>Retail Price</th>
+                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Product</th>
+                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Part No.</th>
+                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Category</th>
+                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Address</th>
+                                <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Stock</th>
+                                <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Original Price</th>
+                                <th style={{ textAlign: 'right', padding: '12px 20px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Retail Price</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -102,10 +105,10 @@ export default function ProductGrid({
                                     <tr 
                                         key={p.id} 
                                         onClick={() => !isOut && addToCart(p, 'price1')}
-                                        style={{ borderBottom: '1px solid var(--table-border-subtle)', cursor: isOut ? 'not-allowed' : 'pointer', opacity: isOut ? 0.5 : 1, minHeight: '48px' }}
+                                        style={{ borderBottom: '1px solid var(--table-border-subtle)', cursor: isOut ? 'not-allowed' : 'pointer', opacity: isOut ? 0.5 : 1, minHeight: '52px' }}
                                         className="hover-row"
                                     >
-                                        <td style={{ padding: '12px 14px', fontSize: '15px' }}>
+                                        <td style={{ padding: '10px 14px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <img 
                                                     src={p.image || p.parent_product?.image || DEFAULT_PLACEHOLDER_IMAGE} 
@@ -215,20 +218,20 @@ export default function ProductGrid({
             )}
             <style>{`
                 .pos-search-input:focus {
-                    background-color: #FFFFFF !important;
+                    background-color: var(--bg-card) !important;
                     border-color: var(--primary) !important;
                     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
                 }
                 .hover-row:hover {
-                    background-color: #F8FAFC;
+                    background-color: var(--bg-secondary);
                 }
                 .pos-product-image {
                     width: 40px;
                     height: 40px;
                     border-radius: 8px;
                     object-fit: cover;
-                    background-color: #F1F5F9;
-                    border: 1px solid #E2E8F0;
+                    background-color: var(--bg-secondary);
+                    border: 1px solid var(--border);
                     flex-shrink: 0;
                     cursor: pointer;
                     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;

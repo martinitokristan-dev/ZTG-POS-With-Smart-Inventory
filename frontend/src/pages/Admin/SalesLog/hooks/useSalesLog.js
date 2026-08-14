@@ -9,7 +9,7 @@ const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
 export default function useSalesLog() {
     const [searchQuery, setSearchQuery] = useState('');
     const [paymentFilter, setPaymentFilter] = useState('All');
-    const [timeFilter, setTimeFilter] = useState('All');
+    const [timeFilter, setTimeFilter] = useState('Today');
     const [cashierFilter, setCashierFilter] = useState('All');
     const [sortFilter, setSortFilter] = useState('Transaction #');
     const [activeTab, setActiveTab] = useState('All');
@@ -27,9 +27,8 @@ export default function useSalesLog() {
         };
         fetchCashiers();
     }, []);
-    const statusParam = activeTab === 'All' ? '' : 
-        (activeTab === 'Refund' ? 'Refund,Return' : 
-        (activeTab === 'Completed' ? 'Completed,Paid,Deposit' : activeTab));
+
+    const statusParam = activeTab === 'All' ? '' : 'Completed,Paid,Deposit,Refund,Return';
     const paymentParam = paymentFilter === 'All' ? '' : paymentFilter;
     const searchParam = searchQuery.trim();
 
@@ -116,12 +115,18 @@ export default function useSalesLog() {
         };
     }, [refetch, page]);
 
-    // Exclude inventory/system/restock transactions at the transaction level BEFORE flattening
-    // This catches any that slip through the backend type=sale filter (e.g. via real-time WebSocket events)
-    const EXCLUDED_STATUSES = new Set(['Restocked', 'Damaged', 'Security Alert']);
-    const saleTransactions = transactions.filter(t => !EXCLUDED_STATUSES.has(t.status));
+    // Exclude inventory/system/restock transactions, Voids, Pendings, and 100% fully refunded/returned transactions
+    const EXCLUDED_STATUSES = new Set(['Restocked', 'Damaged', 'Security Alert', 'Void', 'Pending', 'Cancelled']);
+    const saleTransactions = transactions.filter(t => {
+        if (EXCLUDED_STATUSES.has(t.status)) return false;
+        // Exclude fully refunded transactions (amount <= 0)
+        if ((t.status === 'Refund' || t.status === 'Return') && t.is_partial_refund !== true && Number(t.amount || 0) <= 0) {
+            return false;
+        }
+        return Number(t.amount || 0) > 0;
+    });
 
-    // Flatten transactions into items to match the Sales Log mockup
+    // Flatten transactions into items with net sold quantities
     let flattenedItems = [];
     saleTransactions.forEach(t => {
         const items = (t.items && t.items.length > 0) ? t.items : [{
@@ -133,26 +138,31 @@ export default function useSalesLog() {
             variant: ''
         }];
         items.forEach(item => {
+            const rawQty = Number(item.qty || 1);
+            const refundedQty = Number(item.refunded_qty || 0);
+            const netQty = item.net_qty != null ? Number(item.net_qty) : Math.max(0, rawQty - refundedQty);
+
+            // Skip items with 0 active sales remaining
+            if (netQty <= 0) return;
+
             const resolvedName = item.product?.name || item.name || 'Unknown Product';
             const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
-            const itemQty = Number(item.qty || 1);
             const rawPrice = Number(item.original_price || item.price || 0);
-            const resolvedPrice = rawPrice > 0 ? rawPrice : (Number(t.amount || 0) / Math.max(1, itemQty));
-            const isResTx = t.type === 'reservation' || t.status === 'Deposit' || t.status === 'Paid' || (t.order_ref && t.order_ref.startsWith('RS-'));
+            const resolvedPrice = rawPrice > 0 ? rawPrice : (Number(t.amount || 0) / Math.max(1, netQty));
+            
             flattenedItems.push({
                 ...item,
+                qty: netQty,
                 price: resolvedPrice,
                 name: resolvedName,
                 part_no: resolvedPartNo,
-                _isReservationTx: isResTx,
-                _itemCashPrice: Number(item.price || 0),
                 _txDate: t.date || t.created_at,
                 _txReceipt: t.si_no || t.receipt_number,
                 _txCustomer: t.customer?.name || 'Guest',
                 _txCashier: t.cashier?.name || 'Unknown',
                 _txChecker: t.checker?.name || '—',
                 _txPayment: t.payment_method || '—',
-                _txStatus: t.status,
+                _txStatus: 'Completed',
                 _txAmount: t.amount,
                 _txDiscountAmount: t.discount_amount,
                 _txId: t.id
@@ -162,32 +172,31 @@ export default function useSalesLog() {
 
     let filteredItems = flattenedItems;
 
-    // Dynamic Summary calculation
+    // Dynamic Summary calculation across active sales transactions
     const uniqueTxIds = new Set(filteredItems.map(item => item._txId));
     const uniqueTxs = transactions.filter(t => uniqueTxIds.has(t.id));
 
     let totalSales = 0;
-    let totalRefunds = 0;
+    let totalItemsSold = 0;
     let count = uniqueTxs.length;
 
     uniqueTxs.forEach(t => {
-        if (['Completed', 'Paid', 'Deposit'].includes(t.status)) {
-            totalSales += parseFloat(t.amount || 0);
-        }
-        if (t.status === 'Refund' || t.status === 'Return') {
-            totalRefunds += parseFloat(t.amount || 0);
-        }
+        totalSales += parseFloat(t.amount || 0);
+    });
+
+    filteredItems.forEach(item => {
+        totalItemsSold += Number(item.qty || 0);
     });
 
     const avgSale = count > 0 ? totalSales / count : 0;
-    const metrics = { totalTx: count, totalSales, totalRefunds, avgSale };
+    const metrics = { totalTx: count, totalSales, totalItemsSold, avgSale };
 
     return {
         loading,
         transactions,
         filteredItems,
         totalSales,
-        totalRefunds,
+        totalItemsSold,
         count: pagination.total,
         page,
         setPage,

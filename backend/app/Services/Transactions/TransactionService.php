@@ -65,6 +65,11 @@ class TransactionService
                 });
             } elseif ($method === 'Bank') {
                 $query->where('payment_method', 'like', '%Bank%');
+            } elseif ($method === 'Cheque') {
+                $query->where(function ($q) {
+                    $q->where('payment_method', 'like', '%Cheque%')
+                      ->orWhereNotNull('cheque_number');
+                });
             } else {
                 $query->where('payment_method', 'like', '%' . $method . '%');
             }
@@ -204,11 +209,25 @@ class TransactionService
         $markDamaged = $data['mark_damaged'];
         $reason      = $data['reason'];
 
-        // 1. Ensure transaction is Completed before refunding
+        // 1. Ensure transaction is eligible for refund (Completed or Partial Refund with remaining items)
         $currentStatus = is_object($transaction->status) ? $transaction->status->value : $transaction->status;
-        if ($currentStatus !== 'Completed') {
+        
+        if ($currentStatus === 'Void') {
             throw ValidationException::withMessages([
-                'transaction' => ['Only completed transactions can be refunded or returned.'],
+                'transaction' => ['Voided transactions cannot be refunded or returned.'],
+            ]);
+        }
+
+        $totalRemainingQty = $transaction->items->reduce(function ($sum, $item) {
+            $rawQty = (int) ($item->qty ?? 0);
+            $refundedQty = (int) ($item->refunded_qty ?? 0);
+            $netQty = $item->net_qty !== null ? (int) $item->net_qty : max(0, $rawQty - $refundedQty);
+            return $sum + $netQty;
+        }, 0);
+
+        if ($totalRemainingQty <= 0) {
+            throw ValidationException::withMessages([
+                'transaction' => ['This transaction has already been fully refunded or returned.'],
             ]);
         }
 
@@ -238,8 +257,22 @@ class TransactionService
                     ]);
                 }
 
-                $qty = min($refundEntry['qty'], $item->qty);
+                $rawQty = (int) ($item->qty ?? 0);
+                $refundedQty = (int) ($item->refunded_qty ?? 0);
+                $netAvailable = max(0, $rawQty - $refundedQty);
+                $qty = min((int) $refundEntry['qty'], $netAvailable);
+
+                if ($qty <= 0) {
+                    continue;
+                }
+
                 $totalRefundAmount += $item->price * $qty;
+
+                // Track refunded_qty per line-item
+                $newRefundedQty = $refundedQty + $qty;
+                $item->update([
+                    'refunded_qty' => $newRefundedQty,
+                ]);
 
                 $product = $item->product;
 
@@ -260,8 +293,14 @@ class TransactionService
                 }
             }
 
-            // Set refund transaction amount (totalRefundAmount is already VAT-inclusive)
+            // Round the total refunded amount
             $refundedAmount = round($totalRefundAmount, 2);
+
+            // Preserve original_amount (frozen at checkout); compute net sale amount
+            $originalAmount = (float) ($transaction->original_amount ?? $transaction->amount);
+            $existingRefunded = (float) ($transaction->refunded_amount ?? 0);
+            $totalRefundedSoFar = $existingRefunded + $refundedAmount;
+            $netSaleAmount = max(0, round($originalAmount - $totalRefundedSoFar, 2));
 
             // Build OR No
             $orPrefix = $refundType === 'Refund' ? 'OR-RFD' : 'OR-RTN';
@@ -276,24 +315,31 @@ class TransactionService
 
             try {
                 \Illuminate\Support\Facades\Log::info('[TransactionService] Processing refund/return status update', [
-                    'transaction_id'  => $transaction->id,
-                    'si_no'           => $transaction->si_no,
-                    'previous_status' => is_object($transaction->status) ? $transaction->status->value : $transaction->status,
-                    'previous_amount' => $transaction->amount,
-                    'new_status'      => $refundType,
-                    'refunded_amount' => $refundedAmount,
+                    'transaction_id'   => $transaction->id,
+                    'si_no'            => $transaction->si_no,
+                    'previous_status'  => is_object($transaction->status) ? $transaction->status->value : $transaction->status,
+                    'original_amount'  => $originalAmount,
+                    'refunded_amount'  => $refundedAmount,
+                    'net_sale_amount'  => $netSaleAmount,
+                    'new_status'       => $refundType,
                 ]);
             } catch (\Throwable $logE) {}
 
             $transaction->update([
-                'status'      => $refundType,
-                'refund_reason'=> $reason,
-                'action_type' => $actionType,
-                'inv_action'  => implode('; ', $invActions) ?: 'No Stock Action',
-                'approver_id' => $approverId,
-                'approval_code'=> $pin,
-                'or_no'       => $orNo,
-                'amount'      => $refundedAmount,
+                'status'            => $refundType,
+                'refund_reason'     => $reason,
+                'action_type'       => $actionType,
+                'inv_action'        => implode('; ', $invActions) ?: 'No Stock Action',
+                'approver_id'       => $approverId,
+                'approval_code'     => $pin,
+                'or_no'             => $orNo,
+                // original_amount: stays frozen at checkout value
+                'original_amount'   => $originalAmount,
+                // refunded_amount: cumulative total money refunded
+                'refunded_amount'   => $totalRefundedSoFar,
+                // amount: NET sale = original - all refunds
+                // 0 means full refund (disappears from sales) > 0 means partial (partial sale shown)
+                'amount'            => $netSaleAmount,
             ]);
 
             try {
@@ -301,7 +347,8 @@ class TransactionService
                     'transaction_id' => $transaction->id,
                     'si_no'          => $transaction->si_no,
                     'status'         => $refundType,
-                    'amount'         => $refundedAmount,
+                    'net_amount'     => $netSaleAmount,
+                    'refunded_amount'=> $totalRefundedSoFar,
                 ]);
             } catch (\Throwable $logE) {}
 
@@ -374,22 +421,35 @@ class TransactionService
             $orNo = 'OR-VOID-' . now()->timestamp;
             $approver = User::find($adminId);
 
+            // Preserve original sale amount; void = full cancellation (net = 0)
+            $originalAmount = (float) ($transaction->original_amount ?? $transaction->amount);
+            $fullAmount     = (float) $transaction->amount; // current amount before zeroing
+
+            // Mark all items as fully refunded
+            foreach ($transaction->items as $item) {
+                $item->update(['refunded_qty' => $item->qty]);
+            }
+
             try {
                 \Illuminate\Support\Facades\Log::info('[TransactionService] Processing transaction void', [
                     'transaction_id'  => $transaction->id,
                     'si_no'           => $transaction->si_no,
                     'previous_status' => is_object($transaction->status) ? $transaction->status->value : $transaction->status,
-                    'amount'          => $transaction->amount,
+                    'original_amount' => $originalAmount,
                 ]);
             } catch (\Throwable $logE) {}
 
             $transaction->update([
-                'status'        => TransactionStatus::VOID->value,
-                'void_reason'   => $voidReason,
-                'approver_id'   => $adminId,
-                'approval_code' => $adminPin,
-                'or_no'         => $orNo,
-                'inv_action'    => $invAction,
+                'status'          => TransactionStatus::VOID->value,
+                'void_reason'     => $voidReason,
+                'approver_id'     => $adminId,
+                'approval_code'   => $adminPin,
+                'or_no'           => $orNo,
+                'inv_action'      => $invAction,
+                // Freeze the original amount, record full refund, zero out net sale
+                'original_amount' => $originalAmount,
+                'refunded_amount' => $originalAmount,
+                'amount'          => 0,   // Void = no net sale — disappears from Sales Report
             ]);
 
             try {
@@ -424,6 +484,7 @@ class TransactionService
         $adminId       = $data['admin_id'];
         $adminPin      = $data['admin_pin'];
         $paymentMethod = $data['payment_method'];
+        $chequeNumber  = $data['cheque_number'] ?? null;
         $amountTendered= $data['amount_tendered'];
 
         // 1. Ensure transaction is Pending
@@ -442,17 +503,20 @@ class TransactionService
             ]);
         }
 
-        $updated = DB::transaction(function () use ($transaction, $adminId, $adminPin, $paymentMethod, $amountTendered) {
+        $formattedMethod = $paymentMethod;
+
+        $updated = DB::transaction(function () use ($transaction, $adminId, $adminPin, $formattedMethod, $chequeNumber, $amountTendered) {
             $approver = User::find($adminId);
 
             $transaction->update([
                 'status'          => TransactionStatus::COMPLETED->value,
                 'date'            => now(),
-                'payment_method'  => $paymentMethod,
+                'payment_method'  => $formattedMethod,
+                'cheque_number'   => $chequeNumber,
                 'amount_tendered' => $amountTendered,
                 'approver_id'     => $adminId,
                 'approval_code'   => $adminPin,
-                'action_type'     => "Paid via {$paymentMethod}",
+                'action_type'     => "Paid via {$formattedMethod}",
             ]);
 
             return $transaction->fresh(['customer', 'cashier', 'approver', 'checker', 'items.product']);

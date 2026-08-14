@@ -3,6 +3,8 @@ import api from '../../../../shared/api';
 import { useProducts } from '../../../../contexts/ProductContext';
 import { fetchReservations, resetReservationsCache } from '../../../../shared/hooks/useReservationsCache';
 import { invalidateCachePage } from '../../../../shared/hooks/usePaginatedCache';
+import { copyReservationsToClipboard } from '../../../../shared/utils/orderFromChinaExcelExporter';
+import { showToast } from '../../../../utils/toast';
 import echo from '../../../../lib/echo';
 
 const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
@@ -19,17 +21,19 @@ export default function useReservations() {
     const [reservations, setReservations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('All');
+    const [statusFilter, setStatusFilter] = useState('Pending');
     const [page, setPage] = useState(1);
     const [pagination, setPagination] = useState({ currentPage: 1, lastPage: 1, total: 0 });
 
     /* ── Reset page when search or statusFilter changes ── */
     const handleSearchChange = (val) => {
+        resetReservationsCache();
         setSearch(val);
         setPage(1);
     };
 
     const handleStatusChange = (val) => {
+        resetReservationsCache();
         setStatusFilter(val);
         setPage(1);
     };
@@ -55,11 +59,13 @@ export default function useReservations() {
     const [custName, setCustName] = useState('');
     const [custPhone, setCustPhone] = useState('');
     const [custEmail, setCustEmail] = useState('');
+    const [enginePlateNumber, setEnginePlateNumber] = useState('');
     const [pickupDate, setPickupDate] = useState('');
     const [pickupTime, setPickupTime] = useState('');
     const [notes, setNotes] = useState('');
     const [paymentType, setPaymentType] = useState('deposit50');
     const [paymentMethod, setPaymentMethod] = useState('Cash');
+    const [custChequeNumber, setCustChequeNumber] = useState('');
     const [cartItems, setCartItems] = useState([]);
     const [productSearch, setProductSearch] = useState('');
     const [suggestions, setSuggestions] = useState([]);
@@ -68,6 +74,7 @@ export default function useReservations() {
 
     /* ── Fulfill form state ── */
     const [ffPaymentMethod, setFfPaymentMethod] = useState('Cash');
+    const [ffChequeNumber, setFfChequeNumber] = useState('');
     const [ffAmountReceived, setFfAmountReceived] = useState('');
     const [ffDocType, setFfDocType] = useState('S.I.');
     const [ffNotes, setFfNotes] = useState('');
@@ -190,19 +197,42 @@ export default function useReservations() {
         }, 300);
     };
 
+    const addCustomItemToCart = (itemName, partNo = 'N/A', price = 0, qty = 1) => {
+        if (!itemName || !itemName.trim()) return;
+        const itemId = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+        const newItem = {
+            cart_item_id: itemId,
+            product_id: null,
+            name: itemName.trim(),
+            item_name: itemName.trim(),
+            part_no: partNo.trim() || 'N/A',
+            price: parseFloat(price) || 0,
+            qty: Math.max(1, parseInt(qty) || 1),
+            stock: 9999,
+            priceTier: 'custom',
+            price1: parseFloat(price) || 0,
+            price2: parseFloat(price) || 0,
+        };
+        setCartItems(prev => [...prev, newItem]);
+        setProductSearch('');
+        setSuggestions([]);
+    };
+
     const addToCart = (product, priceTier = 'price2') => {
+        const pId = product.id || product.product_id;
         setCartItems(prev => {
-            const exists = prev.find(c => c.product_id === product.id && (c.priceTier || 'price2') === priceTier);
-            if (exists) return prev.map(c => (c.product_id === product.id && (c.priceTier || 'price2') === priceTier) ? { ...c, qty: c.qty + 1 } : c);
+            const exists = prev.find(c => (c.product_id === pId || c.cart_item_id === pId) && (c.priceTier || 'price2') === priceTier);
+            if (exists) return prev.map(c => ((c.product_id === pId || c.cart_item_id === pId) && (c.priceTier || 'price2') === priceTier) ? { ...c, qty: c.qty + 1 } : c);
             
             const price = priceTier === 'price1' ? parseFloat(product.price1 || 0) : parseFloat(product.price2 || product.price1 || 0);
             return [...prev, { 
-                product_id: product.id, 
+                cart_item_id: pId,
+                product_id: pId, 
                 name: product.name, 
-                part_no: product.part_no, 
+                part_no: product.part_no || 'N/A', 
                 price: price, 
                 qty: 1, 
-                stock: product.stock,
+                stock: product.stock || 9999,
                 priceTier: priceTier,
                 price1: product.price1,
                 price2: product.price2
@@ -214,15 +244,13 @@ export default function useReservations() {
 
     const updateCartItemPriceTier = (productId, oldTier, newTier) => {
         setCartItems(prev => {
-            const index = prev.findIndex(item => item.product_id === productId && (item.priceTier || 'price2') === oldTier);
+            const index = prev.findIndex(item => (item.cart_item_id === productId || item.product_id === productId) && (item.priceTier || 'price2') === oldTier);
             if (index === -1) return prev;
 
             const next = [...prev];
             const item = next[index];
-            const matchIndex = next.findIndex((c, i) => i !== index && c.product_id === productId && (c.priceTier || 'price2') === newTier);
+            const matchIndex = next.findIndex((c, i) => i !== index && (c.cart_item_id === productId || c.product_id === productId) && (c.priceTier || 'price2') === newTier);
 
-            // Use price1/price2 already stored on the cart item at addToCart time
-            // (avoids looking up products state which may not contain this product)
             const price = newTier === 'price1'
                 ? parseFloat(item.price1 || 0)
                 : parseFloat(item.price2 || item.price1 || 0);
@@ -238,8 +266,8 @@ export default function useReservations() {
         });
     };
 
-    const removeFromCart = (product_id) => setCartItems(prev => prev.filter(c => c.product_id !== product_id));
-    const updateQty = (product_id, qty) => setCartItems(prev => prev.map(c => c.product_id === product_id ? { ...c, qty: Math.max(1, parseInt(qty) || 1) } : c));
+    const removeFromCart = (id) => setCartItems(prev => prev.filter(c => (c.cart_item_id || c.product_id || c.id) !== id));
+    const updateQty = (id, qty) => setCartItems(prev => prev.map(c => (c.cart_item_id || c.product_id || c.id) === id ? { ...c, qty: Math.max(1, parseInt(qty) || 1) } : c));
 
     /* ── Cart Calculations ── */
     const vatInclusiveTotal = Math.round(cartItems.reduce((s, c) => s + c.price * c.qty, 0) * 100) / 100;
@@ -253,9 +281,9 @@ export default function useReservations() {
     /* SUBMIT: Create Reservation                        */
     /* ──────────────────────────────────────────────── */
     const resetAddForm = () => {
-        setCustName(''); setCustPhone(''); setCustEmail('');
+        setCustName(''); setCustPhone(''); setCustEmail(''); setEnginePlateNumber('');
         setPickupDate(''); setPickupTime(''); setNotes('');
-        setPaymentType('deposit50'); setPaymentMethod('Cash');
+        setPaymentType('deposit50'); setPaymentMethod('Cash'); setCustChequeNumber('');
         setCartItems([]); setProductSearch(''); setSuggestions([]);
         setAddError('');
     };
@@ -264,19 +292,32 @@ export default function useReservations() {
         e.preventDefault();
         setAddError('');
         if (cartItems.length === 0) { setAddError('Please add at least one item to the order.'); return; }
+        if (paymentMethod === 'Cheque' && !custChequeNumber.trim()) {
+            setAddError('Please enter the Cheque Number.');
+            return;
+        }
         setAddLoading(true);
         try {
             const payload = {
                 customer_name: custName,
                 customer_phone: custPhone,
                 customer_email: custEmail,
+                engine_plate_number: enginePlateNumber,
                 pickup_date: pickupDate,
                 pickup_time: pickupTime,
                 notes,
                 payment_type: paymentType,
                 payment_method: paymentMethod,
+                cheque_number: paymentMethod === 'Cheque' ? custChequeNumber.trim() : null,
                 deposit_amount: depositAmt,
-                items: cartItems.map(c => ({ product_id: c.product_id, qty: c.qty, price: c.price })),
+                items: cartItems.map(c => ({
+                    product_id: c.product_id || null,
+                    item_name: c.item_name || c.name || 'Order Item',
+                    part_no: c.part_no || 'N/A',
+                    engine_plate_number: c.engine_plate_number || enginePlateNumber || null,
+                    qty: c.qty,
+                    price: c.price
+                })),
             };
             const res = await api.post('/reservations', payload);
             setSuccessData(res.data.reservation);
@@ -301,6 +342,7 @@ export default function useReservations() {
     const openFulfill = (r) => {
         setSelected(r);
         setFfPaymentMethod('Cash');
+        setFfChequeNumber('');
         const due = Math.max(0, Number(r?.total || 0) - Number(r?.deposit || 0));
         setFfAmountReceived(due <= 0 ? '0' : '');
         setFfDocType('S.I.');
@@ -316,11 +358,15 @@ export default function useReservations() {
         if (balanceDue > 0 && (ffAmountReceived === '' || amountRec < balanceDue)) {
             setFfError(`Please enter the amount received (minimum ${fmt(balanceDue)}).`); return;
         }
+        if (ffPaymentMethod === 'Cheque' && !ffChequeNumber.trim()) {
+            setFfError('Please enter the Cheque Number.'); return;
+        }
         setFfLoading(true);
         try {
             const res = await api.post(`/reservations/${selected.id}/fulfill`, {
                 balance_payment: balanceDue <= 0 ? 0 : amountRec,
                 payment_method: ffPaymentMethod,
+                cheque_number: ffPaymentMethod === 'Cheque' ? ffChequeNumber.trim() : null,
                 doc_type: ffDocType,
                 notes: ffNotes,
             });
@@ -366,6 +412,36 @@ export default function useReservations() {
     };
 
     /* ──────────────────────────────────────────────── */
+    /* CLIPBOARD EXPORT FOR EXCEL                       */
+    /* ──────────────────────────────────────────────── */
+    const [copiedCount, setCopiedCount] = useState(null);
+
+    const handleCopyToClipboard = async (activeTab = 'deposit') => {
+        try {
+            const res = await api.get('/reservations?per_page=5000');
+            const allData = res.data?.data || (Array.isArray(res.data) ? res.data : reservations);
+            const result = await copyReservationsToClipboard(allData, activeTab);
+            if (result.success) {
+                setCopiedCount(result.count);
+                showToast(`✓ Copied ${result.count} ${result.count === 1 ? 'row' : 'rows'} for Excel! Paste with Ctrl+V.`);
+                setTimeout(() => setCopiedCount(null), 2500);
+            } else {
+                showToast(result.message, 'error');
+            }
+        } catch (e) {
+            console.error('Failed to copy reservations:', e);
+            const result = await copyReservationsToClipboard(reservations, activeTab);
+            if (result.success) {
+                setCopiedCount(result.count);
+                showToast(`✓ Copied ${result.count} ${result.count === 1 ? 'row' : 'rows'} for Excel! Paste with Ctrl+V.`);
+                setTimeout(() => setCopiedCount(null), 2500);
+            } else {
+                showToast(result.message, 'error');
+            }
+        }
+    };
+
+    /* ──────────────────────────────────────────────── */
     /* FULFILL modal balance due calculation             */
     /* ──────────────────────────────────────────────── */
     const ffBalanceDue = selected ? (Number(selected.total || 0) - Number(selected.deposit || 0)) : 0;
@@ -373,7 +449,7 @@ export default function useReservations() {
 
     return {
         // Data & Session
-        reservations, loading, userName,
+        reservations, loading, userName, handleCopyToClipboard, copiedCount,
         
         // Formating
         fmt, fmtDate,
@@ -394,16 +470,16 @@ export default function useReservations() {
         selected, detailsReservation, openDetails, successData,
 
         // Add Modal State & Handlers
-        custName, setCustName, custPhone, setCustPhone, custEmail, setCustEmail,
+        custName, setCustName, custPhone, setCustPhone, custEmail, setCustEmail, enginePlateNumber, setEnginePlateNumber,
         pickupDate, setPickupDate, pickupTime, setPickupTime, notes, setNotes,
-        paymentType, setPaymentType, paymentMethod, setPaymentMethod,
+        paymentType, setPaymentType, paymentMethod, setPaymentMethod, custChequeNumber, setCustChequeNumber,
         cartItems, productSearch, suggestions, addError, addLoading,
-        handleProductSearch, addToCart, removeFromCart, updateQty, updateCartItemPriceTier,
+        handleProductSearch, addToCart, addCustomItemToCart, removeFromCart, updateQty, updateCartItemPriceTier,
         resetAddForm, handleAddReservation, refreshProducts,
         subtotal, tax, total, depositAmt, balance,
 
         // Fulfill Modal State & Handlers
-        ffPaymentMethod, setFfPaymentMethod, ffAmountReceived, setFfAmountReceived,
+        ffPaymentMethod, setFfPaymentMethod, ffChequeNumber, setFfChequeNumber, ffAmountReceived, setFfAmountReceived,
         ffDocType, setFfDocType, ffNotes, setFfNotes, ffError, ffLoading,
         openFulfill, handleFulfill, ffBalanceDue, ffChange,
 

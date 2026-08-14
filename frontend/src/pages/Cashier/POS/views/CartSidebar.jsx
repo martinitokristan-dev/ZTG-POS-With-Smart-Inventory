@@ -102,9 +102,9 @@ export default function CartSidebar({
                                 backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', 
                                 maxHeight: '150px', overflowY: 'auto', boxShadow: 'var(--shadow-md)', marginTop: '2px' 
                             }}>
-                                {customersToDisplay.map(c => (
+                                {customersToDisplay.map((c, index) => (
                                     <div 
-                                        key={c.id} 
+                                        key={c.id || c.customer_id || `cust-${c.name || ''}-${index}`} 
                                         style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '13px', borderBottom: '1px solid var(--border)' }}
                                         onMouseDown={() => {
                                             setExistingCustomerSearch(c.name);
@@ -180,8 +180,8 @@ export default function CartSidebar({
                             onChange={(e) => setSelectedChecker(e.target.value)}
                         >
                             <option value="" hidden>Select Checker *</option>
-                            {checkers.map(checker => (
-                                <option key={checker.id} value={checker.id}>{checker.name}</option>
+                            {checkers.map((checker, index) => (
+                                <option key={checker.id || `checker-${index}`} value={checker.id}>{checker.name}</option>
                             ))}
                         </select>
                     </div>

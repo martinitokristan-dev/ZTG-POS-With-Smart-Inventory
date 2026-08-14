@@ -102,6 +102,39 @@ After migrating and seeding the database, you can log into the system using the 
 
 ---
 
+## 🧪 Automated Testing (Phases 1 to 8)
+
+Run the feature test suites covering all system phases:
+
+```bash
+# Run all Phase feature tests
+php artisan test --filter=Phase
+
+# Run specific Phase test suites
+php artisan test --filter=PhaseOneTest      # Auth, Tokens & Middleware
+php artisan test --filter=PhaseTwoTest      # Settings, Categories, PINs
+php artisan test --filter=PhaseThreeTest    # Products, SKU Variants, Restock
+php artisan test --filter=PhaseFourTest     # POS Checkout, Cash/GCash/Bank/Cheque/Split
+php artisan test --filter=PhaseFiveTest     # History Logs, Voids & Restorations
+php artisan test --filter=PhaseSixTest      # Reservations & Fulfillment
+php artisan test --filter=PhaseSevenTest    # Reports, Dashboard & Notifications
+php artisan test --filter=PhaseEightTest    # Partial Refunds & Net Sales Engine
+```
+
+---
+
+## 📚 Project Documentation & Blueprints
+
+All project specifications and design documents are available in the [`docs/`](file:///d:/ZTG-main/docs) directory:
+
+1. **[Master Capstone Documentation](file:///d:/ZTG-main/docs/ZTG_Capstone_Documentation.md)** — Full SDLC, architecture, technology stack, security, deployment, and sprint logs.
+2. **[Master Implementation Plan](file:///d:/ZTG-main/docs/ZTG_Implementation_Plan.md)** — Step-by-step technical implementation roadmap, phase deliverables, and verification matrices.
+3. **[System Logic Flows & Blueprints](file:///d:/ZTG-main/docs/SystemLogicFlows.md)** — Algorithm flows, checkout validations, refund calculations, and Mermaid sequence diagrams.
+4. **[ERD Database Schema](file:///d:/ZTG-main/docs/ERD_Database_Schema.md)** — 15 relational tables, column constraints, indexes, and Lucid Chart prompts.
+5. **[UI Color Palette & Styling Guide](file:///d:/ZTG-main/docs/UI_Color_Palette.md)** — Design tokens, dark/light theme tokens, typography, and SVG vector standards.
+
+---
+
 ## 📌 Development Notes
 * **UI/UX Source of Truth:** All design implementations strictly follow the visual reference files stored in the `ZTG-main` directory.
 * **Layouts:** The frontend utilizes explicit CSS calculations (`calc(100vh / 0.9)`) on outer wrappers to perfectly fit the viewport and compensate for the `zoom: 0.9` body scaling. 
@@ -145,7 +178,7 @@ The company logo works differently from text details:
 
 ### 7. Excel & Sales Reporting Export Behavior (Desktop vs. Cloud Sync)
 
-This system provides **1-Click Formatted Excel & CSV Exports** designed to match the store's exact 11-column daily sales template (`DATE`, `QTY`, `PART NUMBER`, `PART NAME`, `PRICE`, `SALES`, `CUSTOMER NAME`, `PAYMENT`, `DISCOUNTED`, `S.I./C.I./D.R.`, `SERVE BY`).
+This system provides **1-Click Formatted Excel & CSV Exports** designed to match the store's exact 11-column daily sales template (`DATE`, `QTY`, `PART NUMBER`, `PART NAME`, `PRICE`, `SALES`, `CUSTOMER NAME`, `PAYMENT`, `DISCOUNTED`, `S.I./C.R./D.R.`, `SERVE BY`).
 
 #### **Technical Behavior & Account Scope:**
 * **Desktop File Exports (`.xls` / `.csv`):** 

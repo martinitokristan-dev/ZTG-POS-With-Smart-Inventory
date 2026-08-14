@@ -15,6 +15,9 @@ class ReservationItem extends Model
     protected $fillable = [
         'reservation_id',
         'product_id',
+        'part_no',
+        'item_name',
+        'engine_plate_number',
         'qty',
         'price',
     ];

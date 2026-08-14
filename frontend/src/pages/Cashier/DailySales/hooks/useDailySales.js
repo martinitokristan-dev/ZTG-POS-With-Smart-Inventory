@@ -60,10 +60,19 @@ export default function useDailySales() {
         };
     }, [refetch, page]);
 
-    // Flatten transactions into line items for the Sales Ledger display
+    // Exclude inventory/system/restock transactions, Voids, Pendings, and 100% fully refunded/returned transactions
+    const EXCLUDED_STATUSES = new Set(['Restocked', 'Damaged', 'Security Alert', 'Void', 'Pending', 'Cancelled']);
     const flattenedItems = useMemo(() => {
         const result = [];
-        transactions.forEach(t => {
+        const saleTransactions = transactions.filter(t => {
+            if (EXCLUDED_STATUSES.has(t.status)) return false;
+            if ((t.status === 'Refund' || t.status === 'Return') && t.is_partial_refund !== true && Number(t.amount || 0) <= 0) {
+                return false;
+            }
+            return Number(t.amount || 0) > 0;
+        });
+
+        saleTransactions.forEach(t => {
             const items = (t.items && t.items.length > 0) ? t.items : [{
                 id: null,
                 name: t.itemName || 'Transaction',
@@ -74,10 +83,17 @@ export default function useDailySales() {
             }];
 
             items.forEach(item => {
+                const rawQty = Number(item.qty || 1);
+                const refundedQty = Number(item.refunded_qty || 0);
+                const netQty = item.net_qty != null ? Number(item.net_qty) : Math.max(0, rawQty - refundedQty);
+
+                if (netQty <= 0) return;
+
                 const resolvedName = item.product?.name || item.name || 'Unknown Product';
                 const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
                 result.push({
                     ...item,
+                    qty: netQty,
                     name: resolvedName,
                     part_no: resolvedPartNo,
                     _txDate: t.date || t.created_at,
@@ -86,7 +102,7 @@ export default function useDailySales() {
                     _txCashier: t.cashier?.name || 'Unknown',
                     _txChecker: t.checker?.name || '—',
                     _txPayment: t.payment_method || '—',
-                    _txStatus: t.status,
+                    _txStatus: 'Completed',
                     _txId: t.id
                 });
             });

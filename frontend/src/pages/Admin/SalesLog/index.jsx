@@ -10,7 +10,7 @@ export default function SalesLog() {
             <div className="top-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                     <h1 style={{ fontSize: '20px', marginBottom: '2px', fontFamily: '"Outfit", sans-serif', color: 'var(--text-primary)' }}>Sales Log</h1>
-                    <div className="page-description" style={{ marginTop: '0', fontSize: '12px', color: 'var(--text-secondary)' }}>Master administrative record of all sales, returns, and POS activity.</div>
+                    <div className="page-description" style={{ marginTop: '0', fontSize: '12px', color: 'var(--text-secondary)' }}>Master administrative record of active completed sales.</div>
                 </div>
             </div>
 
@@ -23,12 +23,12 @@ export default function SalesLog() {
                             <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif' }}>{sl.metrics.totalTx}</div>
                         </div>
                         <div className="card" style={{ padding: '16px 20px', background: '#FFFFFF', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500', marginBottom: '6px' }}>Total Sales (Filtered)</div>
-                            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif' }}>{sl.fmt(sl.metrics.totalSales)}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500', marginBottom: '6px' }}>Total Items Sold</div>
+                            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif' }}>{sl.metrics.totalItemsSold}</div>
                         </div>
                         <div className="card" style={{ padding: '16px 20px', background: '#FFFFFF', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500', marginBottom: '6px' }}>Total Refunds / Returns</div>
-                            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif' }}>{sl.fmt(sl.metrics.totalRefunds)}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500', marginBottom: '6px' }}>Total Net Sales</div>
+                            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif' }}>{sl.fmt(sl.metrics.totalSales)}</div>
                         </div>
                         <div className="card" style={{ padding: '16px 20px', background: '#FFFFFF', borderRadius: '10px', border: '1px solid var(--border)' }}>
                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500', marginBottom: '6px' }}>Average Sale</div>
@@ -80,6 +80,7 @@ export default function SalesLog() {
                                         { value: 'Cash', label: 'Cash' },
                                         { value: 'GCash', label: 'GCash' },
                                         { value: 'Bank Transfer', label: 'Bank Transfer' },
+                                        { value: 'Cheque', label: 'Cheque' },
                                         { value: 'P.O. (Pending)', label: 'P.O. (Pending)' },
                                         { value: 'Split', label: 'Split' }
                                     ]}
@@ -100,7 +101,7 @@ export default function SalesLog() {
                         
                         {/* Tabs */}
                         <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-                            {['All', 'Completed', 'Refund', 'Pending'].map(tab => (
+                            {['All', 'Completed'].map(tab => (
                                 <button 
                                     key={tab}
                                     className={`status-tab ${sl.activeTab === tab ? 'active' : ''}`}

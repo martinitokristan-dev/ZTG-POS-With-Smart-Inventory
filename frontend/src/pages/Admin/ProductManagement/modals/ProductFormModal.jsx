@@ -50,7 +50,7 @@ const VariantImageUpload = ({ variant, idx, onUpdateVariantImage }) => {
                     </button>
                 </div>
             ) : (
-                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--primary, #2563EB)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px dashed var(--primary)', padding: '3px 8px', borderRadius: '4px', backgroundColor: '#EFF6FF' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--primary, #2563EB)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px dashed var(--primary)', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'rgba(37, 99, 235, 0.1)' }}>
                     <input type="file" accept="image/*" onChange={handleFileChange} disabled={uploading} style={{ display: 'none' }} />
                     + Upload Custom Image
                 </label>
@@ -74,7 +74,7 @@ const generateNextVariantPartNo = (basePartNo, index) => {
 };
 
 const ImageUploadDropzone = ({ image, onUpload, uploading = false, progress = 0 }) => (
-    <div style={{ border: '2px dashed var(--border)', borderRadius: '8px', padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '16px', backgroundColor: '#F8FAFC', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ border: '2px dashed var(--border)', borderRadius: '8px', padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '16px', backgroundColor: 'var(--bg-secondary)', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
         <input type="file" accept="image/*" onChange={onUpload} disabled={uploading} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: uploading ? 'wait' : 'pointer', width: '100%', height: '100%', zIndex: 5 }} />
         <ImageUploadOverlay isUploading={uploading} progress={progress} borderRadius="8px" />
         {image ? (
@@ -363,7 +363,7 @@ export default function ProductFormModal({
                                     value={formData.stock === 0 ? '' : formData.stock}
                                     onChange={(e) => setFormData({ ...formData, stock: e.target.value === '' ? '' : parseInt(e.target.value) })}
                                     disabled={mode === 'edit'}
-                                    style={mode === 'edit' ? { backgroundColor: '#F1F5F9', cursor: 'not-allowed', color: '#94A3B8' } : {}}
+                                    style={mode === 'edit' ? { backgroundColor: 'var(--bg-secondary)', cursor: 'not-allowed', color: 'var(--text-muted)' } : {}}
                                 />
                             </div>
                             <div className="form-group" style={{ marginBottom: 0 }}>
@@ -390,7 +390,7 @@ export default function ProductFormModal({
                             </div>
                         </div>
 
-                        <div style={{ marginTop: '12px', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', backgroundColor: 'var(--bg-main, #f5f6fa)', marginBottom: '16px' }}>
+                        <div style={{ marginTop: '12px', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', backgroundColor: 'var(--bg-secondary)', marginBottom: '16px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                 <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Product Variants</span>
                                 <button type="button" className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px' }}
@@ -427,20 +427,20 @@ export default function ProductFormModal({
                                         const variantDisplayName = variant.name || formData.name || 'Variant';
 
                                         return (
-                                            <div key={idx} style={{ padding: '12px', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'white', position: 'relative' }}>
+                                            <div key={idx} style={{ padding: '12px', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'var(--bg-card)', position: 'relative' }}>
                                                 <button type="button" onClick={() => {
                                                     const nv = [...formData.variants];
                                                     nv.splice(idx, 1);
                                                     setFormData({ ...formData, variants: nv });
                                                 }} style={{ position: 'absolute', top: '8px', right: '8px', color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
 
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '6px', borderBottom: '1px solid #F1F5F9', paddingRight: '24px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '6px', borderBottom: '1px solid var(--border)', paddingRight: '24px' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>
+                                                        <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
                                                             {variantDisplayName}
                                                         </span>
                                                         {selectedOptionLabels.length > 0 && (
-                                                            <span style={{ color: '#3B82F6', fontWeight: '600', fontSize: '13px' }}>
+                                                            <span style={{ color: 'var(--primary, #3B82F6)', fontWeight: '600', fontSize: '13px' }}>
                                                                 ({selectedOptionLabels.join(', ')})
                                                             </span>
                                                         )}
@@ -508,7 +508,7 @@ export default function ProductFormModal({
                                                                 const nv = [...formData.variants]; nv[idx].stock = e.target.value === '' ? '' : parseInt(e.target.value); setFormData({ ...formData, variants: nv });
                                                             }}
                                                             disabled={mode === 'edit'}
-                                                            style={mode === 'edit' ? { backgroundColor: '#F1F5F9', cursor: 'not-allowed', color: '#94A3B8' } : {}}
+                                                            style={mode === 'edit' ? { backgroundColor: 'var(--bg-secondary)', cursor: 'not-allowed', color: 'var(--text-muted)' } : {}}
                                                         />
                                                     </div>
                                                     <div className="form-group" style={{ marginBottom: 0 }}>

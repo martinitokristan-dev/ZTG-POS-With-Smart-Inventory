@@ -25,7 +25,8 @@ class PayTransactionRequest extends FormRequest
         return [
             'admin_id'        => 'required|exists:users,id',
             'admin_pin'       => 'required|string',
-            'payment_method'  => 'required|string|in:Cash,GCash,Bank',
+            'payment_method'  => 'required|string|in:Cash,GCash,Bank,Cheque',
+            'cheque_number'   => 'required_if:payment_method,Cheque|nullable|string|max:100',
             'amount_tendered' => 'required|numeric|min:0',
         ];
     }

@@ -7,24 +7,24 @@ function getNotifIcon(n) {
     const title   = n.title || '';
 
     if (subType === 'Refund' || subType === 'Return' || title.includes('Refund') || title.includes('Return')) {
-        return { bg: '#FFFBEB', color: '#F59E0B', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>' };
+        return { bg: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>' };
     }
     if (subType === 'Void' || subType === 'Damaged' || title.includes('Void') || title.includes('Damaged')) {
-        return { bg: '#FEF2F2', color: '#DC2626', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>' };
+        return { bg: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>' };
     }
     if (subType === 'Restocked' || title.includes('Restocked')) {
-        return { bg: '#EFF6FF', color: '#3B82F6', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>' };
+        return { bg: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>' };
     }
     if (n.type === 'inventory' || subType === 'Low Stock' || subType === 'Out of Stock' || title.includes('Stock')) {
-        return { bg: '#FFFBEB', color: '#D97706', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>' };
+        return { bg: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>' };
     }
     if (subType === 'Paid' || subType === 'Deposit' || title.includes('Reservation') || title.includes('Deposit')) {
-        return { bg: '#EEF2FF', color: '#4F46E5', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>' };
+        return { bg: 'rgba(99, 102, 241, 0.15)', color: '#6366F1', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>' };
     }
     if (n.type === 'transaction' || subType === 'Completed' || title.includes('Completed')) {
-        return { bg: '#ECFDF5', color: '#10B981', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>' };
+        return { bg: 'rgba(16, 185, 129, 0.15)', color: '#10B981', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>' };
     }
-    return { bg: '#FEF2F2', color: '#EF4444', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>' };
+    return { bg: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>' };
 }
 
 function timeAgo(timestamp) {
@@ -57,14 +57,14 @@ function NotificationCard({ n, isBubble, onDismiss }) {
             {/* Content block */}
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
-                    <strong style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary, #0F172A)', wordBreak: 'break-word' }}>
+                    <strong style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
                         {n.title}
                     </strong>
-                    <span style={{ fontSize: '12px', color: 'var(--text-secondary, #64748B)', flexShrink: 0 }}>{timeStr}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', flexShrink: 0 }}>{timeStr}</span>
                 </div>
                 <div style={{
                     fontSize: '13px',
-                    color: 'var(--text-secondary, #64748B)',
+                    color: 'var(--text-secondary)',
                     lineHeight: 1.5,
                     wordBreak: 'break-word',
                     display: 'block'

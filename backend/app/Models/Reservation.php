@@ -16,15 +16,20 @@ class Reservation extends Model
     protected $fillable = [
         'order_no',
         'customer_id',
+        'customer_name',
+        'customer_phone',
         'email',
+        'engine_plate_number',
         'notes',
         'payment_method',
+        'cheque_number',
         'payment_type',
         'deposit',
         'total',
         'date',
         'pickup_date',
         'pickup_time',
+        'date_get',
         'reserved_by_id',
         'fulfilled_by_id',
         'status',
@@ -37,6 +42,7 @@ class Reservation extends Model
             'status' => ReservationStatus::class,
             'date' => 'date',
             'pickup_date' => 'date',
+            'date_get' => 'date',
         ];
     }
 

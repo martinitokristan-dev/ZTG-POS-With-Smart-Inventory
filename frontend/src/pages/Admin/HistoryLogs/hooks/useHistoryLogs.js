@@ -11,10 +11,9 @@ const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
 
 export default function useHistoryLogs() {
     // Filtering
-    const [activeTab, setActiveTab] = useState('All'); // All, Refund, Return, Void, Reservation
+    const [activeTab, setActiveTab] = useState('All'); // All, Refund, Return, Void, Pending
     const [searchQuery, setSearchQuery] = useState('');
     const [paymentFilter, setPaymentFilter] = useState('All');
-    const [txTypeFilter, setTxTypeFilter] = useState(''); // '' = all types, 'reservation' = reservations only
     
     // Modal states
     const [showRefundModal, setShowRefundModal] = useState(false);
@@ -30,19 +29,15 @@ export default function useHistoryLogs() {
     const [selectedTxForPay, setSelectedTxForPay] = useState(null);
 
     // Map UI states to backend API query params
-    // 'Reservation' tab sets tx_type=reservation and clears status; other tabs filter by status
-    const isReservationTab = activeTab === 'Reservation';
-    const statusParam = (activeTab === 'All' || isReservationTab) ? '' : activeTab;
-    const txTypeParam  = isReservationTab ? 'reservation' : (txTypeFilter || '');
+    const statusParam = activeTab === 'All' ? '' : activeTab;
     const paymentParam = paymentFilter === 'All' ? '' : paymentFilter;
     const searchParam  = searchQuery.trim();
 
     const queryParams = useMemo(() => ({
         status:         statusParam,
-        tx_type:        txTypeParam,
-        payment_method: paymentParam,   // was incorrectly sent as 'type' — fixed to match backend key
+        payment_method: paymentParam,
         search:         searchParam,
-    }), [statusParam, txTypeParam, paymentParam, searchParam]);
+    }), [statusParam, paymentParam, searchParam]);
 
     const { data: transactions, loading, page, setPage, pagination, refetch } = usePaginatedCache('history', '/transactions', queryParams);
 
@@ -99,6 +94,8 @@ export default function useHistoryLogs() {
     const handleSubmitRefund = async (payload) => {
         try {
             await api.post(`/transactions/${selectedTxForRefund.id}/${payload.type.toLowerCase()}`, payload);
+            resetDashboardCache();
+            resetReportsCache();
             handleCloseRefund();
             loadHistory();
         } catch (err) {
@@ -130,6 +127,8 @@ export default function useHistoryLogs() {
     const handleVoid = async (txId, payload) => {
         try {
             await api.post(`/transactions/${txId}/void`, payload);
+            resetDashboardCache();
+            resetReportsCache();
             handleCloseVoid();
             loadHistory();
         } catch (err) {
@@ -188,8 +187,6 @@ export default function useHistoryLogs() {
         setSearchQuery,
         paymentFilter,
         setPaymentFilter,
-        txTypeFilter,
-        setTxTypeFilter,
         showRefundModal,
         selectedTxForRefund,
         handleOpenRefund,

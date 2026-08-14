@@ -14,8 +14,11 @@ return new class extends Migration
         Schema::create('transaction_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('transaction_id')->constrained('transactions')->onDelete('cascade');
-            $table->foreignId('product_id')->constrained('products')->onDelete('restrict');
+            $table->foreignId('product_id')->nullable()->constrained('products')->onDelete('set null');
+            $table->string('item_name', 255)->nullable();
+            $table->string('part_no', 100)->nullable();
             $table->integer('qty');
+            $table->integer('refunded_qty')->default(0);
             $table->decimal('price', 12, 2);
             $table->decimal('original_price', 12, 2)->default(0);
             $table->decimal('discount', 12, 2)->default(0);

@@ -10,7 +10,8 @@ export default function ReservationsTable({
     statusFilter, setStatusFilter, handleStatusChange,
     page, setPage, pagination,
     fmt, fmtDate,
-    openFulfill, openCancel, openDetails
+    openFulfill, openCancel, openDetails,
+    activeTab = 'deposit'
 }) {
     return (
         <>
@@ -22,21 +23,9 @@ export default function ReservationsTable({
                             type="text"
                             className="form-control"
                             style={{ padding: '8px 12px', fontSize: '13px' }}
-                            placeholder="Search by customer name, phone, or reserved item..."
+                            placeholder={activeTab === 'deposit' ? "Search for order in china by customer, phone, part no..." : "Search claimed & paid orders by customer, phone, part no..."}
                             value={search}
                             onChange={(e) => handleSearchChange ? handleSearchChange(e.target.value) : setSearch(e.target.value)}
-                        />
-                    </div>
-                    <div style={{ flex: '1 1 180px', minWidth: '140px' }}>
-                        <IOSSelect
-                            value={statusFilter}
-                            onChange={(e) => handleStatusChange ? handleStatusChange(e.target.value) : setStatusFilter(e.target.value)}
-                            options={[
-                                { value: 'All', label: 'All Statuses' },
-                                { value: 'Pending', label: 'Pending Pickup' },
-                                { value: 'Completed', label: 'Fully Paid / Completed' },
-                                { value: 'Cancelled', label: 'Cancelled' }
-                            ]}
                         />
                     </div>
                 </div>
@@ -45,85 +34,266 @@ export default function ReservationsTable({
             {/* Reservations Table */}
             <div className="card table-card">
                 <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                    <table className="data-table" style={{ minWidth: '850px', width: '100%' }}>
+                    <table className="data-table" style={{ minWidth: '950px', width: '100%' }}>
                         <thead>
                             <tr>
+                                <th style={{ textAlign: 'left' }}>Date Order</th>
+                                <th style={{ textAlign: 'left' }}>Part Number</th>
+                                <th style={{ textAlign: 'left' }}>Description / Part Name</th>
+                                <th style={{ textAlign: 'left' }}>Engine Plate No.</th>
+                                <th style={{ textAlign: 'center' }}>Qty. Ordered</th>
                                 <th style={{ textAlign: 'left' }}>Customer Name</th>
-                                <th style={{ textAlign: 'left' }}>Contact Phone</th>
-                                <th style={{ textAlign: 'left' }}>Product</th>
-                                <th style={{ textAlign: 'right' }}>Qty</th>
-                                <th style={{ textAlign: 'right' }}>Deposit Amount</th>
-                                <th style={{ textAlign: 'right' }}>Total Price</th>
-                                <th style={{ textAlign: 'left' }}>Date Placed</th>
-                                <th style={{ textAlign: 'left' }}>Expected Pickup</th>
-                                <th style={{ textAlign: 'left' }}>Reserved By</th>
-                                <th style={{ textAlign: 'left' }}>Status</th>
+                                <th style={{ textAlign: 'right' }}>Price</th>
+                                <th style={{ textAlign: 'right' }}>Total Amount</th>
+                                <th style={{ textAlign: 'right' }}>Deposit</th>
+                                <th style={{ textAlign: 'right' }}>Payment</th>
+                                {activeTab === 'completed' && <th style={{ textAlign: 'left' }}>Date Get</th>}
                                 <th style={{ textAlign: 'center' }}>Actions</th>
                             </tr>
                         </thead>
-                        <tbody style={{ fontSize: '15px' }}>
-                            {loading ? (
-                                <tr><td colSpan="11" style={{ padding: '32px' }}><LoadingSpinner text="Loading reservations..." minHeight="100px" /></td></tr>
-                            ) : reservations.length === 0 ? (
-                                <tr><td colSpan="11" style={{ textAlign: 'center', padding: '32px', color: 'var(--table-text-muted)', fontSize: '15px' }}>No reservations found.</td></tr>
-                            ) : reservations.map(r => {
-                                const rawStatus = (r.status?.value || r.status || '').toLowerCase();
-                                const isPending = rawStatus === 'pending';
-                                const productNames = r.items?.map(i => i.product?.name || i.name || '—').join(', ') || r.product_name || '—';
-                                const totalQty = r.items?.reduce((s, i) => s + (i.qty || 0), 0) || r.qty || '—';
-                                const fulfilledByName = r.fulfilled_by ? (r.fulfilled_by.real_name || r.fulfilled_by.name) : null;
+                        <tbody style={{ fontSize: '13px' }}>
+                            {(() => {
+                                const displayList = reservations.filter(r => {
+                                    const rawStatus = (r.status?.value || r.status || '').toLowerCase();
+                                    if (activeTab === 'deposit') {
+                                        return rawStatus === 'pending';
+                                    } else {
+                                        return rawStatus === 'completed';
+                                    }
+                                });
 
-                                const depositVal = Number(r.deposit || 0);
-                                const totalVal = Number(r.total || 0);
-                                let badgeStatus = 'pending';
-                                if (rawStatus === 'completed') {
-                                    badgeStatus = 'fully paid';
-                                } else if (rawStatus === 'cancelled') {
-                                    badgeStatus = 'cancelled';
-                                } else {
-                                    badgeStatus = (depositVal > 0 && depositVal < totalVal) ? 'deposit' : 'fully paid';
+                                if (loading) {
+                                    return (
+                                        <tr>
+                                            <td colSpan={activeTab === 'completed' ? 12 : 11} style={{ padding: '32px' }}>
+                                                <LoadingSpinner text={activeTab === 'deposit' ? "Loading orders in China..." : "Loading claimed & paid orders..."} minHeight="100px" />
+                                            </td>
+                                        </tr>
+                                    );
                                 }
 
-                                return (
-                                    <tr key={r.id} style={{ minHeight: '48px' }}>
-                                        <td style={{ fontWeight: 600, fontSize: '15px', color: 'var(--table-text-primary)' }}>{r.customer?.name || r.customer_name || '—'}</td>
-                                        <td style={{ fontSize: '15px', color: 'var(--table-text-secondary)', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{r.customer?.phone || r.customer_phone || '—'}</td>
-                                        <td style={{ fontSize: '15px', color: 'var(--table-text-primary)' }}>
-                                            <FormattedProductName name={productNames} blockVariant={true} />
-                                        </td>
-                                        <td style={{ fontSize: '15px', fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{totalQty}</td>
-                                        <td style={{ fontWeight: 600, fontSize: '15px', color: 'var(--primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(r.deposit)}</td>
-                                        <td style={{ fontWeight: 600, fontSize: '15px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(r.total)}</td>
-                                        <td style={{ fontSize: '15px', fontWeight: 500, color: 'var(--table-text-secondary)' }}>{fmtDate(r.date || r.created_at)}</td>
-                                        <td style={{ fontSize: '15px', fontWeight: 600, color: 'var(--table-text-primary)' }}>{fmtDate(r.pickup_date)}</td>
-                                        <td style={{ fontSize: '13px', color: fulfilledByName ? 'var(--success)' : 'var(--table-text-secondary)', fontWeight: 500 }}>
-                                            {fulfilledByName ? `Fulfilled by: ${fulfilledByName}` : (r.reserved_by?.real_name || r.reserved_by?.name || '—')}
-                                        </td>
-                                        <td><StatusBadge status={badgeStatus} /></td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
-                                                <button 
-                                                    className="action-trigger-btn" 
-                                                    aria-label="View Details" 
-                                                    data-tooltip="View Details" 
-                                                    onClick={() => openDetails && openDetails(r)}
-                                                >
-                                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                                        <circle cx="12" cy="12" r="3"></circle>
-                                                    </svg>
-                                                </button>
-                                                {isPending && (
-                                                    <button className="btn btn-success btn-sm" onClick={() => openFulfill(r)}>Fulfill</button>
+                                if (displayList.length === 0) {
+                                    return (
+                                        <tr>
+                                            <td colSpan={activeTab === 'completed' ? 12 : 11} style={{ textAlign: 'center', padding: '32px', color: 'var(--table-text-muted)', fontSize: '14px' }}>
+                                                {activeTab === 'deposit' ? 'No pending orders in China found.' : 'No claimed & paid orders found.'}
+                                            </td>
+                                        </tr>
+                                    );
+                                }
+
+                                return displayList.map(r => {
+                                    const rawStatus = (r.status?.value || r.status || '').toLowerCase();
+                                    const isPending = rawStatus === 'pending';
+                                    const itemsList = Array.isArray(r.items) && r.items.length > 0 ? r.items : [{
+                                        product: { part_no: '—', name: r.product_name || '—' },
+                                        part_no: '—',
+                                        item_name: r.product_name || '—',
+                                        qty: r.qty || 1,
+                                        price: r.total || 0,
+                                        engine_plate_number: r.engine_plate_number || ''
+                                    }];
+
+                                    const totalQty = itemsList.reduce((s, i) => s + Number(i.qty || 0), 0) || r.qty || 1;
+                                    const unitPrice = itemsList.length === 1 ? Number(itemsList[0].price || 0) : (Number(r.total || 0) / (totalQty || 1));
+
+                                    const depositVal = Number(r.deposit || 0);
+                                    const totalVal = Number(r.total || 0);
+                                    const balanceVal = Math.max(0, totalVal - depositVal);
+                                    const paidVal = balanceVal > 0 ? balancePaid(r, totalVal, depositVal) : totalVal;
+
+                                    function balancePaid(resObj, tot, dep) {
+                                        return Math.max(0, tot - dep) || tot;
+                                    }
+
+                                    const queryStr = (search || '').trim().toLowerCase();
+
+                                    return (
+                                        <tr key={r.id} style={{ minHeight: '48px' }}>
+                                            <td style={{ fontSize: '13px', fontWeight: 500, color: 'var(--table-text-secondary)', verticalAlign: 'middle' }}>
+                                                {fmtDate(r.date || r.created_at)}
+                                            </td>
+
+                                            {/* Part Number Column */}
+                                            <td style={{ verticalAlign: 'middle' }}>
+                                                {itemsList.length > 1 ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        {itemsList.map((it, iIdx) => {
+                                                            const rawPNo = it.product?.part_no || it.part_no;
+                                                            const pNo = (!rawPNo || String(rawPNo).trim().toUpperCase() === 'N/A' || String(rawPNo).trim() === '') ? '—' : String(rawPNo).trim();
+                                                            const isDash = pNo === '—';
+                                                            const isMatch = queryStr && !isDash && (
+                                                                pNo.toLowerCase().includes(queryStr) ||
+                                                                (it.item_name || it.product?.name || '').toLowerCase().includes(queryStr)
+                                                            );
+                                                            return (
+                                                                <div key={iIdx} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                    <span style={{
+                                                                        fontWeight: isDash ? 500 : 600,
+                                                                        fontSize: '13px',
+                                                                        color: isMatch ? '#2563EB' : (isDash ? 'var(--table-text-secondary)' : 'var(--primary)'),
+                                                                        backgroundColor: isMatch ? 'rgba(37, 99, 235, 0.12)' : 'transparent',
+                                                                        padding: isMatch ? '1px 5px' : '0',
+                                                                        borderRadius: '4px',
+                                                                        border: isMatch ? '1px solid rgba(37, 99, 235, 0.3)' : 'none'
+                                                                    }}>
+                                                                        {pNo}
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    (() => {
+                                                        const rawSingle = itemsList[0]?.product?.part_no || itemsList[0]?.part_no;
+                                                        const singlePNo = (!rawSingle || String(rawSingle).trim().toUpperCase() === 'N/A' || String(rawSingle).trim() === '') ? '—' : String(rawSingle).trim();
+                                                        const isSingleDash = singlePNo === '—';
+                                                        return (
+                                                            <span style={{ fontWeight: isSingleDash ? 500 : 600, fontSize: '13px', color: isSingleDash ? 'var(--table-text-secondary)' : 'var(--primary)' }}>
+                                                                {singlePNo}
+                                                            </span>
+                                                        );
+                                                    })()
                                                 )}
-                                                {isPending && (
-                                                    <button className="btn btn-danger-outline btn-sm" onClick={() => openCancel(r)}>Cancel</button>
+                                            </td>
+
+                                            {/* Description / Part Name Column */}
+                                            <td style={{ fontSize: '13px', color: 'var(--table-text-primary)', verticalAlign: 'middle' }}>
+                                                {itemsList.length > 1 ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        {itemsList.map((it, iIdx) => {
+                                                            const pName = it.product?.name || it.item_name || it.name || '—';
+                                                            const isMatch = queryStr && (
+                                                                pName.toLowerCase().includes(queryStr) ||
+                                                                (it.part_no || it.product?.part_no || '').toLowerCase().includes(queryStr)
+                                                            );
+                                                            return (
+                                                                <div key={iIdx} style={{
+                                                                    color: isMatch ? 'var(--primary)' : 'var(--table-text-primary)',
+                                                                    fontWeight: isMatch ? 600 : 400
+                                                                }}>
+                                                                    <FormattedProductName name={pName} blockVariant={true} />
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    <FormattedProductName name={itemsList[0]?.product?.name || itemsList[0]?.item_name || r.product_name || '—'} blockVariant={true} />
                                                 )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                                            </td>
+
+                                            {/* Engine Plate Column */}
+                                            <td style={{ fontSize: '13px', color: 'var(--table-text-secondary)', fontWeight: 500, verticalAlign: 'middle' }}>
+                                                {itemsList.length > 1 ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        {itemsList.map((it, iIdx) => (
+                                                            <div key={iIdx}>
+                                                                {it.engine_plate_number || r.engine_plate_number || '—'}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    r.engine_plate_number || itemsList[0]?.engine_plate_number || '—'
+                                                )}
+                                            </td>
+
+                                            {/* Qty Column */}
+                                            <td style={{ fontSize: '13px', fontWeight: 700, textAlign: 'center', fontVariantNumeric: 'tabular-nums', verticalAlign: 'middle' }}>
+                                                {itemsList.length > 1 ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        {itemsList.map((it, iIdx) => (
+                                                            <div key={iIdx}>{it.qty || 1}</div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    totalQty
+                                                )}
+                                            </td>
+
+                                            <td style={{ fontWeight: 600, fontSize: '13px', color: 'var(--table-text-primary)', verticalAlign: 'middle' }}>
+                                                {r.customer?.name || r.customer_name || '—'}
+                                            </td>
+                                            <td style={{ fontWeight: 500, fontSize: '13px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', verticalAlign: 'middle' }}>
+                                                {itemsList.length > 1 ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        {itemsList.map((it, iIdx) => (
+                                                            <div key={iIdx}>{fmt(it.price || 0)}</div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    fmt(unitPrice)
+                                                )}
+                                            </td>
+                                            <td style={{ fontWeight: 700, fontSize: '13px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', verticalAlign: 'middle' }}>
+                                                {fmt(totalVal)}
+                                            </td>
+                                            <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>
+                                                <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                    {fmt(depositVal)}
+                                                </div>
+                                                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--table-text-muted)', textTransform: 'uppercase', letterSpacing: '0.3px', marginTop: '2px' }}>
+                                                    {(() => {
+                                                        if (!r.payment_method) return 'CASH';
+                                                        const m = String(r.payment_method).trim().toUpperCase();
+                                                        if (m === 'GCASH' || m === 'G-CASH') return 'G-CASH';
+                                                        if (m === 'BANK' || m === 'BANK TRANSFER') return 'BANK';
+                                                        if (m === 'CHEQUE' || m === 'CHECK') {
+                                                            return r.cheque_number ? `CHEQUE #${r.cheque_number}` : 'CHEQUE';
+                                                        }
+                                                        return m;
+                                                    })()}
+                                                </div>
+                                            </td>
+                                            <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>
+                                                <div style={{
+                                                    fontWeight: 700,
+                                                    fontSize: '13px',
+                                                    color: activeTab === 'completed' ? '#059669' : '#DC2626',
+                                                    fontVariantNumeric: 'tabular-nums'
+                                                }}>
+                                                    {fmt(activeTab === 'completed' ? paidVal : balanceVal)}
+                                                </div>
+                                                <div style={{
+                                                    fontSize: '11px',
+                                                    fontWeight: 700,
+                                                    color: activeTab === 'completed' ? '#059669' : '#DC2626',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.4px',
+                                                    marginTop: '2px'
+                                                }}>
+                                                    {activeTab === 'completed' ? 'PAID' : (balanceVal === 0 ? 'PAID' : 'BALANCE')}
+                                                </div>
+                                            </td>
+                                            {activeTab === 'completed' && (
+                                                <td style={{ fontSize: '13px', fontWeight: 600, color: 'var(--table-text-primary)' }}>
+                                                    {r.date_get ? fmtDate(r.date_get) : fmtDate(r.updated_at)}
+                                                </td>
+                                            )}
+                                            <td style={{ textAlign: 'center' }}>
+                                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+                                                    <button 
+                                                        className="action-trigger-btn" 
+                                                        aria-label="View Details" 
+                                                        data-tooltip="View Details" 
+                                                        onClick={() => openDetails && openDetails(r)}
+                                                    >
+                                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                            <circle cx="12" cy="12" r="3"></circle>
+                                                        </svg>
+                                                    </button>
+                                                    {activeTab === 'deposit' && isPending && (
+                                                        <button className="btn btn-success btn-sm" onClick={() => openFulfill(r)}>Fulfill</button>
+                                                    )}
+                                                    {activeTab === 'deposit' && isPending && (
+                                                        <button className="btn btn-danger-outline btn-sm" onClick={() => openCancel(r)}>Cancel</button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                });
+                            })()}
                         </tbody>
                     </table>
                 </div>

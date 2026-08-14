@@ -25,7 +25,7 @@ class ReservationController extends Controller
     public function index(Request $request): JsonResponse
     {
         $reservations = $this->reservationService->getAll(
-            $request->only(['status', 'search'])
+            $request->only(['status', 'search', 'per_page'])
         );
 
         return response()->json($reservations);

@@ -15,8 +15,9 @@ class FulfillReservationRequest extends FormRequest
     {
         return [
             'balance_payment' => 'required|numeric|min:0',
-            'payment_method'  => 'required|string|in:Cash,GCash,Bank',
-            'doc_type'        => 'required|string|in:S.I.,D.R.,C.I.',
+            'payment_method'  => 'required|string|in:Cash,GCash,Bank,Cheque',
+            'cheque_number'   => 'required_if:payment_method,Cheque|nullable|string|max:100',
+            'doc_type'        => 'required|string|in:S.I.,D.R.,C.R.',
         ];
     }
 }

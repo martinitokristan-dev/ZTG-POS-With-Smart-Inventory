@@ -57,7 +57,9 @@ export default function PaymentMethodsTab({ salesSummary, employees = [], fmt, s
 
         filteredTransactions.forEach(tx => {
             if (tx.status === 'Completed' || tx.status === 'Pending') {
-                const pm = tx.payment_method ? (tx.payment_method.startsWith('Split') ? 'Split' : tx.payment_method) : 'Other';
+                const pm = tx.payment_method 
+                    ? (tx.payment_method.startsWith('Split') ? 'Split' : (tx.payment_method.startsWith('Cheque') ? 'Cheque' : tx.payment_method))
+                    : 'Other';
                 const current = pmMap.get(pm) || { name: pm, amount: 0, count: 0 };
                 current.amount += Number(tx.amount || 0);
                 current.count += 1;

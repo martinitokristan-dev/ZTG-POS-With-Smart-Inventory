@@ -1,6 +1,7 @@
 import React from 'react';
 import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
+import { getItemDiscountAmount } from '../../../../shared/utils/clientExcelExporter';
 
 export default function TransactionDetailsModal({ isOpen, onClose, transaction, fmtDate, fmt }) {
     if (!isOpen || !transaction) return null;
@@ -8,6 +9,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
     const tx = transaction;
     const status = tx.status || 'Unknown';
     const reason = tx.reason || tx.refund_reason || tx.void_reason || '—';
+    const chequeNo = tx.cheque_number || (tx.payment_method && tx.payment_method.includes('(#') ? tx.payment_method.match(/\(#([^)]+)\)/)?.[1] : null);
 
     let title = 'Transaction Details';
     let subtitle = tx.si_no || '—';
@@ -26,6 +28,8 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
             restockEntries = [];
         }
     }
+    const isPartialRefund = tx.is_partial_refund === true || (Number(tx.refunded_amount || 0) > 0 && Number(tx.amount || 0) > 0);
+    const isFullRefund = (status === 'Refund' || status === 'Return') && !isPartialRefund;
 
     if (status === 'Restocked') {
         title = 'Restock Details';
@@ -35,10 +39,14 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
         title = 'Void Transaction Details';
         subtitle = 'Cancelled sale record';
         statusColor = '#DC2626';
-    } else if (status === 'Deposit' || status === 'Paid') {
-        title = status === 'Deposit' ? 'Reservation Deposit' : 'Full Payment';
-        subtitle = tx.order_ref || tx.si_no || '—';
-        statusColor = status === 'Deposit' ? '#D97706' : '#059669';
+    } else if (isPartialRefund) {
+        title = 'Partial Refund Details';
+        subtitle = tx.si_no || '—';
+        statusColor = '#D97706';
+    } else if (isFullRefund) {
+        title = 'Full Refund Details';
+        subtitle = tx.si_no || '—';
+        statusColor = '#DC2626';
     } else {
         title = 'Transaction Details';
         subtitle = tx.si_no || '—';
@@ -46,41 +54,50 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
     }
 
     const txItems = Array.isArray(tx.items) ? tx.items : [];
-    const isReservationTx = tx.type === 'reservation' || status === 'Deposit' || status === 'Paid' || (tx.order_ref && (tx.order_ref.startsWith('RS-') || tx.order_ref.startsWith('ORD-')));
+
+    const hasRefundOrReturn = isPartialRefund || isFullRefund || status === 'Refund' || status === 'Return' || Number(tx.refunded_amount || 0) > 0 || txItems.some(i => Number(i.refunded_qty || 0) > 0);
+    const isReturnAction = status === 'Return' || (tx.type && tx.type.toLowerCase().includes('return'));
+    const refundReturnColumnHeader = 'Returned / Refund';
 
     // Calculate overall financial totals across transaction items
     let grossSubtotal = 0;
     let itemDiscountsTotal = 0;
 
     const processedItems = txItems.map(item => {
-        const qty = Number(item.qty || 1);
+        const rawQty = Number(item.qty || 1);
+        const refundedQty = Number(item.refunded_qty || 0);
+        const displayQty = (isPartialRefund || refundedQty > 0)
+            ? Number(item.net_qty ?? Math.max(0, rawQty - refundedQty))
+            : rawQty;
+
         let origPrice = Number(item.original_price || item.price || 0);
-        let itemDisc = Number(item.discount || item.item_discount || 0);
+        let itemDisc = getItemDiscountAmount(item, tx);
 
         // Fallback for older regular sale records where price was saved as net price instead of orig price
-        if (!isReservationTx && item.original_price && Number(item.original_price) > Number(item.price) && itemDisc === 0) {
+        if (item.original_price && Number(item.original_price) > Number(item.price) && itemDisc === 0) {
             origPrice = Number(item.original_price);
             itemDisc = origPrice - Number(item.price);
         }
 
-        const lineGross = qty * origPrice;
-        const lineDisc = qty * itemDisc;
-        // For reservation transactions, lineNet is the deposit/balance amount saved in item.price
-        const lineNet = isReservationTx ? (qty * Number(item.price || 0)) : Math.max(0, lineGross - lineDisc);
+        const lineGross = displayQty * origPrice;
+        const lineDisc = itemDisc;
+        const lineNet = Math.max(0, lineGross - lineDisc);
 
         grossSubtotal += lineGross;
         itemDiscountsTotal += lineDisc;
 
         return {
             ...item,
-            qty,
+            qty: rawQty,
+            displayQty,
+            refundedQty,
             unitPrice: origPrice,
             itemDisc,
             lineNet
         };
     });
 
-    const orderDiscountAmt = isReservationTx ? 0 : Number(tx.discount_amount || 0);
+    const orderDiscountAmt = Number(tx.discount_amount || 0);
     const totalDiscounts = itemDiscountsTotal + orderDiscountAmt;
     const discountTypeLabel = tx.discount_type ? ` (${tx.discount_type})` : '';
 
@@ -97,6 +114,9 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'center', width: '60px' }}>Qty</th>
                                 <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'right', width: '100px' }}>Price</th>
                                 <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'right', width: '105px' }}>Discounted</th>
+                                {hasRefundOrReturn && (
+                                    <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'center', width: '140px' }}>{refundReturnColumnHeader}</th>
+                                )}
                                 <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'right', width: '110px' }}>Total</th>
                             </tr>
                         </thead>
@@ -104,8 +124,8 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                              {processedItems.map((item, index) => {
                                 const partNo = item.product?.part_no || item.part_no || '—';
                                 const name = item.product?.name || item.name || 'Unknown Part';
-                                const chineseName = item.product?.chinese_name || item.chinese_name;
-                                const itemDiscTotal = item.itemDisc * item.qty;
+                                const itemDiscTotal = item.itemDisc;
+                                const refundedQty = item.refundedQty;
 
                                 return (
                                     <tr key={index} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '44px' }}>
@@ -115,13 +135,26 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                         <td style={{ padding: '10px 12px', color: 'var(--table-text-primary)' }}>
                                             <div style={{ fontSize: '14px' }}><FormattedProductName name={name} /></div>
                                         </td>
-                                        <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.qty}</td>
+                                        <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
+                                            {item.displayQty}
+                                        </td>
                                         <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--table-text-secondary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
                                             {fmt(item.unitPrice)}
                                         </td>
                                         <td style={{ padding: '10px 12px', textAlign: 'right', color: itemDiscTotal > 0 ? '#2563EB' : 'var(--table-text-muted)', fontWeight: itemDiscTotal > 0 ? '600' : '500', fontVariantNumeric: 'tabular-nums' }}>
                                             {itemDiscTotal > 0 ? `-${fmt(itemDiscTotal)}` : '—'}
                                         </td>
+                                        {hasRefundOrReturn && (
+                                            <td style={{ padding: '10px 12px', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+                                                {refundedQty > 0 || isFullRefund ? (
+                                                    <span className={`status-badge ${isReturnAction ? 'status-return' : 'status-refund'}`} style={{ textTransform: 'none' }}>
+                                                        {refundedQty > 0 ? `${refundedQty} pcs` : `${item.qty || 1} pcs`}
+                                                    </span>
+                                                ) : (
+                                                    <span style={{ color: 'var(--table-text-muted)' }}>—</span>
+                                                )}
+                                            </td>
+                                        )}
                                         <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
                                             {fmt(item.lineNet)}
                                         </td>
@@ -138,7 +171,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
     const auditDetailRow = (label, value, customStyle = {}) => {
         const isCopyable = ['Invoice No.', 'Reference No.', 'OR Number'].includes(label) && value && value !== '—' && value !== 'N/A';
         return (
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)', fontSize: '13px', alignItems: 'center' }}>
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)', fontSize: '13px', alignItems: 'center' }}>
                 <span style={{ color: 'var(--text-secondary)', fontWeight: '500', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>{label}</span>
                 <span style={{ color: 'var(--text-primary)', textAlign: 'right', fontWeight: '600', ...customStyle }}>
                     {isCopyable ? <CopyableText text={value} label={label} /> : value}
@@ -147,6 +180,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
         );
     };
 
+    const statusDisplayLabel = isPartialRefund ? 'Partial Refund' : (isFullRefund ? 'Full Refund' : status);
     const resolvedCustomer = tx.customer_name || tx.customer?.name || (tx.customer_id ? `Customer #${tx.customer_id}` : null);
 
     return (
@@ -167,12 +201,11 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {status === 'Restocked' && (
                             <>
-                                {auditDetailRow('Invoice No.', tx.si_no || '—')}
+                                {auditDetailRow('Action', 'Inventory Restock')}
                                 {auditDetailRow('Date & Time', fmtDate(tx.date || tx.created_at))}
-                                {auditDetailRow('Verified By', tx.cashier?.name || '—')}
-                                {auditDetailRow('Total Units Added', String(tx.total_qty || restockEntries.reduce((s, e) => s + (e.qty || 0), 0)))}
-                                {auditDetailRow('Status', status, { color: statusColor, fontWeight: '700' })}
-
+                                {auditDetailRow('Restocked By', tx.cashier?.name || '—')}
+                                {auditDetailRow('Total Qty Added', `+${tx.total_qty || 0}`, { color: '#059669', fontWeight: '700' })}
+                                {auditDetailRow('Reason', tx.void_reason || 'Batch restock / Inventory update')}
                                 {restockEntries.length > 0 && (
                                     <div style={{ marginTop: '16px' }}>
                                         <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '10px' }}>Restocked Items</span>
@@ -189,7 +222,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                                 </thead>
                                                 <tbody style={{ fontSize: '14px' }}>
                                                     {restockEntries.map((entry, idx) => {
-                                                        const prevStock = (entry.new_stock || 0) - (entry.qty || 0);
+                                                        const prevStock = entry.previous_stock ?? (entry.new_stock != null ? entry.new_stock - entry.qty : '—');
                                                         return (
                                                             <tr key={idx} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '44px' }}>
                                                                 <td style={{ padding: '10px 14px', fontWeight: '600', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums', fontSize: '14px' }}>
@@ -207,7 +240,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                                                         +{entry.qty || 0}
                                                                     </span>
                                                                 </td>
-                                                                <td style={{ padding: '10px 14px', textAlign: 'right', color: '#0F172A', fontWeight: '700', fontVariantNumeric: 'tabular-nums', fontSize: '14px' }}>
+                                                                <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text-primary)', fontWeight: '700', fontVariantNumeric: 'tabular-nums', fontSize: '14px' }}>
                                                                     {entry.new_stock || 0}
                                                                 </td>
                                                             </tr>
@@ -241,41 +274,53 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 {auditDetailRow('Reference No.', tx.si_no || '—')}
                                 {auditDetailRow('Date & Time', fmtDate(tx.date || tx.created_at))}
                                 {auditDetailRow('Customer', tx.customer_name || tx.customer?.name || 'Walk-in')}
-                                {auditDetailRow('Payment Method', tx.payment_method || '—')}
+                                {auditDetailRow('Payment Method', (tx.payment_method || '—').replace(/\s*\([^)]*\)/g, '').trim())}
+                                {chequeNo && auditDetailRow('Cheque Number', chequeNo)}
                                 {auditDetailRow('Product Value (Full)', fmt(grossSubtotal > 0 ? grossSubtotal : (tx.amount || tx.total)))}
                                 {totalDiscounts > 0 && auditDetailRow(`Total Discounts${discountTypeLabel}`, `-${fmt(totalDiscounts)}`, { color: '#2563EB', fontWeight: '700' })}
-                                {auditDetailRow(status === 'Deposit' ? 'Deposit Amount Collected' : 'Payment Collected', fmt(tx.amount || tx.total), { color: '#0F172A', fontWeight: '700' })}
+                                {auditDetailRow(status === 'Deposit' ? 'Deposit Amount Collected' : 'Payment Collected', fmt(tx.amount || tx.total), { color: 'var(--text-primary)', fontWeight: '700' })}
                                 {auditDetailRow('Served By', tx.checker?.name || tx.cashier?.name || '—')}
                                 {auditDetailRow('Status', status, { color: statusColor, fontWeight: '700' })}
                             </>
                         )}
 
-                        {status !== 'Restocked' && status !== 'Void' && status !== 'Deposit' && status !== 'Paid' && (
+                        {status !== 'Restocked' && status !== 'Void' && (
                             <>
                                 {auditDetailRow('Invoice No.', tx.si_no || '—')}
-                                {tx.order_ref && auditDetailRow('Reservation Ref', tx.order_ref)}
-                                {tx.reservation && (tx.reservation.date || tx.reservation.created_at) && (
-                                    auditDetailRow('Date Reserved / Deposit Date', fmtDate(tx.reservation.date || tx.reservation.created_at))
-                                )}
-                                {auditDetailRow(isReservationTx ? 'Fulfillment / Pickup Date' : 'Date & Time', fmtDate(tx.date || tx.created_at))}
+                                {auditDetailRow('Date & Time', fmtDate(tx.date || tx.created_at))}
                                 {auditDetailRow('Customer', tx.customer_name || tx.customer?.name || (tx.customer_id ? `Customer #${tx.customer_id}` : 'Walk-in'))}
                                 {(tx.customer?.phone || tx.customer_phone) && auditDetailRow('Contact Phone', tx.customer?.phone || tx.customer_phone)}
-                                {auditDetailRow('Payment Method', tx.payment_method || 'Cash')}
-                                {grossSubtotal > 0 && auditDetailRow(isReservationTx ? 'Product Value (Full)' : 'Subtotal (Gross)', fmt(grossSubtotal))}
-                                {!isReservationTx && itemDiscountsTotal > 0 && auditDetailRow('Item Discounts', `-${fmt(itemDiscountsTotal)}`, { color: '#2563EB', fontWeight: '700' })}
-                                {!isReservationTx && orderDiscountAmt > 0 && auditDetailRow(`Order Discount${discountTypeLabel}`, `-${fmt(orderDiscountAmt)}`, { color: '#2563EB', fontWeight: '700' })}
-                                {!isReservationTx && totalDiscounts > 0 && itemDiscountsTotal > 0 && orderDiscountAmt > 0 && auditDetailRow('Total Discounts', `-${fmt(totalDiscounts)}`, { color: '#2563EB', fontWeight: '700' })}
-                                {auditDetailRow(isReservationTx ? 'Balance Paid at Pickup' : 'Net Amount Paid', fmt(tx.amount || tx.total), { color: '#0F172A', fontWeight: '700', fontSize: '15px' })}
+                                {auditDetailRow('Payment Method', (tx.payment_method || 'Cash').replace(/\s*\([^)]*\)/g, '').trim())}
+                                {chequeNo && auditDetailRow('Cheque Number', chequeNo)}
+                                {!isPartialRefund && grossSubtotal > 0 && auditDetailRow('Subtotal (Gross)', fmt(grossSubtotal))}
+                                {totalDiscounts > 0 && (
+                                    (itemDiscountsTotal > 0 && orderDiscountAmt > 0 && itemDiscountsTotal !== orderDiscountAmt) ? (
+                                        <>
+                                            {auditDetailRow('Item Discounts', `-${fmt(itemDiscountsTotal)}`, { color: '#2563EB', fontWeight: '700' })}
+                                            {auditDetailRow(`Order Discount${discountTypeLabel}`, `-${fmt(orderDiscountAmt)}`, { color: '#2563EB', fontWeight: '700' })}
+                                            {auditDetailRow('Total Discounts', `-${fmt(itemDiscountsTotal + orderDiscountAmt)}`, { color: '#2563EB', fontWeight: '700' })}
+                                        </>
+                                    ) : (
+                                        auditDetailRow(`Discount${discountTypeLabel}`, `-${fmt(Math.max(itemDiscountsTotal, orderDiscountAmt))}`, { color: '#2563EB', fontWeight: '700' })
+                                    )
+                                )}
+                                {isPartialRefund && (
+                                    <>
+                                        {auditDetailRow('Original Total', fmt(tx.original_amount != null ? Number(tx.original_amount) : (Number(tx.amount || tx.total || 0) + Number(tx.refunded_amount || 0))))}
+                                        {auditDetailRow('Refunded Amount', `-${fmt(tx.refunded_amount)}`, { color: '#DC2626', fontWeight: '700' })}
+                                    </>
+                                )}
+                                {auditDetailRow(isPartialRefund ? 'Net Sales Remaining' : 'Net Amount Paid', fmt(tx.amount || tx.total), { color: 'var(--text-primary)', fontWeight: '700', fontSize: '15px' })}
                                 {auditDetailRow('Served By', tx.checker?.name || tx.cashier?.name || '—')}
-                                {auditDetailRow('Status', status, { color: statusColor, fontWeight: '700' })}
-                                {(status === 'Refund' || status === 'Return' || reason !== '—') && auditDetailRow('Reason', reason)}
+                                {auditDetailRow('Status', statusDisplayLabel, { color: statusColor, fontWeight: '700' })}
+                                {(status === 'Refund' || status === 'Return' || isPartialRefund || reason !== '—') && auditDetailRow('Reason', reason)}
                             </>
                         )}
                     </div>
                     {itemsBlock}
                 </div>
-                <div className="modal-footer" style={{ padding: '16px 24px', borderTop: 'none', background: '#FFFFFF', display: 'flex', justifyContent: 'flex-end' }}>
-                    <button className="btn" onClick={onClose} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', padding: '8px 24px', borderRadius: '6px', fontWeight: '500', color: '#475569', cursor: 'pointer', fontSize: '14px' }}>Close</button>
+                <div className="modal-footer audit-detail-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', background: 'var(--table-header-bg)', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button type="button" className="btn btn-secondary" onClick={onClose} style={{ padding: '8px 24px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>Close</button>
                 </div>
             </div>
         </div>

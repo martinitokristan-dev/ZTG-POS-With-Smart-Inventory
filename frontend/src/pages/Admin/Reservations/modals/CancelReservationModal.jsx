@@ -16,7 +16,7 @@ export default function CancelReservationModal({
                     <p style={{ fontSize: '14px', color: 'var(--text-primary)', marginBottom: '16px' }}>
                         Are you sure you want to cancel this reservation? The deposited amount will be archived as returned.
                     </p>
-                    <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
+                    <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
                         <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Refundable Deposit:</span>
                         <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--primary)' }}>{fmt(selected.deposit)}</span>
                     </div>

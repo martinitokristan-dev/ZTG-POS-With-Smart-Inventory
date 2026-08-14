@@ -106,21 +106,11 @@ export default function HistoryTable({
                             const [displayDate, ...timeParts] = fullDate.split(', ');
                             const displayTime = timeParts.join(', ');
 
-                            // Linked reservation badge
-                            let reservationDisplay = null;
-                            if (tx.status === 'Deposit') {
-                                reservationDisplay = <span style={{display: 'block', fontSize: '11px', color: '#D97706', fontWeight: '600', marginTop: '3px'}}>50% Deposit</span>;
-                            } else if (tx.status === 'Paid' && tx.order_ref) {
-                                reservationDisplay = <span style={{display: 'block', fontSize: '11px', color: '#059669', fontWeight: '600', marginTop: '3px'}}>Full Payment</span>;
-                            } else if (tx.order_ref && tx.status === 'Completed') {
-                                reservationDisplay = <span style={{display: 'block', fontSize: '11px', color: 'var(--primary)', fontWeight: '600', marginTop: '3px'}}>Pickup · {tx.order_ref}</span>;
-                            }
-
                             const isBottomRow = idx >= transactions.length - 2 && transactions.length > 2;
 
                             const isRestock = tx.status === 'RESTOCKED' || tx.status === 'Restocked' || tx.type === 'inventory' || tx.type === 'restock' || (tx.si_no && tx.si_no.startsWith('INV-RESTOCK'));
                             const customerVal = isRestock ? '—' : (tx.customer?.name || tx.customer_name || 'Walk-in');
-                            const paymentVal = (isRestock || tx.payment_method === 'N/A') ? '—' : (tx.payment_method || '—');
+                            const paymentVal = (isRestock || tx.payment_method === 'N/A') ? '—' : (tx.payment_method ? String(tx.payment_method).replace(/\s*\([^)]*\)/g, '').trim() : '—');
                             const reasonVal = isRestock 
                                 ? (tx.refund_reason || tx.notes || 'Restocking item(s)') 
                                 : (tx.status === 'Refund' || tx.status === 'Return' ? (tx.refund_reason || '—') : tx.status === 'Void' ? (tx.void_reason || '—') : '—');
@@ -137,7 +127,6 @@ export default function HistoryTable({
                                             label="Receipt/Invoice No." 
                                             codeStyle={{ fontSize: '15px', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }} 
                                         />
-                                        {reservationDisplay}
                                     </td>
                                     <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>{customerVal}</td>
                                     <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>{tx.checker?.name || tx.cashier?.name || '—'}</td>

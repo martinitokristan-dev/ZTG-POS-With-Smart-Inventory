@@ -114,6 +114,7 @@ class CheckoutService
                 'Cash'           => $data['amount_tendered'],
                 'Split'          => $data['split_amount_1'] + $data['split_amount_2'],
                 'P.O. (Pending)' => 0,
+                'Cheque'         => $data['amount_tendered'] ?? $grandTotal,
                 default          => $grandTotal, // GCash/Bank: auto-set to total
             };
 
@@ -126,11 +127,14 @@ class CheckoutService
                 'checker_id'        => $data['checker_id'] ?? null,
                 'total_qty'         => array_sum(array_column($cart, 'qty')),
                 'amount'            => $grandTotal,
+                'original_amount'   => $grandTotal,  // Frozen at checkout — never mutated
+                'refunded_amount'   => 0,             // Will be populated on Refund/Return/Void
                 'discount_amount'   => $orderDiscount,
                 'discount_type'     => $data['discount_type'] ?? null,
                 'discount_rate'     => $data['discount_rate'] ?? 0,
                 'amount_tendered'   => $amountTendered,
                 'payment_method'    => $paymentMethodStr,
+                'cheque_number'     => $data['cheque_number'] ?? null,
                 'doc_type'          => $data['doc_type'],
                 'status'            => $data['payment_method'] === 'P.O. (Pending)' ? TransactionStatus::PENDING->value : TransactionStatus::COMPLETED->value,
                 'type'              => TransactionType::SALE->value,
@@ -168,7 +172,7 @@ class CheckoutService
         // Trigger formal discount notification if any discount was applied
         $itemDiscountsTotal = 0;
         foreach ($transaction->items as $item) {
-            $itemDiscountsTotal += ((float)$item->discount) * (int)$item->qty;
+            $itemDiscountsTotal += (float)$item->discount;
         }
         $totalDiscount = $itemDiscountsTotal + ((float)$transaction->discount_amount);
 
@@ -220,7 +224,7 @@ class CheckoutService
     {
         $prefix = match ($docType) {
             'D.R.'  => 'DR',
-            'C.I.'  => 'CI',
+            'C.R.'  => 'CR',
             default => 'SI',
         };
 

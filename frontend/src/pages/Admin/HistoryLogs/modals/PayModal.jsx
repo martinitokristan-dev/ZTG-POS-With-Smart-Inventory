@@ -3,6 +3,7 @@ import IOSSelect from '../../../../shared/components/IOSSelect';
 
 export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDate, fmt }) {
     const [paymentMethod, setPaymentMethod] = useState('Cash');
+    const [chequeNumber, setChequeNumber] = useState('');
     const [amountTendered, setAmountTendered] = useState('');
     const [adminPin, setAdminPin] = useState('');
     const [showPin, setShowPin] = useState(false);
@@ -12,6 +13,7 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
     useEffect(() => {
         if (isOpen && transaction) {
             setPaymentMethod('Cash');
+            setChequeNumber('');
             setAmountTendered('');
             setAdminPin('');
             setShowPin(false);
@@ -26,6 +28,11 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
         e.preventDefault();
         if (isSubmitting) return;
 
+        if (paymentMethod === 'Cheque' && !chequeNumber.trim()) {
+            setErrorMessage('Please enter the Cheque Number.');
+            return;
+        }
+
         setErrorMessage('');
         setIsSubmitting(true);
         
@@ -35,7 +42,8 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
 
             const payload = {
                 payment_method: paymentMethod,
-                amount_tendered: Number(amountTendered),
+                cheque_number: paymentMethod === 'Cheque' ? chequeNumber.trim() : null,
+                amount_tendered: Number(amountTendered || transaction.amount),
                 admin_id: adminId,
                 admin_pin: adminPin
             };
@@ -114,18 +122,44 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
                                 <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Payment Method <span style={{ color: '#EF4444' }}>*</span></label>
                                 <IOSSelect
                                     value={paymentMethod}
-                                    onChange={(e) => setPaymentMethod(e.target.value)}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setPaymentMethod(val);
+                                        if (val === 'Cheque' && !amountTendered) {
+                                            setAmountTendered(String(transaction.amount));
+                                        }
+                                    }}
                                     options={[
                                         { value: 'Cash', label: 'Cash' },
                                         { value: 'GCash', label: 'GCash' },
-                                        { value: 'Bank', label: 'Bank Transfer' }
+                                        { value: 'Bank', label: 'Bank Transfer' },
+                                        { value: 'Cheque', label: 'Cheque' }
                                     ]}
                                     disabled={isSubmitting}
                                 />
                             </div>
 
+                            {paymentMethod === 'Cheque' && (
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Cheque Number <span style={{ color: '#EF4444' }}>*</span></label>
+                                    <input 
+                                        type="text" 
+                                        className="form-control" 
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', fontWeight: '600' }}
+                                        value={chequeNumber}
+                                        onChange={(e) => setChequeNumber(e.target.value)}
+                                        placeholder="e.g. CHK-987654"
+                                        required
+                                        autoFocus
+                                        disabled={isSubmitting}
+                                    />
+                                </div>
+                            )}
+
                             <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Cash Received <span style={{ color: '#EF4444' }}>*</span></label>
+                                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>
+                                    {paymentMethod === 'Cheque' ? 'Cheque Amount' : 'Cash Received'} <span style={{ color: '#EF4444' }}>*</span>
+                                </label>
                                 <input 
                                     type="number" 
                                     className="form-control" 
@@ -184,7 +218,7 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
                         <button type="button" className="btn" style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#475569', fontWeight: '600', padding: '10px 20px', borderRadius: '8px' }} onClick={onClose} disabled={isSubmitting}>
                             Cancel
                         </button>
-                        <button type="submit" className="btn" style={{ background: '#10B981', color: '#FFFFFF', border: 'none', fontWeight: '600', padding: '10px 24px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)', opacity: isSubmitting ? 0.7 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer' }} disabled={!adminPin || !paymentMethod || !amountTendered || isSubmitting}>
+                        <button type="submit" className="btn" style={{ background: '#10B981', color: '#FFFFFF', border: 'none', fontWeight: '600', padding: '10px 24px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)', opacity: isSubmitting ? 0.7 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer' }} disabled={!adminPin || !paymentMethod || (paymentMethod === 'Cheque' && !chequeNumber.trim()) || !amountTendered || isSubmitting}>
                             {isSubmitting ? 'Processing Payment...' : 'Confirm Payment'}
                         </button>
                     </div>

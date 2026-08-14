@@ -6,5 +6,5 @@ enum DocType: string
 {
     case SI = 'S.I.';
     case DR = 'D.R.';
-    case CI = 'C.I.';
+    case CR = 'C.R.';
 }

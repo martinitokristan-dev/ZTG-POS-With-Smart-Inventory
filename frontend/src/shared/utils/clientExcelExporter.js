@@ -2,7 +2,7 @@
  * clientExcelExporter.js
  * Exports sales data matching the client's exact spreadsheet template:
  * - Green Header: DAILY SALES [MONTH YEAR]
- * - 11 Columns: DATE | QTY | PART NUMBER | PART NAME | PRICE | SALES | CUSTOMER NAME | PAYMENT | DISCOUNTED | S.I./C.I./D.R. | SERVE BY
+ * - 11 Columns: DATE | QTY | PART NUMBER | PART NAME | PRICE | SALES | CUSTOMER NAME | PAYMENT | DISCOUNTED | S.I./C.R./D.R. | SERVE BY
  */
 
 const formatDate = (dateStr) => {
@@ -44,213 +44,201 @@ const formatPaymentMethod = (pm) => {
 
 export const getItemDiscountAmount = (item, txInput) => {
   if (!item && !txInput) return 0;
-  const tx = txInput || item.tx || {};
+  const tx = txInput || (item && item.tx) || {};
+  if (!item) return Number(tx.discount_amount || tx.discount || tx.discount_val || 0);
   
-  // 1. Direct item-level discount (per piece * qty)
+  // 1. Direct item-level discount (total discount for this line item)
   const itemDiscVal = Number(item.discount || item.item_discount || 0);
-  const qty = Number(item.qty || 1);
   if (itemDiscVal > 0) {
-    return itemDiscVal * qty;
+    return itemDiscVal;
   }
 
   // 2. Order-wide discount from transaction (discount_amount, discount_val, or discount)
   const orderDisc = Number(tx.discount_amount || tx.discount || tx.discount_val || 0);
   if (orderDisc > 0) {
+    const isPartialRefund = tx.is_partial_refund === true;
     const txItems = Array.isArray(tx.items) && tx.items.length > 0 ? tx.items : [];
-    if (txItems.length <= 1) {
+    
+    const activeItems = isPartialRefund
+      ? txItems.filter(it => Number(it.net_qty ?? Math.max(0, (it.qty || 0) - (it.refunded_qty || 0))) > 0)
+      : txItems;
+
+    if (activeItems.length <= 1) {
+      if (isPartialRefund && activeItems.length === 1) {
+        const uPrice = Number(activeItems[0].original_price || activeItems[0].price || 0);
+        const itemQty = Number(activeItems[0].net_qty ?? Math.max(0, (activeItems[0].qty || 0) - (activeItems[0].refunded_qty || 0)));
+        const gross = itemQty * uPrice;
+        const effDisc = Math.max(0, gross - Number(tx.amount || 0));
+        return effDisc > 0 ? effDisc : orderDisc;
+      }
       return orderDisc;
     }
-    // Calculate raw subtotal of all items in transaction
-    const txRawSubtotal = txItems.reduce((sum, it) => {
+
+    // Calculate raw subtotal of active items in transaction
+    const activeRawSubtotal = activeItems.reduce((sum, it) => {
       const uPrice = Number(it.original_price || it.price || 0);
-      return sum + (Number(it.qty || 1) * uPrice);
+      const q = isPartialRefund
+        ? Number(it.net_qty ?? Math.max(0, (it.qty || 0) - (it.refunded_qty || 0)))
+        : Number(it.qty || 1);
+      return sum + (q * uPrice);
     }, 0);
-    if (txRawSubtotal > 0) {
+
+    if (activeRawSubtotal > 0) {
       const uPrice = Number(item.original_price || item.price || 0);
-      const itemSubtotal = qty * uPrice;
-      return (itemSubtotal / txRawSubtotal) * orderDisc;
+      const itemQty = isPartialRefund
+        ? Number(item.net_qty ?? Math.max(0, (item.qty || 0) - (item.refunded_qty || 0)))
+        : Number(item.qty || 1);
+      const itemSubtotal = itemQty * uPrice;
+
+      if (isPartialRefund) {
+        const effectiveActiveDiscount = Math.max(0, activeRawSubtotal - Number(tx.amount || 0));
+        return (itemSubtotal / activeRawSubtotal) * (effectiveActiveDiscount > 0 ? effectiveActiveDiscount : orderDisc);
+      }
+
+      return (itemSubtotal / activeRawSubtotal) * orderDisc;
     }
-    return orderDisc / txItems.length;
+    return orderDisc / activeItems.length;
   }
 
   return 0;
 };
 
-/**
- * Primary Exporter: HTML Excel Spreadsheet (.xls)
- * Opens cleanly in Microsoft Excel matching the client's exact 11-column template.
- */
-export const exportSalesToExcel = (transactionsItems = [], options = {}) => {
-  const monthYearLabel = getMonthYearLabel(options.startDate, options.endDate);
-  const filename = options.filename 
-    ? options.filename.replace(/\.xlsx$/i, '.xls')
-    : `Daily_Sales_${monthYearLabel.replace(/\s+/g, '_')}.xls`;
-
-  let tableRows = '';
-
-  transactionsItems.forEach((item) => {
-    const tx = item.tx || {};
-    const isDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void');
-    // Mirror SalesReportTab: reservation transactions (deposit OR fulfillment) use item.price
-    // for the SALES column (the portion actually collected), while PRICE shows original_price.
-    const isReservationTx = tx.type === 'reservation';
-    let resolvedName = item.product?.name || item.name || 'Unknown Product';
-    const variantOpt = item.variant_option || item.variant || item.variant_name || item.variantOption;
-    if (variantOpt && !resolvedName.toLowerCase().includes(String(variantOpt).toLowerCase())) {
-        resolvedName = `${resolvedName} (${variantOpt})`;
-    }
-    const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
-    const qty = Number(item.qty || 1);
-    const rawPrice = Number(item.original_price || item.price || 0);
-    const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, qty));
-    const discountVal = getItemDiscountAmount(item, tx);
-    // PRICE column: always full product price (unitPrice)
-    // SALES column: for reservations use item.price × qty; for regular sales use unitPrice × qty
-    const salesUnitPrice = isReservationTx ? Number(item.price || 0) : unitPrice;
-    const grossSalesAmount = qty * salesUnitPrice;
-    const netSalesAmount = Math.max(0, grossSalesAmount - discountVal);
-    const finalSalesAmount = isDeduction ? -netSalesAmount : netSalesAmount;
-
-    const dateVal = formatDate(tx.date || tx.created_at);
-    const customerVal = tx.customer_name || tx.customer?.name || (tx.customer_id ? `Customer #${tx.customer_id}` : 'WALK-IN');
-    const paymentVal = formatPaymentMethod(tx.payment_method);
-    const isPo = paymentVal === 'P.O';
-    const paymentStyle = isPo ? 'color: #C00000; font-weight: bold;' : 'color: #000000;';
-
-    const siDrVal = tx.si_no || tx.receipt_number || '-';
-    const serveByVal = tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || 'SYSTEM';
-
-    tableRows += `
-      <tr style="height: 24px;">
-        <td style="border: 1px solid #000000; text-align: center; mso-number-format:'Short Date'; padding: 4px 8px;">${escapeHtml(dateVal)}</td>
-        <td style="border: 1px solid #000000; text-align: center; mso-number-format:'0'; padding: 4px 8px;">${qty}</td>
-        <td style="border: 1px solid #000000; text-align: center; font-weight: bold; mso-number-format:'\\@'; padding: 4px 12px;">${escapeHtml(resolvedPartNo)}</td>
-        <td style="border: 1px solid #000000; text-align: left; mso-number-format:'\\@'; padding: 4px 12px;">${escapeHtml(resolvedName)}</td>
-        <td style="border: 1px solid #000000; text-align: right; mso-number-format:'#,##0.00'; padding: 4px 12px;">${unitPrice.toFixed(2)}</td>
-        <td style="border: 1px solid #000000; text-align: right; mso-number-format:'#,##0.00'; padding: 4px 12px;">${finalSalesAmount.toFixed(2)}</td>
-        <td style="border: 1px solid #000000; text-align: left; mso-number-format:'\\@'; padding: 4px 12px;">${escapeHtml(customerVal)}</td>
-        <td style="border: 1px solid #000000; text-align: center; ${paymentStyle} mso-number-format:'\\@'; padding: 4px 8px;">${escapeHtml(paymentVal)}</td>
-        <td style="border: 1px solid #000000; text-align: right; mso-number-format:'#,##0.00'; padding: 4px 8px;">${discountVal > 0 ? discountVal.toFixed(2) : ''}</td>
-        <td style="border: 1px solid #000000; text-align: center; mso-number-format:'\\@'; padding: 4px 8px;">${escapeHtml(siDrVal)}</td>
-        <td style="border: 1px solid #000000; text-align: center; mso-number-format:'\\@'; padding: 4px 8px;">${escapeHtml(serveByVal)}</td>
-      </tr>`;
-  });
-
-  const htmlContent = `
+const writeClipboardRichSales = async (htmlRows, tsvRows) => {
+  const fullHtml = `
     <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
     <head>
       <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-      <!--[if gte mso 9]>
-      <xml>
-        <x:ExcelWorkbook>
-          <x:ExcelWorksheets>
-            <x:ExcelWorksheet>
-              <x:Name>${escapeHtml(monthYearLabel)}</x:Name>
-              <x:WorksheetOptions>
-                <x:DisplayGridlines/>
-              </x:WorksheetOptions>
-            </x:ExcelWorksheet>
-          </x:ExcelWorksheets>
-        </x:ExcelWorkbook>
-      </xml>
-      <![endif]-->
       <style>
-        body { font-family: 'Segoe UI', Calibri, sans-serif; font-size: 10pt; }
-        table { border-collapse: collapse; table-layout: auto; }
-        th { background-color: #E2EFDA; color: #000000; font-weight: bold; text-align: center; border: 1px solid #000000; height: 28px; padding: 4px 10px; font-size: 10pt; }
-        .banner { background-color: #006100; color: #FFFFFF; font-size: 16pt; font-weight: bold; text-align: center; height: 42px; border: 1px solid #000000; }
+        body, table, tr, td { font-family: Calibri, Arial, sans-serif; font-size: 11pt; font-weight: bold; border-collapse: collapse; }
       </style>
     </head>
     <body>
-      <table>
-        <thead>
-          <tr>
-            <th colspan="11" class="banner">DAILY SALES ${escapeHtml(monthYearLabel)}</th>
-          </tr>
-          <tr>
-            <th style="min-width: 90px;">DATE</th>
-            <th style="min-width: 50px;">QTY</th>
-            <th style="min-width: 220px;">PART NUMBER</th>
-            <th style="min-width: 340px;">PART NAME</th>
-            <th style="min-width: 100px;">PRICE</th>
-            <th style="min-width: 110px;">SALES</th>
-            <th style="min-width: 180px;">CUSTOMER NAME</th>
-            <th style="min-width: 90px;">PAYMENT</th>
-            <th style="min-width: 110px;">DISCOUNTED</th>
-            <th style="min-width: 110px;">S.I./C.I./D.R.</th>
-            <th style="min-width: 100px;">SERVE BY</th>
-          </tr>
-        </thead>
+      <table style="border-collapse: collapse; font-family: Calibri, Arial, sans-serif; font-size: 11pt; font-weight: bold;">
         <tbody>
-          ${tableRows}
+          ${htmlRows}
         </tbody>
       </table>
     </body>
     </html>
   `;
 
-  const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  if (typeof ClipboardItem !== 'undefined' && navigator.clipboard && navigator.clipboard.write) {
+    try {
+      const htmlBlob = new Blob([fullHtml], { type: 'text/html' });
+      const textBlob = new Blob([tsvRows], { type: 'text/plain' });
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': htmlBlob,
+          'text/plain': textBlob
+        })
+      ]);
+      return true;
+    } catch (err) {
+      console.warn('ClipboardItem write failed, falling back to copy event:', err);
+    }
+  }
+
+  const listener = (e) => {
+    e.clipboardData.setData('text/html', fullHtml);
+    e.clipboardData.setData('text/plain', tsvRows);
+    e.preventDefault();
+  };
+  document.addEventListener('copy', listener);
+  document.execCommand('copy');
+  document.removeEventListener('copy', listener);
+  return true;
 };
 
 /**
- * Secondary Exporter: Clean CSV with UTF-8 BOM & Exact Client 11 Columns
+ * Primary Exporter: Headerless Rich TSV & HTML Clipboard Copy
+ * Copies pure data rows directly to clipboard for direct Excel paste (Ctrl+V)
+ * with BOLD font on every column data exactly matching the client's reference sheet:
+ * DATE | QTY | PART NUMBER | PART NAME | PRICE | SALES | CUSTOMER NAME | PAYMENT | DISCOUNTED | S.I./C.R./D.R. | SERVE BY
  */
-export const exportSalesToCSV = (transactionsItems = [], options = {}) => {
-  const monthYearLabel = getMonthYearLabel(options.startDate, options.endDate);
-  const filename = options.filename || `Daily_Sales_${monthYearLabel.replace(/\s+/g, '_')}.csv`;
+export const copySalesToClipboard = async (transactionsItems = []) => {
+  if (transactionsItems.length === 0) {
+    return { success: false, count: 0, message: 'No sales records to copy' };
+  }
 
-  const headers = ["DATE", "QTY", "PART NUMBER", "PART NAME", "PRICE", "SALES", "CUSTOMER NAME", "PAYMENT", "DISCOUNTED", "S.I./C.I./D.R.", "SERVE BY"];
-  const csvRows = [headers.join(",")];
+  let htmlRows = '';
+  const textRows = [];
+  const bStyle = 'border: 1px solid #000000; padding: 2px 6px; font-family: Calibri, Arial, sans-serif; font-size: 11pt; font-weight: bold; vertical-align: middle; white-space: nowrap;';
 
   transactionsItems.forEach((item) => {
     const tx = item.tx || {};
     const isDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void');
-    const resolvedName = (item.product?.name || item.name || 'Unknown Product').replace(/"/g, '""');
-    const resolvedPartNo = (item.product?.part_no || item.partNo || 'N/A').replace(/"/g, '""');
+    let resolvedName = item.product?.name || item.name || 'Unknown Product';
+    const variantOpt = item.variant_option || item.variant || item.variant_name || item.variantOption;
+    if (variantOpt && !resolvedName.toLowerCase().includes(String(variantOpt).toLowerCase())) {
+        resolvedName = `${resolvedName} (${variantOpt})`;
+    }
+    const resolvedPartNo = item.product?.part_no || item.partNo || '—';
     const qty = Number(item.qty || 1);
-    const unitPrice = Number(item.price || 0);
-    const rowSalesAmount = qty * unitPrice;
-    const finalSalesAmount = isDeduction ? -rowSalesAmount : rowSalesAmount;
-    const discountVal = Number(tx.discount || item.discount || 0);
+    const rawPrice = Number(item.original_price || item.price || 0);
+    const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, qty));
+    const discountVal = getItemDiscountAmount(item, tx);
+    const grossSalesAmount = qty * unitPrice;
+    const netSalesAmount = Math.max(0, grossSalesAmount - discountVal);
+    const finalSalesAmount = isDeduction ? -netSalesAmount : netSalesAmount;
 
     const dateVal = formatDate(tx.date || tx.created_at);
-    const customerVal = (tx.customer_name || tx.customer?.name || (tx.customer_id ? `Customer #${tx.customer_id}` : 'WALK-IN')).replace(/"/g, '""');
-    const paymentVal = formatPaymentMethod(tx.payment_method).replace(/"/g, '""');
-    const siDrVal = (tx.si_no || tx.receipt_number || '-').replace(/"/g, '""');
-    const serveByVal = (tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || 'SYSTEM').replace(/"/g, '""');
+    const customerVal = (tx.customer_name || tx.customer?.name || (tx.customer_id ? `Customer #${tx.customer_id}` : 'WALK-IN')).toUpperCase();
+    const paymentVal = formatPaymentMethod(tx.payment_method).toUpperCase();
+    const isPo = paymentVal === 'P.O';
+    const paymentStyle = isPo ? 'color: #C00000;' : 'color: #000000;';
 
-    const row = [
-      `"${dateVal}"`,
+    const siDrVal = tx.si_no || tx.receipt_number || '—';
+    const serveByVal = (tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || 'SYSTEM').toUpperCase();
+
+    const formattedUnitPrice = unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formattedFinalSales = finalSalesAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formattedDiscount = discountVal > 0 ? discountVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+
+    // 11 Columns matching the client's reference sheet with BOLD on every cell
+    htmlRows += `
+      <tr style="height: 24px;">
+        <td style="${bStyle} text-align: center; mso-number-format:'Short Date';">${escapeHtml(dateVal)}</td>
+        <td style="${bStyle} text-align: center; mso-number-format:'0';">${qty}</td>
+        <td style="${bStyle} text-align: center; mso-number-format:'General';">${escapeHtml(resolvedPartNo)}</td>
+        <td style="${bStyle} text-align: center; mso-number-format:'General';">${escapeHtml(resolvedName)}</td>
+        <td style="${bStyle} text-align: right; mso-number-format:'#,##0.00';">${formattedUnitPrice}</td>
+        <td style="${bStyle} text-align: right; mso-number-format:'#,##0.00';">${formattedFinalSales}</td>
+        <td style="${bStyle} text-align: center; mso-number-format:'General';">${escapeHtml(customerVal)}</td>
+        <td style="${bStyle} text-align: center; ${paymentStyle} mso-number-format:'General';">${escapeHtml(paymentVal)}</td>
+        <td style="${bStyle} text-align: right; mso-number-format:'#,##0.00';">${formattedDiscount}</td>
+        <td style="${bStyle} text-align: center; mso-number-format:'General';">${escapeHtml(siDrVal)}</td>
+        <td style="${bStyle} text-align: center; mso-number-format:'General';">${escapeHtml(serveByVal)}</td>
+      </tr>`;
+
+    textRows.push([
+      dateVal,
       qty,
-      `"${resolvedPartNo}"`,
-      `"${resolvedName}"`,
-      unitPrice.toFixed(2),
-      finalSalesAmount.toFixed(2),
-      `"${customerVal}"`,
-      `"${paymentVal}"`,
-      discountVal > 0 ? discountVal.toFixed(2) : '""',
-      `"${siDrVal}"`,
-      `"${serveByVal}"`
-    ];
-    csvRows.push(row.join(","));
+      resolvedPartNo,
+      resolvedName,
+      formattedUnitPrice,
+      formattedFinalSales,
+      customerVal,
+      paymentVal,
+      formattedDiscount,
+      siDrVal,
+      serveByVal
+    ].join('\t'));
   });
 
-  const csvContent = "\uFEFF" + csvRows.join("\r\n");
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const tsvData = textRows.join('\r\n');
+
+  try {
+    await writeClipboardRichSales(htmlRows, tsvData);
+    return {
+      success: true,
+      count: textRows.length,
+      message: `Copied ${textRows.length} ${textRows.length === 1 ? 'row' : 'rows'} to clipboard for Excel!`
+    };
+  } catch (err) {
+    return {
+      success: false,
+      count: 0,
+      message: 'Failed to access clipboard: ' + (err.message || err)
+    };
+  }
 };

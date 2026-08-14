@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../../../shared/api';
 import useMobileSheet from '../../../../shared/useMobileSheet';
 import IOSSelect from '../../../../shared/components/IOSSelect';
+import { resetReportsCache } from '../../../../shared/hooks/useReportsCache';
 
 export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fmtDate, fmt, onSearchTransaction }) {
     // Read the actual logged-in user from localStorage
@@ -45,7 +46,15 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                 const initialSelected = {};
                 const txItems = Array.isArray(transaction.items) ? transaction.items : [];
                 txItems.forEach(item => {
-                    initialSelected[item.id] = { selected: true, qty: item.qty };
+                    const rawQty = Number(item.qty || 0);
+                    const refundedQty = Number(item.refunded_qty || 0);
+                    const availableQty = item.net_qty != null ? Number(item.net_qty) : Math.max(0, rawQty - refundedQty);
+
+                    if (availableQty > 0) {
+                        initialSelected[item.id] = { selected: true, qty: availableQty, maxQty: availableQty };
+                    } else {
+                        initialSelected[item.id] = { selected: false, qty: 0, maxQty: 0 };
+                    }
                 });
                 setSelectedItems(initialSelected);
             } else {
@@ -57,8 +66,24 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
     if (!isOpen) return null;
 
     const txToUse = loadedTx;
-    const isAlreadyProcessed = txToUse && ['Refund', 'Refunded', 'Return', 'Returned', 'Void', 'Voided'].includes(txToUse.status);
-    const displayError = errorMessage || (isAlreadyProcessed ? `Transaction ${txToUse.si_no || ''} has already been ${txToUse.status}ed and cannot be processed again.` : '');
+    const txItems = txToUse && Array.isArray(txToUse.items) ? txToUse.items : [];
+    
+    const totalRemainingQty = txItems.reduce((sum, item) => {
+        const rawQty = Number(item.qty || 0);
+        const refundedQty = Number(item.refunded_qty || 0);
+        const availableQty = item.net_qty != null ? Number(item.net_qty) : Math.max(0, rawQty - refundedQty);
+        return sum + availableQty;
+    }, 0);
+
+    const isVoided = txToUse && ['Void', 'Voided'].includes(txToUse.status);
+    const isFullyRefunded = txToUse && txItems.length > 0 && totalRemainingQty <= 0;
+    const isAlreadyProcessed = isVoided || isFullyRefunded;
+
+    const displayError = errorMessage || (
+        isVoided 
+            ? `Transaction ${txToUse.si_no || ''} has been voided and cannot be processed.`
+            : (isFullyRefunded ? `Transaction ${txToUse.si_no || ''} has already been fully refunded/returned (0 items remaining).` : '')
+    );
 
     const handleSearch = async () => {
         if (!searchSiNo.trim()) return;
@@ -69,14 +94,26 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                 if (found) {
                     setLoadedTx(found);
                     const initialSelected = {};
-                    const txItems = Array.isArray(found.items) ? found.items : [];
-                    txItems.forEach(item => {
-                        initialSelected[item.id] = { selected: true, qty: item.qty };
+                    const foundItems = Array.isArray(found.items) ? found.items : [];
+                    let foundRemainingQty = 0;
+                    foundItems.forEach(item => {
+                        const rawQty = Number(item.qty || 0);
+                        const refundedQty = Number(item.refunded_qty || 0);
+                        const availableQty = item.net_qty != null ? Number(item.net_qty) : Math.max(0, rawQty - refundedQty);
+                        foundRemainingQty += availableQty;
+
+                        if (availableQty > 0) {
+                            initialSelected[item.id] = { selected: true, qty: availableQty, maxQty: availableQty };
+                        } else {
+                            initialSelected[item.id] = { selected: false, qty: 0, maxQty: 0 };
+                        }
                     });
                     setSelectedItems(initialSelected);
 
-                    if (['Refund', 'Refunded', 'Return', 'Returned', 'Void', 'Voided'].includes(found.status)) {
-                        setErrorMessage(`Transaction ${found.si_no || searchSiNo} has already been ${found.status}ed and cannot be processed again.`);
+                    if (['Void', 'Voided'].includes(found.status)) {
+                        setErrorMessage(`Transaction ${found.si_no || searchSiNo} has been voided and cannot be processed.`);
+                    } else if (foundItems.length > 0 && foundRemainingQty <= 0) {
+                        setErrorMessage(`Transaction ${found.si_no || searchSiNo} has already been fully refunded/returned (0 items remaining).`);
                     }
                 } else {
                     setErrorMessage("Transaction not found.");
@@ -115,8 +152,6 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
             setMarkDamaged(true);
         }
     };
-
-    const txItems = txToUse && Array.isArray(txToUse.items) ? txToUse.items : [];
 
     let subtotal = 0;
     txItems.forEach(item => {
@@ -172,6 +207,7 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
         setIsSubmitting(true);
         try {
             await onSubmit(payload);
+            resetReportsCache();
         } catch (err) {
             const serverMsg = err.response?.data?.message || err.response?.data?.error || err.message || "Failed to process refund.";
             setErrorMessage(serverMsg);
@@ -213,14 +249,14 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                     <div className="form-group" style={{ marginBottom: '16px' }}>
                                         <label className="form-label" style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-primary)', marginBottom: '6px', display: 'block' }}>Search Transaction <span style={{ color: 'var(--danger)' }}>*</span></label>
                                         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                            <input type="text" className="form-control" style={{ borderRadius: '6px', border: '1px solid #D1D5DB', padding: '10px 12px', paddingRight: '36px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} placeholder="Enter S.I. / C.I. Number..." value={searchSiNo} onChange={e => setSearchSiNo(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleSearch(); } }} />
+                                            <input type="text" className="form-control" style={{ borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '10px 12px', paddingRight: '36px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} placeholder="Enter S.I. / C.R. Number..." value={searchSiNo} onChange={e => setSearchSiNo(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleSearch(); } }} />
                                             <button type="button" onClick={handleSearch} style={{ position: 'absolute', right: '8px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', stroke: '#6B7280', fill: 'none', strokeWidth: '2' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                                <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', stroke: 'var(--text-muted)', fill: 'none', strokeWidth: '2' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                                             </button>
                                         </div>
                                     </div>
 
-                                    <div className="info-box" style={{ border: '1px solid var(--border)', borderRadius: '6px', padding: '0' }}>
+                                    <div className="info-box" style={{ border: '1px solid var(--border)', borderRadius: '6px', padding: '0', background: 'var(--bg-card)' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
                                             <span style={{ color: 'var(--text-secondary)' }}>Receipt Number</span>
                                             <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{txToUse ? (txToUse.si_no || txToUse.receipt_number || '—') : '-'}</span>
@@ -250,40 +286,40 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
 
                                 {/* Select Type */}
                                 <div>
-                                    <h4 style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Select Type</h4>
+                                    <h4 style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Select Type</h4>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                        <div onClick={() => handleActionTypeSelect('Refund')} style={{ border: actionType === 'Refund' ? '2px solid var(--primary)' : '1px solid var(--border)', borderRadius: '8px', padding: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '8px', transition: 'all 0.2s', backgroundColor: actionType === 'Refund' ? 'rgba(59,130,246,0.12)' : 'var(--bg-secondary)' }}>
-                                            <div style={{ fontSize: '24px', color: actionType === 'Refund' ? 'var(--primary)' : 'var(--text-muted)', marginBottom: '4px' }}>
+                                        <div onClick={() => handleActionTypeSelect('Refund')} style={{ border: actionType === 'Refund' ? '2px solid var(--primary)' : '1px solid var(--border)', borderRadius: '10px', padding: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '8px', transition: 'all 0.2s', backgroundColor: actionType === 'Refund' ? 'var(--primary-light)' : 'var(--bg-card)', boxShadow: actionType === 'Refund' ? '0 4px 14px rgba(59,130,246,0.25)' : 'none' }}>
+                                            <div style={{ fontSize: '24px', color: actionType === 'Refund' ? 'var(--primary)' : 'var(--text-secondary)', marginBottom: '4px' }}>
                                                 <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                                             </div>
-                                            <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' }}>Refund</span>
-                                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Full money back</span>
+                                            <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>Refund</span>
+                                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500' }}>Full money back</span>
                                         </div>
-                                        <div onClick={() => handleActionTypeSelect('Return')} style={{ border: actionType === 'Return' ? '2px solid var(--primary)' : '1px solid var(--border)', borderRadius: '8px', padding: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '8px', transition: 'all 0.2s', backgroundColor: actionType === 'Return' ? 'rgba(59,130,246,0.12)' : 'var(--bg-secondary)' }}>
-                                            <div style={{ fontSize: '24px', color: actionType === 'Return' ? 'var(--primary)' : 'var(--text-muted)', marginBottom: '4px' }}>
+                                        <div onClick={() => handleActionTypeSelect('Return')} style={{ border: actionType === 'Return' ? '2px solid var(--primary)' : '1px solid var(--border)', borderRadius: '10px', padding: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '8px', transition: 'all 0.2s', backgroundColor: actionType === 'Return' ? 'var(--primary-light)' : 'var(--bg-card)', boxShadow: actionType === 'Return' ? '0 4px 14px rgba(59,130,246,0.25)' : 'none' }}>
+                                            <div style={{ fontSize: '24px', color: actionType === 'Return' ? 'var(--primary)' : 'var(--text-secondary)', marginBottom: '4px' }}>
                                                 <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
                                             </div>
-                                            <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' }}>Return</span>
-                                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Exchange or credit</span>
+                                            <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>Return</span>
+                                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500' }}>Exchange or credit</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Refund Reason */}
                                 <div>
-                                    <h4 style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Refund/Return Reason <span style={{ color: 'var(--danger)' }}>*</span></h4>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
+                                    <h4 style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Refund/Return Reason <span style={{ color: 'var(--danger)' }}>*</span></h4>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', background: 'var(--bg-card)' }}>
                                         {['Defective / Damaged Item', 'Wrong Item Dispensed', 'Customer Changed Mind', 'Other'].map((r, i) => (
-                                            <label key={r} style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)', borderBottom: i < 3 ? `1px solid var(--border)` : 'none', background: 'var(--bg-secondary)' }}>
+                                            <label key={r} style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-primary)', borderBottom: i < 3 ? `1px solid var(--border)` : 'none', background: reason === r ? 'var(--primary-light)' : 'transparent', fontWeight: reason === r ? '700' : '500', transition: 'all 0.2s' }}>
                                                 <input type="radio" checked={reason === r} onChange={() => setReason(r)} style={{ accentColor: 'var(--primary)', width: '16px', height: '16px', margin: 0 }} />
-                                                <span>{r}</span>
+                                                <span style={{ color: 'var(--text-primary)' }}>{r}</span>
                                             </label>
                                         ))}
                                     </div>
                                 </div>
 
                                 <div>
-                                    <textarea className="form-control" rows="2" placeholder="Additional details..." value={notes} onChange={(e) => setNotes(e.target.value)} style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '12px', fontSize: '13px', width: '100%', resize: 'none' }} required></textarea>
+                                    <textarea className="form-control" rows="2" placeholder="Additional details..." value={notes} onChange={(e) => setNotes(e.target.value)} style={{ border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', borderRadius: '6px', padding: '12px', fontSize: '13px', width: '100%', resize: 'none' }} required></textarea>
                                 </div>
                             </div>
 
@@ -307,38 +343,57 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                                 const partNo = item.product?.part_no || item.part_no || item.partNo || item.product?.partNo || item.sku || '—';
                                                 const name = item.product?.name || item.name || 'Unknown Part';
                                                 const price = item.price || 0;
+
+                                                const rawQty = Number(item.qty || 0);
+                                                const refundedQty = Number(item.refunded_qty || 0);
+                                                const maxRefundableQty = item.net_qty != null ? Number(item.net_qty) : Math.max(0, rawQty - refundedQty);
+                                                const isItemFullyRefunded = maxRefundableQty <= 0;
+
                                                 const sel = selectedItems[item.id] || { selected: false, qty: 0 };
                                                 const total = sel.qty * price;
+
                                                 return (
-                                                    <tr key={index} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                    <tr key={index} style={{ borderBottom: '1px solid var(--border)', opacity: isItemFullyRefunded ? 0.6 : 1 }}>
                                                         <td style={{ padding: '12px 8px', verticalAlign: 'middle' }}>
-                                                            <input type="checkbox" checked={sel.selected} onChange={() => handleItemToggle(item.id)} style={{ accentColor: 'var(--primary)', width: '16px', height: '16px', margin: 0 }} />
+                                                            <input 
+                                                                type="checkbox" 
+                                                                checked={sel.selected && !isItemFullyRefunded} 
+                                                                disabled={isItemFullyRefunded}
+                                                                onChange={() => handleItemToggle(item.id)} 
+                                                                style={{ accentColor: 'var(--primary)', width: '16px', height: '16px', margin: 0, cursor: isItemFullyRefunded ? 'not-allowed' : 'pointer' }} 
+                                                            />
                                                         </td>
                                                         <td style={{ padding: '12px 8px' }}>
                                                             <strong style={{ color: 'var(--text-primary)', fontSize: '13px' }}>{name}</strong>
                                                             <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>Part #: {partNo}</div>
                                                         </td>
                                                         <td style={{ padding: '8px', textAlign: 'center', verticalAlign: 'middle' }}>
-                                                            <input 
-                                                                type="number"
-                                                                min="1"
-                                                                max={item.qty}
-                                                                value={sel.qty}
-                                                                disabled={!sel.selected}
-                                                                onChange={(e) => handleQtyChange(item.id, e.target.value, item.qty)}
-                                                                style={{
-                                                                    width: '58px',
-                                                                    padding: '4px 6px',
-                                                                    borderRadius: '6px',
-                                                                    border: '1px solid var(--border)',
-                                                                    textAlign: 'center',
-                                                                    fontSize: '13px',
-                                                                    fontWeight: '600',
-                                                                    backgroundColor: sel.selected ? 'var(--bg-card)' : 'var(--bg-secondary)',
-                                                                    color: sel.selected ? 'var(--text-primary)' : 'var(--text-muted)'
-                                                                }}
-                                                            />
-                                                            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>max {item.qty}</div>
+                                                            {isItemFullyRefunded ? (
+                                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Fully Refunded</span>
+                                                            ) : (
+                                                                <>
+                                                                    <input 
+                                                                        type="number"
+                                                                        min="1"
+                                                                        max={maxRefundableQty}
+                                                                        value={sel.qty}
+                                                                        disabled={!sel.selected}
+                                                                        onChange={(e) => handleQtyChange(item.id, e.target.value, maxRefundableQty)}
+                                                                        style={{
+                                                                            width: '58px',
+                                                                            padding: '4px 6px',
+                                                                            borderRadius: '6px',
+                                                                            border: '1px solid var(--border)',
+                                                                            textAlign: 'center',
+                                                                            fontSize: '13px',
+                                                                            fontWeight: '600',
+                                                                            backgroundColor: sel.selected ? 'var(--bg-card)' : 'var(--bg-secondary)',
+                                                                            color: sel.selected ? 'var(--text-primary)' : 'var(--text-muted)'
+                                                                        }}
+                                                                    />
+                                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>max {maxRefundableQty}</div>
+                                                                </>
+                                                            )}
                                                         </td>
                                                         <td style={{ textAlign: 'right', padding: '12px 8px', verticalAlign: 'middle' }}>
                                                             <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>{fmt(price)}</span>

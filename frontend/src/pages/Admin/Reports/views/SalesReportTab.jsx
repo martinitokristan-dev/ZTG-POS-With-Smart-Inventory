@@ -3,7 +3,7 @@ import IOSDatePicker from '../../../../shared/components/IOSDatePicker';
 import IOSSelect from '../../../../shared/components/IOSSelect';
 import api from '../../../../shared/api';
 import { resetReportsCache } from '../../../../shared/hooks/useReportsCache';
-import { exportSalesToExcel, getItemDiscountAmount } from '../../../../shared/utils/clientExcelExporter';
+import { copySalesToClipboard, getItemDiscountAmount } from '../../../../shared/utils/clientExcelExporter';
 import StatusBadge from '../../../../shared/components/StatusBadge';
 import { showToast } from '../../../../utils/toast';
 import CopyableText from '../../../../shared/components/CopyableText';
@@ -12,6 +12,7 @@ import FormattedProductName from '../../../../shared/components/FormattedProduct
 export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtDate, isReportGenerated, setIsReportGenerated, startDate, setStartDate, endDate, setEndDate }) {
     const [confirming, setConfirming] = useState(false);
     const [hasExported, setHasExported] = useState(false);
+    const [copiedSalesCount, setCopiedSalesCount] = useState(null);
     const [selectedCashier, setSelectedCashier] = useState('All');
     const [selectedPayment, setSelectedPayment] = useState('All');
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -45,7 +46,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
 
     // Extract unique Payment methods
     const paymentOptions = useMemo(() => {
-        const baseOptions = ['Cash', 'GCash', 'Bank Transfer', 'P.O. (Pending)', 'Split'];
+        const baseOptions = ['Cash', 'GCash', 'Bank Transfer', 'Cheque', 'P.O. (Pending)', 'Split'];
         if (!salesSummary?.transactions) return baseOptions;
         const set = new Set(baseOptions);
         salesSummary.transactions.forEach(tx => {
@@ -60,11 +61,16 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
         return Array.from(set);
     }, [salesSummary]);
 
-    // Filter transactions based on selected Cashier and Payment method (Excluding restocks & system logs)
+    // Filter transactions based on selected Cashier and Payment method (Excluding restocks, system logs, & full refunds/voids)
     const filteredTransactions = useMemo(() => {
         if (!salesSummary?.transactions) return [];
         return salesSummary.transactions.filter(tx => {
             if (tx.status === 'RESTOCKED' || tx.status === 'Restocked' || tx.type === 'system' || tx.type === 'restock' || (tx.si_no && tx.si_no.startsWith('INV-RESTOCK'))) {
+                return false;
+            }
+            // Exclude full refunds, returns, and voids from Sales Report (they remain in History Logs)
+            const isFullDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void') && tx.is_partial_refund !== true;
+            if (isFullDeduction) {
                 return false;
             }
             if (selectedCashier !== 'All') {
@@ -83,21 +89,28 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
         });
     }, [salesSummary, selectedCashier, selectedPayment]);
 
-    // Calculate dynamic KPI metrics for filtered data (Net Revenue = ₱9,750 & Items Sold = 61)
+    // Calculate dynamic KPI metrics for filtered data
     const { kpiTotalRevenue, kpiTotalTransactions, kpiAvgTransaction, kpiTotalItemsSold } = useMemo(() => {
         let rev = 0;
         let itemsSold = 0;
         let validTxCount = 0;
 
         filteredTransactions.forEach(tx => {
-            if (['Completed', 'Deposit', 'Paid'].includes(tx.status)) {
+            const isCompleted = ['Completed', 'Deposit', 'Paid'].includes(tx.status);
+            const isPartialRefund = tx.is_partial_refund === true;
+
+            if (isCompleted || isPartialRefund) {
                 rev += Number(tx.amount || 0);
                 validTxCount += 1;
 
                 const itemsList = (tx.items && tx.items.length > 0) ? tx.items : null;
                 if (itemsList) {
                     itemsList.forEach(it => {
-                        itemsSold += Number(it.qty || 0);
+                        // For partial refunds use net_qty (sold qty after returns)
+                        const soldQty = isPartialRefund
+                            ? Number(it.net_qty ?? Math.max(0, (it.qty || 0) - (it.refunded_qty || 0)))
+                            : Number(it.qty || 0);
+                        itemsSold += soldQty;
                     });
                 } else {
                     itemsSold += Number(tx.total_qty || 1);
@@ -123,6 +136,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
 
     if (filteredTransactions.length > 0) {
         filteredTransactions.forEach(tx => {
+            const isPartialRefund = tx.is_partial_refund === true;
             const items = (tx.items && tx.items.length > 0) ? tx.items : [{
                 id: null,
                 name: tx.itemName || 'Transaction',
@@ -131,25 +145,29 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                 price: tx.amount
             }];
             items.forEach(item => {
-                flattenedTransactionsItems.push({
-                    ...item,
-                    tx
-                });
+                // For partial refunds, show net qty sold (not original qty)
+                const displayQty = isPartialRefund
+                    ? Number(item.net_qty ?? Math.max(0, (item.qty || 0) - (item.refunded_qty || 0)))
+                    : Number(item.qty || 1);
 
-                const isDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void');
-                // Any reservation transaction (deposit OR fulfillment) uses partial-payment display:
-                // PRICE = original_price (full product price), SALES = item.price × qty (portion paid)
-                const isReservationTx = tx.type === 'reservation';
-                const qty = Number(item.qty || 1);
+                // Omit items that have 0 remaining net quantity from sales report
+                if (isPartialRefund && displayQty <= 0) {
+                    return;
+                }
+
+                flattenedTransactionsItems.push({ ...item, tx, displayQty });
+
+                // For full deductions (full refund, void): red negative row, excluded from totals
+                const isFullDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void') && !isPartialRefund;
+
                 const rawPrice = Number(item.original_price || item.price || 0);
-                const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, qty));
+                const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, displayQty));
                 const discountVal = getItemDiscountAmount(item, tx);
-                const salesUnitPrice = isReservationTx ? Number(item.price || 0) : unitPrice;
-                const grossRowAmount = qty * salesUnitPrice;
+                const grossRowAmount = displayQty * unitPrice;
                 const netRowAmount = Math.max(0, grossRowAmount - discountVal);
 
-                if (!isDeduction) {
-                    totalQty += (item.qty || 0);
+                if (!isFullDeduction) {
+                    totalQty += displayQty;
                     totalAmount += netRowAmount;
                     totalDiscountAmount += discountVal;
                 }
@@ -157,16 +175,17 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
         });
     }
 
-    const handleExportCSV = () => {
+    const handleCopySales = async () => {
         if (flattenedTransactionsItems.length === 0) return;
-        exportSalesToCSV(flattenedTransactionsItems, { startDate, endDate });
-        setHasExported(true);
-    };
-
-    const handleExportExcel = () => {
-        if (flattenedTransactionsItems.length === 0) return;
-        exportSalesToExcel(flattenedTransactionsItems, { startDate, endDate });
-        setHasExported(true);
+        const res = await copySalesToClipboard(flattenedTransactionsItems);
+        if (res.success) {
+            setCopiedSalesCount(res.count);
+            showToast(`✓ Copied ${res.count} sales ${res.count === 1 ? 'row' : 'rows'} for Excel! Paste with Ctrl+V.`);
+            setHasExported(true);
+            setTimeout(() => setCopiedSalesCount(null), 2500);
+        } else {
+            showToast(res.message, 'error');
+        }
     };
 
     const handleOpenConfirmModal = () => {
@@ -219,19 +238,41 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
 
                 <div style={{ display: 'flex', gap: '12px' }}>
                     <button 
-                        className="btn btn-success" 
-                        onClick={handleExportExcel}
+                        id="copyDailySalesBtn"
+                        className="btn" 
+                        onClick={handleCopySales}
                         disabled={flattenedTransactionsItems.length === 0}
                         style={{ 
-                            display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', fontSize: '13px', 
-                            borderRadius: '8px', padding: '8px 20px', background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', 
-                            border: 'none', color: '#FFFFFF', boxShadow: '0 4px 12px rgba(5,150,105,0.3)',
-                            cursor: flattenedTransactionsItems.length === 0 ? 'not-allowed' : 'pointer'
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px', 
+                            fontWeight: '700', 
+                            fontSize: '13px', 
+                            borderRadius: '8px', 
+                            padding: '8px 20px',
+                            background: 'var(--bg-card)',
+                            border: copiedSalesCount !== null ? '1px solid #10B981' : '1px solid var(--border)',
+                            color: copiedSalesCount !== null ? '#10B981' : 'var(--text-primary)',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                            cursor: flattenedTransactionsItems.length === 0 ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.2s ease'
                         }}
-                        title="Export formatted Excel report matching Daily Sales template"
+                        title="Copy sales data directly to clipboard for Excel (Ctrl+V)"
                     >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                        Export Excel
+                        {copiedSalesCount !== null ? (
+                            <>
+                                <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', fill: 'none', stroke: '#10B981', strokeWidth: 2.5 }}><polyline points="20 6 9 17 4 12"/></svg>
+                                <span>Copied {copiedSalesCount} {copiedSalesCount === 1 ? 'row' : 'rows'}!</span>
+                            </>
+                        ) : (
+                            <>
+                                <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', fill: 'none', stroke: 'currentColor', strokeWidth: 2 }}>
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span>Copy to Clipboard</span>
+                            </>
+                        )}
                     </button>
 
                     {isReportGenerated ? (
@@ -288,7 +329,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                         <thead style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B', background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)', whiteSpace: 'nowrap' }}>
                             <tr>
                                 <th style={{ fontWeight: '600' }}>Date</th>
-                                <th style={{ fontWeight: '600' }}>S.I./C.I./D.R.</th>
+                                <th style={{ fontWeight: '600' }}>S.I./C.R./D.R.</th>
                                 <th style={{ fontWeight: '600' }}>Part No.</th>
                                 <th style={{ fontWeight: '600' }}>Product</th>
                                 <th style={{ textAlign: 'center', fontWeight: '600' }}>Qty</th>
@@ -311,21 +352,26 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                             ) : (
                                 flattenedTransactionsItems.map((item, i) => {
                                     const tx = item.tx || {};
-                                    const isDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void');
+                                    const isPartialRefund = tx.is_partial_refund === true;
+                                    // Full deduction = refund/void with NO net sale remaining
+                                    const isFullDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void') && !isPartialRefund;
                                     const isPending = tx.status === 'Pending';
-                                    // Any reservation transaction uses partial-payment display:
-                                    // PRICE = original_price (full product price), SALES = item.price × qty (portion paid)
-                                    const isReservationTx = tx.type === 'reservation';
-                                    const amountColor = (isDeduction || isPending) ? 'var(--danger, #DC2626)' : 'var(--success, #16A34A)';
-                                    const amountPrefix = isDeduction ? '- ' : '';
+
+                                    // For partial refunds: show net sold qty, not original
+                                    const displayQty = isPartialRefund
+                                        ? Number(item.net_qty ?? Math.max(0, (item.qty || 0) - (item.refunded_qty || 0)))
+                                        : Number(item.qty || 1);
+
+                                    const amountColor = (isFullDeduction || isPending)
+                                        ? 'var(--danger, #DC2626)'
+                                        : 'var(--success, #16A34A)';
+                                    const amountPrefix = isFullDeduction ? '- ' : '';
                                     const resolvedName = item.product?.name || item.name || 'Unknown Product';
                                     const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
-                                    const qty = Number(item.qty || 1);
                                     const rawPrice = Number(item.original_price || item.price || 0);
-                                    const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, qty));
+                                    const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, displayQty));
                                     const discountVal = getItemDiscountAmount(item, tx);
-                                    const salesUnitPrice = isReservationTx ? Number(item.price || 0) : unitPrice;
-                                    const grossRowAmount = qty * salesUnitPrice;
+                                    const grossRowAmount = displayQty * unitPrice;
                                     const netRowAmount = Math.max(0, grossRowAmount - discountVal);
                                     const customerVal = tx.customer_name || tx.customer?.name || (tx.customer_id ? `Customer #${tx.customer_id}` : 'WALK-IN');
                                     const serveByVal = tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || '—';
@@ -345,7 +391,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                             </td>
                                             <td style={{ color: 'var(--table-text-primary)', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{resolvedPartNo}</td>
                                             <td><span style={{ fontSize: '15px' }}><FormattedProductName name={resolvedName} variantOption={item.variant_option || item.variant || item.variantOption} blockVariant={true} /></span></td>
-                                            <td style={{ color: 'var(--table-text-primary)', textAlign: 'center', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{qty}</td>
+                                            <td style={{ color: 'var(--table-text-primary)', textAlign: 'center', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{displayQty}</td>
                                             <td style={{ textAlign: 'right', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
                                                 {fmt(unitPrice)}
                                             </td>
@@ -357,23 +403,11 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                             </td>
                                             <td style={{ color: 'var(--text-secondary)' }}>{serveByVal.split(' ')[0]}</td>
                                             <td>
-                                                {isReservationTx && tx.status === 'Completed' ? (
-                                                    <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                                                        <StatusBadge status={tx.status} />
-                                                        <span style={{ fontSize: '9px', fontWeight: '600', color: '#10B981', letterSpacing: '0.4px', textTransform: 'uppercase', opacity: 0.8 }}>Balance Payment</span>
-                                                    </span>
-                                                ) : isReservationTx && (tx.status === 'Deposit' || tx.status === 'Paid') ? (
-                                                    <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                                                        <StatusBadge status={tx.status} />
-                                                        <span style={{ fontSize: '9px', fontWeight: '600', color: '#2563EB', letterSpacing: '0.4px', textTransform: 'uppercase', opacity: 0.8 }}>Partial Payment</span>
-                                                    </span>
-                                                ) : (
-                                                    <StatusBadge status={tx.status} />
-                                                )}
+                                                <StatusBadge status={isPartialRefund ? 'Completed' : tx.status} />
                                              </td>
-                                        </tr>
-                                    );
-                                })
+                                         </tr>
+                                     );
+                                 })
                             )}
                         </tbody>
                         {flattenedTransactionsItems.length > 0 && (

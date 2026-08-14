@@ -24,7 +24,7 @@
  * @param {number} options.tendered         Amount tendered
  * @param {number} options.change           Change amount
  * @param {string} options.servedBy         Cashier/checker name
- * @param {string} options.docType          Document type ('S.I.', 'D.R.', 'C.I.')
+ * @param {string} options.docType          Document type ('S.I.', 'D.R.', 'C.R.')
  * @param {string} options.originalInvoice  Original invoice number (refund/return)
  * @param {string} options.reason           Reason (refund/return/void)
  * @param {string} options.approver         Approver name
@@ -84,8 +84,8 @@ export function printUnifiedReceipt(options) {
             color: '#059669',
             bgLight: '#ECFDF5',
             border: '#6EE7B7',
-            label: docType === 'D.R.' ? 'DELIVERY RECEIPT' : docType === 'C.I.' ? 'CHARGE INVOICE' : 'SALES INVOICE',
-            badge: docType === 'D.R.' ? 'D.R.' : docType === 'C.I.' ? 'C.I.' : 'S.I.',
+            label: docType === 'D.R.' ? 'DELIVERY RECEIPT' : docType === 'C.R.' ? 'COLLECTION RECEIPT' : 'SALES INVOICE',
+            badge: docType === 'D.R.' ? 'D.R.' : docType === 'C.R.' ? 'C.R.' : 'S.I.',
         },
         Refund: {
             color: '#DC2626',
@@ -121,8 +121,7 @@ export function printUnifiedReceipt(options) {
     const txDiscount = Number(options.discountAmount || options.discount_amount || options.discount || 0);
     const itemsDiscount = items.reduce((sum, item) => {
         const d = Number(item.discount || item.item_discount || 0);
-        const q = Number(item.qty || item.quantity || 1);
-        return sum + (d * q);
+        return sum + d;
     }, 0);
 
     const totalDiscount = txDiscount > 0 ? txDiscount : itemsDiscount;
@@ -157,7 +156,8 @@ export function printUnifiedReceipt(options) {
     if (splitDetails) {
         paymentLines = splitDetails;
     } else {
-        paymentLines += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Payment Method:</td><td style="padding:3px 0;font-size:11px;text-align:right;font-weight:600;">${payment || '—'}</td></tr>`;
+        const cleanPayment = payment ? String(payment).replace(/\s*\([^)]*\)/g, '').trim() : '—';
+        paymentLines += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Payment Method:</td><td style="padding:3px 0;font-size:11px;text-align:right;font-weight:600;">${cleanPayment}</td></tr>`;
         if (tendered > 0 && type === 'Sales') {
             paymentLines += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Cash Received:</td><td style="padding:3px 0;font-size:11px;text-align:right;">&#8369;${Number(tendered).toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
             paymentLines += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Change:</td><td style="padding:3px 0;font-size:11px;text-align:right;">&#8369;${Number(change).toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;

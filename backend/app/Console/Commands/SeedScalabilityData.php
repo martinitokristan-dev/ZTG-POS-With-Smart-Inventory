@@ -144,7 +144,7 @@ class SeedScalabilityData extends Command
         }
 
         $statuses = ['Completed', 'Completed', 'Completed', 'Completed', 'Completed', 'Refund', 'Return', 'Void'];
-        $docTypes = ['S.I.', 'D.R.', 'C.I.'];
+        $docTypes = ['S.I.', 'D.R.', 'C.R.'];
         $paymentMethods = ['Cash', 'GCash', 'Bank Transfer', 'P.O. (Pending)'];
 
         $txBatch = [];

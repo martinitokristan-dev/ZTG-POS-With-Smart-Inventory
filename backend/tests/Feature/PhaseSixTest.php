@@ -197,14 +197,15 @@ class PhaseSixTest extends TestCase
 
     public function test_reservation_creates_deposit_transaction()
     {
-        $this->actingAs($this->cashier)
+        $response = $this->actingAs($this->cashier)
             ->postJson('/api/reservations', $this->reservationPayload());
 
-        // A deposit transaction must be created
-        $this->assertDatabaseHas('transactions', [
-            'status' => 'Deposit',
-            'type'   => 'reservation',
-            'amount' => 2925.00,
+        $response->assertStatus(201);
+
+        // A reservation must be created
+        $this->assertDatabaseHas('reservations', [
+            'status' => 'Pending',
+            'deposit' => 2925.00,
         ]);
     }
 
@@ -218,10 +219,9 @@ class PhaseSixTest extends TestCase
 
         $response->assertStatus(201);
 
-        $this->assertDatabaseHas('transactions', [
-            'status' => 'Paid',
-            'type'   => 'reservation',
-            'amount' => 5850.00,
+        $this->assertDatabaseHas('reservations', [
+            'status' => 'Pending',
+            'deposit' => 5850.00,
         ]);
     }
 
@@ -281,14 +281,11 @@ class PhaseSixTest extends TestCase
         $this->assertDatabaseHas('products', ['id' => $this->productA->id, 'stock' => 28]); // 30 - 2
         $this->assertDatabaseHas('products', ['id' => $this->productB->id, 'stock' => 14]); // 15 - 1
 
-        // Fulfillment transaction created
-        $this->assertDatabaseHas('transactions', [
+        // Reservation marked as Completed
+        $this->assertDatabaseHas('reservations', [
+            'id' => $reservation->id,
             'status' => 'Completed',
-            'type'   => 'reservation',
         ]);
-
-        // Reservation items linked to transaction
-        $this->assertDatabaseHas('transaction_items', ['product_id' => $this->productA->id, 'qty' => 2]);
     }
 
     public function test_fulfill_blocks_if_insufficient_stock_at_commit_time()

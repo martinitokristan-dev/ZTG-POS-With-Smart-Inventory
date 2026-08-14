@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../../../../shared/api';
-import { fetchReportsData } from '../../../../shared/hooks/useReportsCache';
+import { fetchReportsData, resetReportsCache } from '../../../../shared/hooks/useReportsCache';
+import echo from '../../../../lib/echo';
 
 const fmtDate = (d) => d ? new Date(d).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
@@ -30,7 +31,7 @@ export default function useReports() {
     const [startDate, setStartDate] = useState(todayStr);
     const [endDate, setEndDate] = useState(todayStr);
 
-    const loadReports = async () => {
+    const loadReports = useCallback(async () => {
         try {
             setLoading(true);
             const cachedStats = await fetchReportsData(startDate, endDate);
@@ -52,11 +53,37 @@ export default function useReports() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [startDate, endDate]);
 
     useEffect(() => {
         loadReports();
-    }, [startDate, endDate]);
+
+        const token = localStorage.getItem('auth_token');
+        const userStr = localStorage.getItem('auth_user');
+        let channel = null;
+
+        if (token && userStr) {
+            const user = JSON.parse(userStr);
+            const userRole = typeof user.role === 'object' ? (user.role.value || user.role.name) : user.role;
+            if (['Admin', 'Supervisor', 'Cashier', 'Checker'].includes(userRole)) {
+                channel = echo.private('transactions')
+                    .listen('.TransactionCreated', () => {
+                        resetReportsCache();
+                        loadReports();
+                    })
+                    .listen('.TransactionUpdated', () => {
+                        resetReportsCache();
+                        loadReports();
+                    });
+            }
+        }
+
+        return () => {
+            if (channel) {
+                echo.leaveChannel('private-transactions');
+            }
+        };
+    }, [loadReports, startDate, endDate]);
 
     return {
         loading,
@@ -70,6 +97,10 @@ export default function useReports() {
         startDate, setStartDate,
         endDate, setEndDate,
         fmt,
-        fmtDate
+        fmtDate,
+        refetchReports: () => {
+            resetReportsCache();
+            loadReports();
+        }
     };
 }

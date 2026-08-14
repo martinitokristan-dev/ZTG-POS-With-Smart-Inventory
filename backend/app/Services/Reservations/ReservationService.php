@@ -31,30 +31,50 @@ class ReservationService
     }
 
     /**
-     * List reservations with optional status filter, latest first.
+     * List reservations with optional status filter, oldest first (ascending for natural sheet appending).
      */
     public function getAll(array $filters = []): LengthAwarePaginator
     {
         $query = Reservation::with(['customer', 'reservedBy', 'fulfilledBy', 'items.product.parent', 'items.product.variantOptions'])
-            ->latest('date');
+            ->orderBy('date', 'asc')
+            ->orderBy('id', 'asc');
 
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
         if (!empty($filters['search'])) {
-            $query->where(function ($q) use ($filters) {
-                $q->where('order_no', 'like', '%' . $filters['search'] . '%')
-                    ->orWhereHas('customer', fn($cq) => $cq->where('name', 'like', '%' . $filters['search'] . '%'))
-                    ->orWhereHas('items.product', fn($pq) => $pq
-                        ->where('name', 'like', '%' . $filters['search'] . '%')
-                        ->orWhere('part_no', 'like', '%' . $filters['search'] . '%')
-                        ->orWhere('variant_option', 'like', '%' . $filters['search'] . '%')
+            $searchTerm = '%' . trim($filters['search']) . '%';
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('order_no', 'like', $searchTerm)
+                    ->orWhere('customer_name', 'like', $searchTerm)
+                    ->orWhere('customer_phone', 'like', $searchTerm)
+                    ->orWhere('engine_plate_number', 'like', $searchTerm)
+                    ->orWhereHas('customer', fn($cq) => $cq
+                        ->where('name', 'like', $searchTerm)
+                        ->orWhere('phone', 'like', $searchTerm)
+                    )
+                    ->orWhereHas('items', fn($iq) => $iq
+                        ->where('part_no', 'like', $searchTerm)
+                        ->orWhere('item_name', 'like', $searchTerm)
+                        ->orWhere('engine_plate_number', 'like', $searchTerm)
+                        ->orWhereHas('product', fn($pq) => $pq
+                            ->where('name', 'like', $searchTerm)
+                            ->orWhere('part_no', 'like', $searchTerm)
+                            ->orWhereHas('parent', fn($parentQ) => $parentQ
+                                ->where('name', 'like', $searchTerm)
+                                ->orWhere('part_no', 'like', $searchTerm)
+                            )
+                            ->orWhereHas('variantOptions', fn($voQ) => $voQ
+                                ->where('value', 'like', $searchTerm)
+                            )
+                        )
                     );
             });
         }
 
-        $paginator = $query->paginate(20);
+        $perPage = !empty($filters['per_page']) ? (int) $filters['per_page'] : 20;
+        $paginator = $query->paginate($perPage);
         $paginator->getCollection()->transform(function ($r) {
             if ($r->items) {
                 $r->items->transform(function ($item) {
@@ -112,22 +132,25 @@ class ReservationService
     public function createReservation(array $data, int $reservedById): Reservation
     {
         $reservation = DB::transaction(function () use ($data, $reservedById) {
-            // 1. Validate stock availability (but do NOT deduct)
+            // 1. Validate stock availability (for inventory products only)
             foreach ($data['items'] as $item) {
-                $product = Product::findOrFail($item['product_id']);
+                if (!empty($item['product_id'])) {
+                    $product = Product::find($item['product_id']);
+                    if ($product) {
+                        if ($product->stock <= 0) {
+                            throw ValidationException::withMessages([
+                                'items' => ["Product '{$product->name}' is out of stock and cannot be reserved."],
+                            ]);
+                        }
 
-                if ($product->stock <= 0) {
-                    throw ValidationException::withMessages([
-                        'items' => ["Product '{$product->name}' is out of stock and cannot be reserved."],
-                    ]);
-                }
-
-                if ($item['qty'] > $product->stock) {
-                    throw ValidationException::withMessages([
-                        'items' => [
-                            "Requested qty ({$item['qty']}) for '{$product->name}' exceeds available stock ({$product->stock})."
-                        ],
-                    ]);
+                        if ($item['qty'] > $product->stock) {
+                            throw ValidationException::withMessages([
+                                'items' => [
+                                    "Requested qty ({$item['qty']}) for '{$product->name}' exceeds available stock ({$product->stock})."
+                                ],
+                            ]);
+                        }
+                    }
                 }
             }
 
@@ -146,18 +169,25 @@ class ReservationService
             // 4. Generate Order No (Format: RS-YYYY-XXX)
             $orderNo = $this->generateReservationNo();
 
+            $chequeNo = $data['cheque_number'] ?? null;
+            $resPaymentMethod = $data['payment_method'];
+
             // 5. Save reservation
             $reservation = Reservation::create([
                 'order_no' => $orderNo,
                 'customer_id' => $customer->id,
+                'customer_name' => $data['customer_name'] ?? $customer->name,
+                'customer_phone' => $data['customer_phone'] ?? $customer->phone,
                 'email' => $data['customer_email'] ?? null,
+                'engine_plate_number' => $data['engine_plate_number'] ?? null,
                 'notes' => $data['notes'] ?? null,
-                'payment_method' => $data['payment_method'],
+                'payment_method' => $resPaymentMethod,
+                'cheque_number' => $chequeNo,
                 'payment_type' => $data['payment_type'],
                 'deposit' => $data['deposit_amount'],
                 'total' => $total,
                 'date' => now(),
-                'pickup_date' => $data['pickup_date'],
+                'pickup_date' => $data['pickup_date'] ?? null,
                 'pickup_time' => $data['pickup_time'] ?? null,
                 'reserved_by_id' => $reservedById,
                 'status' => ReservationStatus::PENDING->value,
@@ -166,48 +196,12 @@ class ReservationService
             // 6. Save reservation items
             foreach ($data['items'] as $item) {
                 $reservation->items()->create([
-                    'product_id' => $item['product_id'],
+                    'product_id' => $item['product_id'] ?? null,
+                    'item_name' => $item['item_name'] ?? null,
+                    'part_no' => $item['part_no'] ?? null,
+                    'engine_plate_number' => $item['engine_plate_number'] ?? $data['engine_plate_number'] ?? null,
                     'qty' => $item['qty'],
                     'price' => $item['price'],
-                ]);
-            }
-
-            // 7. Log deposit transaction
-            $txStatus = $data['payment_type'] === PaymentType::FULL->value
-                ? TransactionStatus::PAID->value
-                : TransactionStatus::DEPOSIT->value;
-
-            $depositTx = Transaction::create([
-                'si_no' => $orderNo,
-                'date' => now(),
-                'customer_id' => $customer->id,
-                'cashier_id' => $reservedById,
-                'total_qty' => array_sum(array_column($data['items'], 'qty')),
-                'amount' => $data['deposit_amount'],
-                'amount_tendered' => $data['deposit_amount'],
-                'payment_method' => $data['payment_method'],
-                'status' => $txStatus,
-                'type' => TransactionType::RESERVATION->value,
-                'order_ref' => $orderNo,
-                'internal_notes' => "Reservation deposit for order {$orderNo}",
-                'business_snapshot' => Setting::getBusinessSnapshot(), // Frozen at deposit time
-            ]);
-
-            // Create deposit transaction items proportional to deposit amount
-            // original_price stores the FULL product unit price so the Sales Report
-            // can show the real product value in the PRICE column (e.g. ₱200),
-            // while item.price stores the deposit portion (e.g. ₱100) for the SALES column.
-            $depositRatio = $total > 0 ? ($data['deposit_amount'] / $total) : 1;
-            foreach ($data['items'] as $item) {
-                $depositItemPrice = round($item['price'] * $depositRatio, 2);
-                TransactionItem::create([
-                    'transaction_id' => $depositTx->id,
-                    'product_id'     => $item['product_id'],
-                    'qty'            => $item['qty'],
-                    'price'          => $depositItemPrice,  // deposit portion (shown in SALES)
-                    'original_price' => $item['price'],     // full unit price  (shown in PRICE)
-                    'price_tier'     => 'price1',
-                    'unit'           => 'pc',
                 ]);
             }
 
@@ -215,19 +209,13 @@ class ReservationService
         });
 
         // Dispatch real-time events outside the DB transaction block
-        $tx = Transaction::where('order_ref', $reservation->order_no)
-            ->whereIn('status', [TransactionStatus::DEPOSIT->value, TransactionStatus::PAID->value])
-            ->first();
-        if ($tx) {
-            event(new TransactionCreated($tx));
-        }
         event(new ReservationUpdated($reservation));
 
         return $reservation;
     }
 
     /**
-     * Fulfill a reservation: deduct stock and create a final sale transaction.
+     * Fulfill a reservation: deduct stock and mark as completed.
      */
     public function fulfillReservation(Reservation $reservation, array $data, int $fulfilledById): Reservation
     {
@@ -242,22 +230,24 @@ class ReservationService
         }
 
         $fulfilled = DB::transaction(function () use ($reservation, $data, $fulfilledById) {
-            // 1. Lock and re-verify all stock at fulfillment time
-            $productIds = $reservation->items->pluck('product_id')->toArray();
+            // 1. Lock and re-verify all stock at fulfillment time (for inventory products only)
+            $productIds = array_filter($reservation->items->pluck('product_id')->toArray());
             $products = Product::whereIn('id', $productIds)
                 ->lockForUpdate()
                 ->get()
                 ->keyBy('id');
 
             foreach ($reservation->items as $item) {
-                $product = $products->get($item->product_id);
-                if (!$product || $product->stock < $item->qty) {
-                    throw ValidationException::withMessages([
-                        'stock' => [
-                            "Insufficient stock for '{$product->name}'. "
-                            . "Available: {$product->stock}, Reserved: {$item->qty}."
-                        ],
-                    ]);
+                if ($item->product_id && $products->has($item->product_id)) {
+                    $product = $products->get($item->product_id);
+                    if ($product->stock < $item->qty) {
+                        throw ValidationException::withMessages([
+                            'stock' => [
+                                "Insufficient stock for '{$product->name}'. "
+                                . "Available: {$product->stock}, Reserved: {$item->qty}."
+                            ],
+                        ]);
+                    }
                 }
             }
 
@@ -271,110 +261,46 @@ class ReservationService
                 ]);
             }
 
-            // 3. Deduct stock and update sales_count
+            // 3. Deduct stock and update sales_count (for inventory products only)
             foreach ($reservation->items as $item) {
-                $product = $products->get($item->product_id);
-                $newStock = $product->stock - $item->qty;
-                $newStatus = $this->productService->calculateStatus(
-                    $newStock,
-                    $product->alert_limit,
-                    is_object($product->status) ? $product->status->value : $product->status
-                );
+                if ($item->product_id && $products->has($item->product_id)) {
+                    $product = $products->get($item->product_id);
+                    $newStock = $product->stock - $item->qty;
+                    $newStatus = $this->productService->calculateStatus(
+                        $newStock,
+                        $product->alert_limit,
+                        is_object($product->status) ? $product->status->value : $product->status
+                    );
 
-                $isDead = (bool) $product->is_dead_stock;
-                $updateData = [
-                    'stock' => $newStock,
-                    'status' => $newStatus,
-                ];
+                    $isDead = (bool) $product->is_dead_stock;
+                    $updateData = [
+                        'stock' => $newStock,
+                        'status' => $newStatus,
+                    ];
 
-                if ($isDead) {
-                    $updateData['is_dead_stock'] = false;
-                }
+                    if ($isDead) {
+                        $updateData['is_dead_stock'] = false;
+                    }
 
-                $product->update($updateData);
+                    $product->update($updateData);
 
-                if ($isDead) {
-                    event(new \App\Events\ProductUpdated($product->id, ['is_dead_stock' => false]));
-                }
-            }
-
-            // 4. Generate fulfillment SI No
-            $prefix = match ($data['doc_type']) {
-                'D.R.' => 'DR',
-                'C.I.' => 'CI',
-                default => 'SI',
-            };
-            $year = now()->year;
-            $siNo = $prefix . '-' . $year . '-' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
-            while (Transaction::where('si_no', $siNo)->exists()) {
-                $siNo = $prefix . '-' . $year . '-' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
-            }
-
-            $balanceAmount = max(0, $reservation->total - $reservation->deposit);
-            $paymentMethod = $balanceAmount > 0 ? $data['payment_method'] : 'Pre-paid';
-
-            // If reservation was paid in full upfront, update initial Paid transaction to Completed status
-            if ($balanceAmount == 0) {
-                Transaction::where('order_ref', $reservation->order_no)
-                    ->whereIn('status', [TransactionStatus::PAID->value, TransactionStatus::DEPOSIT->value])
-                    ->update([
-                        'status'   => TransactionStatus::COMPLETED->value,
-                        'doc_type' => $data['doc_type'],
-                    ]);
-            } else {
-                // 5. Create fulfillment transaction for remaining balance
-                $transaction = Transaction::create([
-                    'si_no'             => $siNo,
-                    'date'              => now(),
-                    'customer_id'       => $reservation->customer_id,
-                    'cashier_id'        => $fulfilledById,
-                    'total_qty'         => $reservation->items->sum('qty'),
-                    'amount'            => $balanceAmount,
-                    'amount_tendered'   => $data['balance_payment'],
-                    'payment_method'    => $paymentMethod,
-                    'doc_type'          => $data['doc_type'],
-                    'status'            => TransactionStatus::COMPLETED->value,
-                    'type'              => TransactionType::RESERVATION->value,
-                    'order_ref'         => $reservation->order_no,
-                    'internal_notes'    => "Fulfillment of reservation {$reservation->order_no}",
-                    'business_snapshot' => Setting::getBusinessSnapshot(), // Frozen at fulfillment time
-                ]);
-
-                // 6. Create transaction items proportional to fulfillment balance amount
-                // original_price stores the FULL product unit price so the Sales Report
-                // PRICE column shows ₱300 while SALES shows only the balance (₱150) paid.
-                $fulfillmentRatio = $reservation->total > 0 ? ($balanceAmount / $reservation->total) : 1;
-                foreach ($reservation->items as $item) {
-                    $balanceItemPrice = round($item->price * $fulfillmentRatio, 2);
-                    TransactionItem::create([
-                        'transaction_id' => $transaction->id,
-                        'product_id'     => $item->product_id,
-                        'qty'            => $item->qty,
-                        'price'          => $balanceItemPrice,  // balance portion (shown in SALES)
-                        'original_price' => $item->price,       // full unit price  (shown in PRICE)
-                        'price_tier'     => 'price1',
-                        'unit'           => 'pc',
-                    ]);
+                    if ($isDead) {
+                        event(new \App\Events\ProductUpdated($product->id, ['is_dead_stock' => false]));
+                    }
                 }
             }
 
-            // 7. Mark reservation as Completed
+            // 4. Mark reservation as Completed and set date_get
             $reservation->update([
                 'status' => ReservationStatus::COMPLETED->value,
                 'fulfilled_by_id' => $fulfilledById,
+                'date_get' => now(),
             ]);
 
             return $reservation->fresh(['customer', 'reservedBy', 'fulfilledBy', 'items.product']);
         });
 
         // Dispatch real-time events outside the DB transaction block
-        $fulfillmentTx = Transaction::where('order_ref', $fulfilled->order_no)
-            ->where('status', TransactionStatus::COMPLETED->value)
-            ->first();
-        if ($fulfillmentTx) {
-            event(new TransactionCreated($fulfillmentTx));
-        }
-
         foreach ($fulfilled->items as $item) {
             if ($item->product) {
                 event(new InventoryUpdated($item->product_id, (int) $item->product->stock));
@@ -386,13 +312,7 @@ class ReservationService
     }
 
     /**
-     * 
      * Cancel a reservation.
-     * Stock is NOT touched — it was never deducted.
-     * Status is set to Cancelled.
-     * The linked deposit/paid Transaction is voided atomically in the same
-     * DB transaction to prevent orphaned financial records in Sales Log /
-     * History Logs / revenue totals.
      */
     public function cancelReservation(Reservation $reservation, ?string $reason): Reservation
     {
@@ -413,18 +333,6 @@ class ReservationService
                     ? "Cancelled: {$reason}"
                     : 'Cancelled by staff.',
             ]);
-
-            // Void the linked deposit/paid transaction so it no longer appears
-            // as active revenue in Sales Log, History Logs, or report totals.
-            Transaction::where('order_ref', $reservation->order_no)
-                ->whereIn('status', [
-                    TransactionStatus::DEPOSIT->value,
-                    TransactionStatus::PAID->value,
-                ])
-                ->update([
-                    'status' => TransactionStatus::VOID->value,
-                    'internal_notes' => 'Auto-voided: Reservation cancelled.',
-                ]);
 
             return $reservation->fresh(['customer', 'reservedBy', 'items.product']);
         });

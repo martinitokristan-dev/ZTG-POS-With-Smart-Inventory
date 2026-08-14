@@ -23,9 +23,9 @@ export default function SuccessModal({
                             : `Reservation for ${successData?.customer?.name || successData?.customer_name || 'customer'} has been created successfully.`}
                     </p>
                     {successData && (
-                        <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', marginBottom: '24px', textAlign: 'left' }}>
+                        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', marginBottom: '24px', textAlign: 'left' }}>
                             {[
-                                ['Order No.', successData.order_no || `RS-${String(successData.id).padStart(3, '0')}`],
+                                ['Customer', successData?.customer?.name || successData?.customer_name || '—'],
                                 ['Total', fmt(successData.total)],
                                 ['Deposit', fmt(successData.deposit)],
                                 ['Pickup Date', fmtDate(successData.pickup_date)],
