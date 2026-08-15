@@ -32,7 +32,9 @@
 17. [Development Roadmap & Feature Milestones](#17-development-roadmap--feature-milestones)
 18. [Project File & Folder Structure](#18-project-file--folder-structure)
 19. [Known Limitations & Future Improvements](#19-known-limitations--future-improvements)
-20. [Business Details & Receipt Compliance (Business Owner's Guide)](#20-business-details--receipt-compliance-business-owners-guide)
+20. [Development Change Log & Refactoring History](#20-development-change-log--refactoring-history)
+21. [Business Details & Receipt Compliance (Business Owner's Guide)](#21-business-details--receipt-compliance-business-owners-guide)
+22. [System Security & Data Protection Architecture](#22-system-security--data-protection-architecture)
 
 ---
 
@@ -342,52 +344,134 @@ The system uses a **Decoupled SPA + REST API** architecture (also called a **Hea
 
 The system uses **15 database tables** with a MySQL-compatible schema, hosted on TiDB Cloud Serverless.
 
-### Entity-Relationship Summary
+### Entity-Relationship Diagram (ERD)
 
-```
-users (employees)
-  +-- transactions (1:many)
-  |     +-- transaction_items (1:many)
-  |           +-- products
-  +-- reservations (1:many)
-  |     +-- reservation_items (1:many)
-  |           +-- products
-  +-- notifications
+```mermaid
+erDiagram
+    users ||--o{ transactions : "processes (cashier_id)"
+    users ||--o{ transactions : "approves (approver_id)"
+    users ||--o{ reservations : "books (reserved_by_id)"
+    users ||--o{ reservations : "fulfills (fulfilled_by_id)"
+    users ||--o{ report_logs : "generates (user_id)"
+    users ||--o{ notifications : "receives (user_id)"
 
-products
-  +-- categories (many:1)
-  +-- product_variant_values (1:many)
-  |     +-- variant_types (many:1)
-  |     +-- variant_options (many:1)
-  +-- alert_rules (1:many)
+    checkers ||--o{ transactions : "verifies (checker_id)"
 
-settings        (key-value store)
-checkers        (price lookup terminals)
-report_logs     (report generation tracking)
-customers       (walk-in customer profiles)
+    categories ||--o{ products : "categorizes (category_id)"
+
+    products ||--o{ products : "has variants (parent_product_id)"
+    products ||--o{ product_variant_values : "has option values"
+    products ||--o{ transaction_items : "sold in"
+    products ||--o{ reservation_items : "reserved in"
+    products ||--o{ notifications : "alerts for"
+
+    variant_types ||--o{ variant_options : "defines"
+    variant_options ||--o{ product_variant_values : "assigned to"
+
+    customers ||--o{ transactions : "makes (customer_id)"
+    customers ||--o{ reservations : "books (customer_id)"
+
+    transactions ||--o{ transaction_items : "contains"
+    transactions ||--o{ notifications : "triggers"
+
+    reservations ||--o{ reservation_items : "contains"
+
+    users {
+        bigint id PK
+        string employee_id UK
+        string name
+        string real_name
+        string username UK
+        string password
+        string role
+        string status
+    }
+
+    products {
+        bigint id PK
+        bigint parent_product_id FK
+        string name
+        string chinese_name
+        string part_no
+        bigint category_id FK
+        string address
+        int stock
+        int alert_limit
+        decimal price1
+        decimal price2
+        string status
+        string image
+    }
+
+    reservations {
+        bigint id PK
+        string order_no UK
+        bigint customer_id FK
+        string customer_name
+        string payment_method
+        string payment_type
+        decimal deposit
+        decimal total
+        date date
+        date date_get
+        string doc_type
+        string si_no
+        string status
+    }
+
+    transactions {
+        bigint id PK
+        string si_no UK
+        datetime date
+        bigint customer_id FK
+        bigint cashier_id FK
+        bigint checker_id FK
+        decimal amount
+        string payment_method
+        string doc_type
+        string status
+    }
+
+    transaction_items {
+        bigint id PK
+        bigint transaction_id FK
+        bigint product_id FK
+        string item_name
+        string part_no
+        int qty
+        decimal price
+    }
+
+    reservation_items {
+        bigint id PK
+        bigint reservation_id FK
+        bigint product_id FK
+        string part_no
+        string item_name
+        int qty
+        decimal price
+    }
 ```
 
 ### Table Specifications
 
 | Table | Key Columns | Description |
 |---|---|---|
-| `users` | `id`, `name`, `employee_id`, `role`, `pin`, `is_active` | System users with role-based access |
-| `products` | `id`, `name`, `sku`, `price`, `stock`, `category_id` | Inventory items |
-| `categories` | `id`, `name`, `has_variants` | Product categorization |
-| `variant_types` | `id`, `name` | e.g., "Size", "Color" |
-| `variant_options` | `id`, `variant_type_id`, `value` | e.g., "Large", "Red" |
-| `product_variant_values` | `id`, `product_id`, `variant_type_id`, `variant_option_id` | Product-specific variant combinations |
-| `transactions` | `id`, `user_id`, `checker_id`, `total`, `status`, `payment_method` | Sales transactions |
-| `transaction_items` | `id`, `transaction_id`, `product_id`, `quantity`, `unit_price` | Line items per transaction |
-| `reservations` | `id`, `user_id`, `customer_id`, `status`, `total` | Pre-order reservations |
-| `reservation_items` | `id`, `reservation_id`, `product_id`, `quantity` | Line items per reservation |
-| `customers` | `id`, `name`, `contact` | Walk-in customer records |
-| `notifications` | `id`, `user_id`, `type`, `message`, `is_read` | In-app notification store |
-| `settings` | `key`, `value` | System-wide configuration (key-value) |
-| `alert_rules` | `id`, `product_id`, `threshold`, `is_active` | Low-stock notification rules |
-| `checkers` | `id`, `name`, `location` | Price lookup terminal registrations |
-| `report_logs` | `id`, `type`, `generated_at` | Tracks when reports were last generated |
-| `personal_access_tokens` | (Laravel Sanctum standard) | API authentication tokens |
+| `users` | `id`, `name`, `real_name`, `employee_id`, `role`, `pin`, `status`, `profile_photo` | System users with role-based access (Admin, Cashier, Supervisor) |
+| `products` | `id`, `parent_product_id`, `name`, `chinese_name`, `part_no`, `category_id`, `address`, `stock`, `alert_limit`, `price1`, `price2`, `status`, `is_dead_stock`, `damaged`, `image`, `notes` | Master inventory items and variants (supports nullable name/part_no for unclassified goods) |
+| `categories` | `id`, `name`, `prefix`, `chinese_name`, `allow_variants` | Product categorization with variant toggles |
+| `variant_types` | `id`, `name` | e.g., "Size", "Color", "Material" |
+| `variant_options` | `id`, `variant_type_id`, `value` | e.g., "Standard", "Heavy Duty", "300mm" |
+| `product_variant_values` | `id`, `product_id`, `variant_option_id` | Product-specific variant combinations (junction table) |
+| `transactions` | `id`, `si_no`, `or_no`, `date`, `customer_id`, `cashier_id`, `checker_id`, `amount`, `original_amount`, `refunded_amount`, `payment_method`, `cheque_number`, `cheque_bank`, `cheque_date`, `doc_type`, `status` | Central sales, audit ledger, and refund tracking |
+| `transaction_items` | `id`, `transaction_id`, `product_id`, `item_name`, `part_no`, `qty`, `refunded_qty`, `price`, `original_price`, `discount`, `price_tier` | Line items per transaction with cumulative refund tracking |
+| `reservations` | `id`, `order_no`, `customer_id`, `customer_name`, `customer_phone`, `engine_plate_number`, `payment_method`, `cheque_number`, `payment_type`, `deposit`, `total`, `date`, `pickup_date`, `date_get`, `doc_type`, `si_no`, `status` | Pre-order holds with locked Collection Receipt fulfillment |
+| `reservation_items` | `id`, `reservation_id`, `product_id`, `part_no`, `item_name`, `engine_plate_number`, `qty`, `price` | Line items per reservation order |
+| `customers` | `id`, `name`, `phone`, `email`, `tin`, `address` | Walk-in and registered customer registry |
+| `notifications` | `id`, `user_id`, `type`, `sub_type`, `title`, `message`, `link`, `is_read` | In-app real-time notification store |
+| `settings` | `id`, `key`, `value` | System-wide configuration store (business info, thresholds) |
+| `checkers` | `id`, `name`, `status` | Supervisor and floor checker staff profiles |
+| `report_logs` | `id`, `user_id`, `report_type`, `timeframe`, `created_at` | Report generation and export audit trail |
 
 ---
 
@@ -1322,7 +1406,33 @@ This pattern dynamically allows any `*.pages.dev` subdomain, including both the 
 
 ---
 
-## 20. Business Details & Receipt Compliance (Business Owner's Guide)
+### SPRINT 10 — Physical Collection Receipt Booklet Engine, Period Filtering & No-Name Cataloging
+**Date: August 2026**
+
+#### 1. Physical BIR Booklet Collection Receipt (C.R.) Engine
+- **Booklet Layout Faithful Replication:** Engineered a pixel-perfect 2-column physical paper voucher layout inside `printReceipt.js` matching standard Philippine BIR Collection Receipt booklets:
+  - **Left Section:** Enclosed 5-row settlement grid (`IN SETTLEMENT OF THE FOLLOWING:`), subtotal breakdown (`Total Sales`, `Less: Withholding Tax`, `Total Amount Due`), and payment breakdown checkboxes (`CASH`, `CHECK`, `TOTAL`).
+  - **Right Section:** Formal legal certification (`COLLECTION RECEIPT`, `No.:`, `Date:`, `Received from`, `Address at`, `The sum of`, `Pesos (₱...)`, `In partial/full payment for`, and `Payment Received by:` with authorized signature block).
+  - **Paper Slip Outline:** Wrapped the receipt in a clean 1.5px solid black paper boundary with exact booklet slip aspect ratio.
+- **Formal Number-to-Words Currency Engine:** Developed `numberToWords.js` converting decimal currency totals into formal BIR English currency words (e.g. `₱3,000.00` $\rightarrow$ `THREE THOUSAND PESOS ONLY`, `₱2,500.50` $\rightarrow$ `TWO THOUSAND FIVE HUNDRED PESOS AND 50/100 ONLY`).
+- **Automated Cheque Parsing:** If payment method is Cheque, automatically checks `( ✔ ) CHECK`, embeds the cheque reference inside `Check ( [Cheque No] )`, and prints the cheque amount on the Check line.
+- **Locked C.R. Fulfillment:** Reservation fulfillment is strictly locked to `C.R.` document type with mandatory physical booklet number input.
+- **Reprint C.R. Action:** Dedicated green printer icon action available across tables, success modals, and details modals.
+
+#### 2. 2-Tab Reservation Management & Period Date Filtering
+- Implemented 2-tab navigation:
+  - **For Order In China:** Tracks pending customer holds and deposits.
+  - **Order Claimed And Paid:** Displays fulfilled customer pickups.
+- **Period Filter Dropdown:** Added date filter dropdown to the **Order Claimed And Paid** tab defaulting to **Today** (`today`, `this_week`, `this_month`, `this_year`, `all`), backed by indexed `date_get` column queries.
+
+#### 3. No Name / Part No. Product Cataloging & POS Top 5 Selling Categories
+- **Flexible Cataloging:** Supported imported and uncoded goods by making `name` and `part_no` nullable in the database while enforcing image upload for visual identification.
+- **No Name Quick Filters:** Added a dedicated "No Name / Part No." quick filter tab across Product Management, Inventory, and POS.
+- **POS Top 5 Category Logic:** POS category header dynamically ranks and displays the Top 5 most-sold product categories plus the dedicated "No Name / Part No." tab with vector SVG icons.
+
+---
+
+## 21. Business Details & Receipt Compliance (Business Owner's Guide)
 
 This section explains how your business information and printed receipts work in simple terms for store owners and non-technical managers.
 
@@ -1356,7 +1466,7 @@ The company logo works differently from text details:
 
 ---
 
-## 21. System Security & Data Protection Architecture
+## 22. System Security & Data Protection Architecture
 
 The ZTG Heavy Parts POS & Inventory system incorporates multi-layered enterprise security controls across all application layers to protect business data, safeguard user accounts, and maintain system integrity:
 

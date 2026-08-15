@@ -416,16 +416,22 @@ PUT    /api/profile/password            → Change own password
 
 ## Module C: Product Management
 
-### Add Product Logic (No Variants)
+### Add Product Logic (Standard & No Name / Part No. Items)
 ```
-INPUT: name, chinese_name, part_no, category_id, address, stock, price1, price2, status, notes
+INPUT: name, chinese_name, part_no, category_id, address, stock, price1, price2, status, notes, image
 VALIDATE:
-  - part_no must be unique
-  - price1 > 0
+  - name: optional / nullable (for imported items without a designated name)
+  - part_no: optional / nullable (for unnumbered parts; unique when provided)
+  - price1 >= 0
   - stock >= 0
+  - image: optional Cloudinary image URL (essential for identifying no-name parts)
 SAVE:
   - INSERT INTO products (parent_product_id = NULL)
   - status auto-calculated from stock level
+
+NO NAME / PART NO. FILTERING:
+  - Product Management, Inventory, and POS allow filtering specifically for items with no name or no part number.
+  - When selected, queries: WHERE (name IS NULL OR name = '') OR (part_no IS NULL OR part_no = '')
 ```
 
 ### Add Product Logic (With Variants)
@@ -523,6 +529,15 @@ const cart = [
     maxStock: 10              // for validation
   }
 ];
+```
+
+### POS Category Ribbon & Quick Filters
+```
+TOP 5 SELLING CATEGORIES + NO NAME FILTER:
+- The POS catalog header dynamically computes the Top 5 most-sold product categories based on completed sales transactions.
+- In addition to the Top 5 categories, a dedicated "No Name / Part No" filter tab with an image vector icon is provided.
+- Total displayed category filter tabs = Top 5 selling categories + "No Name / Part No" tab.
+- Selecting "No Name / Part No" filters the catalog to display unnamed/unnumbered inventory with high-resolution image previews, enabling quick visual selection and pricing by the cashier.
 ```
 
 ### Add to Cart Logic
@@ -818,55 +833,76 @@ POST   /api/transactions/verify-pin           → Verify admin PIN
 
 ---
 
-## Module F: Order-Based Reservations
+## Module F: Order-Based Reservations & Collection Receipts
 
 ### Reservation Data Structure
 ```javascript
 {
-  id: "ORD-1720000000000",
+  id: 1,
+  order_no: "RS-2026-001",      // Auto-incremented tracking code
   items: [
-    { id: 1, name: "Hydraulic Pump", partNo: "HP-001", price: 2500, qty: 2 },
-    { id: 2, name: "Engine Oil Filter", partNo: "EOF-101", price: 850, qty: 1 }
+    { id: 1, name: "Hydraulic Pump", part_no: "HP-001", price: 2500, qty: 2, engine_plate_number: "ABC-123" },
+    { id: 2, name: "Engine Oil Filter", part_no: "EOF-101", price: 850, qty: 1 }
   ],
-  customer: "Mark Anthony",
-  phone: "0917-888-9999",
+  customer_name: "Mark Anthony",
+  customer_phone: "0917-888-9999",
   email: "mark@email.com",
+  engine_plate_number: "ABC-123",
   notes: "Pickup after 3 PM",
-  payment_method: "Cash",
+  payment_method: "Cash",       // "Cash", "GCash", "Bank Transfer", "Cheque"
+  cheque_number: null,
   payment_type: "deposit50",    // "deposit50" or "full"
   deposit: 2925,                // 50% of total
   total: 5850,                  // (2500*2 + 850*1)
-  date: "Jun 14, 2026",
+  date: "2026-06-14",
   pickup_date: "2026-06-18",
   pickup_time: "15:00",
-  reserved_by: "Administrator",
-  reserved_by_id: "EMP-000",
-  reserved_by_role: "Admin",
-  status: "Pending"
+  date_get: "2026-06-18",       // Claim date upon fulfillment
+  doc_type: "C.R.",             // Locked to Collection Receipt for reservation fulfillment
+  si_no: "CR-00340",            // Physical booklet C.R. number
+  reserved_by_id: 1,
+  fulfilled_by_id: 1,
+  status: "Pending"             // "Pending", "Completed", "Cancelled"
 }
+```
+
+### 2-Tab Navigation & Date Filtering Workflow
+```
+TAB 1: "For Order In China" (Pending Reservations)
+  - Shows all unfulfilled client product holds with deposits.
+  - Action buttons: "Fulfill Order", "Cancel Order", "View Details".
+
+TAB 2: "Order Claimed And Paid" (Completed Reservations)
+  - Shows fulfilled orders where customers have paid the balance and claimed their parts.
+  - Date Filter Dropdown:
+      • "Today" (Default) — orders claimed & fulfilled today.
+      • "This Week" — orders claimed within the current week.
+      • "This Month" — orders claimed within the current month.
+      • "This Year" — orders claimed within the current calendar year.
+      • "All Time" — all historical completed orders.
+  - Action buttons: "Reprint C.R." (Printer icon), "View Details".
 ```
 
 ### Create Reservation Logic
 ```
 INPUT:
-  items[] (from reservation cart), customer_name, phone, email, notes,
-  payment_method, payment_type, deposit_amount, pickup_date, pickup_time
+  items[] (from reservation cart), customer_name, phone, email, engine_plate_number, notes,
+  payment_method, cheque_number, payment_type, deposit_amount, pickup_date, pickup_time
 
 VALIDATE:
   - At least 1 item in cart
   - Customer name required
-  - Each item must have stock > 0
   - Each item qty must not exceed available stock
 
-NOTE: Stock is NOT deducted at reservation time. Only at fulfillment.
+NOTE: Stock is NOT deducted at reservation booking time. Stock is reserved and deducted on fulfillment.
 
 SAVE RESERVATION:
-  INSERT INTO reservations (order_no = "ORD-{timestamp}", status = "Pending")
+  INSERT INTO reservations (order_no = "RS-{YEAR}-{SEQ}", status = "Pending")
   INSERT INTO reservation_items for each cart item
 
 SAVE TRANSACTION (deposit log):
   {
-    si_no: reservation.order_no,   // same as ORD-XXX
+    si_no: reservation.order_no,
     status: payment_type == "full" ? "Paid" : "Deposit",
     type: "reservation",
     amount: deposit_amount,
@@ -875,56 +911,88 @@ SAVE TRANSACTION (deposit log):
   }
 ```
 
-### Fulfill Reservation Logic
+### Fulfill Reservation Logic (Locked to Collection Receipt)
 ```
 INPUT:
-  reservation_id, balance_payment, payment_method, doc_type
+  reservation_id, si_no (C.R. Booklet Number *), payment_method, cheque_number, amount_received, notes
 
 VALIDATE:
   1. Reservation must be "Pending"
-  2. ALL items must have sufficient stock (check at fulfill time)
-  3. Balance payment >= (total - deposit)
+  2. si_no (Collection Receipt Number from physical booklet) is REQUIRED
+  3. ALL items must have sufficient stock
+  4. Amount received >= balance due (total - deposit)
 
 PROCESSING (DB transaction):
   1. FOR EACH reservation item:
        product.stock -= item.qty
        product.sales_count += item.qty
-     SAVE products
+     SAVE products & emit InventoryUpdated events
   
   2. CREATE transaction:
-       si_no: "{prefix}-2026-{random}"  // SI or OR based on doc_type
+       si_no: si_no (C.R. Booklet Number)
+       doc_type: "C.R."
        status: "Completed"
        amount: balance_remaining
-       payment: balance > 0 ? payment_method : "Pre-paid"
+       payment_method: payment_method
+       cheque_number: cheque_number
        order_ref: reservation.order_no
-       fulfilled_by: current_user.name
+       cashier_id: current_user.id
   
   3. UPDATE reservation:
        status = "Completed"
        fulfilled_by_id = current_user.id
+       date_get = now()
+       doc_type = "C.R."
+       si_no = si_no
 ```
 
-### Cancel Reservation Logic
+### Physical BIR Booklet Collection Receipt (C.R.) Print Layout
 ```
-1. CREATE archive record:
-   { reference_id: res.id, type: "Order Cancellation",
-     details: "Customer: {name} cancelled order for {items}. Deposit returned: ₱{amount}" }
+2-COLUMN PHYSICAL BOOKLET SPECIFICATIONS:
+┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ ┌───────────────────────────────────┐                       <u>COLLECTION RECEIPT</u>                           │
+│ │ IN SETTLEMENT OF THE FOLLOWING:   │                                                                         │
+│ ├─────────────────┬─────────────────┤                                                 No.: <u>00340</u>           │
+│ │ PARTICULARS     │ AMOUNT          │                                                 Date: <u>Aug 14, 2026</u>   │
+│ ├─────────────────┼─────────────────┤                                                                         │
+│ │ PUMP GEAR (X2)  │ ₱ 3,000.00      │ Received from <u>KRISTAN C MARTINITO</u>                                │
+│ ├─────────────────┼─────────────────┤ Address at    <u>09639126633</u>                                        │
+│ │                 │                 │                                                                         │
+│ ├─────────────────┼─────────────────┤ The sum of <u>THREE THOUSAND PESOS ONLY</u>                             │
+│ │                 │                 │                                                         Pesos (₱ <u>3,000.00</u>)
+│ ├─────────────────┼─────────────────┤                                                                         │
+│ │                 │                 │ In partial/full payment for <u>                                         </u>│
+│ ├─────────────────┼─────────────────┤                                                                         │
+│ │ Total Sales:    │ ₱ 3,000.00      │                                           Payment Received by:          │
+│ ├─────────────────┼─────────────────┤                                           <u>ADMINISTRATOR</u>          │
+│ │ Less: W/Tax:    │ ₱ 0.00          │                                           _____________________________ │
+│ ├─────────────────┼─────────────────┤                                                Authorized Signature     │
+│ │ Total Amt Due:  │ ₱ 3,000.00      │                                                                         │
+│ ├─────────────────┴─────────────────┤ "THIS DOCUMENT IS NOT VALID FOR CLAIMING INPUT TAXES"                   │
+│ │ PAYMENT IN FORM OF:               │                                                                         │
+│ │ ( ✔ ) CASH   (   ) CHECK          │                                                                         │
+│ │ Cash      <u>₱ 3,000.00</u>      │                                                                         │
+│ │ Check ( ) <u>          </u>      │                                                                         │
+│ │ Others    <u>          </u>      │                                                                         │
+│ │ TOTAL     <u>₱ 3,000.00</u>      │                                                                         │
+│ └───────────────────────────────────┘                                                                         │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
-2. DELETE reservation from reservations table
-   (or soft-delete with status = "Cancelled")
-
-NOTE: No stock changes — stock was never deducted
-NOTE: Deposit refund is handled manually (cash return to customer)
+PRINTING RULES:
+- Left Column: Exactly 5 item rows with grid lines, subtotal calculations, and Payment In Form Of checkboxes.
+- Right Column: Center underlined header, right-aligned No. and Date, flex-aligned fill-in lines.
+- Number to Words: Automatically converts numeric amount to formal BIR words (e.g. THREE THOUSAND PESOS ONLY).
+- Cheque Handling: Checks `( ✔ ) CHECK`, embeds cheque number inside `Check ( BDO-123 )`, and prints amount.
+- Clean Underline: `In partial/full payment for` remains a clean underline with no raw internal database keys.
 ```
 
 ### Laravel API Endpoints:
 ```
-GET    /api/reservations                     → List (with status filter)
+GET    /api/reservations                     → List (with status, search, and date_filter)
 GET    /api/reservations/{id}                → Show with items
 POST   /api/reservations                     → Create reservation
-POST   /api/reservations/{id}/fulfill        → Fulfill/complete
+POST   /api/reservations/{id}/fulfill        → Fulfill (saves C.R. No. and deducts stock)
 POST   /api/reservations/{id}/cancel         → Cancel
-GET    /api/reservations/{id}/receipt         → Download receipt
 ```
 
 ---

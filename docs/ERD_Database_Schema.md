@@ -85,9 +85,9 @@ Master product catalog. Each variant is its own row (same `name`, different `var
 |---|---|---|---|
 | `id` | BIGINT UNSIGNED | PK, AUTO_INCREMENT | |
 | `parent_product_id` | BIGINT UNSIGNED | FK → `products.id`, NULLABLE | NULL = base product; set for variants |
-| `name` | VARCHAR(255) | NOT NULL | Product name |
+| `name` | VARCHAR(255) | NULLABLE | Product name (nullable for items with image/price only) |
 | `chinese_name` | VARCHAR(255) | NULLABLE | Chinese translation |
-| `part_no` | VARCHAR(50) | UNIQUE, NOT NULL | Part number (e.g. HP-001) |
+| `part_no` | VARCHAR(50) | NULLABLE | Part number (nullable for unnumbered items) |
 | `category_id` | BIGINT UNSIGNED | FK → `categories.id`, NOT NULL | |
 | `address` | VARCHAR(50) | NULLABLE | Warehouse location: Rack A-1 |
 | `stock` | INT | NOT NULL, DEFAULT 0 | Current shelf stock |
@@ -98,7 +98,7 @@ Master product catalog. Each variant is its own row (same `name`, different `var
 | `is_dead_stock` | BOOLEAN | DEFAULT FALSE | Flagged as dead stock |
 | `damaged` | INT | NOT NULL, DEFAULT 0 | Units marked damaged |
 | `variant_options` | VARCHAR(255) | NULLABLE | Display label e.g. "Heavy Duty" |
-| `image_url` | VARCHAR(500) | NULLABLE | Cloudinary/CDN image URL |
+| `image` | VARCHAR(500) | NULLABLE | Cloudinary image URL (aliased to `image_url`) |
 | `notes` | TEXT | NULLABLE | Internal notes |
 | `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
 | `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | |
@@ -167,7 +167,7 @@ Central sales and audit ledger for Sales, Refunds, Returns, Voids, Restocks, and
 | `inv_action` | VARCHAR(100) | NULLABLE | e.g. "Restocked to Shelf" |
 | `approver_id` | BIGINT UNSIGNED | FK → `users.id`, NULLABLE | Admin who approved action |
 | `approval_code` | VARCHAR(20) | NULLABLE | PIN used for approval |
-| `order_ref` | VARCHAR(50) | NULLABLE | FK reference to reservation `ORD-XXX` |
+| `order_ref` | VARCHAR(50) | NULLABLE | FK reference to reservation `ORD-XXX` / `RS-XXX` |
 | `business_snapshot` | TEXT / JSON | NULLABLE | Frozen snapshot of business header details |
 | `internal_notes` | TEXT | NULLABLE | Internal notes |
 | `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
@@ -202,12 +202,12 @@ Line items for each sales transaction or inventory adjustment.
 ---
 
 ### 11. `reservations`
-Order-based reservations with multi-item cart support and vehicle tracking.
+Order-based reservations with multi-item cart support, Collection Receipt fulfillment, and vehicle tracking.
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | `id` | BIGINT UNSIGNED | PK, AUTO_INCREMENT | |
-| `order_no` | VARCHAR(50) | UNIQUE, NOT NULL | Format: `ORD-XXXXXXXX` |
+| `order_no` | VARCHAR(50) | UNIQUE, NOT NULL | Format: `RS-YYYY-XXX` |
 | `customer_id` | BIGINT UNSIGNED | FK → `customers.id`, NULLABLE, ON DELETE SET NULL | Customer reference |
 | `customer_name` | VARCHAR(100) | NULLABLE | Customer display name |
 | `customer_phone` | VARCHAR(50) | NULLABLE | Customer contact phone |
@@ -224,7 +224,9 @@ Order-based reservations with multi-item cart support and vehicle tracking.
 | `date` | DATE | NOT NULL | Reservation date |
 | `pickup_date` | DATE | NULLABLE | Expected pickup date |
 | `pickup_time` | TIME | NULLABLE | Expected pickup time |
-| `date_get` | DATE | NULLABLE | Actual item fulfillment date |
+| `date_get` | DATE | NULLABLE | Actual item fulfillment / claim date |
+| `doc_type` | VARCHAR(20) | DEFAULT 'C.R.' | Document type: 'C.R.' (Collection Receipt), 'S.I.', 'D.R.' |
+| `si_no` | VARCHAR(50) | NULLABLE | Physical Collection Receipt No. (C.R. No.) from booklet |
 | `reserved_by_id` | BIGINT UNSIGNED | FK → `users.id`, NOT NULL | Cashier who booked |
 | `fulfilled_by_id` | BIGINT UNSIGNED | FK → `users.id`, NULLABLE | Cashier who fulfilled |
 | `status` | VARCHAR(50) | NOT NULL, DEFAULT 'Pending' | PHP Enum: `Pending`, `Completed`, `Cancelled` |
@@ -293,34 +295,113 @@ Key-value store for system configuration settings.
 
 ---
 
-## Relationships Summary
+## Visual Mermaid ERD
 
-```
-users (1) ──────< transactions (M)             [cashier_id]
-users (1) ──────< transactions (M)             [approver_id]
-users (1) ──────< reservations (M)             [reserved_by_id]
-users (1) ──────< reservations (M)             [fulfilled_by_id]
-users (1) ──────< report_logs (M)              [user_id]
+```mermaid
+erDiagram
+    users ||--o{ transactions : "processes (cashier_id)"
+    users ||--o{ transactions : "approves (approver_id)"
+    users ||--o{ reservations : "books (reserved_by_id)"
+    users ||--o{ reservations : "fulfills (fulfilled_by_id)"
+    users ||--o{ report_logs : "generates (user_id)"
+    users ||--o{ notifications : "receives (user_id)"
 
-checkers (1) ───< transactions (M)             [checker_id]
+    checkers ||--o{ transactions : "verifies (checker_id)"
 
-categories (1) ──< products (M)                [category_id]
+    categories ||--o{ products : "categorizes (category_id)"
 
-products (1) ───< products (M)                  [parent_product_id] (self-ref for variants)
-products (1) ───< transaction_items (M)        [product_id]
-products (1) ───< reservation_items (M)        [product_id]
-products (1) ───< notifications (M)            [product_id]
-products (M) ───< product_variant_values (M) >── variant_options (M)
+    products ||--o{ products : "has variants (parent_product_id)"
+    products ||--o{ product_variant_values : "has option values"
+    products ||--o{ transaction_items : "sold in"
+    products ||--o{ reservation_items : "reserved in"
+    products ||--o{ notifications : "alerts for"
 
-variant_types (1) ─< variant_options (M)       [variant_type_id]
+    variant_types ||--o{ variant_options : "defines"
+    variant_options ||--o{ product_variant_values : "assigned to"
 
-customers (1) ──< transactions (M)             [customer_id]
-customers (1) ──< reservations (M)             [customer_id]
+    customers ||--o{ transactions : "makes (customer_id)"
+    customers ||--o{ reservations : "books (customer_id)"
 
-transactions (1) ─< transaction_items (M)      [transaction_id]
-transactions (1) ─< notifications (M)          [transaction_id]
+    transactions ||--o{ transaction_items : "contains"
+    transactions ||--o{ notifications : "triggers"
 
-reservations (1) ─< reservation_items (M)      [reservation_id]
+    reservations ||--o{ reservation_items : "contains"
+
+    users {
+        bigint id PK
+        string employee_id UK
+        string name
+        string real_name
+        string username UK
+        string password
+        string role
+        string status
+    }
+
+    products {
+        bigint id PK
+        bigint parent_product_id FK
+        string name
+        string chinese_name
+        string part_no
+        bigint category_id FK
+        string address
+        int stock
+        int alert_limit
+        decimal price1
+        decimal price2
+        string status
+        string image
+    }
+
+    reservations {
+        bigint id PK
+        string order_no UK
+        bigint customer_id FK
+        string customer_name
+        string payment_method
+        string payment_type
+        decimal deposit
+        decimal total
+        date date
+        date date_get
+        string doc_type
+        string si_no
+        string status
+    }
+
+    transactions {
+        bigint id PK
+        string si_no UK
+        datetime date
+        bigint customer_id FK
+        bigint cashier_id FK
+        bigint checker_id FK
+        decimal amount
+        string payment_method
+        string doc_type
+        string status
+    }
+
+    transaction_items {
+        bigint id PK
+        bigint transaction_id FK
+        bigint product_id FK
+        string item_name
+        string part_no
+        int qty
+        decimal price
+    }
+
+    reservation_items {
+        bigint id PK
+        bigint reservation_id FK
+        bigint product_id FK
+        string part_no
+        string item_name
+        int qty
+        decimal price
+    }
 ```
 
 ---
@@ -338,12 +419,12 @@ TABLES:
 - categories (id PK, name UNIQUE, prefix, chinese_name, allow_variants BOOL, timestamps)
 - variant_types (id PK, name UNIQUE, created_at)
 - variant_options (id PK, variant_type_id FK->variant_types, value, created_at)
-- products (id PK, parent_product_id FK->products NULLABLE self-ref, name, chinese_name, part_no UNIQUE, category_id FK->categories, address, stock INT, alert_limit INT, price1 DECIMAL, price2 DECIMAL, status, is_dead_stock BOOL, damaged INT, variant_options VARCHAR, image_url VARCHAR, notes TEXT, timestamps)
+- products (id PK, parent_product_id FK->products NULLABLE self-ref, name NULLABLE, chinese_name, part_no NULLABLE, category_id FK->categories, address, stock INT, alert_limit INT, price1 DECIMAL, price2 DECIMAL, status, is_dead_stock BOOL, damaged INT, variant_options VARCHAR, image VARCHAR, notes TEXT, timestamps)
 - product_variant_values (id PK, product_id FK->products, variant_option_id FK->variant_options, UNIQUE[product_id+variant_option_id])
 - customers (id PK, name, phone, email, tin, address, timestamps)
 - transactions (id PK, si_no UNIQUE, or_no, date DATETIME, customer_id FK->customers, cashier_id FK->users, checker_id FK->checkers, total_qty INT, amount DECIMAL, original_amount DECIMAL, refunded_amount DECIMAL, discount_amount DECIMAL, discount_type, discount_rate DECIMAL, amount_tendered DECIMAL, payment_method, cheque_number, cheque_bank, cheque_date DATE, doc_type, status, type, refund_reason, void_reason, action_type, inv_action, approver_id FK->users NULLABLE, approval_code, order_ref, business_snapshot TEXT, internal_notes TEXT, timestamps)
 - transaction_items (id PK, transaction_id FK->transactions CASCADE, product_id FK->products, item_name, part_no, qty INT, refunded_qty INT, price DECIMAL, original_price DECIMAL, discount DECIMAL, price_tier, unit VARCHAR, created_at)
-- reservations (id PK, order_no UNIQUE, customer_id FK->customers, customer_name, customer_phone, email, engine_plate_number, notes TEXT, payment_method, cheque_number, cheque_bank, cheque_date DATE, payment_type, deposit DECIMAL, total DECIMAL, date DATE, pickup_date DATE, pickup_time TIME, date_get DATE, reserved_by_id FK->users, fulfilled_by_id FK->users NULLABLE, status, timestamps)
+- reservations (id PK, order_no UNIQUE, customer_id FK->customers, customer_name, customer_phone, email, engine_plate_number, notes TEXT, payment_method, cheque_number, cheque_bank, cheque_date DATE, payment_type, deposit DECIMAL, total DECIMAL, date DATE, pickup_date DATE, pickup_time TIME, date_get DATE, doc_type DEFAULT 'C.R.', si_no VARCHAR(50), reserved_by_id FK->users, fulfilled_by_id FK->users NULLABLE, status, timestamps)
 - reservation_items (id PK, reservation_id FK->reservations CASCADE, product_id FK->products, part_no, item_name, engine_plate_number, qty INT, price DECIMAL)
 - report_logs (id PK, user_id FK->users NULLABLE, report_type, timeframe, created_at)
 - notifications (id PK, type, sub_type, title, message TEXT, link, product_id FK->products NULLABLE, transaction_id FK->transactions NULLABLE, is_read BOOL, user_id FK->users NULLABLE, created_at)
