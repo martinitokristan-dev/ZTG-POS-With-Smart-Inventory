@@ -17,6 +17,7 @@ use App\Events\TransactionCreated;
 use App\Events\TransactionUpdated;
 use App\Events\ReservationUpdated;
 use App\Models\Setting;
+use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -41,6 +42,22 @@ class ReservationService
 
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['date_filter']) && $filters['date_filter'] !== 'all') {
+            $df = $filters['date_filter'];
+            if ($df === 'today') {
+                $query->whereDate(DB::raw("COALESCE(date_get, date, created_at)"), Carbon::today());
+            } elseif ($df === 'this_week') {
+                $query->where(DB::raw("COALESCE(date_get, date, created_at)"), '>=', Carbon::now()->startOfWeek()->toDateString())
+                      ->where(DB::raw("COALESCE(date_get, date, created_at)"), '<=', Carbon::now()->endOfWeek()->toDateString());
+            } elseif ($df === 'this_month') {
+                $query->where(DB::raw("COALESCE(date_get, date, created_at)"), '>=', Carbon::now()->startOfMonth()->toDateString())
+                      ->where(DB::raw("COALESCE(date_get, date, created_at)"), '<=', Carbon::now()->endOfMonth()->toDateString());
+            } elseif ($df === 'this_year') {
+                $query->where(DB::raw("COALESCE(date_get, date, created_at)"), '>=', Carbon::now()->startOfYear()->toDateString())
+                      ->where(DB::raw("COALESCE(date_get, date, created_at)"), '<=', Carbon::now()->endOfYear()->toDateString());
+            }
         }
 
         if (!empty($filters['search'])) {
@@ -290,11 +307,13 @@ class ReservationService
                 }
             }
 
-            // 4. Mark reservation as Completed and set date_get
+            // 4. Mark reservation as Completed and set date_get, doc_type, si_no
             $reservation->update([
                 'status' => ReservationStatus::COMPLETED->value,
                 'fulfilled_by_id' => $fulfilledById,
                 'date_get' => now(),
+                'doc_type' => $data['doc_type'] ?? 'C.R.',
+                'si_no' => $data['si_no'] ?? null,
             ]);
 
             return $reservation->fresh(['customer', 'reservedBy', 'fulfilledBy', 'items.product']);

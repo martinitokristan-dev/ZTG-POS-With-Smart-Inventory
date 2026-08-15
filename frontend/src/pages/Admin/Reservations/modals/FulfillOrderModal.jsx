@@ -7,6 +7,7 @@ export default function FulfillOrderModal({
     ffChequeNumber, setFfChequeNumber,
     ffAmountReceived, setFfAmountReceived,
     ffDocType, setFfDocType,
+    ffSiNo, setFfSiNo,
     ffNotes, setFfNotes,
     ffError, ffLoading,
     ffBalanceDue, ffChange,
@@ -179,15 +180,44 @@ export default function FulfillOrderModal({
                             <div>
                                 <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '10px', letterSpacing: '0.5px', textTransform: 'uppercase', marginTop: '4px' }}>Transaction Details</h4>
                                 <div className="form-group" style={{ marginBottom: '12px' }}>
-                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Document Type <span style={{ color: 'var(--danger)' }}>*</span></label>
-                                    <IOSSelect
-                                        value={ffDocType}
-                                        onChange={(e) => setFfDocType(e.target.value)}
-                                        options={[
-                                            { value: 'S.I.', label: 'S.I. (Sales Invoice)' },
-                                            { value: 'C.R.', label: 'C.R. (Collection Receipt)' },
-                                            { value: 'D.R.', label: 'D.R. (Delivery Receipt)' }
-                                        ]}
+                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Document Type</label>
+                                    <div style={{
+                                        padding: '10px 14px',
+                                        borderRadius: '8px',
+                                        background: 'var(--bg-secondary)',
+                                        border: '1px solid var(--border)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between'
+                                    }}>
+                                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                                            C.R. (Collection Receipt)
+                                        </span>
+                                        <span style={{
+                                            fontSize: '11px',
+                                            fontWeight: 700,
+                                            padding: '2px 8px',
+                                            borderRadius: '12px',
+                                            background: 'rgba(16, 185, 129, 0.15)',
+                                            color: '#10B981',
+                                            border: '1px solid rgba(16, 185, 129, 0.3)'
+                                        }}>
+                                            LOCKED
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '12px' }}>
+                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+                                        Collection Receipt No. (C.R. No.) <span style={{ color: 'var(--danger)' }}>*</span>
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        className="form-control" 
+                                        required 
+                                        placeholder="e.g. CR-00340 or booklet number" 
+                                        value={ffSiNo} 
+                                        onChange={(e) => setFfSiNo(e.target.value)} 
+                                        style={{ fontSize: '13px', fontWeight: 600 }} 
                                     />
                                 </div>
                                 <div className="form-group" style={{ marginBottom: '12px' }}>

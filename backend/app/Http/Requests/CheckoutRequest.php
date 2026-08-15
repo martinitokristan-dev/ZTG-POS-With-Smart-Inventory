@@ -32,6 +32,7 @@ class CheckoutRequest extends FormRequest
             'discount_rate'          => 'nullable|numeric|min:0',
 
             // Document & payment
+            'si_no'                  => 'nullable|string|max:50|unique:transactions,si_no',
             'payment_method'         => 'required|string',
             'cheque_number'          => 'required_if:payment_method,Cheque|nullable|string|max:100',
             'doc_type'               => 'required|string|in:S.I.,D.R.,C.R.',

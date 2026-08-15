@@ -442,6 +442,10 @@ export default function useProductManagement() {
     const handleAddProduct = async (e) => {
         e.preventDefault();
         if (isSubmitting) return;
+        if (!formData.image || !formData.image.trim()) {
+            setErrorMessage('Product image is required. Please upload a photo for the product.');
+            return;
+        }
         setIsSubmitting(true);
         try {
             setErrorMessage('');
@@ -462,6 +466,10 @@ export default function useProductManagement() {
     const handleEditProduct = async (e) => {
         e.preventDefault();
         if (isSubmitting) return;
+        if (!formData.image || !formData.image.trim()) {
+            setErrorMessage('Product image is required. Please upload a photo for the product.');
+            return;
+        }
         setIsSubmitting(true);
         const { commit, rollback } = optimisticUpdateProduct(selectedProduct.id, formData);
         try {

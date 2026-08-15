@@ -3,7 +3,7 @@ import CopyableText from '../../../../shared/components/CopyableText';
 import StatusBadge from '../../../../shared/components/StatusBadge';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 
-export default function ReservationDetailsModal({ isOpen, onClose, reservation, fmt, fmtDate }) {
+export default function ReservationDetailsModal({ isOpen, onClose, reservation, fmt, fmtDate, onPrintCR }) {
     if (!isOpen || !reservation) return null;
 
     const r = reservation;
@@ -29,10 +29,11 @@ export default function ReservationDetailsModal({ isOpen, onClose, reservation, 
     const fulfilledByName = r.fulfilled_by?.real_name || r.fulfilled_by?.name || null;
     const items = r.items || [];
     const chequeNo = r.cheque_number || (r.payment_method && r.payment_method.includes('(#') ? r.payment_method.match(/\(#([^)]+)\)/)?.[1] : null);
+    const crNo = r.si_no || (rawStatus === 'completed' ? r.order_no : null);
 
     const dateReserved = fmtDate(r.date || r.created_at);
     const fullyPaidDate = rawStatus === 'completed'
-        ? fmtDate(r.updated_at)
+        ? fmtDate(r.date_get || r.updated_at)
         : (isDirectFull ? dateReserved : null);
 
     const detailRow = (label, value, customStyle = {}) => (
@@ -62,11 +63,13 @@ export default function ReservationDetailsModal({ isOpen, onClose, reservation, 
                 {/* Body */}
                 <div className="modal-body" style={{ padding: '24px', maxHeight: '70vh', overflowY: 'auto', background: 'var(--bg-card)' }}>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {detailRow('Order Number', r.order_no, { color: 'var(--primary)', fontWeight: '700' })}
+                        {crNo && detailRow('Collection Receipt (C.R. No.)', crNo, { color: '#059669', fontWeight: '700' })}
                         {detailRow('Customer Name', custName)}
                         {detailRow('Contact Phone', custPhone)}
                         {custEmail !== '—' && detailRow('Customer Email', custEmail)}
                         {detailRow('Date Placed / Reserved', dateReserved)}
-                        {fullyPaidDate && detailRow('Fully Paid Date', fullyPaidDate, { color: 'var(--success)', fontWeight: '700' })}
+                        {fullyPaidDate && detailRow('Fulfilled / Paid Date', fullyPaidDate, { color: 'var(--success)', fontWeight: '700' })}
                         {detailRow('Expected Pickup', fmtDate(r.pickup_date))}
                         {detailRow('Payment Method', (r.payment_method || 'Cash').replace(/\s*\([^)]*\)/g, '').trim())}
                         {chequeNo && detailRow('Cheque Number', chequeNo)}
@@ -144,7 +147,24 @@ export default function ReservationDetailsModal({ isOpen, onClose, reservation, 
                 </div>
 
                 {/* Footer */}
-                <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', justifyContent: 'flex-end' }}>
+                <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        {rawStatus === 'completed' && onPrintCR && (
+                            <button 
+                                type="button" 
+                                className="btn btn-outline" 
+                                onClick={() => onPrintCR(r)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', color: '#059669', borderColor: '#A7F3D0' }}
+                            >
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                    <rect x="6" y="14" width="12" height="8"></rect>
+                                </svg>
+                                Reprint Collection Receipt (C.R.)
+                            </button>
+                        )}
+                    </div>
                     <button type="button" className="btn btn-secondary" onClick={onClose} style={{ padding: '8px 24px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>Close</button>
                 </div>
             </div>

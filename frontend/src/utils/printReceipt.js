@@ -1,3 +1,5 @@
+import { numberToWordsPesos } from './numberToWords';
+
 /**
  * printReceipt.js
  * Generates an HTML receipt and triggers the browser print dialog.
@@ -36,6 +38,9 @@
  * @param {string} options.logoUrl          ALWAYS current live logo URL (never frozen)
  */
 export function printUnifiedReceipt(options) {
+    if (options.docType === 'C.R.') {
+        return printCollectionReceipt(options);
+    }
     const {
         type = 'Sales',
         invoiceNo = '',
@@ -311,3 +316,335 @@ export function printUnifiedReceipt(options) {
         }, 1000);
     }, 100);
 }
+
+/**
+ * printCollectionReceipt
+ * Generates a physical BIR booklet style Collection Receipt matching the client's template.
+ *
+ * @param {Object} options
+ */
+export function printCollectionReceipt(options) {
+    const {
+        receiptNo = '',
+        invoiceNo = '',
+        siNo = '',
+        date = '',
+        customer = '',
+        customerName = '',
+        address = '',
+        phone = '',
+        enginePlate = '',
+        items = [],
+        total = 0,
+        amount = 0,
+        balancePaid = 0,
+        deposit = 0,
+        payment = '',
+        paymentMethod = '',
+        chequeNumber = '',
+        servedBy = '',
+        orderNo = '',
+        orderRef = '',
+        businessInfo = {},
+        logoUrl = null,
+    } = options;
+
+    const finalReceiptNo = receiptNo || siNo || invoiceNo || '—';
+    const finalCustomer = customer || customerName || 'Walk-in Customer';
+    const finalAddress = address || [phone, enginePlate].filter(Boolean).join(' · ') || '—';
+    const finalDate = date || new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: '2-digit' });
+    const finalPaymentMethod = (paymentMethod || payment || 'Cash').toUpperCase();
+    const finalChequeNo = chequeNumber || options.cheque_number || '';
+    const finalOrderRef = orderNo || orderRef || (options.order_ref ? options.order_ref : '');
+    const finalServedBy = servedBy || options.cashier || options.fulfilled_by || 'Staff';
+
+    const numericTotal = Number(total || amount || balancePaid || 0);
+    const wordsAmount = numberToWordsPesos(numericTotal);
+
+    // Business identity
+    let cachedBiz = {};
+    try {
+        const stored = localStorage.getItem('cached_business_info');
+        if (stored) cachedBiz = JSON.parse(stored);
+    } catch (e) {}
+
+    const bizName = businessInfo?.business_name || cachedBiz?.business_name || 'ZTG HEAVY PARTS';
+    const bizAddress = businessInfo?.address || cachedBiz?.address || '';
+    const bizContact = businessInfo?.contact_number || cachedBiz?.contact_number || '';
+    const bizTin = businessInfo?.tin || cachedBiz?.tin || '';
+
+    const isCash = finalPaymentMethod.includes('CASH');
+    const isCheck = finalPaymentMethod.includes('CHEQUE') || finalPaymentMethod.includes('CHECK');
+    const isOther = !isCash && !isCheck;
+
+    // Exactly 5 rows for the table to match the physical booklet
+    let particularsRows = '';
+    const itemRows = (items && items.length > 0) ? items.slice(0, 5) : [];
+    
+    for (let i = 0; i < 5; i++) {
+        const it = itemRows[i];
+        if (it) {
+            const name = it.name || it.item_name || it.product?.name || 'Item';
+            const qtyStr = it.qty ? ` (X${it.qty})` : '';
+            const amtStr = Number(it.total || (it.price * (it.qty || 1)) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
+            particularsRows += `
+                <tr style="height: 24px;">
+                    <td style="padding: 3px 6px; font-size: 11px; border-bottom: 1px solid #000; border-right: 1px solid #000; text-transform: uppercase; vertical-align: middle;">
+                        ${name}${qtyStr}
+                    </td>
+                    <td style="padding: 3px 6px; font-size: 11px; text-align: right; border-bottom: 1px solid #000; font-weight: bold; vertical-align: middle; white-space: nowrap;">
+                        &#8369;${amtStr}
+                    </td>
+                </tr>
+            `;
+        } else if (i === 0 && itemRows.length === 0) {
+            particularsRows += `
+                <tr style="height: 24px;">
+                    <td style="padding: 3px 6px; font-size: 11px; border-bottom: 1px solid #000; border-right: 1px solid #000; text-transform: uppercase; vertical-align: middle;">
+                        ${finalOrderRef ? `ORDER #${finalOrderRef} SETTLEMENT` : 'PAYMENT / SETTLEMENT'}
+                    </td>
+                    <td style="padding: 3px 6px; font-size: 11px; text-align: right; border-bottom: 1px solid #000; font-weight: bold; vertical-align: middle; white-space: nowrap;">
+                        &#8369;${numericTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                </tr>
+            `;
+        } else {
+            particularsRows += `
+                <tr style="height: 24px;">
+                    <td style="padding: 3px 6px; border-bottom: 1px solid #000; border-right: 1px solid #000;">&nbsp;</td>
+                    <td style="padding: 3px 6px; border-bottom: 1px solid #000;">&nbsp;</td>
+                </tr>
+            `;
+        }
+    }
+
+    const receiptHtml = `
+        <div style="font-family: Arial, Helvetica, sans-serif; width: 800px; margin: 10px auto; padding: 22px 24px; color: #000; background: #FFF; border: 1.5px solid #000; box-sizing: border-box;">
+            
+            <!-- Two-Column Booklet Layout -->
+            <div style="display: flex; gap: 24px; align-items: stretch;">
+
+                <!-- LEFT COLUMN: Physical Settlement Box with Inner Borders -->
+                <div style="width: 280px; border: 1.5px solid #000; box-sizing: border-box; display: flex; flex-direction: column;">
+                    
+                    <!-- Box Header -->
+                    <div style="border-bottom: 1px solid #000; padding: 5px 4px; font-size: 10px; font-weight: bold; text-align: center; letter-spacing: 0.3px; text-transform: uppercase;">
+                        IN SETTLEMENT OF THE FOLLOWING:
+                    </div>
+                    
+                    <!-- Particulars & Amount Table -->
+                    <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid #000; height: 22px;">
+                                <th style="padding: 3px 6px; font-size: 9.5px; text-align: center; font-weight: bold; text-transform: uppercase; width: 62%; border-right: 1px solid #000;">PARTICULARS</th>
+                                <th style="padding: 3px 6px; font-size: 9.5px; text-align: center; font-weight: bold; text-transform: uppercase; width: 38%;">AMOUNT</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${particularsRows}
+                            <tr style="height: 22px;">
+                                <td style="padding: 3px 6px; font-size: 10px; font-weight: bold; text-align: center; border-bottom: 1px solid #000; border-right: 1px solid #000;">Total Sales:</td>
+                                <td style="padding: 3px 6px; font-size: 10.5px; font-weight: bold; text-align: right; border-bottom: 1px solid #000;">&#8369;${numericTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                            <tr style="height: 22px;">
+                                <td style="padding: 3px 6px; font-size: 9.5px; font-weight: bold; text-align: center; border-bottom: 1px solid #000; border-right: 1px solid #000;">Less: Withholding Tax:</td>
+                                <td style="padding: 3px 6px; font-size: 10px; text-align: right; border-bottom: 1px solid #000;">&#8369;0.00</td>
+                            </tr>
+                            <tr style="height: 22px;">
+                                <td style="padding: 3px 6px; font-size: 10px; font-weight: bold; text-align: center; border-bottom: 1px solid #000; border-right: 1px solid #000;">Total Amount Due:</td>
+                                <td style="padding: 3px 6px; font-size: 10.5px; font-weight: bold; text-align: right; border-bottom: 1px solid #000;">&#8369;${numericTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Payment In Form Of Section -->
+                    <div style="padding: 6px 8px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 9.5px; font-weight: bold; text-align: center; margin-bottom: 4px; text-transform: uppercase;">
+                                PAYMENT IN FORM OF:
+                            </div>
+                            <div style="display: flex; justify-content: center; gap: 16px; font-size: 10px; font-weight: bold; margin-bottom: 8px;">
+                                <span>(&nbsp;${isCash ? '&#10004;' : '&nbsp;'}&nbsp;) CASH</span>
+                                <span>(&nbsp;${isCheck ? '&#10004;' : '&nbsp;'}&nbsp;) CHECK</span>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 6px; font-size: 10.5px;">
+                            <!-- Cash row -->
+                            <div style="display: flex; align-items: flex-end;">
+                                <span style="font-weight: bold; width: 45px;">Cash</span>
+                                <span style="flex: 1; border-bottom: 1px solid #000; text-align: right; font-weight: bold; padding-right: 4px; padding-bottom: 1px;">
+                                    ${isCash ? `&#8369;${numericTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '&nbsp;'}
+                                </span>
+                            </div>
+
+                            <!-- Check row -->
+                            <div style="display: flex; align-items: flex-end;">
+                                <span style="font-weight: bold; white-space: nowrap;">Check (&nbsp;</span>
+                                <span style="min-width: 45px; border-bottom: 1px solid #000; text-align: center; font-size: 9.5px; font-weight: bold; padding-bottom: 1px;">
+                                    ${finalChequeNo || '&nbsp;'}
+                                </span>
+                                <span style="font-weight: bold; margin-right: 4px;">&nbsp;)</span>
+                                <span style="flex: 1; border-bottom: 1px solid #000; text-align: right; font-weight: bold; padding-right: 4px; padding-bottom: 1px;">
+                                    ${isCheck ? `&#8369;${numericTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '&nbsp;'}
+                                </span>
+                            </div>
+
+                            <!-- Others row -->
+                            <div style="display: flex; align-items: flex-end;">
+                                <span style="font-weight: bold; width: 45px;">Others</span>
+                                <span style="flex: 1; border-bottom: 1px solid #000; text-align: right; font-weight: bold; padding-right: 4px; padding-bottom: 1px;">
+                                    ${isOther ? `&#8369;${numericTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '&nbsp;'}
+                                </span>
+                            </div>
+
+                            <!-- TOTAL row -->
+                            <div style="display: flex; align-items: flex-end;">
+                                <span style="font-weight: bold; width: 45px;">TOTAL</span>
+                                <span style="flex: 1; border-bottom: 1px solid #000; text-align: right; font-weight: bold; font-size: 11px; padding-right: 4px; padding-bottom: 1px;">
+                                    &#8369;${numericTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- RIGHT COLUMN: Open Booklet Page -->
+                <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 2px 0 0 0;">
+                    
+                    <div>
+                        <!-- Top Header: COLLECTION RECEIPT centered/underlined -->
+                        <div style="text-align: center; margin-bottom: 12px;">
+                            <span style="font-size: 21px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; text-decoration: underline;">
+                                COLLECTION RECEIPT
+                            </span>
+                        </div>
+
+                        <!-- No. & Date lines aligned right -->
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-bottom: 20px;">
+                            <div style="display: flex; align-items: flex-end; width: 230px;">
+                                <span style="font-size: 13px; font-weight: bold; margin-right: 6px;">No.:</span>
+                                <span style="flex: 1; border-bottom: 1px solid #000; text-align: center; font-size: 13.5px; font-weight: bold; font-family: Arial, monospace; padding-bottom: 1px;">
+                                    ${finalReceiptNo}
+                                </span>
+                            </div>
+                            <div style="display: flex; align-items: flex-end; width: 230px;">
+                                <span style="font-size: 13px; font-weight: bold; margin-right: 6px;">Date:</span>
+                                <span style="flex: 1; border-bottom: 1px solid #000; text-align: center; font-size: 13px; font-weight: bold; padding-bottom: 1px;">
+                                    ${finalDate}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Main Body Fill-in Lines -->
+                        <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13px;">
+                            
+                            <!-- Received from -->
+                            <div style="display: flex; align-items: flex-end;">
+                                <span style="font-weight: bold; white-space: nowrap; margin-right: 6px;">Received from</span>
+                                <span style="flex: 1; border-bottom: 1px solid #000; font-weight: bold; text-transform: uppercase; padding-left: 6px; padding-bottom: 1px;">
+                                    ${finalCustomer}
+                                </span>
+                            </div>
+
+                            <!-- Address at -->
+                            <div style="display: flex; align-items: flex-end;">
+                                <span style="font-weight: bold; white-space: nowrap; margin-right: 6px;">Address at</span>
+                                <span style="flex: 1; border-bottom: 1px solid #000; font-weight: bold; padding-left: 6px; padding-bottom: 1px;">
+                                    ${finalAddress}
+                                </span>
+                            </div>
+
+                            <!-- The sum of -->
+                            <div style="display: flex; align-items: flex-end;">
+                                <span style="font-weight: bold; white-space: nowrap; margin-right: 6px;">The sum of</span>
+                                <span style="flex: 1; border-bottom: 1px solid #000; font-weight: bold; font-size: 11.5px; text-transform: uppercase; padding-left: 6px; padding-bottom: 1px;">
+                                    ${wordsAmount}
+                                </span>
+                            </div>
+
+                            <!-- Pesos ( ₱ Amount ) -->
+                            <div style="display: flex; align-items: flex-end; justify-content: flex-end; margin-top: -2px;">
+                                <span style="font-weight: bold; margin-right: 4px;">Pesos (&nbsp;&#8369;</span>
+                                <span style="border-bottom: 1px solid #000; min-width: 170px; text-align: center; font-weight: 900; font-size: 14px; padding: 0 8px; padding-bottom: 1px;">
+                                    ${numericTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                </span>
+                                <span style="font-weight: bold; margin-left: 4px;">&nbsp;)</span>
+                            </div>
+
+                            <!-- In partial/full payment for (Clean blank underline matching booklet) -->
+                            <div style="display: flex; align-items: flex-end;">
+                                <span style="font-weight: bold; white-space: nowrap; margin-right: 6px;">In partial/full payment for</span>
+                                <span style="flex: 1; border-bottom: 1px solid #000; padding-bottom: 1px;">&nbsp;</span>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Signatures Block & Disclaimer -->
+                    <div style="margin-top: 24px;">
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; margin-bottom: 16px;">
+                            <div style="width: 220px; text-align: center;">
+                                <div style="font-size: 11px; font-weight: bold; margin-bottom: 2px;">Payment Received by:</div>
+                                <div style="font-size: 12.5px; font-weight: bold; text-transform: uppercase; margin-bottom: 22px;">
+                                    ${finalServedBy}
+                                </div>
+                                <div style="border-bottom: 1px solid #000; width: 100%; margin-bottom: 4px;"></div>
+                                <div style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    Authorized Signature
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BIR Disclaimer Notice -->
+                        <div style="text-align: center; font-size: 9.5px; font-weight: bold; letter-spacing: 0.3px;">
+                            "THIS DOCUMENT IS NOT VALID FOR CLAIMING INPUT TAXES"
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    `;
+
+    // Render via print-section
+    let printStyle = document.getElementById('print-style-cr');
+    if (!printStyle) {
+        printStyle = document.createElement('style');
+        printStyle.id = 'print-style-cr';
+        printStyle.innerHTML = `
+            @media print {
+                body * { visibility: hidden !important; }
+                #ztg-print-cr, #ztg-print-cr * { visibility: visible !important; }
+                #ztg-print-cr {
+                    position: absolute; left: 0; top: 0; width: 100%;
+                    background: #fff; z-index: 999999; display: flex;
+                    justify-content: center; align-items: flex-start;
+                    padding: 10px 0; margin: 0;
+                }
+            }
+            @page { size: auto; margin: 0.5cm; }
+        `;
+        document.head.appendChild(printStyle);
+    }
+
+    let printDiv = document.getElementById('ztg-print-cr');
+    if (!printDiv) {
+        printDiv = document.createElement('div');
+        printDiv.id = 'ztg-print-cr';
+        document.body.appendChild(printDiv);
+    }
+
+    printDiv.innerHTML = receiptHtml;
+
+    setTimeout(() => {
+        window.print();
+        setTimeout(() => {
+            printDiv.innerHTML = '';
+        }, 1000);
+    }, 100);
+}
+

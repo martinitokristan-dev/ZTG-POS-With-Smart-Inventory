@@ -45,8 +45,10 @@ export default function HistoryTable({
             }
         }
 
+        const docType = tx.doc_type || (tx.si_no?.startsWith('DR') ? 'D.R.' : tx.si_no?.startsWith('CR') ? 'C.R.' : 'S.I.');
+
         printUnifiedReceipt({
-            type: tx.status === 'Refund' ? 'Refund' : tx.status === 'Return' ? 'Return' : tx.status === 'Void' ? 'Void' : 'Sales',
+            type: 'Sales',
             invoiceNo: tx.si_no || tx.receipt_number,
             date: new Date(tx.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
             customer: tx.customer?.name || 'Walk-in',
@@ -60,14 +62,9 @@ export default function HistoryTable({
             tendered: tx.amount_tendered || 0,
             change: tx.change || 0,
             servedBy: tx.checker?.name || tx.cashier?.name || 'Cashier',
-            docType: 'S.I.',
+            docType: docType,
             splitDetails: splitDetails,
-            reason: tx.notes || '',
-            originalInvoice: tx.original_receipt_number || '',
-            approver: tx.approver?.real_name || tx.approver?.name || '',
-            // BIR compliance: use frozen snapshot; null for legacy (falls back to empty object)
             businessInfo: tx.business_snapshot || {},
-            // Logo is always the current live logo — never frozen per spec
             logoUrl: logoUrl,
         });
         setOpenDropdownId(null);

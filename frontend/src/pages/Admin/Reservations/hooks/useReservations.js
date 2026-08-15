@@ -5,6 +5,7 @@ import { fetchReservations, resetReservationsCache } from '../../../../shared/ho
 import { invalidateCachePage } from '../../../../shared/hooks/usePaginatedCache';
 import { copyReservationsToClipboard } from '../../../../shared/utils/orderFromChinaExcelExporter';
 import { showToast } from '../../../../utils/toast';
+import { printCollectionReceipt } from '../../../../utils/printReceipt';
 import echo from '../../../../lib/echo';
 
 const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
@@ -22,10 +23,11 @@ export default function useReservations() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('Pending');
+    const [dateFilter, setDateFilter] = useState('today');
     const [page, setPage] = useState(1);
     const [pagination, setPagination] = useState({ currentPage: 1, lastPage: 1, total: 0 });
 
-    /* ── Reset page when search or statusFilter changes ── */
+    /* ── Reset page when search or statusFilter or dateFilter changes ── */
     const handleSearchChange = (val) => {
         resetReservationsCache();
         setSearch(val);
@@ -35,6 +37,12 @@ export default function useReservations() {
     const handleStatusChange = (val) => {
         resetReservationsCache();
         setStatusFilter(val);
+        setPage(1);
+    };
+
+    const handleDateFilterChange = (val) => {
+        resetReservationsCache();
+        setDateFilter(val);
         setPage(1);
     };
 
@@ -73,6 +81,7 @@ export default function useReservations() {
     const [addLoading, setAddLoading] = useState(false);
 
     /* ── Fulfill form state ── */
+    const [ffSiNo, setFfSiNo] = useState('');
     const [ffPaymentMethod, setFfPaymentMethod] = useState('Cash');
     const [ffChequeNumber, setFfChequeNumber] = useState('');
     const [ffAmountReceived, setFfAmountReceived] = useState('');
@@ -91,7 +100,7 @@ export default function useReservations() {
     const loadReservations = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await fetchReservations(search, statusFilter, page);
+            const res = await fetchReservations(search, statusFilter, page, statusFilter === 'Completed' ? dateFilter : '');
             if (res && res.data) {
                 setReservations(res.data);
                 setPagination({
@@ -107,7 +116,7 @@ export default function useReservations() {
         } finally {
             setLoading(false);
         }
-    }, [search, statusFilter, page]);
+    }, [search, statusFilter, page, dateFilter]);
 
     useEffect(() => { loadReservations(); }, [loadReservations]);
 
@@ -341,11 +350,12 @@ export default function useReservations() {
     /* ──────────────────────────────────────────────── */
     const openFulfill = (r) => {
         setSelected(r);
+        setFfSiNo('');
         setFfPaymentMethod('Cash');
         setFfChequeNumber('');
         const due = Math.max(0, Number(r?.total || 0) - Number(r?.deposit || 0));
         setFfAmountReceived(due <= 0 ? '0' : '');
-        setFfDocType('S.I.');
+        setFfDocType('C.R.');
         setFfNotes('');
         setFfError('');
         setShowFulfillModal(true);
@@ -358,6 +368,9 @@ export default function useReservations() {
         if (balanceDue > 0 && (ffAmountReceived === '' || amountRec < balanceDue)) {
             setFfError(`Please enter the amount received (minimum ${fmt(balanceDue)}).`); return;
         }
+        if (!ffSiNo.trim()) {
+            setFfError(`Please enter the physical Collection Receipt No. from your paper booklet.`); return;
+        }
         if (ffPaymentMethod === 'Cheque' && !ffChequeNumber.trim()) {
             setFfError('Please enter the Cheque Number.'); return;
         }
@@ -367,10 +380,19 @@ export default function useReservations() {
                 balance_payment: balanceDue <= 0 ? 0 : amountRec,
                 payment_method: ffPaymentMethod,
                 cheque_number: ffPaymentMethod === 'Cheque' ? ffChequeNumber.trim() : null,
-                doc_type: ffDocType,
+                doc_type: 'C.R.',
+                si_no: ffSiNo.trim(),
                 notes: ffNotes,
             });
-            setSuccessData(res.data.reservation);
+            const fulfilledRes = res.data.reservation;
+            setSuccessData({
+                ...fulfilledRes,
+                si_no: ffSiNo.trim(),
+                doc_type: 'C.R.',
+                balance_payment: balanceDue <= 0 ? 0 : amountRec,
+                payment_method: ffPaymentMethod,
+                cheque_number: ffPaymentMethod === 'Cheque' ? ffChequeNumber.trim() : null
+            });
             setShowFulfillModal(false);
             setShowSuccessModal(true);
             resetReservationsCache();
@@ -387,6 +409,33 @@ export default function useReservations() {
         } finally {
             setFfLoading(false);
         }
+    };
+
+    /* ── Reprint Collection Receipt (C.R.) ── */
+    const handleReprintCR = (r) => {
+        const target = r || successData || selected;
+        if (!target) return;
+
+        const totalAmt = Number(target.total || 0);
+        const depAmt = Number(target.deposit || 0);
+        const balAmt = Math.max(0, totalAmt - depAmt);
+
+        printCollectionReceipt({
+            receiptNo: target.si_no || target.order_no || '—',
+            orderNo: target.order_no,
+            date: target.date_get ? fmtDate(target.date_get) : fmtDate(target.updated_at || target.date || new Date()),
+            customer: target.customer?.name || target.customer_name || 'Walk-in Customer',
+            address: target.customer?.address || [target.customer_phone || target.customer?.phone, target.engine_plate_number].filter(Boolean).join(' · ') || '—',
+            phone: target.customer?.phone || target.customer_phone,
+            enginePlate: target.engine_plate_number,
+            items: target.items || [],
+            total: totalAmt,
+            balancePaid: balAmt,
+            deposit: depAmt,
+            paymentMethod: target.payment_method || 'Cash',
+            chequeNumber: target.cheque_number,
+            servedBy: target.fulfilledBy?.name || target.fulfilled_by?.name || target.reservedBy?.name || userName || 'Staff',
+        });
     };
 
     /* ──────────────────────────────────────────────── */
@@ -457,6 +506,7 @@ export default function useReservations() {
         // Filters & Pagination
         search, setSearch, handleSearchChange,
         statusFilter, setStatusFilter, handleStatusChange,
+        dateFilter, setDateFilter, handleDateFilterChange,
         page, setPage, pagination,
 
         // Modal Controls
@@ -479,9 +529,10 @@ export default function useReservations() {
         subtotal, tax, total, depositAmt, balance,
 
         // Fulfill Modal State & Handlers
+        ffSiNo, setFfSiNo,
         ffPaymentMethod, setFfPaymentMethod, ffChequeNumber, setFfChequeNumber, ffAmountReceived, setFfAmountReceived,
         ffDocType, setFfDocType, ffNotes, setFfNotes, ffError, ffLoading,
-        openFulfill, handleFulfill, ffBalanceDue, ffChange,
+        openFulfill, handleFulfill, handleReprintCR, ffBalanceDue, ffChange,
 
         // Cancel Modal State & Handlers
         cancelReason, setCancelReason, cancelLoading, openCancel, handleCancel

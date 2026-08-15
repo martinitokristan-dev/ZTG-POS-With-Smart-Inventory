@@ -101,13 +101,13 @@ export default function ProductsTable({
                             {isVariantSubRow ? (
                                 <>
                                     <strong style={{ color: 'var(--table-text-primary)', fontSize: '15px', fontWeight: '600', display: 'block' }}>
-                                        {product.name || parentProduct?.name} {varLabel && !(product.name || '').includes(varLabel) && <span style={{ color: 'var(--primary)', fontWeight: '500' }}>({varLabel})</span>}
+                                        {(product.name || parentProduct?.name || '—')} {varLabel && !(product.name || '').includes(varLabel) && <span style={{ color: 'var(--primary)', fontWeight: '500' }}>({varLabel})</span>}
                                     </strong>
                                     {showChineseNames && product.chinese_name && <span style={{ fontSize: '12px', color: 'var(--table-text-secondary)', fontWeight: '500', marginTop: '2px', display: 'block' }}>{product.chinese_name}</span>}
                                 </>
                             ) : (
                                 <>
-                                    <strong style={{ color: 'var(--table-text-primary)', fontSize: '15px', fontWeight: '600', display: 'block' }}>{product.name}</strong>
+                                    <strong style={{ color: 'var(--table-text-primary)', fontSize: '15px', fontWeight: '600', display: 'block' }}>{product.name || '—'}</strong>
                                     {showChineseNames && product.chinese_name && <span style={{ fontSize: '12px', color: 'var(--table-text-secondary)', fontWeight: '500', marginTop: '2px', display: 'block' }}>{product.chinese_name}</span>}
                                 </>
                             )}
@@ -303,7 +303,8 @@ export default function ProductsTable({
                                 { value: 'Low Stock', label: 'Low Stock' },
                                 { value: 'No Stock', label: 'No Stock' },
                                 { value: 'Disabled', label: 'Disabled' },
-                                { value: 'Dead Stock', label: 'Dead Stock' }
+                                { value: 'Dead Stock', label: 'Dead Stock' },
+                                { value: 'No Name/Part No', label: 'No Name / Part No' }
                             ]}
                         />
                     </div>

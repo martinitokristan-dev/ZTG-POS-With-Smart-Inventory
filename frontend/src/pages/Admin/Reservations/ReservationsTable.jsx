@@ -8,9 +8,10 @@ export default function ReservationsTable({
     reservations, loading,
     search, setSearch, handleSearchChange,
     statusFilter, setStatusFilter, handleStatusChange,
+    dateFilter = 'today', setDateFilter, handleDateFilterChange,
     page, setPage, pagination,
     fmt, fmtDate,
-    openFulfill, openCancel, openDetails,
+    openFulfill, openCancel, openDetails, onReprintCR,
     activeTab = 'deposit'
 }) {
     return (
@@ -28,6 +29,21 @@ export default function ReservationsTable({
                             onChange={(e) => handleSearchChange ? handleSearchChange(e.target.value) : setSearch(e.target.value)}
                         />
                     </div>
+                    {activeTab === 'completed' && (
+                        <div style={{ width: '160px' }}>
+                            <IOSSelect
+                                value={dateFilter}
+                                onChange={(e) => handleDateFilterChange ? handleDateFilterChange(e.target.value) : (setDateFilter && setDateFilter(e.target.value))}
+                                options={[
+                                    { value: 'today', label: 'Today' },
+                                    { value: 'this_week', label: 'This Week' },
+                                    { value: 'this_month', label: 'This Month' },
+                                    { value: 'this_year', label: 'This Year' },
+                                    { value: 'all', label: 'All Time' }
+                                ]}
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -282,6 +298,21 @@ export default function ReservationsTable({
                                                             <circle cx="12" cy="12" r="3"></circle>
                                                         </svg>
                                                     </button>
+                                                    {(activeTab === 'completed' || !isPending) && (
+                                                        <button 
+                                                            className="action-trigger-btn" 
+                                                            aria-label="Reprint Collection Receipt" 
+                                                            data-tooltip="Reprint C.R." 
+                                                            onClick={() => onReprintCR && onReprintCR(r)}
+                                                            style={{ color: '#059669' }}
+                                                        >
+                                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                                                <rect x="6" y="14" width="12" height="8"></rect>
+                                                            </svg>
+                                                        </button>
+                                                    )}
                                                     {activeTab === 'deposit' && isPending && (
                                                         <button className="btn btn-success btn-sm" onClick={() => openFulfill(r)}>Fulfill</button>
                                                     )}

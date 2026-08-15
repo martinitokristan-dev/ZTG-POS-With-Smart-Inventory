@@ -15,9 +15,9 @@ class StoreProductRequest extends FormRequest
     {
         return [
             // Base product fields
-            'name'                       => 'required|string|max:255',
-            'chinese_name'               => 'required|string|max:255',
-            'part_no'                    => 'required|string|max:50|unique:products,part_no',
+            'name'                       => 'nullable|string|max:255',
+            'chinese_name'               => 'nullable|string|max:255',
+            'part_no'                    => 'nullable|string|max:50|unique:products,part_no',
             'category_id'                => 'required|exists:categories,id',
             'address'                    => 'nullable|string|max:50',
             'stock'                      => 'required|integer|min:0',
@@ -25,14 +25,14 @@ class StoreProductRequest extends FormRequest
             'price1'                     => 'required|numeric|min:0',
             'price2'                     => 'required|numeric|min:0',
             'notes'                      => 'nullable|string',
-            'image'                      => 'nullable|string|max:255',
+            'image'                      => 'required|string|max:255',
             'is_dead_stock'              => 'nullable|boolean',
             'damaged'                    => 'nullable|integer|min:0',
 
             // Optional variants array
             'variants'                   => 'nullable|array',
-            'variants.*.name'            => 'required_with:variants|string|max:255',
-            'variants.*.part_no'         => 'required_with:variants|string|max:50|distinct|different:part_no|unique:products,part_no',
+            'variants.*.name'            => 'nullable|string|max:255',
+            'variants.*.part_no'         => 'nullable|string|max:50|distinct|different:part_no|unique:products,part_no',
             'variants.*.stock'           => 'required_with:variants|integer|min:0',
             'variants.*.alert_limit'     => 'nullable|integer|min:0',
             'variants.*.price1'          => 'required_with:variants|numeric|min:0',
@@ -47,6 +47,7 @@ class StoreProductRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'image.required'                    => 'Product image is required.',
             'variants.*.part_no.different'      => 'A variant cannot have the same part number as the main product.',
             'variants.*.part_no.distinct'       => 'Each variant must have a unique part number.',
             'variants.*.option_ids.required_with'=> 'Please select a variant option for each added variant.',

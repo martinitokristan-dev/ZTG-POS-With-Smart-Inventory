@@ -30,6 +30,8 @@ class Reservation extends Model
         'pickup_date',
         'pickup_time',
         'date_get',
+        'doc_type',
+        'si_no',
         'reserved_by_id',
         'fulfilled_by_id',
         'status',

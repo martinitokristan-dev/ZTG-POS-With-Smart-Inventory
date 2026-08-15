@@ -57,6 +57,13 @@ class ProductService
             if (!empty($filters['status']) && $filters['status'] !== 'All') {
                 if ($filters['status'] === 'Dead Stock') {
                     $q->where('is_dead_stock', true);
+                } elseif (in_array($filters['status'], ['No Name/Part No', 'Photo Only', 'Unnamed', 'No Part No / Name'])) {
+                    $q->where(function ($sub) {
+                        $sub->whereNull('name')
+                            ->orWhere('name', '')
+                            ->orWhereNull('part_no')
+                            ->orWhere('part_no', '');
+                    });
                 } else {
                     $q->where('status', $filters['status']);
                 }
@@ -87,6 +94,18 @@ class ProductService
                       ->orWhereHas('variants', function ($sub) {
                           $sub->where('is_dead_stock', true);
                       });
+                } elseif (in_array($filters['status'], ['No Name/Part No', 'Photo Only', 'Unnamed', 'No Part No / Name'])) {
+                    $q->where(function ($sub) {
+                        $sub->whereNull('name')
+                            ->orWhere('name', '')
+                            ->orWhereNull('part_no')
+                            ->orWhere('part_no', '');
+                    })->orWhereHas('variants', function ($sub) {
+                        $sub->whereNull('name')
+                            ->orWhere('name', '')
+                            ->orWhereNull('part_no')
+                            ->orWhere('part_no', '');
+                    });
                 } else {
                     $q->where('status', $filters['status'])
                       ->orWhereHas('variants', function ($sub) use ($filters) {
@@ -139,9 +158,9 @@ class ProductService
             // 1. Save base product
             $baseProduct = Product::create([
                 'parent_product_id' => null,
-                'name'              => $data['name'],
+                'name'              => $data['name'] ?? null,
                 'chinese_name'      => $data['chinese_name'] ?? null,
-                'part_no'           => $data['part_no'],
+                'part_no'           => $data['part_no'] ?? null,
                 'category_id'       => $data['category_id'],
                 'address'           => $data['address'] ?? null,
                 'stock'             => $data['stock'],
@@ -163,9 +182,9 @@ class ProductService
 
                     $variant = Product::create([
                         'parent_product_id' => $baseProduct->id,
-                        'name'              => $variantData['name'],
+                        'name'              => $variantData['name'] ?? null,
                         'chinese_name'      => $variantData['chinese_name'] ?? null,
-                        'part_no'           => $variantData['part_no'],
+                        'part_no'           => $variantData['part_no'] ?? null,
                         'category_id'       => $data['category_id'],
                         'address'           => $data['address'] ?? null,
                         'stock'             => $variantData['stock'],
@@ -199,13 +218,13 @@ class ProductService
         // 1. Check for duplicates inside the payload itself
         // Note: This is an intentional redundant safeguard in case this service method is ever called from paths bypassing UpdateProductRequest.
         if (isset($data['variants']) && is_array($data['variants'])) {
-            $partNos = array_column($data['variants'], 'part_no');
+            $partNos = array_filter(array_column($data['variants'], 'part_no'));
             if (count($partNos) !== count(array_unique($partNos))) {
                 throw ValidationException::withMessages([
                     'variants' => ['Duplicate part numbers detected within the variants payload.'],
                 ]);
             }
-            if (in_array($data['part_no'], $partNos)) {
+            if (!empty($data['part_no']) && in_array($data['part_no'], $partNos)) {
                 throw ValidationException::withMessages([
                     'variants' => ["A variant cannot have the same part number as the parent product ('{$data['part_no']}')."],
                 ]);
@@ -227,9 +246,9 @@ class ProductService
 
                 // Update the parent product
                 $product->update([
-                    'name'         => $data['name'],
+                    'name'         => $data['name'] ?? null,
                     'chinese_name' => $data['chinese_name'] ?? null,
-                    'part_no'      => $data['part_no'],
+                    'part_no'      => $data['part_no'] ?? null,
                     'category_id'  => $data['category_id'],
                     'address'      => $data['address'] ?? null,
                     'stock'        => $data['stock'],
@@ -252,15 +271,17 @@ class ProductService
                             ? 'Disabled'
                             : $this->calculateStatus($variantData['stock'], $variantAlertLimit, $variantData['status'] ?? 'Active');
 
-                        // Check for duplicate part_no manually to exclude own ID
-                        $partNoQuery = Product::where('part_no', $variantData['part_no']);
-                        if (!empty($variantData['id'])) {
-                            $partNoQuery->where('id', '!=', $variantData['id']);
-                        }
-                        if ($partNoQuery->exists()) {
-                            throw ValidationException::withMessages([
-                                'variants' => ["The part number '{$variantData['part_no']}' is already in use by another product."],
-                            ]);
+                        // Check for duplicate part_no manually to exclude own ID if provided
+                        if (!empty($variantData['part_no'])) {
+                            $partNoQuery = Product::where('part_no', $variantData['part_no']);
+                            if (!empty($variantData['id'])) {
+                                $partNoQuery->where('id', '!=', $variantData['id']);
+                            }
+                            if ($partNoQuery->exists()) {
+                                throw ValidationException::withMessages([
+                                    'variants' => ["The part number '{$variantData['part_no']}' is already in use by another product."],
+                                ]);
+                            }
                         }
 
                         $variant = null;
@@ -270,9 +291,9 @@ class ProductService
 
                         $variantFields = [
                             'parent_product_id' => $product->id,
-                            'name'              => $variantData['name'],
+                            'name'              => $variantData['name'] ?? null,
                             'chinese_name'      => array_key_exists('chinese_name', $variantData) ? $variantData['chinese_name'] : ($variant ? $variant->chinese_name : null),
-                            'part_no'           => $variantData['part_no'],
+                            'part_no'           => $variantData['part_no'] ?? null,
                             'category_id'       => $data['category_id'],
                             'address'           => $data['address'] ?? null,
                             'stock'             => $variantData['stock'],

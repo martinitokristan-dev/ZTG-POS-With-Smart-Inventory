@@ -319,7 +319,7 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                 </div>
 
                                 <div>
-                                    <textarea className="form-control" rows="2" placeholder="Additional details..." value={notes} onChange={(e) => setNotes(e.target.value)} style={{ border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', borderRadius: '6px', padding: '12px', fontSize: '13px', width: '100%', resize: 'none' }} required></textarea>
+                                    <textarea className="form-control" rows="2" placeholder="Additional details (optional)..." value={notes} onChange={(e) => setNotes(e.target.value)} style={{ border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', borderRadius: '6px', padding: '12px', fontSize: '13px', width: '100%', resize: 'none' }}></textarea>
                                 </div>
                             </div>
 

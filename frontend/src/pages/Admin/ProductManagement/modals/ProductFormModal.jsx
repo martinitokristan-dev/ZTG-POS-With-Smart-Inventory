@@ -277,14 +277,17 @@ export default function ProductFormModal({
                     <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
                         {errorMessage && <div style={{ padding: '12px', background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', borderRadius: '6px', fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>{errorMessage}</div>}
 
-                        <ImageUploadDropzone image={formData.image} onUpload={handleImageUpload} uploading={uploadingImage} progress={imageProgress} />
+                        <div className="form-group" style={{ marginBottom: '16px' }}>
+                            <label className="form-label">Product Image <span style={{ color: 'red' }}>*</span></label>
+                            <ImageUploadDropzone image={formData.image} onUpload={handleImageUpload} uploading={uploadingImage} progress={imageProgress} />
+                        </div>
 
                         {/* Basic Information Section */}
                         <div className="section-header">Basic Information</div>
                         <div className="grid-2">
                             <div className="form-group">
-                                <label className="form-label">Part Number <span style={{ color: 'red' }}>*</span></label>
-                                <input type="text" className="form-control" required placeholder="e.g. TRK-003" value={formData.part_no} onChange={(e) => setFormData({ ...formData, part_no: e.target.value })} />
+                                <label className="form-label">Part Number (Optional)</label>
+                                <input type="text" className="form-control" placeholder="e.g. TRK-003 or leave blank" value={formData.part_no} onChange={(e) => setFormData({ ...formData, part_no: e.target.value })} />
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Category <span style={{ color: 'red' }}>*</span></label>
@@ -298,19 +301,18 @@ export default function ProductFormModal({
                         </div>
                         <div className="grid-2">
                             <div className="form-group">
-                                <label className="form-label">English Name <span style={{ color: 'red' }}>*</span></label>
+                                <label className="form-label">English Name (Optional)</label>
                                 <input
                                     type="text"
                                     className="form-control"
-                                    required
-                                    placeholder="e.g. Track Link Assembly"
+                                    placeholder="e.g. Track Link Assembly or leave blank"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 />
                             </div>
                             <div className="form-group">
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <label className="form-label" style={{ margin: 0 }}>Chinese Name <span style={{ color: 'red' }}>*</span></label>
+                                    <label className="form-label" style={{ margin: 0 }}>Chinese Name (Optional)</label>
                                     <button
                                         type="button"
                                         onClick={triggerTranslation}
@@ -320,7 +322,7 @@ export default function ProductFormModal({
                                         {isTranslating ? 'Translating...' : 'Auto-Translate'}
                                     </button>
                                 </div>
-                                <input type="text" className="form-control" required placeholder="e.g. 履带链节总成" value={formData.chinese_name} onChange={(e) => setFormData({ ...formData, chinese_name: e.target.value })} />
+                                <input type="text" className="form-control" placeholder="e.g. 履带链节总成 or leave blank" value={formData.chinese_name} onChange={(e) => setFormData({ ...formData, chinese_name: e.target.value })} />
                             </div>
                         </div>
 
@@ -476,8 +478,8 @@ export default function ProductFormModal({
                                                         />
                                                     </div>
                                                     <div className="form-group" style={{ marginBottom: 0 }}>
-                                                        <label className="form-label">Variant Part No. *</label>
-                                                        <input type="text" className="form-control" required value={variant.part_no} onChange={(e) => {
+                                                        <label className="form-label">Variant Part No. (Optional)</label>
+                                                        <input type="text" className="form-control" placeholder="e.g. TRK-003-1 or blank" value={variant.part_no} onChange={(e) => {
                                                             const nv = [...formData.variants]; nv[idx].part_no = e.target.value; setFormData({ ...formData, variants: nv });
                                                         }} />
                                                     </div>

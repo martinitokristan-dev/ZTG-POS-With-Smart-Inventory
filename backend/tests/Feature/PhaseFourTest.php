@@ -496,5 +496,43 @@ class PhaseFourTest extends TestCase
         ]);
     }
 
+    public function test_checkout_with_manual_si_no()
+    {
+        $payload = $this->cartPayload([
+            'si_no' => '004501',
+        ]);
+
+        $response = $this->actingAs($this->cashier)
+            ->postJson('/api/pos/checkout', $payload);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('transaction.si_no', '004501');
+
+        $this->assertDatabaseHas('transactions', [
+            'si_no' => '004501',
+        ]);
+    }
+
+    public function test_checkout_rejects_duplicate_manual_si_no()
+    {
+        $payload1 = $this->cartPayload([
+            'si_no' => '004502',
+        ]);
+
+        $this->actingAs($this->cashier)
+            ->postJson('/api/pos/checkout', $payload1)
+            ->assertStatus(201);
+
+        $payload2 = $this->cartPayload([
+            'si_no' => '004502',
+        ]);
+
+        $response = $this->actingAs($this->cashier)
+            ->postJson('/api/pos/checkout', $payload2);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors('si_no');
+    }
+
 }
 

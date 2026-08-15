@@ -103,8 +103,8 @@ class CheckoutService
                 ['phone' => $data['customer_phone'] ?? null]
             );
 
-            // 7. Generate SI No based on doc_type
-            $siNo = $this->generateSiNo($data['doc_type']);
+            // 7. Use manual SI No entered by Cashier from physical BIR booklet (fallback to generated if omitted in tests)
+            $siNo = !empty($data['si_no']) ? trim($data['si_no']) : $this->generateSiNo($data['doc_type']);
 
             // 8. Build payment method string
             $paymentMethodStr = $this->buildPaymentMethodString($data);

@@ -50,13 +50,13 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                     {isVariant ? (
                         <>
                             <strong style={{ display: 'block', fontSize: '15px', fontWeight: 600, color: 'var(--table-text-primary)' }}>
-                                {item.name || parentProduct.name} {variantOptionText && !(item.name || '').includes(variantOptionText) && <span style={{ color: 'var(--primary)', fontWeight: 500 }}>({variantOptionText})</span>}
+                                {(item.name || parentProduct?.name || '—')} {variantOptionText && !(item.name || '').includes(variantOptionText) && <span style={{ color: 'var(--primary)', fontWeight: 500 }}>({variantOptionText})</span>}
                             </strong>
-                            {showChineseNames && (item.chinese_name || parentProduct.chinese_name) && <span className="chinese-subtitle" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--table-text-secondary)' }}>{item.chinese_name || parentProduct.chinese_name}</span>}
+                            {showChineseNames && (item.chinese_name || parentProduct?.chinese_name) && <span className="chinese-subtitle" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--table-text-secondary)' }}>{item.chinese_name || parentProduct?.chinese_name}</span>}
                         </>
                     ) : (
                         <>
-                            <strong style={{ display: 'block', fontSize: '15px', fontWeight: 600, color: 'var(--table-text-primary)' }}>{item.name}</strong>
+                            <strong style={{ display: 'block', fontSize: '15px', fontWeight: 600, color: 'var(--table-text-primary)' }}>{item.name || '—'}</strong>
                             {showChineseNames && <span className="chinese-subtitle" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--table-text-secondary)' }}>{item.chinese_name || ''}</span>}
                         </>
                     )}

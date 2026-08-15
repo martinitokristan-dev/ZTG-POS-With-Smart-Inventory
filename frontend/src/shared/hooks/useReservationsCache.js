@@ -10,8 +10,8 @@ export const resetReservationsCache = () => {
     reservationsCache = { pages: {} };
 };
 
-export async function fetchReservations(search = '', status = 'All', page = 1) {
-    const key = `${search}_${status}_${page}`;
+export async function fetchReservations(search = '', status = 'All', page = 1, dateFilter = '') {
+    const key = `${search}_${status}_${page}_${dateFilter}`;
     const now = Date.now();
 
     if (reservationsCache.pages[key] && (now - reservationsCache.pages[key].ts < TTL_MS)) {
@@ -22,6 +22,7 @@ export async function fetchReservations(search = '', status = 'All', page = 1) {
     if (search) params.set('search', search);
     if (status !== 'All') params.set('status', status);
     if (page > 1) params.set('page', page);
+    if (dateFilter && dateFilter !== 'all') params.set('date_filter', dateFilter);
 
     const res = await api.get(`/reservations?${params}`);
     const payload = res.data;

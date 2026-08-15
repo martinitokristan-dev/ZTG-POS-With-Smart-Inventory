@@ -17,6 +17,7 @@ export default function Reservations() {
             res.handleStatusChange('Pending');
         } else {
             res.handleStatusChange('Completed');
+            res.handleDateFilterChange('today');
         }
     };
 
@@ -134,6 +135,9 @@ export default function Reservations() {
                         statusFilter={res.statusFilter}
                         setStatusFilter={res.setStatusFilter}
                         handleStatusChange={res.handleStatusChange}
+                        dateFilter={res.dateFilter}
+                        setDateFilter={res.setDateFilter}
+                        handleDateFilterChange={res.handleDateFilterChange}
                         page={res.page}
                         setPage={res.setPage}
                         pagination={res.pagination}
@@ -142,6 +146,7 @@ export default function Reservations() {
                         openFulfill={res.openFulfill}
                         openCancel={res.openCancel}
                         openDetails={res.openDetails}
+                        onReprintCR={res.handleReprintCR}
                         activeTab={activeTab}
                     />
                 </div>
@@ -191,6 +196,7 @@ export default function Reservations() {
                 ffChequeNumber={res.ffChequeNumber} setFfChequeNumber={res.setFfChequeNumber}
                 ffAmountReceived={res.ffAmountReceived} setFfAmountReceived={res.setFfAmountReceived}
                 ffDocType={res.ffDocType} setFfDocType={res.setFfDocType}
+                ffSiNo={res.ffSiNo} setFfSiNo={res.setFfSiNo}
                 ffNotes={res.ffNotes} setFfNotes={res.setFfNotes}
                 ffError={res.ffError}
                 ffLoading={res.ffLoading}
@@ -217,6 +223,7 @@ export default function Reservations() {
                 successData={res.successData}
                 fmt={res.fmt}
                 fmtDate={res.fmtDate}
+                onPrintCR={res.handleReprintCR}
             />
 
             <ReservationDetailsModal
@@ -225,6 +232,7 @@ export default function Reservations() {
                 reservation={res.detailsReservation}
                 fmt={res.fmt}
                 fmtDate={res.fmtDate}
+                onPrintCR={res.handleReprintCR}
             />
         </div>
     );

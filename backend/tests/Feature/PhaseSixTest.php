@@ -106,7 +106,7 @@ class PhaseSixTest extends TestCase
         $customer = Customer::create(['name' => 'Test Customer', 'phone' => '09170000000']);
 
         $reservation = Reservation::create([
-            'order_no'       => 'RS-2026-001',
+            'order_no'       => 'RS-' . uniqid(),
             'customer_id'    => $customer->id,
             'payment_method' => 'Cash',
             'payment_type'   => 'deposit50',
@@ -270,21 +270,26 @@ class PhaseSixTest extends TestCase
             ->postJson("/api/reservations/{$reservation->id}/fulfill", [
                 'balance_payment' => 2925.00, // Total 5850 - Deposit 2925 = Balance 2925
                 'payment_method'  => 'Cash',
-                'doc_type'        => 'S.I.',
+                'doc_type'        => 'C.R.',
+                'si_no'           => 'CR-00340',
             ]);
 
         $response->assertStatus(200)
             ->assertJsonFragment(['message' => 'Reservation fulfilled successfully.'])
-            ->assertJsonPath('reservation.status', 'Completed');
+            ->assertJsonPath('reservation.status', 'Completed')
+            ->assertJsonPath('reservation.doc_type', 'C.R.')
+            ->assertJsonPath('reservation.si_no', 'CR-00340');
 
         // Stock must be deducted on fulfillment
         $this->assertDatabaseHas('products', ['id' => $this->productA->id, 'stock' => 28]); // 30 - 2
         $this->assertDatabaseHas('products', ['id' => $this->productB->id, 'stock' => 14]); // 15 - 1
 
-        // Reservation marked as Completed
+        // Reservation marked as Completed with C.R. and si_no
         $this->assertDatabaseHas('reservations', [
-            'id' => $reservation->id,
-            'status' => 'Completed',
+            'id'       => $reservation->id,
+            'status'   => 'Completed',
+            'doc_type' => 'C.R.',
+            'si_no'    => 'CR-00340',
         ]);
     }
 
@@ -369,5 +374,33 @@ class PhaseSixTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors('reservation');
+    }
+
+    public function test_completed_reservations_filter_by_date()
+    {
+        $resToday = $this->makePendingReservation();
+        $resToday->update([
+            'status' => 'Completed',
+            'date_get' => \Carbon\Carbon::today()->toDateString(),
+        ]);
+
+        $resOld = $this->makePendingReservation();
+        $resOld->update([
+            'status' => 'Completed',
+            'date_get' => \Carbon\Carbon::now()->subMonths(2)->toDateString(),
+        ]);
+
+        // Filter by today
+        $responseToday = $this->actingAs($this->admin)
+            ->getJson('/api/reservations?status=Completed&date_filter=today');
+        $responseToday->assertStatus(200);
+        $this->assertEquals(1, count($responseToday->json('data')));
+        $this->assertEquals($resToday->id, $responseToday->json('data.0.id'));
+
+        // Filter by this_year
+        $responseYear = $this->actingAs($this->admin)
+            ->getJson('/api/reservations?status=Completed&date_filter=this_year');
+        $responseYear->assertStatus(200);
+        $this->assertEquals(2, count($responseYear->json('data')));
     }
 }

@@ -31,6 +31,8 @@ return new class extends Migration
             $table->date('pickup_date')->nullable();
             $table->time('pickup_time')->nullable();
             $table->date('date_get')->nullable();
+            $table->string('doc_type', 20)->default('C.R.')->nullable();
+            $table->string('si_no', 50)->nullable();
             $table->foreignId('reserved_by_id')->constrained('users')->onDelete('restrict');
             $table->foreignId('fulfilled_by_id')->nullable()->constrained('users')->onDelete('set null');
             $table->string('status', 50)->default('Pending'); // PHP Enum: Pending, Completed, Cancelled

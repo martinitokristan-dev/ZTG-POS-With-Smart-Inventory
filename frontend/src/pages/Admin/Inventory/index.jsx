@@ -66,7 +66,8 @@ export default function Inventory() {
                                         { value: 'Active', label: 'Active / Healthy' },
                                         { value: 'Low Stock', label: 'Low Stock' },
                                         { value: 'No Stock', label: 'No Stock' },
-                                        { value: 'Dead Stock', label: 'Dead Stock' }
+                                        { value: 'Dead Stock', label: 'Dead Stock' },
+                                        { value: 'No Name/Part No', label: 'No Name / Part No' }
                                     ]}
                                 />
                             </div>

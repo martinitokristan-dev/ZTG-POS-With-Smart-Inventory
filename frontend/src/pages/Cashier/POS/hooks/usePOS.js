@@ -142,7 +142,9 @@ export default function usePOS() {
         let list = flatProducts.filter(p => 
             !p.parent_product_id ? (!p.variants || p.variants.length === 0 || p.stock > 0) : true
         );
-        if (categoryFilter !== 'All') {
+        if (categoryFilter === 'No Name / Part No' || categoryFilter === 'Photo Only') {
+            list = list.filter(p => !p.name || !p.part_no || p.name.trim() === '' || p.part_no.trim() === '');
+        } else if (categoryFilter !== 'All') {
             list = list.filter(p => p.category === categoryFilter || p.category?.name === categoryFilter);
         }
         return list;
@@ -385,6 +387,7 @@ export default function usePOS() {
                 customer_name: (payload.customerName || selectedCustomer?.name || newCustomerName || 'Walk-in').trim() || 'Walk-in',
                 customer_phone: customerPhone || null,
                 checker_id: selectedChecker ? selectedChecker : null,
+                si_no: payload.si_no || payload.siNo || null,
                 payment_method: paymentMethodStr,
                 cheque_number: paymentObj.cheque_number || payload.cheque_number || null,
                 doc_type: docTypeStr,

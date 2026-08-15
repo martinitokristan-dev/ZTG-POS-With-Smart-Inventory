@@ -115,6 +115,21 @@ class PhaseThreeTest extends TestCase
         $this->assertEquals('Oil Filter', $data[0]['name']);
     }
 
+    public function test_products_list_filters_by_no_name_or_part_no()
+    {
+        $this->makeProduct(['name' => 'Named Part', 'part_no' => 'NP-001']);
+        $this->makeProduct(['name' => null, 'part_no' => null, 'image' => 'https://res.cloudinary.com/test/img.jpg']);
+
+        $response = $this->actingAs($this->admin)
+            ->getJson('/api/products?status=' . urlencode('No Name/Part No'));
+
+        $response->assertStatus(200);
+        $data = $response->json();
+        $this->assertCount(1, $data);
+        $this->assertNull($data[0]['name']);
+        $this->assertNull($data[0]['part_no']);
+    }
+
     /* ─── Product Show Tests ──────────────────────────────── */
 
     public function test_auth_user_can_show_product()
@@ -141,6 +156,7 @@ class PhaseThreeTest extends TestCase
                 'chinese_name' => '零件',
                 'part_no'      => $product->part_no,
                 'category_id' => $product->category_id,
+                'image'       => 'https://res.cloudinary.com/test/image.jpg',
                 'stock'       => 10,
                 'alert_limit' => 10,
                 'price1'      => 100.00,
@@ -168,6 +184,7 @@ class PhaseThreeTest extends TestCase
                 'chinese_name'=> '液压泵',
                 'part_no'     => 'HP-001',
                 'category_id' => $this->category->id,
+                'image'       => 'https://res.cloudinary.com/test/image.jpg',
                 'stock'       => 30,
                 'alert_limit' => 5,
                 'price1'      => 2500.00,
@@ -185,6 +202,45 @@ class PhaseThreeTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_create_product_without_name_and_part_no_with_required_image()
+    {
+        $response = $this->actingAs($this->admin)
+            ->postJson('/api/products', [
+                'category_id' => $this->category->id,
+                'image'       => 'https://res.cloudinary.com/test/photo_only.jpg',
+                'stock'       => 15,
+                'alert_limit' => 3,
+                'price1'      => 1200.00,
+                'price2'      => 1400.00,
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonFragment(['image' => 'https://res.cloudinary.com/test/photo_only.jpg'])
+            ->assertJsonFragment(['status' => 'Active']);
+
+        $this->assertDatabaseHas('products', [
+            'image'   => 'https://res.cloudinary.com/test/photo_only.jpg',
+            'name'    => null,
+            'part_no' => null,
+            'stock'   => 15,
+        ]);
+    }
+
+    public function test_create_product_fails_without_image()
+    {
+        $response = $this->actingAs($this->admin)
+            ->postJson('/api/products', [
+                'name'        => 'No Image Part',
+                'category_id' => $this->category->id,
+                'stock'       => 5,
+                'price1'      => 500.00,
+                'price2'      => 600.00,
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors('image');
+    }
+
     public function test_admin_can_create_product_with_variants()
     {
         $variantType = VariantType::create(['name' => 'Grade']);
@@ -197,6 +253,7 @@ class PhaseThreeTest extends TestCase
                 'chinese_name'=> '液压泵',
                 'part_no'     => 'HP-001',
                 'category_id' => $this->category->id,
+                'image'       => 'https://res.cloudinary.com/test/image.jpg',
                 'stock'       => 10,
                 'alert_limit' => 5,
                 'price1'      => 2500.00,
@@ -241,6 +298,7 @@ class PhaseThreeTest extends TestCase
                 'chinese_name'=> '走私零件',
                 'part_no'     => 'SM-001',
                 'category_id' => $this->category->id,
+                'image'       => 'https://res.cloudinary.com/test/image.jpg',
                 'stock'       => 1,
                 'price1'      => 100.00,
                 'price2'      => 110.00,
@@ -259,6 +317,7 @@ class PhaseThreeTest extends TestCase
                 'chinese_name'=> '空零件',
                 'part_no'     => 'EP-001',
                 'category_id' => $this->category->id,
+                'image'       => 'https://res.cloudinary.com/test/image.jpg',
                 'stock'       => 0,
                 'alert_limit' => 5,
                 'price1'      => 50.00,
@@ -277,6 +336,7 @@ class PhaseThreeTest extends TestCase
                 'chinese_name'=> '稀缺零件',
                 'part_no'     => 'SC-001',
                 'category_id' => $this->category->id,
+                'image'       => 'https://res.cloudinary.com/test/image.jpg',
                 'stock'       => 3,
                 'alert_limit' => 5,
                 'price1'      => 50.00,
@@ -299,6 +359,7 @@ class PhaseThreeTest extends TestCase
                 'chinese_name'=> '新名称',
                 'part_no'     => 'OLD-001',
                 'category_id' => $this->category->id,
+                'image'       => 'https://res.cloudinary.com/test/image.jpg',
                 'stock'       => 50,
                 'alert_limit' => 10,
                 'price1'      => 200.00,

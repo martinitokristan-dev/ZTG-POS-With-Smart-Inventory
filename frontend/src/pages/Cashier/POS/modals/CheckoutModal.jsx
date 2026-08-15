@@ -39,6 +39,7 @@ export default function CheckoutModal({
     fmt 
 }) {
     const [docType, setDocType] = useState('S.I.');
+    const [siNo, setSiNo] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('Cash');
     
     // Cash Fields
@@ -87,6 +88,21 @@ export default function CheckoutModal({
             .catch(() => { /* logo silently absent */ });
     }, []);
 
+    // Reset state when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            setDocType('S.I.');
+            setPaymentMethod('Cash');
+            setAmountTendered('');
+            setChequeNumber('');
+            setSplitAmount1('');
+            setSplitAmount2('');
+            setSiNo('');
+            setCheckoutSuccess(false);
+            setCompletedTx(null);
+            setError(null);
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -138,10 +154,17 @@ export default function CheckoutModal({
             paymentData = { method: paymentMethod };
         }
 
+        if (!siNo.trim()) {
+            const docLabel = docType === 'D.R.' ? 'Delivery Receipt No.' : docType === 'C.R.' ? 'Collection Receipt No.' : 'Sales Invoice No.';
+            setError(`Please enter the physical ${docLabel} from your paper booklet.`);
+            return;
+        }
+
         setIsProcessing(true);
         try {
             const payload = {
                 doc_type: docType,
+                si_no: siNo.trim(),
                 payment: paymentData
             };
 
@@ -614,11 +637,26 @@ export default function CheckoutModal({
                     <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto', background: '#FFFFFF' }}>
                         <h4 style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 0, marginBottom: '2px', fontFamily: '"Outfit", sans-serif' }}>Payment & Invoice Details</h4>
                         
-                        {/* Document Info */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
+                        {/* Document & Invoice Number Info */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                             <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Doc Type</label>
                                 <IOSSelect value={docType} onChange={e => setDocType(e.target.value)} options={docTypeOptions} />
+                            </div>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>
+                                    {docType === 'D.R.' ? 'Delivery Receipt No.' : docType === 'C.R.' ? 'Collection Receipt No.' : 'Sales Invoice No.'} <span style={{ color: 'var(--danger, #EF4444)' }}>*</span>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    className="form-control form-control-sm" 
+                                    placeholder={docType === 'D.R.' ? 'e.g. DR-00120' : docType === 'C.R.' ? 'e.g. CR-00340' : 'e.g. 004501'} 
+                                    style={{ fontSize: '13px', fontWeight: '700', letterSpacing: '0.5px' }} 
+                                    value={siNo} 
+                                    onChange={e => setSiNo(e.target.value)} 
+                                    required 
+                                    autoFocus 
+                                />
                             </div>
                         </div>
                         
