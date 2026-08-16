@@ -36,12 +36,20 @@ class ReservationService
      */
     public function getAll(array $filters = []): LengthAwarePaginator
     {
-        $query = Reservation::with(['customer', 'reservedBy', 'fulfilledBy', 'items.product.parent', 'items.product.variantOptions'])
-            ->orderBy('date', 'asc')
-            ->orderBy('id', 'asc');
+        $query = Reservation::with(['customer', 'reservedBy', 'fulfilledBy', 'items.product.parent', 'items.product.variantOptions']);
 
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['status']) && $filters['status'] === 'Completed') {
+            $query->orderBy(DB::raw("COALESCE(date_get, date, created_at)"), 'asc')
+                  ->orderBy('updated_at', 'asc')
+                  ->orderBy('id', 'asc');
+        } else {
+            $query->orderBy('date', 'asc')
+                  ->orderBy('created_at', 'asc')
+                  ->orderBy('id', 'asc');
         }
 
         if (!empty($filters['date_filter']) && $filters['date_filter'] !== 'all') {

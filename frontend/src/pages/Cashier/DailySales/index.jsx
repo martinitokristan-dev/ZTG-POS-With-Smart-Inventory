@@ -12,8 +12,8 @@ export default function DailySales() {
             <div className="main-workspace">
                 <div className="top-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <h1 style={{ fontSize: '20px', marginBottom: '2px', fontFamily: '"Outfit", sans-serif', color: 'var(--text-primary)' }}>Sales Log</h1>
-                        <div className="page-description" style={{ marginTop: '0', fontSize: '12px', color: 'var(--text-secondary)' }}>Revenue-impacting transactions from your sessions. Completed and refunded sales only.</div>
+                        <h1 style={{ fontSize: '20px', marginBottom: '2px', color: 'var(--text-primary)' }}>Sales Log</h1>
+                        <div className="page-description" style={{ marginTop: '0', fontSize: '13px', color: 'var(--text-secondary)' }}>Revenue-impacting transactions from your sessions. Completed and refunded sales only.</div>
                     </div>
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>                    </div>
                 </div>
@@ -25,7 +25,7 @@ export default function DailySales() {
                         <div className="card stat-box" style={{ padding: '24px', background: 'var(--bg-card)', borderRadius: '10px', border: '1px solid var(--border)' }}>
                             <div>
                                 <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Gross Sales Revenue</span>
-                                <div style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif' }}>{ds.fmt(ds.grossSales)}</div>
+                                <div style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{ds.fmt(ds.grossSales)}</div>
                             </div>
                         </div>
                     </div>

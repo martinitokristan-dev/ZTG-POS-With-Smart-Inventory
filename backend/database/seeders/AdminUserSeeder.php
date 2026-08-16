@@ -33,7 +33,7 @@ class AdminUserSeeder extends Seeder
         User::updateOrCreate(
             ['employee_id' => 'EMP-001'],
             [
-                'name' => 'Test Cashier',
+                'name' => 'Jane Doe',
                 'real_name' => 'Jane Doe',
                 'email' => 'cashier@ztg.com',
                 'username' => 'cashier',

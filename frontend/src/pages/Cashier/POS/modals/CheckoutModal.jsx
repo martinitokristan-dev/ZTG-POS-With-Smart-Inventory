@@ -225,7 +225,7 @@ export default function CheckoutModal({
             payment: completedTx.payment_method,
             tendered: completedTx.amount_tendered || 0,
             change: Math.max(0, (completedTx.amount_tendered || 0) - completedTx.amount),
-            servedBy: completedTx.cashier?.name || cashierName,
+            servedBy: completedTx.cashier?.real_name || completedTx.cashier?.name || cashierName,
             docType: completedTx.doc_type || docType,
             splitDetails: splitDetails,
             // BIR compliance: use frozen snapshot from this transaction;
@@ -249,13 +249,33 @@ export default function CheckoutModal({
     if (checkoutSuccess && completedTx) {
         const userStr = localStorage.getItem('auth_user');
         const user = userStr ? JSON.parse(userStr) : {};
-        const cashierName = user.real_name || user.name || 'Cashier';
+        const cashierName = completedTx.cashier?.real_name || completedTx.cashier?.name || user.real_name || user.name || 'Cashier';
+        const checkerName = completedTx.checker?.name || completedTx.checker?.checker_name || null;
         
+        // Business info from snapshot
+        let cachedBiz = {};
+        try {
+            const stored = localStorage.getItem('cached_business_info');
+            if (stored) cachedBiz = JSON.parse(stored);
+        } catch (e) { /* ignore */ }
+        const biz = completedTx.business_snapshot || cachedBiz || {};
+        const bizName = biz.business_name || 'ZTG HEAVY EQUIPMENT PARTS';
+        const bizBranch = biz.branch_location || '';
+        const bizAddress = biz.address || '';
+        const bizTin = biz.tin ? `TIN: ${biz.tin}` : '';
+        const bizContact = biz.contact_number ? `Tel: ${biz.contact_number}` : '';
+
         // Format dates
         const dateStr = new Date(completedTx.created_at || completedTx.date || Date.now()).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
 
         // Calculate VAT details
         const totalVal = parseFloat(completedTx.amount || 0);
+        const taxRate = parseFloat(biz.tax_rate || '12') || 12;
+        const taxDivisor = 1 + (taxRate / 100);
+        const vatableSales = totalVal / taxDivisor;
+        const vatAmount = totalVal - vatableSales;
+        const discountAmount = Number(completedTx.discount_amount || cartTotals.discount || 0);
+        const subtotalVal = totalVal + discountAmount;
         const isSplit = completedTx.payment_method?.startsWith('Split:');
 
         return (
@@ -264,16 +284,19 @@ export default function CheckoutModal({
                     background: 'white',
                     borderRadius: '20px',
                     width: '100%',
-                    maxWidth: '580px',
+                    maxWidth: '620px',
                     margin: '20px',
                     boxShadow: '0 25px 60px rgba(0,0,0,0.18)',
                     overflow: 'hidden',
                     position: 'relative',
-                    color: '#1E293B'
+                    color: '#1E293B',
+                    maxHeight: '92vh',
+                    display: 'flex',
+                    flexDirection: 'column'
                 }}>
-                    {/* Success Header Banner — always light mode */}
+                    {/* Success Header Banner */}
                     <div className="receipt-header-banner" style={{
-                        padding: '16px 24px',
+                        padding: '14px 24px',
                         background: '#F8FAFC',
                         borderBottom: '1px solid #E2E8F0',
                         display: 'flex',
@@ -281,7 +304,7 @@ export default function CheckoutModal({
                         justifyContent: 'center',
                         textAlign: 'center',
                         flexDirection: 'column',
-                        gap: '8px'
+                        gap: '6px'
                     }}>
                         <div style={{
                             width: '32px', height: '32px',
@@ -296,16 +319,16 @@ export default function CheckoutModal({
                             </svg>
                         </div>
                         <div>
-                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0F172A', fontFamily: '"Outfit", sans-serif' }}>Transaction Successful</h3>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748B' }}>
-                                Receipt No: <strong style={{ color: '#0F172A', fontWeight: 700 }}>{completedTx.si_no || completedTx.receipt_number}</strong>
+                            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#0F172A' }}>Transaction Successful</h3>
+                            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B' }}>
+                                Receipt / {completedTx.doc_type || docType} No: <strong style={{ color: '#0F172A', fontWeight: 700 }}>{completedTx.si_no || completedTx.receipt_number}</strong>
                             </p>
                         </div>
                     </div>
 
-                    {/* Receipt Body — always light mode */}
-                    <div className="receipt-modal-body" style={{ padding: '16px 24px 20px', background: '#FFFFFF' }}>
-                        {/* Receipt Paper — always light mode */}
+                    {/* Receipt Body */}
+                    <div className="receipt-modal-body" style={{ padding: '16px 24px 20px', background: '#FFFFFF', overflowY: 'auto', flex: 1 }}>
+                        {/* Receipt Paper */}
                         <div className="receipt-paper" style={{
                             background: '#FAFAFA',
                             border: '1px solid #E8ECF0',
@@ -316,83 +339,137 @@ export default function CheckoutModal({
                             {/* Company Header */}
                             <div className="receipt-company-header" style={{
                                 background: '#F1F5F9',
-                                padding: '12px 20px',
+                                padding: '14px 20px',
                                 textAlign: 'center',
                                 borderBottom: '1px dashed #CBD5E1'
                             }}>
-                                <p style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 2px' }}>ZTG Heavy Equipment Parts</p>
-                                <p style={{ fontSize: '11px', color: '#64748B', margin: 0 }}>Official Sales Receipt</p>
+                                <p style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.8px', margin: '0 0 3px' }}>{bizName}</p>
+                                {bizBranch && <p style={{ fontSize: '11px', color: '#475569', margin: '0 0 2px', fontWeight: 600 }}>{bizBranch}</p>}
+                                {bizAddress && <p style={{ fontSize: '11px', color: '#64748B', margin: '0 0 2px' }}>{bizAddress}</p>}
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', fontSize: '10.5px', color: '#64748B', flexWrap: 'wrap' }}>
+                                    {bizTin && <span>{bizTin}</span>}
+                                    {bizContact && <span>{bizContact}</span>}
+                                </div>
+                                <p style={{ fontSize: '11px', color: '#2563EB', fontWeight: 700, margin: '6px 0 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Official {completedTx.doc_type === 'D.R.' ? 'Delivery Receipt' : completedTx.doc_type === 'C.R.' ? 'Collection Receipt' : 'Sales Invoice'}
+                                </p>
                             </div>
 
-                            {/* Receipt Content — all colors hardcoded to light theme */}
-                            <div className="receipt-content-area" style={{ padding: '16px 20px', maxHeight: '320px', overflowY: 'auto', background: '#FAFAFA' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px', marginBottom: '16px', fontSize: '13px', color: '#64748B' }}>
-                                    <span style={{ fontWeight: '600' }}>Date:</span>
-                                    <span style={{ textAlign: 'right', color: '#1E293B' }}>{dateStr}</span>
-                                    
-                                    <span style={{ fontWeight: '600' }}>Cashier:</span>
-                                    <span style={{ textAlign: 'right', color: '#1E293B' }}>{completedTx.cashier?.name || cashierName}</span>
-                                    
-                                    <span style={{ fontWeight: '600' }}>Customer:</span>
-                                    <span style={{ textAlign: 'right', color: '#1E293B' }}>{completedTx.customer?.name || 'Walk-in'}</span>
-                                    
-                                    <span style={{ fontWeight: '600' }}>Doc Type:</span>
-                                    <span style={{ textAlign: 'right', color: '#1E293B' }}>{completedTx.doc_type || docType}</span>
+                            {/* Receipt Content */}
+                            <div className="receipt-content-area" style={{ padding: '16px 20px', background: '#FAFAFA' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', marginBottom: '14px', fontSize: '12.5px' }}>
+                                    <div>
+                                        <span style={{ color: '#64748B', fontSize: '11.5px' }}>Date &amp; Time:</span>
+                                        <div style={{ fontWeight: '600', color: '#1E293B' }}>{dateStr}</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <span style={{ color: '#64748B', fontSize: '11.5px' }}>Doc Type:</span>
+                                        <div style={{ fontWeight: '700', color: '#2563EB' }}>{completedTx.doc_type || docType}</div>
+                                    </div>
+                                    <div>
+                                        <span style={{ color: '#64748B', fontSize: '11.5px' }}>Cashier:</span>
+                                        <div style={{ fontWeight: '600', color: '#1E293B' }}>{cashierName}</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <span style={{ color: '#64748B', fontSize: '11.5px' }}>Customer:</span>
+                                        <div style={{ fontWeight: '600', color: '#1E293B' }}>{completedTx.customer?.name || 'Walk-in'}</div>
+                                    </div>
+                                    {checkerName && (
+                                        <div>
+                                            <span style={{ color: '#64748B', fontSize: '11.5px' }}>Checker:</span>
+                                            <div style={{ fontWeight: '600', color: '#1E293B' }}>{checkerName}</div>
+                                        </div>
+                                    )}
+                                    {completedTx.customer?.phone && (
+                                        <div style={{ textAlign: checkerName ? 'right' : 'left' }}>
+                                            <span style={{ color: '#64748B', fontSize: '11.5px' }}>Phone:</span>
+                                            <div style={{ fontWeight: '500', color: '#1E293B' }}>{completedTx.customer.phone}</div>
+                                        </div>
+                                    )}
                                 </div>
                                 
-                                <div style={{ borderTop: '1px dashed #CBD5E1', margin: '16px 0' }}></div>
+                                <div style={{ borderTop: '1px dashed #CBD5E1', margin: '12px 0' }}></div>
                                 
-                                <div style={{ marginBottom: '16px' }}>
-                                    {(completedTx.items || []).map(item => {
-                                        const price = parseFloat(item.price || 0);
-                                        const itemTotal = price * item.qty;
-                                        const tierBadge = item.price_tier === 'price2' ? (
-                                            <span key={`${item.id}-badge`} style={{ fontSize: '10px', backgroundColor: '#F5F3FF', color: '#7C3AED', padding: '1px 5px', borderRadius: '8px', fontWeight: '700', marginLeft: '4px' }}>P2</span>
-                                        ) : (
-                                            <span key={`${item.id}-badge`} style={{ fontSize: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', padding: '1px 5px', borderRadius: '8px', fontWeight: '700', marginLeft: '4px' }}>P1</span>
-                                        );
-                                        return (
-                                            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#1E293B' }}>
-                                                <span style={{ flex: 1, paddingRight: '12px', fontWeight: '500' }}>
-                                                    {item.product?.name || item.name || 'Item'}
-                                                    {tierBadge}
-                                                </span>
-                                                <span style={{ color: '#64748B', width: '40px', textAlign: 'center' }}>x{item.qty}</span>
-                                                <span style={{ fontWeight: '600', width: '80px', textAlign: 'right', color: '#1E293B' }}>₱{itemTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                {/* Items Detailed Table */}
+                                <div style={{ marginBottom: '14px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #E2E8F0', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
+                                        <span>Item Description</span>
+                                        <span style={{ textAlign: 'center', width: '36px' }}>Qty</span>
+                                        <span style={{ textAlign: 'right', width: '75px' }}>Unit Price</span>
+                                        <span style={{ textAlign: 'right', width: '80px' }}>Total</span>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+                                        {(completedTx.items || []).map(item => {
+                                            const price = parseFloat(item.price || 0);
+                                            const itemTotal = price * item.qty;
+                                            const partNo = item.product?.part_no || item.partNo || item.part_no;
+                                            const tierBadge = item.price_tier === 'price2' ? (
+                                                <span key={`${item.id}-badge`} style={{ fontSize: '9.5px', backgroundColor: '#F5F3FF', color: '#7C3AED', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', marginLeft: '4px' }}>P2</span>
+                                            ) : (
+                                                <span key={`${item.id}-badge`} style={{ fontSize: '9.5px', backgroundColor: '#EFF6FF', color: '#2563EB', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', marginLeft: '4px' }}>P1</span>
+                                            );
+                                            return (
+                                                <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '8px', alignItems: 'center', fontSize: '12.5px', color: '#1E293B', padding: '3px 0' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                        <span style={{ fontWeight: '600', color: '#0F172A' }}>
+                                                            {item.product?.name || item.name || 'Item'}
+                                                            {tierBadge}
+                                                        </span>
+                                                        {partNo && <span style={{ fontSize: '11px', color: '#64748B' }}>P/N: {partNo}</span>}
+                                                    </div>
+                                                    <span style={{ color: '#64748B', width: '36px', textAlign: 'center', fontWeight: '600' }}>x{item.qty}</span>
+                                                    <span style={{ color: '#475569', width: '75px', textAlign: 'right', fontSize: '12px' }}>₱{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                    <span style={{ fontWeight: '700', width: '80px', textAlign: 'right', color: '#0F172A' }}>₱{itemTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                
+                                <div style={{ borderTop: '1px dashed #CBD5E1', margin: '12px 0' }}></div>
+                                
+                                {/* Financial Breakdown */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px' }}>
+                                    {discountAmount > 0 && (
+                                        <>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
+                                                <span>Subtotal</span>
+                                                <span style={{ fontWeight: '600', color: '#1E293B' }}>₱{subtotalVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                             </div>
-                                        );
-                                    })}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2563EB', fontWeight: '600' }}>
+                                                <span>Discount {completedTx.discount_type ? `(${completedTx.discount_type})` : ''}</span>
+                                                <span>-₱{discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B', fontSize: '11.5px' }}>
+                                        <span>VATable Sales</span>
+                                        <span>₱{vatableSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B', fontSize: '11.5px' }}>
+                                        <span>VAT Amount ({taxRate}%)</span>
+                                        <span>₱{vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B', fontSize: '11.5px' }}>
+                                        <span>VAT-Exempt Sales</span>
+                                        <span>₱0.00</span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', fontSize: '16px', color: completedTx.payment_method === 'P.O. (Pending)' ? '#EF4444' : '#2563EB', borderTop: '1.5px solid #CBD5E1', borderBottom: '1.5px solid #CBD5E1', padding: '6px 0', margin: '4px 0' }}>
+                                        <span>Grand Total</span>
+                                        <span>₱{totalVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </div>
                                 </div>
-                                
-                                <div style={{ borderTop: '1px dashed #CBD5E1', margin: '16px 0' }}></div>
-                                
-                                {((completedTx.discount_amount && Number(completedTx.discount_amount) > 0) || cartTotals.discount > 0) && (
-                                    <>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
-                                            <span style={{ color: '#64748B' }}>Subtotal</span>
-                                            <span style={{ fontWeight: '600', color: '#1E293B' }}>₱{(totalVal + Number(completedTx.discount_amount || cartTotals.discount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#2563EB', fontWeight: '600' }}>
-                                            <span>Discount</span>
-                                            <span>-₱{Number(completedTx.discount_amount || cartTotals.discount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                        </div>
-                                    </>
-                                )}
 
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '16px', color: completedTx.payment_method === 'P.O. (Pending)' ? '#EF4444' : '#2563EB' }}>
-                                    <span>Grand Total</span>
-                                    <span>₱{totalVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                </div>
-
-                                <div style={{ borderTop: '1px dashed #CBD5E1', margin: '16px 0' }}></div>
-
-                                <div style={{ fontSize: '12px', color: '#64748B' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                {/* Settlement / Payment Method Details */}
+                                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <span>Payment Method:</span>
-                                        <span style={{ fontWeight: '600', color: '#1E293B' }}>{completedTx.payment_method?.replace(/\s*\([^)]*\)/g, '').trim()}</span>
+                                        <span style={{ fontWeight: '700', color: '#1E293B' }}>{completedTx.payment_method?.replace(/\s*\([^)]*\)/g, '').trim()}</span>
                                     </div>
                                     {completedTx.cheque_number && (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                             <span>Cheque Number:</span>
                                             <span style={{ fontWeight: '600', color: '#1E293B' }}>{completedTx.cheque_number}</span>
                                         </div>
@@ -400,20 +477,20 @@ export default function CheckoutModal({
                                     {!isSplit ? (
                                         completedTx.payment_method === 'Cash' && (
                                             <>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                     <span>Cash Received:</span>
                                                     <span style={{ fontWeight: '600', color: '#1E293B' }}>₱{parseFloat(completedTx.amount_tendered || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </div>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                     <span>Change Due:</span>
-                                                    <span style={{ fontWeight: '600', color: '#1E293B' }}>₱{Math.max(0, parseFloat(completedTx.amount_tendered || 0) - totalVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                    <span style={{ fontWeight: '700', color: '#15803D' }}>₱{Math.max(0, parseFloat(completedTx.amount_tendered || 0) - totalVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </div>
                                             </>
                                         )
                                     ) : (
                                         <>
                                             {completedTx.amount_tendered > 0 && (
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                     <span>Cash Received:</span>
                                                     <span style={{ fontWeight: '600', color: '#1E293B' }}>₱{parseFloat(completedTx.amount_tendered || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </div>
@@ -421,7 +498,7 @@ export default function CheckoutModal({
                                             {completedTx.amount_tendered > 0 && (
                                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                     <span>Change:</span>
-                                                    <span style={{ fontWeight: '600', color: '#1E293B' }}>₱{Math.max(0, parseFloat(completedTx.amount_tendered || 0) - totalVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                    <span style={{ fontWeight: '700', color: '#15803D' }}>₱{Math.max(0, parseFloat(completedTx.amount_tendered || 0) - totalVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </div>
                                             )}
                                         </>
@@ -471,7 +548,7 @@ export default function CheckoutModal({
                             <circle cx="20" cy="21" r="1"></circle>
                             <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                         </svg>
-                        <h3 className="modal-title" style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif' }}>Order Review & Checkout</h3>
+                        <h3 className="modal-title" style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>Order Review & Checkout</h3>
                     </div>
                     <button className="modal-close" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', borderRadius: '50%' }}>
                         <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' }}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -506,7 +583,7 @@ export default function CheckoutModal({
                     <div className="modal-body" style={{ padding: 0, display: 'grid', gridTemplateColumns: '1.2fr 1fr', minHeight: 0, overflow: 'hidden', height: '76vh' }}>
                     {/* Left Pane: Order Review */}
                     <div style={{ padding: '24px', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflowY: 'auto', background: '#F8FAFC' }}>
-                        <h4 style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 0, marginBottom: '12px', fontFamily: '"Outfit", sans-serif' }}>Items in Cart</h4>
+                        <h4 style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 0, marginBottom: '12px' }}>Items in Cart</h4>
                         
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', overflowY: 'auto', paddingRight: '4px' }}>
                             {cart.map(item => {
@@ -635,7 +712,7 @@ export default function CheckoutModal({
                     
                     {/* Right Pane: Checkout Configuration */}
                     <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto', background: '#FFFFFF' }}>
-                        <h4 style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 0, marginBottom: '2px', fontFamily: '"Outfit", sans-serif' }}>Payment & Invoice Details</h4>
+                        <h4 style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 0, marginBottom: '2px' }}>Payment & Invoice Details</h4>
                         
                         {/* Document & Invoice Number Info */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -680,7 +757,19 @@ export default function CheckoutModal({
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                     <div className="form-group" style={{ marginBottom: 0 }}>
                                         <label className="form-label" style={{ fontSize: '9px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Cash Received *</label>
-                                        <input type="number" className="form-control form-control-sm" placeholder="₱0.00" style={{ fontSize: '13px', fontWeight: '700', textAlign: 'right' }} value={amountTendered} onChange={e => setAmountTendered(e.target.value)} />
+                                        <input 
+                                            type="number" 
+                                            className="form-control form-control-sm" 
+                                            placeholder="₱0.00" 
+                                            style={{ fontSize: '13px', fontWeight: '700', textAlign: 'right' }} 
+                                            value={amountTendered} 
+                                            onChange={e => setAmountTendered(e.target.value)} 
+                                            onKeyDown={(e) => {
+                                                if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+                                                    e.preventDefault();
+                                                }
+                                            }}
+                                        />
                                     </div>
                                     <div className="form-group" style={{ marginBottom: 0 }}>
                                         <label className="form-label" style={{ fontSize: '9px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Change Due</label>
@@ -695,11 +784,35 @@ export default function CheckoutModal({
                                 <div style={{ fontSize: '9px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Split Payment Details</div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', alignItems: 'center' }}>
                                     <IOSSelect value={splitMethod1} onChange={e => setSplitMethod1(e.target.value)} options={splitMethodOptions} />
-                                    <input type="number" className="form-control form-control-sm" placeholder="Amount 1" style={{ fontWeight: '700', textAlign: 'right' }} value={splitAmount1} onChange={e => setSplitAmount1(e.target.value)} />
+                                    <input 
+                                        type="number" 
+                                        className="form-control form-control-sm" 
+                                        placeholder="Amount 1" 
+                                        style={{ fontWeight: '700', textAlign: 'right' }} 
+                                        value={splitAmount1} 
+                                        onChange={e => setSplitAmount1(e.target.value)} 
+                                        onKeyDown={(e) => {
+                                            if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                    />
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', alignItems: 'center' }}>
                                     <IOSSelect value={splitMethod2} onChange={e => setSplitMethod2(e.target.value)} options={splitMethodOptions} />
-                                    <input type="number" className="form-control form-control-sm" placeholder="Amount 2" style={{ fontWeight: '700', textAlign: 'right' }} value={splitAmount2} onChange={e => setSplitAmount2(e.target.value)} />
+                                    <input 
+                                        type="number" 
+                                        className="form-control form-control-sm" 
+                                        placeholder="Amount 2" 
+                                        style={{ fontWeight: '700', textAlign: 'right' }} 
+                                        value={splitAmount2} 
+                                        onChange={e => setSplitAmount2(e.target.value)} 
+                                        onKeyDown={(e) => {
+                                            if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                    />
                                 </div>
                             </div>
                         )}
@@ -741,6 +854,11 @@ export default function CheckoutModal({
                                         placeholder={orderDiscountType === 'CustomAmount' ? '0.00' : '0'}
                                         value={orderDiscountVal}
                                         onChange={e => setOrderDiscountVal(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+                                                e.preventDefault();
+                                            }
+                                        }}
                                         style={{ fontSize: '12px', fontWeight: '700' }}
                                     />
                                     <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '500', marginTop: '4px', display: 'block' }}>

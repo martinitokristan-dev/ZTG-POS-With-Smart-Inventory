@@ -203,7 +203,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                             <>
                                 {auditDetailRow('Action', 'Inventory Restock')}
                                 {auditDetailRow('Date & Time', fmtDate(tx.date || tx.created_at))}
-                                {auditDetailRow('Restocked By', tx.cashier?.name || '—')}
+                                {auditDetailRow('Restocked By', tx.cashier?.real_name || tx.cashier?.name || '—')}
                                 {auditDetailRow('Total Qty Added', `+${tx.total_qty || 0}`, { color: '#059669', fontWeight: '700' })}
                                 {auditDetailRow('Reason', tx.void_reason || 'Batch restock / Inventory update')}
                                 {restockEntries.length > 0 && (
@@ -259,7 +259,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 {auditDetailRow('Invoice No.', tx.si_no || '—')}
                                 {auditDetailRow('Date & Time', fmtDate(tx.date || tx.created_at))}
                                 {auditDetailRow('Customer', tx.customer_name || tx.customer?.name || 'Walk-in')}
-                                {auditDetailRow('Served By', tx.checker?.name || tx.cashier?.name || '—')}
+                                {auditDetailRow('Served By', tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || '—')}
                                 {auditDetailRow('Subtotal (Gross)', fmt(grossSubtotal > 0 ? grossSubtotal : (tx.amount || tx.total)))}
                                 {totalDiscounts > 0 && auditDetailRow(`Total Discounts${discountTypeLabel}`, `-${fmt(totalDiscounts)}`, { color: '#2563EB', fontWeight: '700' })}
                                 {auditDetailRow('Amount', fmt(tx.amount || tx.total))}
@@ -279,7 +279,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 {auditDetailRow('Product Value (Full)', fmt(grossSubtotal > 0 ? grossSubtotal : (tx.amount || tx.total)))}
                                 {totalDiscounts > 0 && auditDetailRow(`Total Discounts${discountTypeLabel}`, `-${fmt(totalDiscounts)}`, { color: '#2563EB', fontWeight: '700' })}
                                 {auditDetailRow(status === 'Deposit' ? 'Deposit Amount Collected' : 'Payment Collected', fmt(tx.amount || tx.total), { color: 'var(--text-primary)', fontWeight: '700' })}
-                                {auditDetailRow('Served By', tx.checker?.name || tx.cashier?.name || '—')}
+                                {auditDetailRow('Served By', tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || '—')}
                                 {auditDetailRow('Status', status, { color: statusColor, fontWeight: '700' })}
                             </>
                         )}
@@ -311,7 +311,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                     </>
                                 )}
                                 {auditDetailRow(isPartialRefund ? 'Net Sales Remaining' : 'Net Amount Paid', fmt(tx.amount || tx.total), { color: 'var(--text-primary)', fontWeight: '700', fontSize: '15px' })}
-                                {auditDetailRow('Served By', tx.checker?.name || tx.cashier?.name || '—')}
+                                {auditDetailRow('Served By', tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || '—')}
                                 {auditDetailRow('Status', statusDisplayLabel, { color: statusColor, fontWeight: '700' })}
                                 {(status === 'Refund' || status === 'Return' || isPartialRefund || reason !== '—') && auditDetailRow('Reason', reason)}
                             </>

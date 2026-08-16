@@ -480,4 +480,83 @@ class PhaseThreeTest extends TestCase
         $response->assertStatus(200);
         $this->assertDatabaseHas('products', ['id' => $product->id, 'stock' => 0, 'status' => 'No Stock']);
     }
+
+    public function test_disabling_base_product_does_not_delete_variants()
+    {
+        // 1. Create base product
+        $base = $this->makeProduct(['part_no' => 'BASE-001', 'name' => 'Hydraulic Filter Base', 'image' => 'https://example.com/filter.png']);
+
+        // 2. Create two child variants
+        $v1 = Product::create([
+            'parent_product_id' => $base->id,
+            'name'              => 'Hydraulic Filter 50mm',
+            'part_no'           => 'VAR-001',
+            'category_id'       => $this->category->id,
+            'stock'             => 10,
+            'alert_limit'       => 2,
+            'price1'            => 100,
+            'price2'            => 100,
+            'image'             => 'https://example.com/filter50.png',
+            'status'            => 'Active',
+        ]);
+
+        $v2 = Product::create([
+            'parent_product_id' => $base->id,
+            'name'              => 'Hydraulic Filter 60mm',
+            'part_no'           => 'VAR-002',
+            'category_id'       => $this->category->id,
+            'stock'             => 15,
+            'alert_limit'       => 3,
+            'price1'            => 120,
+            'price2'            => 120,
+            'image'             => 'https://example.com/filter60.png',
+            'status'            => 'Active',
+        ]);
+
+        $this->assertCount(2, $base->fresh()->variants);
+
+        // 3. Update base product status to Disabled (WITHOUT sending 'variants' in payload)
+        $response = $this->actingAs($this->admin)
+            ->putJson("/api/products/{$base->id}", [
+                'name'        => $base->name,
+                'part_no'     => $base->part_no,
+                'category_id' => $this->category->id,
+                'stock'       => $base->stock,
+                'price1'      => $base->price1,
+                'price2'      => $base->price2,
+                'image'       => 'https://example.com/filter.png',
+                'status'      => 'Disabled',
+            ]);
+
+        $response->assertStatus(200);
+
+        // 4. Assert base product is Disabled
+        $this->assertEquals(ProductStatus::DISABLED, $base->fresh()->status);
+
+        // 5. Assert child variants STILL EXIST and their status cascaded to Disabled
+        $freshVariants = $base->fresh()->variants;
+        $this->assertCount(2, $freshVariants, 'Child variants must NOT be deleted when disabling parent');
+        $this->assertTrue($freshVariants->contains('id', $v1->id));
+        $this->assertTrue($freshVariants->contains('id', $v2->id));
+        $this->assertEquals(ProductStatus::DISABLED, $v1->fresh()->status, 'Child variant 1 must cascade to Disabled');
+        $this->assertEquals(ProductStatus::DISABLED, $v2->fresh()->status, 'Child variant 2 must cascade to Disabled');
+
+        // 6. Re-enable base product
+        $reEnableResponse = $this->actingAs($this->admin)
+            ->putJson("/api/products/{$base->id}", [
+                'name'        => $base->name,
+                'part_no'     => $base->part_no,
+                'category_id' => $this->category->id,
+                'stock'       => $base->stock,
+                'price1'      => $base->price1,
+                'price2'      => $base->price2,
+                'image'       => 'https://example.com/filter.png',
+                'status'      => 'Active',
+            ]);
+
+        $reEnableResponse->assertStatus(200);
+        $this->assertEquals(ProductStatus::ACTIVE, $base->fresh()->status);
+        $this->assertEquals(ProductStatus::ACTIVE, $v1->fresh()->status, 'Child variant 1 re-enabled to Active');
+        $this->assertEquals(ProductStatus::ACTIVE, $v2->fresh()->status, 'Child variant 2 re-enabled to Active');
+    }
 }

@@ -9,8 +9,8 @@ export default function SalesLog() {
         <div className="main-workspace">
             <div className="top-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <h1 style={{ fontSize: '20px', marginBottom: '2px', fontFamily: '"Outfit", sans-serif', color: 'var(--text-primary)' }}>Sales Log</h1>
-                    <div className="page-description" style={{ marginTop: '0', fontSize: '12px', color: 'var(--text-secondary)' }}>Master administrative record of active completed sales.</div>
+                    <h1 style={{ fontSize: '20px', marginBottom: '2px', color: 'var(--text-primary)' }}>Sales Log</h1>
+                    <div className="page-description" style={{ marginTop: '0', fontSize: '13px', color: 'var(--text-secondary)' }}>Master administrative record of active completed sales.</div>
                 </div>
             </div>
 
@@ -20,19 +20,19 @@ export default function SalesLog() {
                     <div className="daily-sales-kpis" style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
                         <div className="card" style={{ padding: '16px 20px', background: '#FFFFFF', borderRadius: '10px', border: '1px solid var(--border)' }}>
                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500', marginBottom: '6px' }}>Total Transactions</div>
-                            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif' }}>{sl.metrics.totalTx}</div>
+                            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{sl.metrics.totalTx}</div>
                         </div>
                         <div className="card" style={{ padding: '16px 20px', background: '#FFFFFF', borderRadius: '10px', border: '1px solid var(--border)' }}>
                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500', marginBottom: '6px' }}>Total Items Sold</div>
-                            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif' }}>{sl.metrics.totalItemsSold}</div>
+                            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{sl.metrics.totalItemsSold}</div>
                         </div>
                         <div className="card" style={{ padding: '16px 20px', background: '#FFFFFF', borderRadius: '10px', border: '1px solid var(--border)' }}>
                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500', marginBottom: '6px' }}>Total Net Sales</div>
-                            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif' }}>{sl.fmt(sl.metrics.totalSales)}</div>
+                            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{sl.fmt(sl.metrics.totalSales)}</div>
                         </div>
                         <div className="card" style={{ padding: '16px 20px', background: '#FFFFFF', borderRadius: '10px', border: '1px solid var(--border)' }}>
                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500', marginBottom: '6px' }}>Average Sale</div>
-                            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif' }}>{sl.fmt(sl.metrics.avgSale)}</div>
+                            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{sl.fmt(sl.metrics.avgSale)}</div>
                         </div>
                     </div>
 

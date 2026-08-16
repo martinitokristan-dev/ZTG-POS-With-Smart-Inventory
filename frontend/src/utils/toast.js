@@ -25,7 +25,7 @@ export function showToast(message, type = 'success') {
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.15);
         font-size: 13.5px;
         font-weight: 600;
-        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Outfit", "Inter", sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         letter-spacing: -0.1px;
         pointer-events: auto;
         opacity: 0;

@@ -56,7 +56,7 @@ export default function PaymentMethodsTab({ salesSummary, employees = [], fmt, s
         let total = 0;
 
         filteredTransactions.forEach(tx => {
-            if (tx.status === 'Completed' || tx.status === 'Pending') {
+            if (['Completed', 'Deposit', 'Paid'].includes(tx.status) || (tx.is_partial_refund && Number(tx.amount || 0) > 0)) {
                 const pm = tx.payment_method 
                     ? (tx.payment_method.startsWith('Split') ? 'Split' : (tx.payment_method.startsWith('Cheque') ? 'Cheque' : tx.payment_method))
                     : 'Other';

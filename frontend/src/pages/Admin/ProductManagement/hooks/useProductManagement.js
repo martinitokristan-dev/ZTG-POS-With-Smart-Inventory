@@ -525,8 +525,25 @@ export default function useProductManagement() {
     };
 
     const handleToggleStatus = async (product) => {
+        const newStatus = product.status === 'Disabled' ? 'Active' : 'Disabled';
+        const opt = optimisticUpdateProduct(product.id, {
+            status: newStatus,
+            variants: product.variants?.map(v => ({ ...v, status: newStatus }))
+        });
+
+        // Also optimistically update local products state in ProductManagement table
+        setProducts(prev => prev.map(p => {
+            if (p.id === product.id) {
+                return {
+                    ...p,
+                    status: newStatus,
+                    variants: p.variants?.map(v => ({ ...v, status: newStatus }))
+                };
+            }
+            return p;
+        }));
+
         try {
-            const newStatus = product.status === 'Disabled' ? 'Active' : 'Disabled';
             const payload = {
                 name: product.name,
                 chinese_name: product.chinese_name,
@@ -544,9 +561,12 @@ export default function useProductManagement() {
                 status: newStatus
             };
             await api.put(`/products/${product.id}`, payload);
+            opt.commit();
             setSuccessMessage(`Product ${newStatus === 'Active' ? 'enabled' : 'disabled'} successfully!`);
             loadProducts();
         } catch (error) {
+            opt.rollback();
+            loadProducts();
             alert(error.response?.data?.message || 'Error toggling product status.');
         }
     };

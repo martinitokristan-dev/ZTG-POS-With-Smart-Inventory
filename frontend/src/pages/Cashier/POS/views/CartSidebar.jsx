@@ -48,7 +48,7 @@ export default function CartSidebar({
         <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '16px', height: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px' }}>
             <div style={{ flexShrink: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '10px', marginBottom: '12px' }}>
-                    <h3 style={{ fontSize: '15px', fontWeight: '700', fontFamily: '"Outfit", sans-serif', margin: 0, color: 'var(--text-primary)' }}>Product List</h3>
+                    <h3 style={{ fontSize: '15px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>Product List</h3>
                     <button 
                         onClick={clearCart}
                         style={{ color: 'var(--danger)', fontSize: '12px', fontWeight: '600', textDecoration: 'none', border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }}
@@ -79,15 +79,15 @@ export default function CartSidebar({
                     </div>
                 )}
 
-                {/* Customer Information Section */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                    <div style={{ position: 'relative' }}>
-                        <label style={{ display: 'block', fontSize: '10px', marginBottom: '2px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Existing Customer / Already Exist</label>
+                {/* Customer Information Section — Compact 2-Column POS Layout */}
+                <div className="cart-customer-section" style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '10px' }}>
+                    <div className="form-group" style={{ position: 'relative' }}>
+                        <label className="form-label" htmlFor="existingCustomerSearch">Existing Customer</label>
                         <input 
                             type="text" 
-                            className="form-control form-control-sm" 
+                            id="existingCustomerSearch"
+                            className="form-control" 
                             placeholder="Search existing customer..." 
-                            style={{ width: '100%', padding: '8px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }}
                             value={existingCustomerSearch}
                             onFocus={() => setIsDropdownOpen(true)}
                             onChange={(e) => {
@@ -124,13 +124,14 @@ export default function CartSidebar({
                             </div>
                         )}
                     </div>
-                    <div>
-                        <label style={{ display: 'block', fontSize: '10px', marginBottom: '2px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>New Customer / First time</label>
+
+                    <div className="form-group">
+                        <label className="form-label" htmlFor="newCustomerName">New Customer Name</label>
                         <input 
                             type="text" 
-                            className="form-control form-control-sm" 
+                            id="newCustomerName"
+                            className="form-control" 
                             placeholder="Enter new customer name" 
-                            style={{ width: '100%', padding: '8px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }}
                             value={newCustomerName}
                             onChange={(e) => {
                                 setNewCustomerName(e.target.value);
@@ -141,55 +142,85 @@ export default function CartSidebar({
                             }}
                         />
                     </div>
-                    <div>
-                        <input 
-                            type="text" 
-                            className="form-control form-control-sm" 
-                            placeholder="Contact Number (Optional)" 
-                            style={{ width: '100%', padding: '8px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }}
-                            value={customerPhone}
-                            onChange={(e) => setCustomerPhone(e.target.value)}
-                        />
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="customerPhone">Contact No.</label>
+                            <input 
+                                type="tel" 
+                                id="customerPhone"
+                                className="form-control" 
+                                placeholder="0917-000-0000" 
+                                value={customerPhone}
+                                onChange={(e) => setCustomerPhone(e.target.value.replace(/[^\d+ -]/g, ''))}
+                                onKeyDown={(e) => {
+                                    if (
+                                        !/^[0-9+ -]$/.test(e.key) && 
+                                        !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) &&
+                                        !e.ctrlKey && !e.metaKey
+                                    ) {
+                                        e.preventDefault();
+                                    }
+                                }}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="customerTin">Buyer's TIN</label>
+                            <input 
+                                type="text" 
+                                id="customerTin"
+                                className="form-control" 
+                                placeholder="123-456-789-000" 
+                                value={customerTin}
+                                onChange={(e) => setCustomerTin(e.target.value.replace(/[^\d-]/g, ''))}
+                                onKeyDown={(e) => {
+                                    if (
+                                        !/^[0-9-]$/.test(e.key) && 
+                                        !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) &&
+                                        !e.ctrlKey && !e.metaKey
+                                    ) {
+                                        e.preventDefault();
+                                    }
+                                }}
+                            />
+                        </div>
                     </div>
-                    <div>
-                        <input 
-                            type="text" 
-                            className="form-control form-control-sm" 
-                            placeholder="Buyer's TIN (e.g. 123-456-789-000) — Required for B2B" 
-                            style={{ width: '100%', padding: '8px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }}
-                            value={customerTin}
-                            onChange={(e) => setCustomerTin(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <input 
-                            type="text" 
-                            className="form-control form-control-sm" 
-                            placeholder="Buyer's Business Address (Optional for walk-in)" 
-                            style={{ width: '100%', padding: '8px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }}
-                            value={customerAddress}
-                            onChange={(e) => setCustomerAddress(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label style={{ display: 'block', fontSize: '10px', marginBottom: '2px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Warehouse Checker <span style={{ color: 'var(--danger)' }}>*</span></label>
-                        <select 
-                            className="form-select form-select-sm"
-                            style={{ width: '100%', padding: '8px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }}
-                            value={selectedChecker || ''}
-                            onChange={(e) => setSelectedChecker(e.target.value)}
-                        >
-                            <option value="" hidden>Select Checker *</option>
-                            {checkers.map((checker, index) => (
-                                <option key={checker.id || `checker-${index}`} value={checker.id}>{checker.name}</option>
-                            ))}
-                        </select>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px' }}>
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="customerAddress">Business Address</label>
+                            <input 
+                                type="text" 
+                                id="customerAddress"
+                                className="form-control" 
+                                placeholder="Address (Optional)" 
+                                value={customerAddress}
+                                onChange={(e) => setCustomerAddress(e.target.value)}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="warehouseChecker">
+                                Checker <span style={{ color: 'var(--danger, #EF4444)' }}>*</span>
+                            </label>
+                            <select 
+                                id="warehouseChecker"
+                                className="form-control"
+                                value={selectedChecker || ''}
+                                onChange={(e) => setSelectedChecker(e.target.value)}
+                            >
+                                <option value="">Select Checker *</option>
+                                {checkers.map((checker, index) => (
+                                    <option key={checker.id || `checker-${index}`} value={checker.id}>{checker.name}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
                 </div>
+
             </div>
 
             {/* Product Items List container */}
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px', borderBottom: '1px dashed var(--border)', paddingBottom: '70px', paddingRight: '4px' }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px', borderBottom: '1px dashed var(--border)', paddingBottom: '8px', paddingRight: '4px' }}>
                 {cart.length === 0 ? (
                     <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '15px', fontSize: '12px' }}>No items selected.</p>
                 ) : (
@@ -231,7 +262,19 @@ export default function CartSidebar({
                                                 min="1"
                                                 max={item.stock}
                                                 value={item.qty} 
-                                                onChange={(e) => setCartItemQty && setCartItemQty(item.id, item.priceTier, e.target.value)}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.replace(/\D/g, '');
+                                                    setCartItemQty && setCartItemQty(item.id, item.priceTier, val);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (
+                                                        !/^[0-9]$/.test(e.key) && 
+                                                        !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) &&
+                                                        !e.ctrlKey && !e.metaKey
+                                                    ) {
+                                                        e.preventDefault();
+                                                    }
+                                                }}
                                                 onFocus={(e) => e.target.select()}
                                                 style={{ 
                                                     width: '44px', 

@@ -11,8 +11,8 @@ export default function CustomerLog() {
             <div className="main-workspace">
                 <div className="top-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <h1 style={{ fontSize: '20px', marginBottom: '2px', fontFamily: '"Outfit", sans-serif', color: 'var(--text-primary)' }}>Customer Log</h1>
-                        <div className="page-description" style={{ marginTop: '0', fontSize: '12px', color: 'var(--text-secondary)' }}>View customer purchase history, contact details, and initial registration date.</div>
+                        <h1 style={{ fontSize: '20px', marginBottom: '2px', color: 'var(--text-primary)' }}>Customer Log</h1>
+                        <div className="page-description" style={{ marginTop: '0', fontSize: '13px', color: 'var(--text-secondary)' }}>View customer purchase history, contact details, and initial registration date.</div>
                     </div>
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>                    </div>
                 </div>

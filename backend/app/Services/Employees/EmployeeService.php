@@ -23,6 +23,19 @@ class EmployeeService
      */
     public function createEmployee(array $data): User
     {
+        if (empty($data['name'])) {
+            $data['name'] = $data['real_name'] ?? $data['username'];
+        }
+
+        if (empty($data['employee_id'])) {
+            $maxId = User::max('id') ?? 0;
+            $data['employee_id'] = 'EMP-' . str_pad((string)($maxId + 1), 3, '0', STR_PAD_LEFT);
+        }
+
+        if (empty($data['status'])) {
+            $data['status'] = 'Active';
+        }
+
         $data['password'] = Hash::make($data['password']);
 
         return User::create($data);
@@ -33,6 +46,10 @@ class EmployeeService
      */
     public function updateEmployee(User $employee, array $data): User
     {
+        if (empty($data['name']) && !empty($data['real_name'])) {
+            $data['name'] = $data['real_name'];
+        }
+
         if (!empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
         } else {

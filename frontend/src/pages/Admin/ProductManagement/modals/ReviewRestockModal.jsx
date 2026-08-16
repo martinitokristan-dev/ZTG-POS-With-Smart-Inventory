@@ -29,7 +29,7 @@ export default function ReviewRestockModal({
                             </svg>
                         </div>
                         <div>
-                            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif' }}>Review Restock Order</h3>
+                            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: 'var(--text-primary)' }}>Review Restock Order</h3>
                             <p style={{ margin: '3px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '500' }}>Verify items, quantities, and supervisor approval before completing restock.</p>
                         </div>
                     </div>

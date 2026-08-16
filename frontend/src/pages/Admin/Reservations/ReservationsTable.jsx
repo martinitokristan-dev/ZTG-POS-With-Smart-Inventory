@@ -76,6 +76,24 @@ export default function ReservationsTable({
                                     } else {
                                         return rawStatus === 'completed';
                                     }
+                                }).sort((a, b) => {
+                                    if (activeTab === 'completed') {
+                                        const dateA = new Date(a.date_get || a.date || a.created_at).getTime();
+                                        const dateB = new Date(b.date_get || b.date || b.created_at).getTime();
+                                        if (dateA !== dateB) return dateA - dateB;
+                                        const updatedA = new Date(a.updated_at || 0).getTime();
+                                        const updatedB = new Date(b.updated_at || 0).getTime();
+                                        if (updatedA !== updatedB) return updatedA - updatedB;
+                                        return (a.id || 0) - (b.id || 0);
+                                    } else {
+                                        const dateA = new Date(a.date || a.created_at).getTime();
+                                        const dateB = new Date(b.date || b.created_at).getTime();
+                                        if (dateA !== dateB) return dateA - dateB;
+                                        const createdA = new Date(a.created_at || 0).getTime();
+                                        const createdB = new Date(b.created_at || 0).getTime();
+                                        if (createdA !== createdB) return createdA - createdB;
+                                        return (a.id || 0) - (b.id || 0);
+                                    }
                                 });
 
                                 if (loading) {

@@ -96,7 +96,7 @@ export default function IOSTimePicker({
                     fontSize: '13px',
                     fontWeight: 500,
                     color: value ? 'var(--text-primary)' : 'var(--text-muted)',
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Outfit", sans-serif',
+                    fontFamily: 'var(--font-ui)',
                     boxShadow: isOpen ? '0 0 0 3px rgba(59, 130, 246, 0.15)' : '0 1px 2px 0 rgba(0, 0, 0, 0.04)',
                     transition: 'all 0.2s ease',
                     minHeight: '38px',
@@ -128,7 +128,7 @@ export default function IOSTimePicker({
                         boxShadow: '0 16px 36px -4px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.2)',
                         padding: '16px',
                         width: '260px',
-                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Outfit", sans-serif',
+                        fontFamily: 'var(--font-ui)',
                         userSelect: 'none',
                     }}
                 >

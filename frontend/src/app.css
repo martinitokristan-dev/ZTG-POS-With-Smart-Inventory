@@ -1,6 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 @import './styles/table-theme.css';
+@import './styles/form-theme.css';
 @import './styles/dark-theme.css';
 
 @source './**/*.jsx';
@@ -8,7 +9,7 @@
 
 :root {
   --bg-canvas: #F8FAFC;
-  --bg-sidebar: #1E293B;
+  --bg-sidebar: #FFFFFF;
   --bg-sidebar-hover: #334155;
   --bg-card: #FFFFFF;
   --bg-secondary: #F1F5F9;
@@ -33,6 +34,70 @@
   --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
   --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.02);
 }
+
+/* Sidebar Theme & Typography */
+.admin-sidebar {
+  background-color: var(--bg-sidebar, #FFFFFF);
+  border-right: 1px solid var(--border, #E2E8F0);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+.admin-sidebar a {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-size: 14.5px !important;
+  font-weight: 500 !important;
+  letter-spacing: normal !important;
+}
+
+.admin-sidebar a:not(.active):not([aria-current="page"]) {
+  color: #1E293B !important;
+  background-color: transparent;
+}
+
+.admin-sidebar a:not(.active):not([aria-current="page"]) svg {
+  stroke: #1E293B !important;
+}
+
+.admin-sidebar a:not(.active):not([aria-current="page"]):hover {
+  background-color: #3B82F6 !important;
+  color: #FFFFFF !important;
+}
+
+.admin-sidebar a:not(.active):not([aria-current="page"]):hover svg {
+  stroke: #FFFFFF !important;
+}
+
+.admin-sidebar button {
+  color: #475569;
+  background-color: transparent;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-weight: 500;
+}
+
+.admin-sidebar button svg {
+  stroke: currentColor;
+}
+
+.admin-sidebar button:hover {
+  background-color: #3B82F6 !important;
+  color: #FFFFFF !important;
+}
+
+.admin-sidebar button:hover svg {
+  stroke: #FFFFFF !important;
+}
+
+.admin-sidebar a.active,
+.admin-sidebar a[aria-current="page"] {
+  background-color: #3B82F6 !important;
+  color: #FFFFFF !important;
+}
+
+.admin-sidebar a.active svg,
+.admin-sidebar a[aria-current="page"] svg {
+  stroke: #FFFFFF !important;
+}
+
 
 [data-theme="dark"], html.dark-theme, body.dark-theme {
   --bg-canvas: #0B1329;
@@ -227,9 +292,9 @@ textarea::placeholder,
   --color-danger: var(--danger);
   --color-danger-hover: var(--danger-hover);
   --color-danger-light: var(--danger-light);
-  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-brand: 'Outfit', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-brand: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
 }
 
 * {
@@ -239,10 +304,9 @@ textarea::placeholder,
 }
 
 html, body, button, input, select, textarea, span, h1, h2, h3, h4, h5, h6 {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  letter-spacing: -0.011em;
+  font-family: var(--font-ui) !important;
   -webkit-font-smoothing: antialiased;
-  font-feature-settings: 'tnum' 1, 'cv02' 1;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html {
@@ -259,10 +323,8 @@ body {
   height: calc(100vh / 0.9);
   overflow: hidden;
   font-family: var(--font-ui);
-  font-feature-settings: 'tnum' 1, 'cv02' 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.011em;
 }
 
 #app {
@@ -449,7 +511,9 @@ h1 {
   padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  font-size: 14px;
+  font-family: var(--font-ui) !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
   color: var(--text-primary);
   background-color: var(--bg-card);
   outline: none;
@@ -558,7 +622,7 @@ select.form-control,
   padding: 8px 32px 8px 12px !important;
   border: 1px solid var(--border);
   border-radius: 10px;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Outfit", "Inter", sans-serif;
+  font-family: var(--font-ui) !important;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
@@ -592,7 +656,7 @@ input[type="datetime-local"] {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 8px 12px;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Outfit", "Inter", sans-serif;
+  font-family: var(--font-ui) !important;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
@@ -1009,7 +1073,7 @@ tr:hover td {
 
 :root {
   --bg-canvas: #F8FAFC;
-  --bg-sidebar: #1E293B;
+  --bg-sidebar: #FFFFFF;
   --bg-sidebar-hover: #334155;
   --bg-card: #FFFFFF;
   --border: #E2E8F0;
@@ -1059,37 +1123,9 @@ tr:hover td {
   --color-danger-hover: var(--danger-hover);
   --color-danger-light: var(--danger-light);
   
-  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-brand: 'Outfit', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-}
-
-/* Global Font Override to prevent browser default serif layout */
-html, body, button, input, select, textarea, span, h1, h2, h3, h4, h5, h6 {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  letter-spacing: -0.011em;
-  -webkit-font-smoothing: antialiased;
-  font-feature-settings: 'tnum' 1, 'cv02' 1;
-}
-
-html {
-  height: 100%;
-}
-
-body {
-  background-color: #F8FAFC;
-  color: #0F172A;
-  margin: 0;
-  padding: 0;
-  zoom: 0.9;
-  width: calc(100vw / 0.9);
-  height: calc(100vh / 0.9);
-  overflow: hidden;
-  font-family: var(--font-ui);
-  font-feature-settings: 'tnum' 1, 'cv02' 1;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.011em;
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-brand: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
 }
 
 #app {
@@ -1467,8 +1503,8 @@ body {
 }
 
 .login-logo {
-    font-family: 'Outfit', sans-serif;
-    font-size: 30px;
+    font-family: var(--font-ui);
+    font-size: 28px;
     font-weight: 800;
     text-align: center;
     color: #0F172A;
@@ -2609,7 +2645,18 @@ body {
 
 
 /* Missing Grid & Section Header Classes */
-.section-header { font-size: 13px; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-top: 16px; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.section-header { 
+  font-family: var(--font-ui) !important;
+  font-size: 12px !important; 
+  font-weight: 700 !important; 
+  color: var(--text-secondary, #64748B) !important; 
+  text-transform: uppercase !important; 
+  letter-spacing: 0.05em !important;
+  margin-top: 20px !important; 
+  margin-bottom: 12px !important; 
+  border-bottom: 1px solid var(--border, #E2E8F0) !important; 
+  padding-bottom: 6px !important; 
+}
 .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }

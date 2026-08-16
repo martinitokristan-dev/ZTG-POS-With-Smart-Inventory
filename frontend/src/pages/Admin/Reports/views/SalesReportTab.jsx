@@ -46,11 +46,11 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
 
     // Extract unique Payment methods
     const paymentOptions = useMemo(() => {
-        const baseOptions = ['Cash', 'GCash', 'Bank Transfer', 'Cheque', 'P.O. (Pending)', 'Split'];
+        const baseOptions = ['Cash', 'GCash', 'Bank Transfer', 'Cheque', 'Split'];
         if (!salesSummary?.transactions) return baseOptions;
         const set = new Set(baseOptions);
         salesSummary.transactions.forEach(tx => {
-            if (tx.payment_method) {
+            if (tx.payment_method && tx.payment_method !== 'P.O. (Pending)') {
                 if (tx.payment_method.startsWith('Split')) {
                     set.add('Split');
                 } else {
@@ -61,11 +61,15 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
         return Array.from(set);
     }, [salesSummary]);
 
-    // Filter transactions based on selected Cashier and Payment method (Excluding restocks, system logs, & full refunds/voids)
+    // Filter transactions based on selected Cashier and Payment method (Excluding restocks, system logs, pending orders, & full refunds/voids)
     const filteredTransactions = useMemo(() => {
         if (!salesSummary?.transactions) return [];
         return salesSummary.transactions.filter(tx => {
             if (tx.status === 'RESTOCKED' || tx.status === 'Restocked' || tx.type === 'system' || tx.type === 'restock' || (tx.si_no && tx.si_no.startsWith('INV-RESTOCK'))) {
+                return false;
+            }
+            // Exclude pending/credit purchase orders (only show after payment/settlement)
+            if (tx.status === 'Pending' || tx.status === 'Pending Order' || tx.payment_method === 'P.O. (Pending)') {
                 return false;
             }
             // Exclude full refunds, returns, and voids from Sales Report (they remain in History Logs)

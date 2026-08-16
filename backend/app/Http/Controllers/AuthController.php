@@ -17,21 +17,26 @@ class AuthController extends Controller
         $request->validate([
             'login_id' => 'required|string',
             'password' => 'required|string',
-            'role' => 'required|string|in:Admin,Cashier,Supervisor',
+            'role'     => 'nullable|string',
         ]);
 
-        // Find user by either username or employee_id, matching their selected role
+        // Find user by either username or employee_id
         $user = User::where(function ($query) use ($request) {
             $query->where('username', $request->login_id)
                   ->orWhere('employee_id', $request->login_id);
         })
-        ->where('role', $request->role)
-        ->where('status', 'Active')
         ->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'login_id' => ['The provided credentials do not match our records or the selected role.'],
+                'login_id' => ['Invalid username, employee ID, or password.'],
+            ]);
+        }
+
+        $userStatus = is_object($user->status) ? $user->status->value : $user->status;
+        if (strtolower((string)$userStatus) !== 'active') {
+            throw ValidationException::withMessages([
+                'login_id' => ['Your account is currently inactive. Please contact an administrator.'],
             ]);
         }
 

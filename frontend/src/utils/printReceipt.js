@@ -206,7 +206,7 @@ export function printUnifiedReceipt(options) {
 
             <!-- Invoice Number & Date -->
             <div style="border: 1px dashed #ccc; padding: 8px; margin-bottom: 10px;">
-                <table style="width:100%; border-collapse: collapse;">
+                <table class="receipt-table" style="width:100%; border-collapse: collapse;">
                     <tr>
                         <td style="font-size:11px; color:#6B7280;">Invoice No.:</td>
                         <td style="font-size:12px; font-weight:900; text-align:right; color:${cfg.color};">${invoiceNo}</td>
@@ -225,7 +225,7 @@ export function printUnifiedReceipt(options) {
             <!-- Sold To Block -->
             <div style="border: 1px dashed #ccc; padding: 8px; margin-bottom: 10px;">
                 <div style="font-size:10px; font-weight:700; text-transform:uppercase; color:#6B7280; margin-bottom:4px;">Sold To / Customer</div>
-                <table style="width:100%; border-collapse:collapse;">
+                <table class="receipt-table" style="width:100%; border-collapse:collapse;">
                     <tr><td style="font-size:10px;color:#6B7280;width:55px;">Name:</td><td style="font-size:11px;font-weight:700;">${customer || 'Walk-in'}</td></tr>
                     <tr><td style="font-size:10px;color:#6B7280;">Address:</td><td style="font-size:11px;">${buyerAddress || '—'}</td></tr>
                     <tr><td style="font-size:10px;color:#6B7280;">TIN:</td><td style="font-size:11px;font-weight:600;">${buyerTin || 'N/A (Walk-in)'}</td></tr>
@@ -235,7 +235,7 @@ export function printUnifiedReceipt(options) {
 
             <!-- Items Table -->
             <div style="margin-bottom: 10px;">
-                <table style="width:100%; border-collapse: collapse; border-top: 2px solid #111; border-bottom: 1px dashed #ccc;">
+                <table class="receipt-table" style="width:100%; border-collapse: collapse; border-top: 2px solid #111; border-bottom: 1px dashed #ccc;">
                     <thead>
                         <tr style="border-bottom: 1px dashed #999;">
                             <th style="padding:5px 4px; text-align:left; font-size:10px; font-weight:700; text-transform:uppercase;">Description</th>
@@ -253,7 +253,7 @@ export function printUnifiedReceipt(options) {
 
             <!-- VAT Breakdown + Totals — uses tax_rate from businessInfo snapshot -->
             <div style="margin-bottom: 10px;">
-                <table style="width:100%; border-collapse: collapse;">
+                <table class="receipt-table" style="width:100%; border-collapse: collapse;">
                     ${discountLines}
                     <tr><td style="padding:2px 0;font-size:10px;color:#6B7280;">VATable Sales:</td><td style="padding:2px 0;font-size:10px;text-align:right;color:#6B7280;">&#8369;${(Number(total)/taxDivisor).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>
                     <tr><td style="padding:2px 0;font-size:10px;color:#6B7280;">VAT Amount (${taxRate}%):</td><td style="padding:2px 0;font-size:10px;text-align:right;color:#6B7280;">&#8369;${(Number(total)-Number(total)/taxDivisor).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>
@@ -284,20 +284,62 @@ export function printUnifiedReceipt(options) {
     if (!printStyle) {
         printStyle = document.createElement('style');
         printStyle.id = 'print-style-receipt';
-        printStyle.innerHTML = `
-            @media print {
-                body * { visibility: hidden !important; }
-                #ztg-print-receipt, #ztg-print-receipt * { visibility: visible !important; }
-                #ztg-print-receipt {
-                    position: absolute; left: 0; top: 0; width: 100%;
-                    background: #fff; z-index: 999999; display: flex;
-                    justify-content: center; padding: 0; margin: 0;
-                }
-            }
-            @page { margin: 0.5cm; }
-        `;
         document.head.appendChild(printStyle);
     }
+    printStyle.innerHTML = `
+        @media print {
+            html, body {
+                zoom: 1 !important;
+                background: #fff !important;
+                color: #000 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                overflow: visible !important;
+                font-family: 'Courier New', Courier, monospace !important;
+            }
+            body * { visibility: hidden !important; }
+            #ztg-print-receipt, #ztg-print-receipt * { visibility: visible !important; }
+            #ztg-print-receipt {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                background: #fff !important;
+                z-index: 999999 !important;
+                display: flex !important;
+                justify-content: center !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            #ztg-print-receipt table.receipt-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                background: transparent !important;
+            }
+            #ztg-print-receipt th,
+            #ztg-print-receipt td {
+                background: transparent !important;
+                border-color: inherit !important;
+                color: #111 !important;
+                font-family: 'Courier New', Courier, monospace !important;
+            }
+            #ztg-print-receipt th {
+                padding: 5px 4px !important;
+                font-size: 10px !important;
+                font-weight: 700 !important;
+            }
+            #ztg-print-receipt td {
+                padding: 3px 0 !important;
+                font-size: 11px !important;
+            }
+            #ztg-print-receipt tbody td {
+                padding: 5px 4px !important;
+            }
+        }
+        @page { margin: 0.5cm; }
+    `;
 
     let printDiv = document.getElementById('ztg-print-receipt');
     if (!printDiv) {
@@ -433,7 +475,7 @@ export function printCollectionReceipt(options) {
                     </div>
                     
                     <!-- Particulars & Amount Table -->
-                    <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                    <table class="receipt-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
                         <thead>
                             <tr style="border-bottom: 1px solid #000; height: 22px;">
                                 <th style="padding: 3px 6px; font-size: 9.5px; text-align: center; font-weight: bold; text-transform: uppercase; width: 62%; border-right: 1px solid #000;">PARTICULARS</th>
@@ -615,21 +657,75 @@ export function printCollectionReceipt(options) {
     if (!printStyle) {
         printStyle = document.createElement('style');
         printStyle.id = 'print-style-cr';
-        printStyle.innerHTML = `
-            @media print {
-                body * { visibility: hidden !important; }
-                #ztg-print-cr, #ztg-print-cr * { visibility: visible !important; }
-                #ztg-print-cr {
-                    position: absolute; left: 0; top: 0; width: 100%;
-                    background: #fff; z-index: 999999; display: flex;
-                    justify-content: center; align-items: flex-start;
-                    padding: 10px 0; margin: 0;
-                }
-            }
-            @page { size: auto; margin: 0.5cm; }
-        `;
         document.head.appendChild(printStyle);
     }
+    printStyle.innerHTML = `
+        @media print {
+            html, body {
+                zoom: 1 !important;
+                background: #fff !important;
+                color: #000 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                overflow: visible !important;
+                font-family: Arial, Helvetica, sans-serif !important;
+            }
+            body * { visibility: hidden !important; }
+            #ztg-print-cr, #ztg-print-cr * { visibility: visible !important; }
+            #ztg-print-cr {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                background: #fff !important;
+                z-index: 999999 !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: flex-start !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            #ztg-print-cr div,
+            #ztg-print-cr span,
+            #ztg-print-cr p,
+            #ztg-print-cr h3 {
+                color: #000 !important;
+                border-color: #000 !important;
+                font-family: Arial, Helvetica, sans-serif !important;
+            }
+            #ztg-print-cr table.receipt-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                table-layout: fixed !important;
+                background: transparent !important;
+                margin: 0 !important;
+            }
+            #ztg-print-cr table.receipt-table th,
+            #ztg-print-cr table.receipt-table td {
+                border-color: #000 !important;
+                color: #000 !important;
+                background: transparent !important;
+                font-family: Arial, Helvetica, sans-serif !important;
+                line-height: 1.2 !important;
+            }
+            #ztg-print-cr table.receipt-table th {
+                padding: 3px 6px !important;
+                font-size: 9.5px !important;
+                font-weight: bold !important;
+                text-align: center !important;
+                border-bottom: 1px solid #000 !important;
+                background-color: transparent !important;
+            }
+            #ztg-print-cr table.receipt-table td {
+                padding: 3px 6px !important;
+                font-size: 11px !important;
+                background-color: transparent !important;
+            }
+        }
+        @page { size: auto; margin: 0.5cm; }
+    `;
 
     let printDiv = document.getElementById('ztg-print-cr');
     if (!printDiv) {

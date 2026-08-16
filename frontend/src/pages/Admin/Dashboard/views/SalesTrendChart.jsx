@@ -139,10 +139,10 @@ export default function SalesTrendChart({ last7Days = [], timeRange = 'Today' })
             boxSizing: 'border-box'
         }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', margin: 0, fontFamily: 'Outfit, sans-serif' }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', margin: 0 }}>
                     Sales Trend — {timeRange}
                 </h3>
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', fontFamily: 'Inter, sans-serif' }}>{dateRangeStr}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#94A3B8' }}>{dateRangeStr}</span>
             </div>
 
             <div style={{ width: '100%', height: height, position: 'relative' }}>

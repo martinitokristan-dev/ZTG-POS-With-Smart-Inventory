@@ -78,8 +78,8 @@ export default function ProductsTable({
         // Check if status is explicitly disabled
         let finalStatusText = product.status || stockStatusText;
         if (product.status === 'Disabled') {
-            statusBg = '#F1F5F9';
-            statusText = '#64748B';
+            statusBg = '#FEE2E2';
+            statusText = '#DC2626';
             finalStatusText = 'Disabled';
         }
 
@@ -261,7 +261,7 @@ export default function ProductsTable({
                     border: '1px solid rgba(255, 255, 255, 0.12)',
                     boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.15)',
                     fontSize: '13.5px', fontWeight: 600,
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Outfit", sans-serif',
+                    fontFamily: 'var(--font-ui)',
                     letterSpacing: '-0.1px',
                     pointerEvents: 'auto',
                     animation: 'toast-slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards'

@@ -111,13 +111,24 @@ export default function usePOS() {
     const flatProducts = useMemo(() => {
         const flat = [];
         posProducts.forEach(p => {
-            if (!p.variants || p.variants.length === 0) {
+            // If the parent product is Disabled, hide the entire product family from POS
+            if (p.status === 'Disabled') {
+                return;
+            }
+
+            const hasVariants = p.variants && p.variants.length > 0;
+
+            // Push base product if it has no variants or has sellable stock
+            if (!hasVariants) {
                 flat.push(p);
-            } else {
-                // Push the base product itself
+            } else if (p.stock > 0) {
                 flat.push(p);
-                // Push the variants
+            }
+
+            // Push active child variants (exclude any individually disabled variant)
+            if (hasVariants) {
                 p.variants.forEach(v => {
+                    if (v.status === 'Disabled') return;
                     const opts = v.variant_options || v.variantOptions;
                     const optLabel = Array.isArray(opts) && opts.length > 0 ? opts.map(o => o.value).join(', ') : null;
                     let vName = v.name || p.name;

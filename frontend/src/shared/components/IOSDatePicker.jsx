@@ -165,7 +165,7 @@ export default function IOSDatePicker({
                     fontSize: '13px',
                     fontWeight: 500,
                     color: value ? 'var(--text-primary)' : 'var(--text-muted)',
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Outfit", sans-serif',
+                    fontFamily: 'var(--font-ui)',
                     boxShadow: isOpen ? '0 0 0 3px rgba(59, 130, 246, 0.15)' : '0 1px 2px 0 rgba(0, 0, 0, 0.04)',
                     transition: 'all 0.2s ease',
                     minHeight: '38px',
@@ -202,7 +202,7 @@ export default function IOSDatePicker({
                         width: '280px',
                         maxWidth: 'calc(100vw - 32px)',
                         boxSizing: 'border-box',
-                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Outfit", sans-serif',
+                        fontFamily: 'var(--font-ui)',
                         userSelect: 'none',
                         animation: 'ios-popover-appear 0.2s ease-out forwards',
                     }}

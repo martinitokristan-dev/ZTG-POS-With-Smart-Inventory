@@ -528,5 +528,48 @@ class PhaseEightTest extends TestCase
         $this->assertNotNull($topCat);
         $this->assertEquals(1500.00, $topCat['revenue']);
     }
+
+    /** @test */
+    public function test_pending_po_orders_are_excluded_from_sales_report_until_paid(): void
+    {
+        // 1. Create a Completed sale: 5 items @ ₱500 = ₱2,500
+        $completedTx = $this->createCompletedTransaction(5);
+
+        // 2. Create a Pending P.O. order: 10 items @ ₱500 = ₱5,000
+        $customer = Customer::firstOrCreate(['name' => 'PO Customer']);
+        $poTx = Transaction::create([
+            'date'           => now(),
+            'type'           => 'sale',
+            'status'         => 'Pending',
+            'amount'         => 5000.00,
+            'original_amount'=> 5000.00,
+            'payment_method' => 'P.O. (Pending)',
+            'customer_id'    => $customer->id,
+            'cashier_id'     => $this->cashier->id,
+            'receipt_number' => 'PO-TEST-001',
+            'si_no'          => '102',
+        ]);
+        TransactionItem::create([
+            'transaction_id' => $poTx->id,
+            'product_id'     => $this->product->id,
+            'qty'            => 10,
+            'price'          => 500.00,
+            'total'          => 5000.00,
+        ]);
+
+        $service = app(ReportService::class);
+        $summary = $service->getSalesSummary();
+
+        // 3. Sales Report metrics MUST ONLY include the completed transaction (₱2,500, 5 items, 1 tx)
+        $this->assertEquals(2500.00, (float)$summary['total_revenue'], 'Sales revenue must exclude pending P.O. orders');
+        $this->assertEquals(5, (int)$summary['total_items_sold'], 'Total items sold must exclude pending P.O. items');
+        $this->assertEquals(1, (int)$summary['transaction_count'], 'Transaction count must only count completed sales');
+        $this->assertEquals(2500.00, (float)$summary['average_transaction']);
+
+        // 4. The transactions list for Sales Report table must NOT contain the pending P.O.
+        $txList = $summary['transactions'];
+        $foundPo = $txList->firstWhere('id', $poTx->id);
+        $this->assertNull($foundPo, 'Pending P.O. must not appear in sales report transactions list');
+    }
 }
 

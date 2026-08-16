@@ -127,12 +127,18 @@ export const ProductProvider = ({ children }) => {
                 if (['Admin', 'Supervisor', 'Cashier'].includes(user.role)) {
                     productChannel = echo.private('products')
                         .listen('.ProductUpdated', (e) => {
-                            console.log('[Echo Debug] ProductUpdated event received:', e);
                             setProducts(prev => prev.map(p => {
                                 if (p.id === e.productId) {
+                                    const newStatus = e.changedFields.status ?? p.status;
+                                    const newVariants = p.variants ? p.variants.map(v => ({
+                                        ...v,
+                                        status: newStatus === 'Disabled' ? 'Disabled' : (v.status === 'Disabled' ? 'Active' : v.status)
+                                    })) : p.variants;
                                     return {
                                         ...p,
                                         ...e.changedFields,
+                                        status: newStatus,
+                                        variants: newVariants,
                                         price: parseFloat(e.changedFields.price1 ?? p.price1 ?? p.price),
                                         retail_price: parseFloat(e.changedFields.price1 ?? p.price1 ?? p.retail_price)
                                     };

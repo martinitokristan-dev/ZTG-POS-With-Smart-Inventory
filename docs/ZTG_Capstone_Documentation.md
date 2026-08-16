@@ -1432,6 +1432,40 @@ This pattern dynamically allows any `*.pages.dev` subdomain, including both the 
 
 ---
 
+### SPRINT 11 — Order From China Excel Integration, Enterprise Variant Cascade, Single Login Redesign & Receipt Integrity
+**Date: August 2026**
+
+#### 1. Order From China Excel Integration & Template Synchronization
+- **Official Excel Template (`ZTG_ORDER_FROM_CHINA_TEMPLATE.xls`):** Created and integrated the standardized XML spreadsheet template matching the business supplier's exact multi-column layout for Overseas Orders.
+- **Rich Clipboard Exporter (`orderFromChinaExcelExporter.js`):** Built a high-fidelity clipboard exporter generating dual-format HTML and TSV payload with Calibri 11pt bold typography, 1px solid black cell borders, bold red payment status badges (`PAID [Amount]` / `[Amount] BALANCE`), and exact 11-column structure for the "ORDER CLAIMED AND PAID" sheet.
+- **Ascending Chronological Append Sorting:** Re-engineered backend queries in `ReservationService.php` and frontend table rendering so fulfilled orders are strictly sorted chronologically by claim time (`date_get ASC, updated_at ASC, id ASC`). Newly fulfilled orders automatically appear on the **bottom row**, enabling store staff to use **Copy to Clipboard** and paste (`Ctrl + V`) directly into the next empty row of their Excel ledger without shifting past records.
+- **Streamlined China Order Modal (`AddReservationModal.jsx`):** Removed internal inventory search to focus exclusively on direct entry for custom overseas parts (`Item Name`, `Part No / SKU`, `Price`, `Qty`, and `+ Add Item`).
+
+#### 2. Enterprise Product Variant Model (Option A Cascade)
+- **Cascade Disabling Without Data Deletion:** Disabling a parent product cascades `Disabled` status across parent and child variants, removing the product family from the active POS register while preserving all child variant rows, barcode linkages, transaction history, and stock records in the database.
+- **Re-enablement & Selective Variant Toggles:** Re-enabling a parent product recalculates child variant statuses dynamically based on live stock quantities (`Active`, `Low Stock`, `No Stock`). Disabling a single child variant suspends only that SKU while sibling variants remain sellable.
+- **Optimistic Zero-Latency State Sync:** Integrated optimistic state updates across `ProductContext.jsx` and `useProductManagement.js` so toggling product status reflects instantly (0ms delay) on Cashier POS registers.
+
+#### 3. Single Unified Login Redesign & Dynamic RBAC Authentication
+- **Single Form Login Interface (`Login.jsx`):** Eliminated the redundant role selection dropdown, replacing it with a single, modern login form.
+- **Dynamic Dual-Identifier Auth (`AuthController.php`):** Accepts either a `username` or an `employee_id` (e.g. `EMP-001`) with password, dynamically querying user roles and redirecting seamlessly to Admin or Cashier workspaces.
+- **Sanitized Error Messaging:** Returns clean, professional error notifications without exposing internal system logic.
+
+#### 4. Comprehensive Post-Checkout BIR Receipt & Real Cashier Identity
+- **Rich Checkout Confirmation Modal (`CheckoutModal.jsx`):** Upgraded the post-transaction success modal to display complete enterprise receipt details:
+  - **Company Header:** Business name, branch location, address, BIR TIN, and contact details from write-once business snapshots.
+  - **Transaction Meta Grid:** Document Type, Receipt / SI Booklet number, Real Cashier Name, Checker Name, Customer Name, and Phone number.
+  - **Detailed Line Items:** Item descriptions with Part Numbers (`P/N`), price tier badges (`P1` / `P2`), quantities, unit prices, and line totals.
+  - **BIR Tax Breakdown:** Itemized Subtotal, Discounts, VATable Sales (12%), VAT Amount (12%), and VAT-Exempt Sales.
+  - **Settlement Details:** Payment Method, Cash Received, Change Due, Cheque Number, and Split Payment breakdowns.
+- **Real Name Priority Resolution (`real_name || name`):** Standardized employee name resolution across receipts, audit modals (`TransactionDetailsModal`, `VoidModal`, `RefundModal`), and reporting logs.
+
+#### 5. Disabled Status Badge & Inventory Stock Visual Separation
+- **Distinct Red Disabled Badge:** Updated `Disabled` status badge tokens to high-contrast red (`#FEE2E2` background, `#DC2626` text, bold weight) across Product Management and Inventory tables.
+- **Accurate Stock Quantity Pill:** Enforced strict visual separation in `InventoryTable.jsx` so healthy stock quantities (e.g. 🟢 **90 units**) remain green, preventing disabled items from displaying misleading red stock badges.
+
+---
+
 ## 21. Business Details & Receipt Compliance (Business Owner's Guide)
 
 This section explains how your business information and printed receipts work in simple terms for store owners and non-technical managers.

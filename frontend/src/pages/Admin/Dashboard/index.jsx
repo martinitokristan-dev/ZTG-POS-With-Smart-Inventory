@@ -31,10 +31,10 @@ export default function Dashboard() {
                 flexShrink: 0,
             }}>
                 <div>
-                    <h1 style={{ fontSize: 18, fontWeight: 700, color: '#0F172A', fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.5px', margin: 0 }}>
+                    <h1 style={{ fontSize: 20, fontWeight: 700, color: '#0F172A', letterSpacing: '-0.3px', margin: 0 }}>
                         Good morning, {name}
                     </h1>
-                    <p style={{ color: '#64748B', fontSize: 12, marginTop: 2, margin: '2px 0 0' }}>
+                    <p style={{ color: '#64748B', fontSize: 13, marginTop: 2, margin: '2px 0 0' }}>
                         You're signed in as <strong style={{ color: '#0F172A' }}>Admin</strong>. Here's your store at a glance.
                     </p>
                 </div>

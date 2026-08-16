@@ -3,36 +3,36 @@
    ========================================== */
 
 :root {
-  --table-text-primary: #1F2937;
-  --table-text-secondary: #4B5563;
-  --table-text-muted: #6B7280;
+  --table-text-primary: #0F172A;
+  --table-text-secondary: #475569;
+  --table-text-muted: #94A3B8;
   --table-header-bg: #F8FAFC;
-  --table-border: #E5E7EB;
-  --table-border-subtle: #F3F4F6;
-  --table-hover: rgba(59, 130, 246, 0.05);
-  --table-row-height: 48px;
+  --table-border: #E2E8F0;
+  --table-border-subtle: #E2E8F0;
+  --table-hover: rgba(59, 130, 246, 0.04);
+  --table-row-height: 52px;
 }
 
 [data-theme="dark"], html.dark-theme, body.dark-theme {
   --table-text-primary: #F8FAFC;
   --table-text-secondary: #94A3B8;
   --table-text-muted: #64748B;
-  --table-header-bg: #1E293B;
-  --table-border: #334155;
+  --table-header-bg: #151F38;
+  --table-border: #263354;
   --table-border-subtle: #263354;
-  --table-hover: rgba(59, 130, 246, 0.15);
+  --table-hover: rgba(59, 130, 246, 0.12);
 }
 
-
-/* Base Data Table Rules */
+/* Base Data Table Rules — Applied to All System UI Tables (Excluding Print Receipts) */
 table.data-table,
 table.pos-table,
 table.reports-table,
 table.modal-table,
-table.ztg-table {
+table.ztg-table,
+table:not(.receipt-table):not(#ztg-print-cr *):not(#ztg-print-receipt *) {
   width: 100%;
   border-collapse: collapse;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
   color: var(--table-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -44,33 +44,39 @@ table.pos-table th,
 table.reports-table th,
 table.modal-table th,
 table.ztg-table th,
-.table-header-cell {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #64748B;
-  background-color: var(--table-header-bg);
-  border-bottom: 2px solid var(--table-border);
-  padding: 12px 16px;
-  line-height: 1.4;
-  vertical-align: middle;
+.table-header-cell,
+table:not(.receipt-table):not(#ztg-print-cr *):not(#ztg-print-receipt *) > thead > tr > th,
+table:not(.receipt-table):not(#ztg-print-cr *):not(#ztg-print-receipt *) > tr > th {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  color: var(--table-text-secondary);
+  background-color: var(--table-header-bg) !important;
+  border-bottom: 2px solid var(--table-border) !important;
+  padding: 14px 18px !important;
+  line-height: 1.4 !important;
+  vertical-align: middle !important;
 }
 
-/* Table Body Cells */
+/* Table Body Cells — Distinct Line Every Row without overriding custom colors */
 table.data-table td,
 table.pos-table td,
 table.reports-table td,
 table.modal-table td,
 table.ztg-table td,
-.table-body-cell {
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.5;
+.table-body-cell,
+table:not(.receipt-table):not(#ztg-print-cr *):not(#ztg-print-receipt *) > tbody > tr > td,
+table:not(.receipt-table):not(#ztg-print-cr *):not(#ztg-print-receipt *) > tr > td {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1.45 !important;
   color: var(--table-text-primary);
-  border-bottom: 1px solid var(--table-border-subtle);
-  padding: 12px 16px;
-  vertical-align: middle;
+  border-bottom: 1px solid var(--table-border) !important;
+  padding: 14px 18px !important;
+  vertical-align: middle !important;
 }
 
 /* Table Rows */
@@ -79,9 +85,11 @@ table.pos-table tbody tr,
 table.reports-table tbody tr,
 table.modal-table tbody tr,
 table.ztg-table tbody tr,
-tr.table-row {
+tr.table-row,
+table:not(.receipt-table):not(#ztg-print-cr *):not(#ztg-print-receipt *) > tbody > tr {
   min-height: var(--table-row-height);
   transition: background-color 0.15s ease;
+  border-bottom: 1px solid var(--table-border) !important;
 }
 
 /* Hover States */
@@ -91,7 +99,8 @@ table.pos-table tbody tr:hover,
 table.reports-table tbody tr:hover,
 table.modal-table tbody tr:hover,
 table.ztg-table tbody tr:hover,
-tr.hover-row:hover {
+tr.hover-row:hover,
+table:not(.receipt-table):not(#ztg-print-cr *):not(#ztg-print-receipt *) > tbody > tr:hover {
   background-color: var(--table-hover) !important;
 }
 
@@ -103,7 +112,15 @@ tr.hover-row:hover {
 .part-no-val,
 .num-col,
 td.num-col,
-th.num-col {
+th.num-col,
+td[style*="textAlign: 'right'"],
+td[style*="text-align: right"],
+th[style*="textAlign: 'right'"],
+th[style*="text-align: right"],
+.table-num {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-size: 14.5px !important;
+  font-weight: 600 !important;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
@@ -112,45 +129,50 @@ th.num-col {
 .stock-val,
 .part-no-val,
 .highlight-num {
-  font-weight: 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-size: 14.5px !important;
+  font-weight: 600 !important;
 }
 
 .product-title,
 .product-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--table-text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
 }
 
 .secondary-info {
-  font-size: 13px;
-  font-weight: 500;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
   color: var(--table-text-secondary);
 }
 
 .muted-info {
-  font-size: 12px;
-  font-weight: 500;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-size: 12.5px !important;
+  font-weight: 400 !important;
   color: var(--table-text-muted);
 }
+
 
 /* Column Alignment Utilities */
 .text-left,
 th.text-left,
 td.text-left {
-  text-align: left;
+  text-align: left !important;
 }
 
 .text-right,
 th.text-right,
 td.text-right {
-  text-align: right;
+  text-align: right !important;
 }
 
 .text-center,
 th.text-center,
 td.text-center {
-  text-align: center;
+  text-align: center !important;
 }
 
 /* Sticky Header Utility */
@@ -158,7 +180,7 @@ td.text-center {
   position: sticky;
   top: 0;
   z-index: 10;
-  background-color: var(--table-header-bg);
+  background-color: var(--table-header-bg) !important;
 }
 
 /* Truncation Utility */
@@ -167,3 +189,4 @@ td.text-center {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+

@@ -57,10 +57,10 @@ export default function VoidModal({ isOpen, onClose, transaction, onSubmit, fmtD
                             <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ color: 'var(--danger)' }}><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
                         </div>
                         <div>
-                            <h3 style={{ color: 'var(--danger)', fontSize: '18px', fontWeight: '700', margin: '0 0 2px 0', fontFamily: '"Outfit", sans-serif' }}>
+                            <h3 style={{ color: 'var(--danger)', fontSize: '18px', fontWeight: '700', margin: '0 0 2px 0' }}>
                                 Void Transaction
                             </h3>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '12px', margin: 0 }}>Admin authorization required — Cashier must physically request this action</p>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>Admin authorization required — Cashier must physically request this action</p>
                         </div>
                     </div>
     
@@ -102,7 +102,7 @@ export default function VoidModal({ isOpen, onClose, transaction, onSubmit, fmtD
                                 </div>
                                 <div>
                                     <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '2px' }}>Served By</span>
-                                    <span style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '13.5px' }}>{transaction.checker?.name || transaction.cashier?.name || '—'}</span>
+                                    <span style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '13.5px' }}>{transaction.checker?.real_name || transaction.checker?.name || transaction.cashier?.real_name || transaction.cashier?.name || '—'}</span>
                                 </div>
                                 <div style={{ gridColumn: 'span 2', borderTop: '1px dashed var(--border)', paddingTop: '12px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount to Void</span>

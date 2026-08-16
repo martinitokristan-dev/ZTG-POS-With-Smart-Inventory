@@ -219,9 +219,9 @@ class ReportService
             }
         }
 
-        // Transactions list for the sales report table (Excluding inventory restocks and system logs)
+        // Transactions list for the sales report table (Excluding inventory restocks, system logs, and unpaid pending orders)
         $transactionsQuery = Transaction::with(['items.product.parent', 'items.product.variantOptions', 'customer', 'cashier', 'checker'])
-            ->whereNotIn('status', ['RESTOCKED', 'Restocked', 'Security Alert'])
+            ->whereIn('status', ['Completed', 'Deposit', 'Paid', 'Refund', 'Return', 'Void'])
             ->whereNotIn('type', ['system', 'restock']);
 
         if ($utcStart && $utcEnd) {
@@ -382,7 +382,7 @@ class ReportService
         // Dead stock (sales_count = 0 and created before X days) - Top 100 items
         $deadStock = Product::whereDoesntHave('transactionItems', function ($q) {
             $q->whereHas('transaction', function ($tq) {
-                $tq->whereIn('status', ['Completed', 'Pending']);
+                $tq->whereIn('status', ['Completed', 'Deposit', 'Paid']);
             });
         })
             ->where('created_at', '<', now()->subDays($deadStockDays))

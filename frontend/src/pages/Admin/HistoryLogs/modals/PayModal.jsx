@@ -83,10 +83,10 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
                             </svg>
                         </div>
                         <div>
-                            <h3 style={{ color: '#047857', fontSize: '18px', fontWeight: '700', margin: '0 0 2px 0', fontFamily: '"Outfit", sans-serif' }}>
+                            <h3 style={{ color: '#047857', fontSize: '18px', fontWeight: '700', margin: '0 0 2px 0' }}>
                                 Pay Pending Order
                             </h3>
-                            <p style={{ color: '#6B7280', fontSize: '12px', margin: 0 }}>Collect payment for a parked P.O. transaction</p>
+                            <p style={{ color: '#6B7280', fontSize: '13px', margin: 0 }}>Collect payment for a parked P.O. transaction</p>
                         </div>
                     </div>
     
@@ -166,6 +166,11 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
                                     style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px' }}
                                     value={amountTendered}
                                     onChange={(e) => setAmountTendered(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+                                            e.preventDefault();
+                                        }
+                                    }}
                                     min={transaction.amount}
                                     step="0.01"
                                     required
@@ -190,7 +195,12 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
                                         className="form-control" 
                                         style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '16px', letterSpacing: showPin ? 'normal' : '4px' }}
                                         value={adminPin}
-                                        onChange={(e) => setAdminPin(e.target.value)}
+                                        onChange={(e) => setAdminPin(e.target.value.replace(/\D/g, ''))}
+                                        onKeyDown={(e) => {
+                                            if (!/^[0-9]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+                                                e.preventDefault();
+                                            }
+                                        }}
                                         placeholder="Enter PIN"
                                         required
                                         maxLength={6}

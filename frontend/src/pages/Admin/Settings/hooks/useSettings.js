@@ -829,16 +829,27 @@ export default function useSettings() {
     // ------------------------------------------------------------------------
     const openAddEmployee = () => {
         setSelectedEmployee(null);
-        setEmployeeForm({ name: '', email: '', username: '', role: 'Cashier', pin: '', status: 'Active' });
+        setEmployeeForm({
+            employee_id: '',
+            username: '',
+            real_name: '',
+            name: '',
+            password: '',
+            role: 'Cashier',
+            pin: '',
+            status: 'Active'
+        });
         setShowEmployeeModal(true);
     };
 
     const openEditEmployee = (emp) => {
         setSelectedEmployee(emp);
         setEmployeeForm({
-            name: emp.real_name || emp.name,
-            email: emp.email || '',
+            employee_id: emp.employee_id || '',
             username: emp.username || '',
+            real_name: emp.real_name || emp.name || '',
+            name: emp.name || emp.real_name || '',
+            password: '',
             role: emp.role || 'Cashier',
             pin: emp.pin || '',
             status: emp.status || 'Active'
@@ -849,19 +860,45 @@ export default function useSettings() {
     const handleEmployeeSubmit = async (e) => {
         e.preventDefault();
         try {
+            const payload = {
+                ...employeeForm,
+                name: employeeForm.real_name?.trim() || employeeForm.username?.trim(),
+                real_name: employeeForm.real_name?.trim(),
+                username: employeeForm.username?.trim(),
+                employee_id: employeeForm.employee_id?.trim() || undefined,
+            };
+
+            if (payload.role === 'Cashier') {
+                delete payload.pin;
+            }
+
             if (selectedEmployee) {
-                const res = await api.put(`/employees/${selectedEmployee.id}`, employeeForm);
-                setEmployees(prev => prev.map(emp => emp.id === selectedEmployee.id ? res.data : emp));
+                if (!payload.password) {
+                    delete payload.password;
+                }
+                const res = await api.put(`/employees/${selectedEmployee.id}`, payload);
+                const updated = res.data.employee || res.data;
+                setEmployees(prev => prev.map(emp => emp.id === selectedEmployee.id ? updated : emp));
                 showToast('Employee updated successfully!', 'success');
             } else {
-                const res = await api.post('/employees', employeeForm);
-                setEmployees(prev => [res.data, ...prev]);
+                const res = await api.post('/employees', payload);
+                const created = res.data.employee || res.data;
+                setEmployees(prev => [created, ...prev]);
                 showToast('New employee added successfully!', 'success');
             }
             setShowEmployeeModal(false);
             resetSettingsCache('employees');
         } catch (err) {
-            showToast(err.response?.data?.message || 'Failed to save employee.', 'error');
+            console.error('Failed to save employee:', err);
+            const errData = err.response?.data;
+            let errMsg = 'Failed to save employee.';
+            if (errData?.errors) {
+                const firstKey = Object.keys(errData.errors)[0];
+                errMsg = errData.errors[firstKey]?.[0] || errMsg;
+            } else if (errData?.message) {
+                errMsg = errData.message;
+            }
+            showToast(errMsg, 'error');
         }
     };
 

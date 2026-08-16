@@ -683,9 +683,35 @@
 }
 
 /* 11. Main Dashboard Sidebar Palette Synchronization */
-[data-theme="dark"] .admin-sidebar {
+[data-theme="dark"] .admin-sidebar,
+html.dark-theme .admin-sidebar,
+body.dark-theme .admin-sidebar {
   background-color: var(--bg-canvas) !important;
   border-right: 1px solid var(--border) !important;
+}
+
+[data-theme="dark"] .admin-sidebar a:not(.active):not([aria-current="page"]),
+html.dark-theme .admin-sidebar a:not(.active):not([aria-current="page"]),
+body.dark-theme .admin-sidebar a:not(.active):not([aria-current="page"]) {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .admin-sidebar a:not(.active):not([aria-current="page"]) svg,
+html.dark-theme .admin-sidebar a:not(.active):not([aria-current="page"]) svg,
+body.dark-theme .admin-sidebar a:not(.active):not([aria-current="page"]) svg {
+  stroke: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .admin-sidebar button,
+html.dark-theme .admin-sidebar button,
+body.dark-theme .admin-sidebar button {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .admin-sidebar button svg,
+html.dark-theme .admin-sidebar button svg,
+body.dark-theme .admin-sidebar button svg {
+  stroke: var(--text-primary) !important;
 }
 
 [data-theme="dark"] .admin-sidebar-header {
@@ -694,7 +720,7 @@
 
 [data-theme="dark"] .admin-sidebar-footer {
   background-color: transparent !important;
-  border-top: none !important;
+  border-top: 1px solid var(--border) !important;
 }
 
 /* 12. Dark Mode Scrollbars */

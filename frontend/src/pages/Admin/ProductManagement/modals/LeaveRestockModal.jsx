@@ -12,7 +12,7 @@ export default function LeaveRestockModal({ isOpen, onClose, onSaveDraft, onDisc
                 
                 {/* Header */}
                 <div {...dragHandleProps} style={{ padding: '20px 24px 16px 24px', position: 'relative', textAlign: 'center', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', touchAction: 'none' }}>
-                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif', textAlign: 'center' }}>
+                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', textAlign: 'center' }}>
                         Leave Restock?
                     </h3>
                     <button type="button" onClick={onClose} style={{ position: 'absolute', right: '16px', top: '16px', background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

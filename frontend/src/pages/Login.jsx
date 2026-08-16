@@ -35,7 +35,6 @@ const fixImageUrl = (url) => {
 };
 
 function Login() {
-    const [role, setRole] = useState('Admin');
     const [loginId, setLoginId] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -96,9 +95,8 @@ function Login() {
 
         try {
             const response = await api.post('/login', {
-                login_id: loginId,
-                password: password,
-                role: role
+                login_id: loginId.trim(),
+                password: password
             });
 
             const { token, user } = response.data;
@@ -107,7 +105,7 @@ function Login() {
             localStorage.setItem('auth_user', JSON.stringify(user));
             window.dispatchEvent(new Event('auth_user_updated'));
 
-            // Redirect based on role
+            // Auto-redirect user based on their assigned role
             if (user.role === 'Admin' || user.role === 'Supervisor') {
                 navigate('/dashboard');
             } else if (user.role === 'Cashier') {
@@ -115,25 +113,22 @@ function Login() {
             } else if (user.role === 'Checker') {
                 navigate('/inventory');
             } else {
-                navigate('/');
+                navigate('/dashboard');
             }
         } catch (err) {
             console.error(err);
             if (err.response && err.response.data && err.response.data.errors) {
                 const errors = err.response.data.errors;
-                setError(errors.login_id ? errors.login_id[0] : 'Invalid credentials.');
+                const firstKey = Object.keys(errors)[0];
+                setError(errors[firstKey]?.[0] || 'Invalid username, employee ID, or password.');
             } else if (err.response && err.response.data && err.response.data.message) {
                 setError(err.response.data.message);
             } else {
-                setError('Something went wrong. Please try again.');
+                setError('Unable to connect to the authentication server. Please check your network or try again.');
             }
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleRoleSelect = (selectedRole) => {
-        setRole(selectedRole);
     };
 
     return (
@@ -146,7 +141,7 @@ function Login() {
                 <div style={{ display: 'flex', justifyContent: 'center', marginTop: '-15px', marginBottom: '0px' }}>
                     <img 
                         src={fixImageUrl(logoUrl) || "/ztg-logo.png"} 
-                        alt="ZTG Heavy Equipment Parts" 
+                        alt={businessName || "ZTG Heavy Equipment Parts"} 
                         onError={(e) => {
                             if (!e.currentTarget.dataset.failed) {
                                 e.currentTarget.dataset.failed = "true";
@@ -160,43 +155,35 @@ function Login() {
                         }} 
                     />
                 </div>
-                <p className="login-subtitle">Select your role and sign in to continue</p>
+                <p className="login-subtitle" style={{ marginTop: '4px', marginBottom: '24px' }}>
+                    Sign in to access your account
+                </p>
                 
                 {error && (
-                    <div style={{ backgroundColor: '#FEF2F2', color: '#EF4444', padding: '10px', fontSize: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #FCA5A5' }}>
-                        {error}
+                    <div style={{ 
+                        backgroundColor: '#FEF2F2', 
+                        color: '#991B1B', 
+                        padding: '12px 16px', 
+                        fontSize: '13px', 
+                        fontWeight: '500', 
+                        borderRadius: '10px', 
+                        marginBottom: '20px', 
+                        border: '1px solid #FCA5A5',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        lineHeight: '1.4'
+                    }}>
+                        <svg style={{ width: '18px', height: '18px', flexShrink: 0, color: '#DC2626' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <span>{error}</span>
                     </div>
                 )}
 
                 <form id="loginForm" onSubmit={handleLogin}>
-                    <div className="role-selector">
-                        <div 
-                            className={`role-card ${role === 'Admin' ? 'active' : ''}`} 
-                            onClick={() => handleRoleSelect('Admin')}
-                        >
-                            <svg className="role-icon" viewBox="0 0 24 24">
-                                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                            </svg>
-                            <div className="role-name" style={{ fontSize: '14px', fontWeight: '700', marginBottom: '2px', color: 'var(--text-primary)' }}>Admin</div>
-                            <div className="role-desc" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Full system access</div>
-                        </div>
-                        <div 
-                            className={`role-card ${role === 'Cashier' ? 'active' : ''}`} 
-                            onClick={() => handleRoleSelect('Cashier')}
-                        >
-                            <svg className="role-icon" viewBox="0 0 24 24">
-                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                                <line x1="8" y1="21" x2="16" y2="21"></line>
-                                <line x1="12" y1="17" x2="12" y2="21"></line>
-                            </svg>
-                            <div className="role-name" style={{ fontSize: '14px', fontWeight: '700', marginBottom: '2px', color: 'var(--text-primary)' }}>Cashier</div>
-                            <div className="role-desc" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>POS & Sales only</div>
-                        </div>
-                    </div>
-
-                    <input type="hidden" id="selectedRole" value={role} />
-
                     <div className="form-group">
                         <label className="form-label" htmlFor="username">Employee ID or Username</label>
                         <div className="input-wrapper" style={{ position: 'relative' }}>
@@ -207,7 +194,7 @@ function Login() {
                                 type="text" 
                                 id="username" 
                                 className="form-control" 
-                                placeholder="Enter username or ID" 
+                                placeholder="Enter username or employee ID" 
                                 autoComplete="username"
                                 value={loginId}
                                 onChange={(e) => setLoginId(e.target.value)}

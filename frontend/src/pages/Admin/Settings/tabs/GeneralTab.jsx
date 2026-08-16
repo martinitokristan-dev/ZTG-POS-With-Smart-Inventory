@@ -252,12 +252,21 @@ export default function GeneralTab({
                                 <span style={{ color: '#EF4444', marginLeft: '4px' }}>*</span>
                             </label>
                             <input
-                                type="text"
+                                type="tel"
                                 id="contactNumber"
                                 className="form-control"
                                 placeholder="e.g. 0917-000-1111"
                                 value={settings.contact_number || ''}
-                                onChange={(e) => handleSettingInputChange('contact_number', e.target.value)}
+                                onChange={(e) => handleSettingInputChange('contact_number', e.target.value.replace(/[^\d+ -]/g, ''))}
+                                onKeyDown={(e) => {
+                                    if (
+                                        !/^[0-9+ -]$/.test(e.key) && 
+                                        !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) &&
+                                        !e.ctrlKey && !e.metaKey
+                                    ) {
+                                        e.preventDefault();
+                                    }
+                                }}
                                 disabled={!isEditing}
                             />
                         </div>
@@ -286,7 +295,16 @@ export default function GeneralTab({
                                 className="form-control"
                                 placeholder="e.g. 000-123-456-000"
                                 value={settings.tin || ''}
-                                onChange={(e) => handleSettingInputChange('tin', e.target.value)}
+                                onChange={(e) => handleSettingInputChange('tin', e.target.value.replace(/[^\d-]/g, ''))}
+                                onKeyDown={(e) => {
+                                    if (
+                                        !/^[0-9-]$/.test(e.key) && 
+                                        !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) &&
+                                        !e.ctrlKey && !e.metaKey
+                                    ) {
+                                        e.preventDefault();
+                                    }
+                                }}
                                 disabled={!isEditing}
                             />
                         </div>
@@ -298,7 +316,16 @@ export default function GeneralTab({
                                     id="taxRate"
                                     className="form-control"
                                     value={settings.tax_rate || ''}
-                                    onChange={(e) => handleSettingInputChange('tax_rate', e.target.value)}
+                                    onChange={(e) => handleSettingInputChange('tax_rate', e.target.value.replace(/[^0-9.]/g, ''))}
+                                    onKeyDown={(e) => {
+                                        if (
+                                            !/^[0-9.]$/.test(e.key) && 
+                                            !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) &&
+                                            !e.ctrlKey && !e.metaKey
+                                        ) {
+                                            e.preventDefault();
+                                        }
+                                    }}
                                     disabled={!isEditing}
                                 />
                             </div>

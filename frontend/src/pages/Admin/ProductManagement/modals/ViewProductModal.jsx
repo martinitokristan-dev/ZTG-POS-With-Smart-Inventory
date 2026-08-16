@@ -19,7 +19,7 @@ export default function ViewProductModal({ isOpen, onClose, product, categories 
                 onClick={e => e.stopPropagation()}
             >
                 <div className="modal-header flex justify-between items-center px-6 py-5 border-b border-slate-100">
-                    <h3 className="modal-title text-[18px] font-bold text-slate-800 m-0" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                    <h3 className="modal-title text-[18px] font-bold text-slate-800 m-0">
                         Product Details: {product.name}
                     </h3>
                     <button 

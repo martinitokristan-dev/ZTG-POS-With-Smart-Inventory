@@ -17,13 +17,7 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
         let stockBadgeBg = '#F0FDF4';
         let stockColor = '#15803D';
 
-        if (item.status === 'Disabled') {
-            stockStatusText = 'Disabled';
-            statusBg = '#F1F5F9';
-            statusText = '#64748B';
-            stockBadgeBg = '#F1F5F9';
-            stockColor = '#64748B';
-        } else if (isOutOfStock) {
+        if (isOutOfStock) {
             stockStatusText = 'No Stock';
             statusBg = '#FEE2E2';
             statusText = '#B91C1C';
@@ -35,6 +29,13 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
             statusText = '#B45309';
             stockBadgeBg = '#FEFCE8';
             stockColor = '#D97706';
+        }
+
+        // Only override the STATUS column badge when Disabled (stock badge remains based on actual stock count)
+        if (item.status === 'Disabled') {
+            stockStatusText = 'Disabled';
+            statusBg = '#FEE2E2';
+            statusText = '#DC2626';
         }
 
         const variantOptionText = item.variant_options?.map(o => o.value).join(', ')

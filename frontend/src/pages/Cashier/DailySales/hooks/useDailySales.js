@@ -99,8 +99,8 @@ export default function useDailySales() {
                     _txDate: t.date || t.created_at,
                     _txReceipt: t.si_no || t.receipt_number,
                     _txCustomer: t.customer?.name || 'Guest',
-                    _txCashier: t.cashier?.name || 'Unknown',
-                    _txChecker: t.checker?.name || '—',
+                    _txCashier: t.cashier?.real_name || t.cashier?.name || 'Unknown',
+                    _txChecker: t.checker?.real_name || t.checker?.name || '—',
                     _txPayment: t.payment_method || '—',
                     _txStatus: 'Completed',
                     _txId: t.id
@@ -160,8 +160,9 @@ export default function useDailySales() {
     const cashiersList = useMemo(() => {
         const names = new Set();
         transactions.forEach(t => {
-            if (t.cashier?.name) {
-                names.add(t.cashier.name);
+            const cName = t.cashier?.real_name || t.cashier?.name;
+            if (cName) {
+                names.add(cName);
             }
         });
         return Array.from(names).sort();

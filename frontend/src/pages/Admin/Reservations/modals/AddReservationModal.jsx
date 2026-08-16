@@ -91,7 +91,24 @@ export default function AddReservationModal({
                                 </div>
                                 <div className="form-group" style={{ marginBottom: '12px' }}>
                                     <label className="form-label" style={{ fontSize: '12px', fontWeight: 500 }}>Contact Number <span style={{ color: 'var(--danger)' }}>*</span></label>
-                                    <input type="tel" className="form-control" required placeholder="09XX-XXX-XXXX" value={custPhone} onChange={(e) => setCustPhone(e.target.value)} style={{ fontSize: '13px' }} />
+                                    <input 
+                                        type="tel" 
+                                        className="form-control" 
+                                        required 
+                                        placeholder="09XX-XXX-XXXX" 
+                                        value={custPhone} 
+                                        onChange={(e) => setCustPhone(e.target.value.replace(/[^\d+ -]/g, ''))} 
+                                        onKeyDown={(e) => {
+                                            if (
+                                                !/^[0-9+ -]$/.test(e.key) && 
+                                                !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) &&
+                                                !e.ctrlKey && !e.metaKey
+                                            ) {
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                        style={{ fontSize: '13px' }} 
+                                    />
                                 </div>
                                 <div className="form-group" style={{ marginBottom: '12px' }}>
                                     <label className="form-label" style={{ fontSize: '12px', fontWeight: 500 }}>Email Address (Optional)</label>
@@ -147,10 +164,20 @@ export default function AddReservationModal({
                                         <input
                                             type="number"
                                             step="0.01"
+                                            min="0"
                                             className="form-control"
                                             placeholder="Price (₱)"
                                             value={customPrice}
                                             onChange={(e) => setCustomPrice(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (
+                                                    !/^[0-9.]$/.test(e.key) && 
+                                                    !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) &&
+                                                    !e.ctrlKey && !e.metaKey
+                                                ) {
+                                                    e.preventDefault();
+                                                }
+                                            }}
                                             style={{ fontSize: '12px' }}
                                         />
                                         <input
@@ -160,6 +187,15 @@ export default function AddReservationModal({
                                             placeholder="Qty"
                                             value={customQty}
                                             onChange={(e) => setCustomQty(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (
+                                                    !/^[0-9]$/.test(e.key) && 
+                                                    !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) &&
+                                                    !e.ctrlKey && !e.metaKey
+                                                ) {
+                                                    e.preventDefault();
+                                                }
+                                            }}
                                             style={{ fontSize: '12px', textAlign: 'center' }}
                                         />
                                     </div>
@@ -172,35 +208,8 @@ export default function AddReservationModal({
                                             disabled={!customName.trim()}
                                             style={{ fontWeight: 600, fontSize: '12px', padding: '6px 14px' }}
                                         >
-                                            + Add Custom Item
+                                            + Add Item
                                         </button>
-                                    </div>
-                                </div>
-
-                                {/* Optional Inventory Search */}
-                                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', alignItems: 'flex-start' }}>
-                                    <div style={{ flex: 1, position: 'relative' }}>
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            placeholder="Or search existing inventory to add..."
-                                            value={productSearch}
-                                            onChange={(e) => handleProductSearch(e.target.value)}
-                                            style={{ fontSize: '12px' }}
-                                            autoComplete="off"
-                                        />
-                                        {suggestions.length > 0 && (
-                                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: 'var(--shadow-md)', maxHeight: '200px', overflowY: 'auto', marginTop: '4px' }}>
-                                                {suggestions.map(p => (
-                                                    <div key={p.id} onClick={() => addToCart(p)} style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: '13px', color: 'var(--text-primary)' }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-                                                        <strong style={{ display: 'block' }}>{p.name}</strong>
-                                                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{p.part_no} · Stock: {p.stock} · {fmt(p.price2)}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
 

@@ -96,19 +96,19 @@ export default function ProductGrid({
             {/* Catalogue Table */}
             <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0, flex: 1, minHeight: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0 0 10px 10px' }}>
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-                    <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', fontFamily: '"Outfit", sans-serif', margin: 0 }}>Catalogue Picker</h3>
+                    <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Catalogue Picker</h3>
                 </div>
                 <div style={{ overflowY: 'auto', overflowX: 'auto', flex: 1 }}>
                     <table className="pos-table data-table" style={{ width: '100%', minWidth: '650px', borderCollapse: 'collapse' }}>
                         <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--table-header-bg)' }}>
                             <tr>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Product</th>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Part No.</th>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Category</th>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Address</th>
-                                <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Stock</th>
-                                <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Original Price</th>
-                                <th style={{ textAlign: 'right', padding: '12px 20px', fontSize: '11px', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Retail Price</th>
+                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Product</th>
+                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Part No.</th>
+                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Category</th>
+                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Address</th>
+                                <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Stock</th>
+                                <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Original Price</th>
+                                <th style={{ textAlign: 'right', padding: '12px 20px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Retail Price</th>
                             </tr>
                         </thead>
                         <tbody>

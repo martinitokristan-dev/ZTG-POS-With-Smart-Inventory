@@ -18,14 +18,15 @@ class UpdateEmployeeRequest extends FormRequest
             : ($this->route('user') ? ($this->route('user')->id ?? $this->route('user')) : $this->route('id'));
 
         return [
-            'name' => 'required|string|max:100',
-            'real_name' => 'required|string|max:100',
-            'email' => 'nullable|email|max:255|unique:users,email,' . $employeeId,
-            'username' => 'required|string|max:50|unique:users,username,' . $employeeId,
-            'password' => 'nullable|string|min:6',
-            'pin' => 'nullable|string|digits:4',
-            'role' => 'required|string|in:Admin,Cashier,Supervisor',
-            'status' => 'required|string|in:Active,Inactive',
+            'employee_id' => 'nullable|string|max:50|unique:users,employee_id,' . $employeeId,
+            'name'        => 'nullable|string|max:100',
+            'real_name'   => 'required|string|max:100',
+            'email'       => 'nullable|email|max:255|unique:users,email,' . $employeeId,
+            'username'    => 'required|string|max:50|unique:users,username,' . $employeeId,
+            'password'    => 'nullable|string|min:4',
+            'pin'         => 'nullable|string|digits:4',
+            'role'        => 'required|string|in:Admin,Cashier,Supervisor,Checker',
+            'status'      => 'nullable|string|in:Active,Inactive',
         ];
     }
 }

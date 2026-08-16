@@ -50,7 +50,7 @@ export default function IOSSelect({ value, onChange, options = [], placeholder =
                     color: selectedOption ? 'var(--text-primary)' : 'var(--text-muted)',
                     fontSize: '13px',
                     fontWeight: 600,
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Outfit", sans-serif',
+                    fontFamily: 'var(--font-ui)',
                     boxShadow: isOpen ? '0 0 0 3px rgba(59, 130, 246, 0.15)' : 'var(--shadow-sm)',
                     cursor: disabled ? 'default' : 'pointer',
                     transition: 'all 0.2s ease',
@@ -98,7 +98,7 @@ export default function IOSSelect({ value, onChange, options = [], placeholder =
                         padding: '6px',
                         maxHeight: '260px',
                         overflowY: 'auto',
-                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Outfit", sans-serif',
+                        fontFamily: 'var(--font-ui)',
                         boxSizing: 'border-box',
                     }}
                 >

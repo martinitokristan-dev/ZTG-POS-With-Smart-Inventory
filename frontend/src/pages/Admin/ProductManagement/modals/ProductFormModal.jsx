@@ -311,18 +311,41 @@ export default function ProductFormModal({
                                 />
                             </div>
                             <div className="form-group">
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <label className="form-label" style={{ margin: 0 }}>Chinese Name (Optional)</label>
+                                <label className="form-label" htmlFor="chineseName">Chinese Name (Optional)</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="text"
+                                        id="chineseName"
+                                        className="form-control"
+                                        placeholder="e.g. 履带链节总成 or leave blank"
+                                        value={formData.chinese_name}
+                                        onChange={(e) => setFormData({ ...formData, chinese_name: e.target.value })}
+                                        style={{ paddingRight: '115px' }}
+                                    />
                                     <button
                                         type="button"
                                         onClick={triggerTranslation}
                                         disabled={isTranslating}
-                                        style={{ background: 'none', border: 'none', color: isTranslating ? 'var(--text-secondary, #64748B)' : 'var(--primary, #2563EB)', fontSize: '11px', fontWeight: 600, padding: 0, cursor: isTranslating ? 'not-allowed' : 'pointer', outline: 'none' }}
+                                        style={{
+                                            position: 'absolute',
+                                            right: '8px',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            background: 'var(--bg-secondary, #F1F5F9)',
+                                            border: '1px solid var(--border, #CBD5E1)',
+                                            borderRadius: '6px',
+                                            color: isTranslating ? 'var(--text-secondary, #64748B)' : 'var(--primary, #2563EB)',
+                                            fontSize: '11px',
+                                            fontWeight: 600,
+                                            padding: '4px 8px',
+                                            cursor: isTranslating ? 'not-allowed' : 'pointer',
+                                            outline: 'none',
+                                            transition: 'all 0.15s ease'
+                                        }}
                                     >
                                         {isTranslating ? 'Translating...' : 'Auto-Translate'}
                                     </button>
                                 </div>
-                                <input type="text" className="form-control" placeholder="e.g. 履带链节总成 or leave blank" value={formData.chinese_name} onChange={(e) => setFormData({ ...formData, chinese_name: e.target.value })} />
                             </div>
                         </div>
 
@@ -348,11 +371,38 @@ export default function ProductFormModal({
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
                             <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label">Original Price <span style={{ color: 'red' }}>*</span></label>
-                                <input type="number" className="form-control" required min="0" step="any" placeholder="₱0.00" value={formData.price1 === 0 ? '' : formData.price1} onChange={(e) => setFormData({ ...formData, price1: e.target.value === '' ? '' : parseFloat(e.target.value) })} />
+                                <input 
+                                    type="number" 
+                                    className="form-control" 
+                                    required 
+                                    min="0" 
+                                    step="any" 
+                                    placeholder="₱0.00" 
+                                    value={formData.price1 === 0 ? '' : formData.price1} 
+                                    onChange={(e) => setFormData({ ...formData, price1: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+                                    onKeyDown={(e) => {
+                                        if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+                                            e.preventDefault();
+                                        }
+                                    }}
+                                />
                             </div>
                             <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label">Retail Price</label>
-                                <input type="number" className="form-control" min="0" step="any" placeholder="₱0.00" value={formData.price2 === 0 ? '' : formData.price2} onChange={(e) => setFormData({ ...formData, price2: e.target.value === '' ? '' : parseFloat(e.target.value) })} />
+                                <input 
+                                    type="number" 
+                                    className="form-control" 
+                                    min="0" 
+                                    step="any" 
+                                    placeholder="₱0.00" 
+                                    value={formData.price2 === 0 ? '' : formData.price2} 
+                                    onChange={(e) => setFormData({ ...formData, price2: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+                                    onKeyDown={(e) => {
+                                        if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+                                            e.preventDefault();
+                                        }
+                                    }}
+                                />
                             </div>
                             <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label">{mode === 'edit' ? 'Current Stock' : 'Initial Stock'} {mode !== 'edit' && <span style={{ color: 'red' }}>*</span>}</label>
@@ -364,13 +414,31 @@ export default function ProductFormModal({
                                     placeholder="0"
                                     value={formData.stock === 0 ? '' : formData.stock}
                                     onChange={(e) => setFormData({ ...formData, stock: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                                    onKeyDown={(e) => {
+                                        if (!/^[0-9]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+                                            e.preventDefault();
+                                        }
+                                    }}
                                     disabled={mode === 'edit'}
                                     style={mode === 'edit' ? { backgroundColor: 'var(--bg-secondary)', cursor: 'not-allowed', color: 'var(--text-muted)' } : {}}
                                 />
                             </div>
                             <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label">Alert Level <span style={{ color: 'red' }}>*</span></label>
-                                <input type="number" className="form-control" required min="1" placeholder="5" value={formData.alert_limit === 0 ? '' : formData.alert_limit} onChange={(e) => setFormData({ ...formData, alert_limit: e.target.value === '' ? '' : parseInt(e.target.value) })} />
+                                <input 
+                                    type="number" 
+                                    className="form-control" 
+                                    required 
+                                    min="1" 
+                                    placeholder="5" 
+                                    value={formData.alert_limit === 0 ? '' : formData.alert_limit} 
+                                    onChange={(e) => setFormData({ ...formData, alert_limit: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                                    onKeyDown={(e) => {
+                                        if (!/^[0-9]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+                                            e.preventDefault();
+                                        }
+                                    }}
+                                />
                             </div>
                         </div>
 

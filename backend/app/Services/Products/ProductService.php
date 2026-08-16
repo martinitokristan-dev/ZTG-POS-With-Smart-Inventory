@@ -262,9 +262,24 @@ class ProductService
                     'damaged'      => $data['damaged'] ?? 0,
                 ]);
 
-                // Update/create variants
-                $payloadVariantIds = [];
-                if (isset($data['variants']) && is_array($data['variants'])) {
+                // Cascade status to child variants if 'variants' is NOT explicitly in payload (e.g. status toggle)
+                if (!array_key_exists('variants', $data) && $product->parent_product_id === null) {
+                    if ($status === 'Disabled') {
+                        // Cascade Disabled to all child variants
+                        Product::where('parent_product_id', $product->id)->update(['status' => 'Disabled']);
+                    } elseif ($status !== 'Disabled') {
+                        // Parent re-enabled: recalculate status for each child variant based on their stock
+                        $childVariants = Product::where('parent_product_id', $product->id)->get();
+                        foreach ($childVariants as $variant) {
+                            $variantStatus = $this->calculateStatus($variant->stock, $variant->alert_limit);
+                            $variant->update(['status' => $variantStatus]);
+                        }
+                    }
+                }
+
+                // Update/create variants (only if 'variants' key is explicitly passed in payload)
+                if (array_key_exists('variants', $data) && is_array($data['variants'])) {
+                    $payloadVariantIds = [];
                     foreach ($data['variants'] as $variantData) {
                         $variantAlertLimit = $variantData['alert_limit'] ?? $alertLimit;
                         $variantStatus = ($variantData['status'] ?? 'Active') === 'Disabled' 
@@ -319,17 +334,17 @@ class ProductService
                             $variant->variantOptions()->sync($variantData['option_ids']);
                         }
                     }
-                }
 
-                // Delete variants not in payload
-                $currentVariants = Product::where('parent_product_id', $product->id)->get();
-                foreach ($currentVariants as $currentVariant) {
-                    if (!in_array($currentVariant->id, $payloadVariantIds)) {
-                        if ($currentVariant->image) {
-                            $this->deleteCloudImage($currentVariant->image);
+                    // Delete variants that were removed in the full edit form
+                    $currentVariants = Product::where('parent_product_id', $product->id)->get();
+                    foreach ($currentVariants as $currentVariant) {
+                        if (!in_array($currentVariant->id, $payloadVariantIds)) {
+                            if ($currentVariant->image) {
+                                $this->deleteCloudImage($currentVariant->image);
+                            }
+                            $currentVariant->variantOptions()->detach();
+                            $currentVariant->delete();
                         }
-                        $currentVariant->variantOptions()->detach();
-                        $currentVariant->delete();
                     }
                 }
 

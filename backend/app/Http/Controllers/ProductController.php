@@ -71,7 +71,7 @@ class ProductController extends Controller
             'price1'       => (float) $updatedProduct->price1,
             'price2'       => (float) $updatedProduct->price2,
             'category_id'  => $updatedProduct->category_id,
-            'status'       => $updatedProduct->status,
+            'status'       => $updatedProduct->status instanceof \BackedEnum ? $updatedProduct->status->value : (string) $updatedProduct->status,
         ]));
         
         event(new InventoryUpdated($updatedProduct->id, (int) $updatedProduct->stock));

@@ -271,7 +271,7 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
                                             <span style={{ color: 'var(--text-secondary)' }}>Served By</span>
-                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{txToUse ? (txToUse.checker?.name || txToUse.cashier?.name || '—') : '-'}</span>
+                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{txToUse ? (txToUse.checker?.real_name || txToUse.checker?.name || txToUse.cashier?.real_name || txToUse.cashier?.name || '—') : '-'}</span>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
                                             <span style={{ color: 'var(--text-secondary)' }}>Original Amount</span>

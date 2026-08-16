@@ -13,7 +13,7 @@ export default function EmployeeModal({
 
     return (
         <div className="modal-overlay" style={{ display: 'flex' }}>
-            <div className="modal-card" style={{ maxWidth: '450px' }}>
+            <div className="modal-card" style={{ maxWidth: '460px' }}>
                 <form onSubmit={handleEmployeeSubmit}>
                     <div className="modal-header">
                         <h3 className="modal-title">{selectedEmployee ? 'Edit Employee Access' : 'Register New Employee'}</h3>
@@ -25,38 +25,49 @@ export default function EmployeeModal({
                     </div>
                     <div className="modal-body">
                         <div className="form-group">
-                            <label className="form-label">Username/Access ID</label>
+                            <label className="form-label">Full Name <span style={{ color: '#DC2626' }}>*</span></label>
+                            <input 
+                                type="text" 
+                                className="form-control" 
+                                required 
+                                placeholder="Enter employee's full name"
+                                value={employeeForm.real_name || ''}
+                                onChange={(e) => setEmployeeForm({...employeeForm, real_name: e.target.value})}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Login Username <span style={{ color: '#DC2626' }}>*</span></label>
                             <input 
                                 type="text" 
                                 className="form-control" 
                                 required
-                                value={employeeForm.employee_id}
+                                placeholder="Enter login username (e.g. cashier1)"
+                                value={employeeForm.username || ''}
+                                onChange={(e) => setEmployeeForm({...employeeForm, username: e.target.value})}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Employee ID</label>
+                            <input 
+                                type="text" 
+                                className="form-control" 
+                                placeholder={selectedEmployee ? '' : 'Auto-generated if left blank (EMP-XXX)'}
+                                value={employeeForm.employee_id || ''}
                                 onChange={(e) => setEmployeeForm({...employeeForm, employee_id: e.target.value})}
                                 readOnly={!!selectedEmployee}
                                 style={selectedEmployee ? { backgroundColor: 'var(--bg-canvas)' } : {}}
                             />
                         </div>
                         <div className="form-group">
-                            <label className="form-label">Full Name</label>
-                            <input 
-                                type="text" 
-                                className="form-control" 
-                                required 
-                                placeholder="Enter employee's full name"
-                                value={employeeForm.real_name}
-                                onChange={(e) => setEmployeeForm({...employeeForm, real_name: e.target.value})}
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Password</label>
+                            <label className="form-label">Password {selectedEmployee ? <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 'normal' }}>(Leave blank to keep unchanged)</span> : <span style={{ color: '#DC2626' }}>*</span>}</label>
                             <div style={{ position: 'relative', width: '100%' }}>
                                 <input 
                                     type={showPassword ? "text" : "password"} 
                                     className="form-control" 
                                     required={!selectedEmployee} 
-                                    placeholder="Enter login password" 
+                                    placeholder={selectedEmployee ? "••••••••" : "Enter login password (min. 4 chars)"} 
                                     style={{ paddingRight: '40px' }}
-                                    value={employeeForm.password}
+                                    value={employeeForm.password || ''}
                                     onChange={(e) => setEmployeeForm({...employeeForm, password: e.target.value})}
                                 />
                                 <button 
@@ -83,7 +94,7 @@ export default function EmployeeModal({
                         <div className="form-group">
                             <label className="form-label">Assigned Role</label>
                             <IOSSelect
-                                value={employeeForm.role}
+                                value={employeeForm.role || 'Cashier'}
                                 onChange={(e) => setEmployeeForm({...employeeForm, role: e.target.value})}
                                 options={[
                                     { value: 'Cashier', label: 'Cashier' },
@@ -103,7 +114,7 @@ export default function EmployeeModal({
                                         maxLength="4" 
                                         pattern="[0-9]{4}" 
                                         style={{ paddingRight: '40px' }}
-                                        value={employeeForm.pin}
+                                        value={employeeForm.pin || ''}
                                         onChange={(e) => setEmployeeForm({...employeeForm, pin: e.target.value.replace(/\D/g, '')})}
                                     />
                                     <button 
