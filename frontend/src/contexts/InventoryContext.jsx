@@ -14,8 +14,8 @@ export const InventoryProvider = ({ children }) => {
     const pollTimer = useRef(null);
 
     const fetchInventory = useCallback(async () => {
-        const token = localStorage.getItem('auth_token');
-        const userStr = localStorage.getItem('auth_user');
+        const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
+        const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         if (!token || !userStr) return;
 
         try {
@@ -64,8 +64,8 @@ export const InventoryProvider = ({ children }) => {
     useEffect(() => {
         fetchInventory().finally(() => schedulePoll(300000));
 
-        const token = localStorage.getItem('auth_token');
-        const userStr = localStorage.getItem('auth_user');
+        const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
+        const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         let inventoryChannel = null;
         let productChannel = null;
 

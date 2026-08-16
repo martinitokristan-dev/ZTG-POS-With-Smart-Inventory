@@ -55,7 +55,7 @@ export default function ReservationsTable({
                             <tr>
                                 <th style={{ textAlign: 'left' }}>Date Order</th>
                                 <th style={{ textAlign: 'left' }}>Part Number</th>
-                                <th style={{ textAlign: 'left' }}>Description / Part Name</th>
+                                <th style={{ textAlign: 'left', maxWidth: '170px' }}>Description / Part Name</th>
                                 <th style={{ textAlign: 'left' }}>Engine Plate No.</th>
                                 <th style={{ textAlign: 'center' }}>Qty. Ordered</th>
                                 <th style={{ textAlign: 'left' }}>Customer Name</th>
@@ -192,9 +192,9 @@ export default function ReservationsTable({
                                             </td>
 
                                             {/* Description / Part Name Column */}
-                                            <td style={{ fontSize: '13px', color: 'var(--table-text-primary)', verticalAlign: 'middle' }}>
+                                            <td style={{ fontSize: '13px', color: 'var(--table-text-primary)', verticalAlign: 'middle', maxWidth: '170px', overflow: 'hidden' }}>
                                                 {itemsList.length > 1 ? (
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxWidth: '100%', overflow: 'hidden' }}>
                                                         {itemsList.map((it, iIdx) => {
                                                             const pName = it.product?.name || it.item_name || it.name || '—';
                                                             const isMatch = queryStr && (
@@ -204,7 +204,9 @@ export default function ReservationsTable({
                                                             return (
                                                                 <div key={iIdx} style={{
                                                                     color: isMatch ? 'var(--primary)' : 'var(--table-text-primary)',
-                                                                    fontWeight: isMatch ? 600 : 400
+                                                                    fontWeight: isMatch ? 600 : 400,
+                                                                    maxWidth: '100%',
+                                                                    overflow: 'hidden'
                                                                 }}>
                                                                     <FormattedProductName name={pName} blockVariant={true} />
                                                                 </div>
@@ -212,7 +214,9 @@ export default function ReservationsTable({
                                                         })}
                                                     </div>
                                                 ) : (
-                                                    <FormattedProductName name={itemsList[0]?.product?.name || itemsList[0]?.item_name || r.product_name || '—'} blockVariant={true} />
+                                                    <div style={{ maxWidth: '100%', overflow: 'hidden' }}>
+                                                        <FormattedProductName name={itemsList[0]?.product?.name || itemsList[0]?.item_name || r.product_name || '—'} blockVariant={true} />
+                                                    </div>
                                                 )}
                                             </td>
 

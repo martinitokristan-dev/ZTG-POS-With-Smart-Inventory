@@ -5,7 +5,7 @@ import { fetchDashboardData } from '../../../../shared/hooks/useDashboardCache';
 import { flattenToSellableSKUs } from '../../../../shared/utils/skuHelpers';
 
 export function useDashboard() {
-    const userStr = localStorage.getItem('auth_user');
+    const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
     const user = userStr ? JSON.parse(userStr) : null;
     const name = user ? user.real_name || user.name : 'Administrator';
     const [loading, setLoading] = useState(true);

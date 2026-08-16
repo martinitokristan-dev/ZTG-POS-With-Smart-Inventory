@@ -36,21 +36,31 @@ export default function ReservationDetailsModal({ isOpen, onClose, reservation, 
         ? fmtDate(r.date_get || r.updated_at)
         : (isDirectFull ? dateReserved : null);
 
-    const detailRow = (label, value, customStyle = {}) => (
-        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)', fontSize: '13px', alignItems: 'center' }}>
-            <span style={{ color: 'var(--text-secondary)', fontWeight: '500', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>{label}</span>
-            <span style={{ color: 'var(--text-primary)', textAlign: 'right', fontWeight: '600', ...customStyle }}>{value}</span>
-        </div>
-    );
+    const detailRow = (label, value, customStyle = {}) => {
+        const isCopyable = ['Order Number', 'C.R. No.', 'Collection Receipt (C.R. No.)'].includes(label) && value && value !== '—';
+        return (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--border)', fontSize: '13px', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-secondary)', fontWeight: '500', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>{label}</span>
+                <span style={{ color: 'var(--text-primary)', textAlign: 'right', fontWeight: '600', ...customStyle }}>
+                    {isCopyable ? <CopyableText text={value} label={label} /> : value}
+                </span>
+            </div>
+        );
+    };
 
     return (
         <div className="modal-overlay" style={{ zIndex: 999 }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-            <div className="modal-card" style={{ maxWidth: '680px', width: '95%', background: 'var(--bg-card)', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border)' }}>
+            <div className="modal-card audit-detail-card" style={{ maxWidth: '880px', width: '95%', background: 'var(--bg-card)', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border)' }}>
                 {/* Header */}
-                <div className="modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <h3 className="modal-title" style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>Reservation Details</h3>
-                        <StatusBadge status={badgeStatus} />
+                <div className="modal-header audit-detail-header" style={{ padding: '18px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <h3 className="modal-title" style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>Reservation Details</h3>
+                            <StatusBadge status={badgeStatus} />
+                        </div>
+                        <p className="audit-detail-subtitle" style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                            Order: {r.order_no} • Customer: {custName}
+                        </p>
                     </div>
                     <button type="button" className="modal-close" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
                         <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }}>
@@ -61,93 +71,86 @@ export default function ReservationDetailsModal({ isOpen, onClose, reservation, 
                 </div>
 
                 {/* Body */}
-                <div className="modal-body" style={{ padding: '24px', maxHeight: '70vh', overflowY: 'auto', background: 'var(--bg-card)' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="modal-body audit-detail-body" style={{ padding: '20px 24px', maxHeight: '70vh', overflowY: 'auto', background: 'var(--bg-card)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', columnGap: '32px' }}>
                         {detailRow('Order Number', r.order_no, { color: 'var(--primary)', fontWeight: '700' })}
                         {crNo && detailRow('Collection Receipt (C.R. No.)', crNo, { color: '#059669', fontWeight: '700' })}
                         {detailRow('Customer Name', custName)}
                         {detailRow('Contact Phone', custPhone)}
                         {custEmail !== '—' && detailRow('Customer Email', custEmail)}
-                        {detailRow('Date Placed / Reserved', dateReserved)}
-                        {fullyPaidDate && detailRow('Fulfilled / Paid Date', fullyPaidDate, { color: 'var(--success)', fontWeight: '700' })}
+                        {detailRow('Date Placed', dateReserved)}
                         {detailRow('Expected Pickup', fmtDate(r.pickup_date))}
                         {detailRow('Payment Method', (r.payment_method || 'Cash').replace(/\s*\([^)]*\)/g, '').trim())}
                         {chequeNo && detailRow('Cheque Number', chequeNo)}
                         {detailRow('Payment Type', isDirectFull ? 'Full Payment (100%)' : '50% Deposit')}
+                        {detailRow('Total Order Price', fmt(totalVal), { fontWeight: '700' })}
+                        {!isDirectFull && detailRow('Deposit Amount Paid', fmt(depositVal), { color: 'var(--primary)', fontWeight: '700' })}
+                        {!isDirectFull && rawStatus === 'completed' && (
+                            detailRow('Balance Paid at Pickup', fmt(totalVal - depositVal), { color: 'var(--success)', fontWeight: '700' })
+                        )}
+                        {!isDirectFull && rawStatus !== 'completed' && balanceDue > 0 && (
+                            detailRow('Balance Due at Pickup', fmt(balanceDue), { color: 'var(--danger)', fontWeight: '700' })
+                        )}
                         {detailRow('Reserved By', reservedByName)}
+                        {fullyPaidDate && detailRow('Fulfilled / Paid Date', fullyPaidDate, { color: 'var(--success)', fontWeight: '700' })}
                         {fulfilledByName && detailRow('Fulfilled By', fulfilledByName, { color: 'var(--success)', fontWeight: '700' })}
                         {r.notes && detailRow('Notes', r.notes)}
-
-                        {/* Financial Summary Box */}
-                        <div style={{ marginTop: '16px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px' }}>
-                            {detailRow('Total Order Price', fmt(totalVal), { fontSize: '15px', fontWeight: '700' })}
-                            {!isDirectFull && detailRow('Deposit Amount Paid', fmt(depositVal), { color: 'var(--primary)', fontWeight: '700' })}
-                            {!isDirectFull && rawStatus === 'completed' && (
-                                detailRow('Balance Paid at Pickup', fmt(totalVal - depositVal), { color: 'var(--success)', fontWeight: '700' })
-                            )}
-                            {!isDirectFull && rawStatus !== 'completed' && balanceDue > 0 && (
-                                detailRow('Balance Due at Pickup', fmt(balanceDue), { color: 'var(--danger)', fontWeight: '700', fontSize: '14px' })
-                            )}
-                            {isDirectFull && (
-                                detailRow('Amount Paid Upfront', fmt(totalVal), { color: 'var(--success)', fontWeight: '700' })
-                            )}
-                        </div>
-
-                        {/* Items Table */}
-                        {items.length > 0 && (
-                            <div style={{ marginTop: '20px' }}>
-                                <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>
-                                    Reserved Items ({items.length})
-                                </span>
-                                <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', background: 'var(--bg-card)' }}>
-                                    <table className="modal-table data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-                                        <thead style={{ background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border)', color: 'var(--text-secondary)', fontSize: '12px', textTransform: 'uppercase' }}>
-                                            <tr>
-                                                <th style={{ padding: '10px 12px', fontWeight: '600' }}>Part No.</th>
-                                                <th style={{ padding: '10px 12px', fontWeight: '600' }}>Product</th>
-                                                <th style={{ padding: '10px 12px', fontWeight: '600', textAlign: 'center', width: '60px' }}>Qty</th>
-                                                <th style={{ padding: '10px 12px', fontWeight: '600', textAlign: 'right', width: '100px' }}>Unit Price</th>
-                                                <th style={{ padding: '10px 12px', fontWeight: '600', textAlign: 'right', width: '110px' }}>Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {items.map((item, idx) => {
-                                                const rawPNo = item.product?.part_no || item.part_no;
-                                                const pNo = (!rawPNo || String(rawPNo).trim().toUpperCase() === 'N/A' || String(rawPNo).trim() === '') ? '—' : String(rawPNo).trim();
-                                                const isDash = pNo === '—';
-                                                const pName = item.product?.name || item.item_name || item.name || 'Unknown Product';
-                                                const unitPrice = Number(item.price || 0);
-                                                const qty = Number(item.qty || 1);
-                                                const lineTotal = unitPrice * qty;
-
-                                                return (
-                                                    <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                                                        <td style={{ padding: '10px 12px', fontWeight: isDash ? '500' : '600', color: isDash ? 'var(--text-secondary)' : 'var(--primary)' }}>
-                                                            {isDash ? (
-                                                                '—'
-                                                            ) : (
-                                                                <CopyableText text={pNo} label="Part No." codeStyle={{ fontSize: '13px', fontWeight: '600' }} />
-                                                            )}
-                                                        </td>
-                                                        <td style={{ padding: '10px 12px', color: 'var(--text-primary)' }}>
-                                                            <FormattedProductName name={pName} />
-                                                        </td>
-                                                        <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '600', color: 'var(--text-primary)' }}>{qty}</td>
-                                                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{fmt(unitPrice)}</td>
-                                                        <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '700', color: 'var(--text-primary)' }}>{fmt(lineTotal)}</td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
                     </div>
+
+                    {/* Items Table */}
+                    {items.length > 0 && (
+                        <div className="audit-detail-section" style={{ marginTop: '16px' }}>
+                            <span className="audit-detail-section-title" style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>
+                                Reserved Items ({items.length})
+                            </span>
+                            <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflowX: 'hidden', overflowY: 'auto', background: 'var(--bg-card)', maxHeight: '250px' }}>
+                                <table className="modal-table data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', tableLayout: 'fixed' }}>
+                                    <thead style={{ background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)', color: 'var(--table-text-secondary)', fontSize: '12px' }}>
+                                        <tr>
+                                            <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', width: '130px' }}>Part No.</th>
+                                            <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em' }}>Product</th>
+                                            <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'center', width: '55px' }}>Qty</th>
+                                            <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'right', width: '95px' }}>Unit Price</th>
+                                            <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'right', width: '100px' }}>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody style={{ fontSize: '14px' }}>
+                                        {items.map((item, idx) => {
+                                            const rawPNo = item.product?.part_no || item.part_no;
+                                            const pNo = (!rawPNo || String(rawPNo).trim().toUpperCase() === 'N/A' || String(rawPNo).trim() === '') ? '—' : String(rawPNo).trim();
+                                            const isDash = pNo === '—';
+                                            const pName = item.product?.name || item.item_name || item.name || 'Unknown Product';
+                                            const unitPrice = Number(item.price || 0);
+                                            const qty = Number(item.qty || 1);
+                                            const lineTotal = unitPrice * qty;
+
+                                            return (
+                                                <tr key={idx} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '44px' }}>
+                                                    <td style={{ padding: '10px 12px', fontWeight: isDash ? '500' : '600', color: isDash ? 'var(--text-secondary)' : 'var(--primary)', fontVariantNumeric: 'tabular-nums', overflow: 'hidden' }}>
+                                                        {isDash ? (
+                                                            '—'
+                                                        ) : (
+                                                            <CopyableText text={pNo} label="Part No." codeStyle={{ fontSize: '13px', fontWeight: '600' }} />
+                                                        )}
+                                                    </td>
+                                                    <td style={{ padding: '10px 12px', color: 'var(--table-text-primary)', overflow: 'hidden' }}>
+                                                        <div style={{ fontSize: '14px', overflow: 'hidden' }}><FormattedProductName name={pName} /></div>
+                                                    </td>
+                                                    <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '600', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{qty}</td>
+                                                    <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--table-text-secondary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{fmt(unitPrice)}</td>
+                                                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '700', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{fmt(lineTotal)}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer */}
-                <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="modal-footer audit-detail-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', background: 'var(--table-header-bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                         {rawStatus === 'completed' && onPrintCR && (
                             <button 
@@ -165,7 +168,7 @@ export default function ReservationDetailsModal({ isOpen, onClose, reservation, 
                             </button>
                         )}
                     </div>
-                    <button type="button" className="btn btn-secondary" onClick={onClose} style={{ padding: '8px 24px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>Close</button>
+                    <button type="button" className="btn btn-secondary" onClick={onClose} style={{ padding: '8px 24px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>Close</button>
                 </div>
             </div>
         </div>

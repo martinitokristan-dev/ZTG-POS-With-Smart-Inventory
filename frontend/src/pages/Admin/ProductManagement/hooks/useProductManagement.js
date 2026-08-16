@@ -34,7 +34,7 @@ const DEFAULT_FORM = {
 
 export default function useProductManagement() {
     // ── User session ────────────────────────────────────────────
-    const userStr = localStorage.getItem('auth_user');
+    const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
     const user = userStr ? JSON.parse(userStr) : null;
     const currentUserName = user ? user.real_name || user.name : 'Administrator';
 
@@ -171,8 +171,8 @@ export default function useProductManagement() {
     }, [search, categoryId, statusFilter, viewMode, restockSearch, restockCategory, page]);
 
     useEffect(() => {
-        const token = localStorage.getItem('auth_token');
-        const userStr = localStorage.getItem('auth_user');
+        const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
+        const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         let productChannel = null;
         let inventoryChannel = null;
 

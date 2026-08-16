@@ -36,7 +36,7 @@ export default function SettingsView() {
     } = useSettings();
 
     const authUser = React.useMemo(() => {
-        const stored = localStorage.getItem('auth_user');
+        const stored = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         return stored ? JSON.parse(stored) : null;
     }, []);
 

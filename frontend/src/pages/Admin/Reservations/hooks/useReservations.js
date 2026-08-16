@@ -15,7 +15,7 @@ export default function useReservations() {
     const { products, refetch: refreshProducts, searchPosProducts } = useProducts();
 
     /* ── User Session ── */
-    const user = (() => { try { return JSON.parse(localStorage.getItem('auth_user')); } catch { return null; } })();
+    const user = (() => { try { return JSON.parse((sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'))); } catch { return null; } })();
     const userName = user?.real_name || user?.name || 'Staff';
 
     /* ── List State ── */
@@ -121,8 +121,8 @@ export default function useReservations() {
     useEffect(() => { loadReservations(); }, [loadReservations]);
 
     useEffect(() => {
-        const token = localStorage.getItem('auth_token');
-        const userStr = localStorage.getItem('auth_user');
+        const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
+        const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         let channel = null;
 
         if (token && userStr) {

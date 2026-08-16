@@ -198,7 +198,7 @@ export default function CheckoutModal({
             }
         }
 
-        const userStr = localStorage.getItem('auth_user');
+        const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         const user = userStr ? JSON.parse(userStr) : {};
         const cashierName = user.real_name || user.name || 'Cashier';
 
@@ -247,7 +247,7 @@ export default function CheckoutModal({
     };
 
     if (checkoutSuccess && completedTx) {
-        const userStr = localStorage.getItem('auth_user');
+        const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         const user = userStr ? JSON.parse(userStr) : {};
         const cashierName = completedTx.cashier?.real_name || completedTx.cashier?.name || user.real_name || user.name || 'Cashier';
         const checkerName = completedTx.checker?.name || completedTx.checker?.checker_name || null;

@@ -102,7 +102,7 @@ export default function ProductGrid({
                     <table className="pos-table data-table" style={{ width: '100%', minWidth: '650px', borderCollapse: 'collapse' }}>
                         <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--table-header-bg)' }}>
                             <tr>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Product</th>
+                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)', maxWidth: '200px' }}>Product</th>
                                 <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Part No.</th>
                                 <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Category</th>
                                 <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Address</th>
@@ -130,8 +130,8 @@ export default function ProductGrid({
                                         style={{ borderBottom: '1px solid var(--table-border-subtle)', cursor: isOut ? 'not-allowed' : 'pointer', opacity: isOut ? 0.5 : 1, minHeight: '52px' }}
                                         className="hover-row"
                                     >
-                                        <td style={{ padding: '10px 14px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <td style={{ padding: '10px 14px', maxWidth: '200px', overflow: 'hidden' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                                                 <img 
                                                     src={p.image || p.parent_product?.image || DEFAULT_PLACEHOLDER_IMAGE} 
                                                     alt={p.name} 
@@ -142,11 +142,11 @@ export default function ProductGrid({
                                                     }}
                                                     onError={(e) => { e.currentTarget.src = DEFAULT_PLACEHOLDER_IMAGE; }}
                                                 />
-                                                <div>
-                                                    <div style={{ fontSize: '15px' }}>
-                                                        <FormattedProductName name={p.name} />
+                                                <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                                                    <div style={{ fontSize: '15px', overflow: 'hidden' }}>
+                                                        <FormattedProductName name={p.name} blockVariant={true} />
                                                     </div>
-                                                    {showChineseNames && p.chinese_name && <div style={{ fontSize: '12px', color: 'var(--table-text-secondary)', fontWeight: '500', marginTop: '2px' }}>{p.chinese_name}</div>}
+                                                    {showChineseNames && p.chinese_name && <div style={{ fontSize: '12px', color: 'var(--table-text-secondary)', fontWeight: '500', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.chinese_name}</div>}
                                                 </div>
                                             </div>
                                         </td>

@@ -3,6 +3,7 @@ import LoadingSpinner from '../../../../shared/components/LoadingSpinner';
 import useDisplayChineseNames from '../../../../shared/hooks/useDisplayChineseNames';
 import { matchesStatusFilter } from '../../../../shared/utils/skuHelpers';
 import CopyableText from '../../../../shared/components/CopyableText';
+import FormattedProductName from '../../../../shared/components/FormattedProductName';
 
 export default function InventoryTable({ products, loading, handleViewProduct, pagination, statusFilter }) {
     const showChineseNames = useDisplayChineseNames();
@@ -47,18 +48,25 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
 
         return (
             <tr key={item.id} style={!isVariant && baseIndex > 0 ? { borderTop: '2px solid var(--border)' } : {}}>
-                <td style={{ fontSize: '15px' }}>
+                <td style={{ fontSize: '15px', maxWidth: '220px', overflow: 'hidden' }}>
                     {isVariant ? (
                         <>
-                            <strong style={{ display: 'block', fontSize: '15px', fontWeight: 600, color: 'var(--table-text-primary)' }}>
-                                {(item.name || parentProduct?.name || '—')} {variantOptionText && !(item.name || '').includes(variantOptionText) && <span style={{ color: 'var(--primary)', fontWeight: 500 }}>({variantOptionText})</span>}
-                            </strong>
-                            {showChineseNames && (item.chinese_name || parentProduct?.chinese_name) && <span className="chinese-subtitle" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--table-text-secondary)' }}>{item.chinese_name || parentProduct?.chinese_name}</span>}
+                            <FormattedProductName
+                                name={item.name || parentProduct?.name || '—'}
+                                variantOption={variantOptionText}
+                                blockVariant={true}
+                                style={{ fontSize: '15px' }}
+                            />
+                            {showChineseNames && (item.chinese_name || parentProduct?.chinese_name) && <span className="chinese-subtitle" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--table-text-secondary)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.chinese_name || parentProduct?.chinese_name}</span>}
                         </>
                     ) : (
                         <>
-                            <strong style={{ display: 'block', fontSize: '15px', fontWeight: 600, color: 'var(--table-text-primary)' }}>{item.name || '—'}</strong>
-                            {showChineseNames && <span className="chinese-subtitle" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--table-text-secondary)' }}>{item.chinese_name || ''}</span>}
+                            <FormattedProductName
+                                name={item.name || '—'}
+                                blockVariant={false}
+                                style={{ fontSize: '15px' }}
+                            />
+                            {showChineseNames && <span className="chinese-subtitle" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--table-text-secondary)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.chinese_name || ''}</span>}
                         </>
                     )}
                 </td>

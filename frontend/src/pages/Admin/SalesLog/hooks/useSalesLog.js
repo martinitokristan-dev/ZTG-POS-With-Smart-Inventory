@@ -88,8 +88,8 @@ export default function useSalesLog() {
     const { data: transactions, loading, page, setPage, pagination, refetch } = usePaginatedCache('sales', '/transactions', queryParams);
 
     useEffect(() => {
-        const token = localStorage.getItem('auth_token');
-        const userStr = localStorage.getItem('auth_user');
+        const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
+        const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         let channel = null;
 
         if (token && userStr) {

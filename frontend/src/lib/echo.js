@@ -21,7 +21,7 @@ const echoInstance = new Echo({
             // Using a getter ensures the token is dynamically fetched
             // at the exact moment of connection / subscription auth
             get Authorization() {
-                const token = localStorage.getItem('auth_token');
+                const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
                 return token ? `Bearer ${token}` : '';
             }
         }

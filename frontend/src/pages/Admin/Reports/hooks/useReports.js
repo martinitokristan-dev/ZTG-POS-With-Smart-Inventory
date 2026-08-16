@@ -58,8 +58,8 @@ export default function useReports() {
     useEffect(() => {
         loadReports();
 
-        const token = localStorage.getItem('auth_token');
-        const userStr = localStorage.getItem('auth_user');
+        const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
+        const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         let channel = null;
 
         if (token && userStr) {

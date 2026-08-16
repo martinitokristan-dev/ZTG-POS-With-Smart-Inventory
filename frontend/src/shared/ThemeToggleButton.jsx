@@ -5,7 +5,7 @@ export default function ThemeToggleButton({ style = {} }) {
     const { isDark, toggleTheme } = useTheme();
     const [userRole, setUserRole] = useState(() => {
         try {
-            const userStr = localStorage.getItem('auth_user');
+            const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
             if (userStr) {
                 const user = JSON.parse(userStr);
                 return user?.role || '';
@@ -19,7 +19,7 @@ export default function ThemeToggleButton({ style = {} }) {
     useEffect(() => {
         const handleUserUpdate = () => {
             try {
-                const userStr = localStorage.getItem('auth_user');
+                const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
                 if (userStr) {
                     const user = JSON.parse(userStr);
                     setUserRole(user?.role || '');

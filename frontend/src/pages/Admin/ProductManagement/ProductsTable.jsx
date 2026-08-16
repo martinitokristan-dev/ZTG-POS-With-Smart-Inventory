@@ -4,6 +4,7 @@ import LoadingSpinner from '../../../shared/components/LoadingSpinner';
 import useDisplayChineseNames from '../../../shared/hooks/useDisplayChineseNames';
 import { matchesStatusFilter } from '../../../shared/utils/skuHelpers';
 import CopyableText from '../../../shared/components/CopyableText';
+import FormattedProductName from '../../../shared/components/FormattedProductName';
 
 export default function ProductsTable({
     products,
@@ -89,7 +90,7 @@ export default function ProductsTable({
                 className="table-row-item"
                 style={isFirstInGroup ? { borderTop: '2px solid var(--border)' } : {}}
             >
-                <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)' }}>
+                <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', maxWidth: '220px' }}>
                     <div className="flex items-center gap-3">
                         <img
                             src={product.image || DEFAULT_PLACEHOLDER_IMAGE}
@@ -97,20 +98,22 @@ export default function ProductsTable({
                             className="w-10 h-10 rounded-lg object-cover bg-slate-100 border border-slate-200 flex-shrink-0"
                             onError={(e) => { e.target.src = DEFAULT_PLACEHOLDER_IMAGE; }}
                         />
-                        <div className="flex flex-col">
+                        <div className="flex flex-col" style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
                             {isVariantSubRow ? (
-                                <>
-                                    <strong style={{ color: 'var(--table-text-primary)', fontSize: '15px', fontWeight: '600', display: 'block' }}>
-                                        {(product.name || parentProduct?.name || '—')} {varLabel && !(product.name || '').includes(varLabel) && <span style={{ color: 'var(--primary)', fontWeight: '500' }}>({varLabel})</span>}
-                                    </strong>
-                                    {showChineseNames && product.chinese_name && <span style={{ fontSize: '12px', color: 'var(--table-text-secondary)', fontWeight: '500', marginTop: '2px', display: 'block' }}>{product.chinese_name}</span>}
-                                </>
+                                <FormattedProductName
+                                    name={product.name || parentProduct?.name || '—'}
+                                    variantOption={varLabel}
+                                    blockVariant={true}
+                                    style={{ fontSize: '15px' }}
+                                />
                             ) : (
-                                <>
-                                    <strong style={{ color: 'var(--table-text-primary)', fontSize: '15px', fontWeight: '600', display: 'block' }}>{product.name || '—'}</strong>
-                                    {showChineseNames && product.chinese_name && <span style={{ fontSize: '12px', color: 'var(--table-text-secondary)', fontWeight: '500', marginTop: '2px', display: 'block' }}>{product.chinese_name}</span>}
-                                </>
+                                <FormattedProductName
+                                    name={product.name || '—'}
+                                    blockVariant={false}
+                                    style={{ fontSize: '15px' }}
+                                />
                             )}
+                            {showChineseNames && product.chinese_name && <span style={{ fontSize: '12px', color: 'var(--table-text-secondary)', fontWeight: '500', marginTop: '2px', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.chinese_name}</span>}
                         </div>
                     </div>
                 </td>
@@ -171,11 +174,14 @@ export default function ProductsTable({
                     <div className="flex items-center justify-center gap-1.5" style={{ position: 'relative' }}>
                         {/* Inline View Button */}
                         <button 
-                            onClick={() => onView(isVariantSubRow ? {
-                                ...product,
-                                category: product.category || parentProduct?.category,
-                                category_id: product.category_id || parentProduct?.category_id
-                            } : product)} 
+                            onClick={() => {
+                                setOpenDropdownId(null);
+                                onView(isVariantSubRow ? {
+                                    ...product,
+                                    category: product.category || parentProduct?.category,
+                                    category_id: product.category_id || parentProduct?.category_id
+                                } : product);
+                            }} 
                             className="action-trigger-btn" 
                             aria-label="View Product Details" 
                             data-tooltip="View Details"

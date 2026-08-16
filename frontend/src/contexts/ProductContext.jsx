@@ -17,7 +17,7 @@ export const ProductProvider = ({ children }) => {
     const pollTimer = useRef(null);
 
     const fetchData = useCallback(async () => {
-        const token = localStorage.getItem('auth_token');
+        const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
         if (!token) {
             setInitialLoading(false);
             return;
@@ -100,7 +100,7 @@ export const ProductProvider = ({ children }) => {
     }, [fetchData]);
 
     useEffect(() => {
-        const token = localStorage.getItem('auth_token');
+        const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
         if (token) {
             fetchData().finally(() => schedulePoll(300000));
         } else {
@@ -108,7 +108,7 @@ export const ProductProvider = ({ children }) => {
         }
 
         const handleAuthChange = () => {
-            const currentToken = localStorage.getItem('auth_token');
+            const currentToken = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
             if (currentToken) {
                 fetchData();
             }
@@ -117,7 +117,7 @@ export const ProductProvider = ({ children }) => {
         window.addEventListener('storage', handleAuthChange);
         window.addEventListener('auth-change', handleAuthChange);
 
-        const userStr = localStorage.getItem('auth_user');
+        const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         let productChannel = null;
         let inventoryChannel = null;
 
@@ -191,7 +191,7 @@ export const ProductProvider = ({ children }) => {
      * Returns flat product + variant list matching the query.
      */
     const searchPosProducts = useCallback(async (searchQuery, categoryId = null) => {
-        const token = localStorage.getItem('auth_token');
+        const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
         if (!token) return [];
         try {
             const params = new URLSearchParams();

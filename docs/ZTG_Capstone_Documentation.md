@@ -1530,6 +1530,41 @@ The ZTG Heavy Parts POS & Inventory system incorporates multi-layered enterprise
 
 ---
 
+## 23. Multi-Session Tab Isolation Architecture (LocalStorage vs. SessionStorage)
+
+### 1. The Challenge (Why Multiple Accounts Couldn't Coexist on the Same Browser)
+Previously, logging into the **Admin** account in Tab 1 and the **Cashier** account in Tab 2 on the same computer caused one session to overwrite and kick out the other. Users would find themselves constantly logged out or redirected back to the login screen.
+
+### 2. Non-Technical Explanation & Real-World Analogy
+
+#### 🏢 The Analogy: The Shared Lobby Whiteboard vs. Private Room Drawers
+
+* **The Old Way (`localStorage` = Shared Lobby Whiteboard):**
+  > Imagine an office building where there is only **one public whiteboard in the front lobby**. 
+  > - The **Admin** walks in, writes their name and security badge number on the whiteboard, and goes to Room 1 (Tab 1).
+  > - Later, the **Cashier** opens Room 2 (Tab 2) and writes their name on the *same* lobby whiteboard, erasing the Admin's name.
+  > - When the Admin in Room 1 tries to approve a purchase, the security guard checks the lobby whiteboard, sees the Cashier's badge instead of the Admin's, gets confused, and kicks the Admin out to the front door (Login screen).
+
+* **The New Way (`sessionStorage` = Private Room Drawers):**
+  > Instead of using one shared whiteboard in the lobby, every room (browser tab) is now given its own **private, locked desk drawer**.
+  > - When the **Admin** logs in on Tab 1, their digital badge is stored inside **Tab 1's private drawer**.
+  > - When a **Cashier** logs in on Tab 2, their digital badge goes into **Tab 2's private drawer**.
+  > - Because each tab only checks its own drawer, neither account disturbs or erases the other. The Admin and Cashier can work simultaneously on the exact same computer and browser without any conflicts.
+
+---
+
+### 3. Summary Comparison Table
+
+| Feature / Behavior | Old Implementation (`localStorage`) | Modern Implementation (`sessionStorage`) |
+| :--- | :--- | :--- |
+| **Tab Isolation** | ❌ **Shared globally** across all tabs in the browser | ✅ **Isolated per tab** (Each tab has its own session) |
+| **Simultaneous Logins** | ❌ Logging into Tab 2 kicked out Tab 1 | ✅ Tab 1 can be **Admin** while Tab 2 is **Cashier** |
+| **Tab Closure Behavior** | Stays saved permanently until explicit logout | 🔒 Closes automatically when the tab is closed (Enhanced Security) |
+| **Real-Time Data (Echo/Pusher)** | Intertwined channel authentication | Isolated WebSocket listeners per active tab |
+| **Global Preferences (Themes/Logos)** | Kept in `localStorage` for system-wide sync | Kept in `localStorage` for system-wide sync |
+
+---
+
 *End of ZTG Heavy Parts Capstone Project Documentation v2.0*
 
 *Document updated: August 2026*

@@ -37,7 +37,7 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
         setIsSubmitting(true);
         
         try {
-            const user = (() => { try { return JSON.parse(localStorage.getItem('auth_user')); } catch { return null; } })();
+            const user = (() => { try { return JSON.parse((sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'))); } catch { return null; } })();
             const adminId = user?.id || 1;
 
             const payload = {

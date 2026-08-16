@@ -31,7 +31,7 @@ export const NotificationProvider = ({ children }) => {
 
     const fetchNotifications = useCallback(async () => {
         // Skip fetch entirely when not authenticated
-        if (!localStorage.getItem('auth_token')) return;
+        if (!(sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'))) return;
 
         const fetchStart = Date.now();
         try {
@@ -111,8 +111,8 @@ export const NotificationProvider = ({ children }) => {
     useEffect(() => {
         fetchNotifications().finally(() => schedulePoll(15000));
 
-        const token = localStorage.getItem('auth_token');
-        const userStr = localStorage.getItem('auth_user');
+        const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
+        const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         let channel = null;
 
         if (token && userStr) {

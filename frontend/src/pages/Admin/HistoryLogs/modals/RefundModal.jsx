@@ -6,7 +6,7 @@ import { resetReportsCache } from '../../../../shared/hooks/useReportsCache';
 
 export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fmtDate, fmt, onSearchTransaction }) {
     // Read the actual logged-in user from localStorage
-    const currentUser = (() => { try { return JSON.parse(localStorage.getItem('auth_user')); } catch { return null; } })();
+    const currentUser = (() => { try { return JSON.parse((sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'))); } catch { return null; } })();
     const currentUserName = currentUser?.real_name || currentUser?.name || 'Current User';
     const { sheetRef, dragHandleProps } = useMobileSheet({ onClose });
     const [actionType, setActionType] = useState('Refund');

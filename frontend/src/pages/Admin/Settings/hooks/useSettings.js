@@ -191,7 +191,7 @@ export default function useSettings() {
     const loadSettingsData = async () => {
         setLoading(true);
         try {
-            let currentRole = profileData.role || (localStorage.getItem('auth_user') ? JSON.parse(localStorage.getItem('auth_user')).role : '');
+            let currentRole = profileData.role || ((sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user')) ? JSON.parse((sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'))).role : '');
             
             // Load user profile
             const profileDataResponse = await fetchSettingData('user', '/user');
@@ -203,7 +203,7 @@ export default function useSettings() {
                     email: u.email || '',
                     username: u.username || '',
                     pin: u.pin || '',
-                    role: u.role || (localStorage.getItem('auth_user') ? JSON.parse(localStorage.getItem('auth_user')).role : 'Cashier'),
+                    role: u.role || ((sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user')) ? JSON.parse((sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'))).role : 'Cashier'),
                     profile_photo: u.profile_photo || null
                 };
                 setProfileData(loadedProfile);
@@ -212,10 +212,10 @@ export default function useSettings() {
                     currentRole = loadedProfile.role;
                 }
 
-                const stored = localStorage.getItem('auth_user');
+                const stored = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
                 if (stored) {
                     const parsed = JSON.parse(stored);
-                    localStorage.setItem('auth_user', JSON.stringify({ ...parsed, profile_photo: u.profile_photo || null }));
+                    sessionStorage.setItem('auth_user', JSON.stringify({ ...parsed, profile_photo: u.profile_photo || null })); localStorage.removeItem('auth_user');
                     window.dispatchEvent(new Event('auth_user_updated'));
                 }
             }
@@ -319,16 +319,16 @@ export default function useSettings() {
             const res = await api.put('/profile', profileData);
             const updatedUser = res.data?.user;
             if (updatedUser) {
-                const stored = localStorage.getItem('auth_user');
+                const stored = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
                 if (stored) {
                     const parsed = JSON.parse(stored);
-                    localStorage.setItem('auth_user', JSON.stringify({
+                    sessionStorage.setItem('auth_user', JSON.stringify({
                         ...parsed,
                         username: updatedUser.username,
                         real_name: updatedUser.real_name,
                         email: updatedUser.email,
                         profile_photo: updatedUser.profile_photo ?? parsed.profile_photo
-                    }));
+                    })); localStorage.removeItem('auth_user');
                 }
             }
 
@@ -387,10 +387,10 @@ export default function useSettings() {
             const newPhotoUrl = res.data?.profile_photo;
             setProfileData(prev => ({ ...prev, profile_photo: newPhotoUrl }));
 
-            const stored = localStorage.getItem('auth_user');
+            const stored = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
             if (stored) {
                 const parsed = JSON.parse(stored);
-                localStorage.setItem('auth_user', JSON.stringify({ ...parsed, profile_photo: newPhotoUrl }));
+                sessionStorage.setItem('auth_user', JSON.stringify({ ...parsed, profile_photo: newPhotoUrl })); localStorage.removeItem('auth_user');
             }
             resetSettingsCache('user');
             window.dispatchEvent(new Event('auth_user_updated'));
@@ -415,10 +415,10 @@ export default function useSettings() {
             await api.delete('/profile/avatar');
             setProfileData(prev => ({ ...prev, profile_photo: null }));
 
-            const stored = localStorage.getItem('auth_user');
+            const stored = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
             if (stored) {
                 const parsed = JSON.parse(stored);
-                localStorage.setItem('auth_user', JSON.stringify({ ...parsed, profile_photo: null }));
+                sessionStorage.setItem('auth_user', JSON.stringify({ ...parsed, profile_photo: null })); localStorage.removeItem('auth_user');
             }
             resetSettingsCache('user');
             window.dispatchEvent(new Event('auth_user_updated'));

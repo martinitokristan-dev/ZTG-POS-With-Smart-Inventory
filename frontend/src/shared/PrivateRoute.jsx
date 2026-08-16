@@ -12,8 +12,8 @@ import { Navigate, Outlet } from 'react-router-dom';
  *    e.g. <PrivateRoute allowedRoles={['Admin']}><Dashboard /></PrivateRoute>
  */
 function PrivateRoute({ children, allowedRoles }) {
-    const token = localStorage.getItem('auth_token');
-    const userStr = localStorage.getItem('auth_user');
+    const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
+    const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
 
     if (!token || !userStr) {
         return <Navigate to="/login" replace />;

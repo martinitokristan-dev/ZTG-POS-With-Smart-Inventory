@@ -73,7 +73,7 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
     const navigate = useRouterNavigate();
     const [avatarError, setAvatarError] = React.useState(false);
     const [user, setUser] = React.useState(() => {
-        const userStr = localStorage.getItem('auth_user');
+        const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         return userStr ? JSON.parse(userStr) : null;
     });
 
@@ -126,7 +126,7 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
 
     React.useEffect(() => {
         const handleUpdate = () => {
-            const userStr = localStorage.getItem('auth_user');
+            const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
             setUser(userStr ? JSON.parse(userStr) : null);
             setAvatarError(false);
         };
@@ -142,10 +142,10 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
                     const freshUser = userRes.data.user;
                     setUser(freshUser);
                     setAvatarError(false);
-                    const stored = localStorage.getItem('auth_user');
+                    const stored = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
                     if (stored) {
                         const parsed = JSON.parse(stored);
-                        localStorage.setItem('auth_user', JSON.stringify({ ...parsed, ...freshUser }));
+                        sessionStorage.setItem('auth_user', JSON.stringify({ ...parsed, ...freshUser })); localStorage.removeItem('auth_user');
                     }
                 }
 

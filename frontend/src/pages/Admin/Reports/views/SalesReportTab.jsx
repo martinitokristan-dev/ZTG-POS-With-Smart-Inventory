@@ -335,7 +335,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                 <th style={{ fontWeight: '600' }}>Date</th>
                                 <th style={{ fontWeight: '600' }}>S.I./C.R./D.R.</th>
                                 <th style={{ fontWeight: '600' }}>Part No.</th>
-                                <th style={{ fontWeight: '600' }}>Product</th>
+                                <th style={{ fontWeight: '600', maxWidth: '140px' }}>Product</th>
                                 <th style={{ textAlign: 'center', fontWeight: '600' }}>Qty</th>
                                 <th style={{ textAlign: 'right', fontWeight: '600' }}>Price</th>
                                 <th style={{ textAlign: 'right', fontWeight: '600' }}>Sales</th>
@@ -394,20 +394,20 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                                 <CopyableText text={tx.si_no || tx.receipt_number} label="SI Number" />
                                             </td>
                                             <td style={{ color: 'var(--table-text-primary)', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{resolvedPartNo}</td>
-                                            <td><span style={{ fontSize: '15px' }}><FormattedProductName name={resolvedName} variantOption={item.variant_option || item.variant || item.variantOption} blockVariant={true} /></span></td>
+                                            <td style={{ maxWidth: '140px', overflow: 'hidden' }}><span style={{ fontSize: '15px' }}><FormattedProductName name={resolvedName} variantOption={item.variant_option || item.variant || item.variantOption} blockVariant={true} /></span></td>
                                             <td style={{ color: 'var(--table-text-primary)', textAlign: 'center', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{displayQty}</td>
                                             <td style={{ textAlign: 'right', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
                                                 {fmt(unitPrice)}
                                             </td>
                                             <td style={{ fontWeight: '600', textAlign: 'right', color: amountColor, fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{amountPrefix}{fmt(netRowAmount)}</td>
-                                            <td style={{ color: 'var(--table-text-primary)', fontWeight: '500', fontSize: '15px' }}>{customerVal}</td>
+                                            <td style={{ color: 'var(--table-text-primary)', fontWeight: '500', fontSize: '15px', whiteSpace: 'normal' }}>{customerVal}</td>
                                             <td style={{ fontWeight: tx.payment_method?.startsWith('P.O') ? '600' : '500', color: tx.payment_method?.startsWith('P.O') ? '#C00000' : 'var(--table-text-secondary)', fontSize: '15px' }}>{tx.payment_method || 'CASH'}</td>
                                             <td style={{ textAlign: 'right', color: discountVal > 0 ? '#2563EB' : 'var(--table-text-muted)', fontWeight: discountVal > 0 ? '600' : '500', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>
-                                                {discountVal > 0 ? `-${fmt(discountVal)}` : '—'}
+                                                {discountVal > 0 ? `-${fmt(discountVal)}` : fmt(0)}
                                             </td>
                                             <td style={{ color: 'var(--text-secondary)' }}>{serveByVal.split(' ')[0]}</td>
                                             <td>
-                                                <StatusBadge status={isPartialRefund ? 'Completed' : tx.status} />
+                                                <StatusBadge status={isPartialRefund ? 'Partial Refund' : tx.status} />
                                              </td>
                                          </tr>
                                      );
@@ -427,7 +427,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                     <td></td>
                                     <td></td>
                                     <td style={{ fontWeight: '800', padding: '16px', textAlign: 'center', color: '#2563EB', fontSize: '13px' }}>
-                                        {totalDiscountAmount > 0 ? `-${fmt(totalDiscountAmount)}` : '—'}
+                                        {totalDiscountAmount > 0 ? `-${fmt(totalDiscountAmount)}` : fmt(0)}
                                     </td>
                                     <td></td>
                                     <td></td>

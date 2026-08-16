@@ -229,8 +229,8 @@ export default function CartSidebar({
 
                         return (
                             <div key={`${item.id}-${item.priceTier}`} style={{ position: 'relative', zIndex: cart.length - index, display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border)', alignItems: 'center' }}>
-                                <div style={{ flex: 1, marginRight: '12px' }}>
-                                    <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '2px' }}>
+                                <div style={{ flex: 1, minWidth: 0, marginRight: '12px' }}>
+                                    <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '2px', overflow: 'hidden' }}>
                                         <FormattedProductName name={item.name} />
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>

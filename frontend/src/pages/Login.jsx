@@ -63,7 +63,7 @@ function Login() {
 
     React.useEffect(() => {
         const fetchSettings = async () => {
-            const token = localStorage.getItem('auth_token');
+            const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
             if (!token) return; // Unauthenticated guest on login screen uses cached logo
             try {
                 const res = await api.get('/settings');
@@ -101,8 +101,8 @@ function Login() {
 
             const { token, user } = response.data;
             
-            localStorage.setItem('auth_token', token);
-            localStorage.setItem('auth_user', JSON.stringify(user));
+            sessionStorage.setItem('auth_token', token); localStorage.removeItem('auth_token');
+            sessionStorage.setItem('auth_user', JSON.stringify(user)); localStorage.removeItem('auth_user');
             window.dispatchEvent(new Event('auth_user_updated'));
 
             // Auto-redirect user based on their assigned role

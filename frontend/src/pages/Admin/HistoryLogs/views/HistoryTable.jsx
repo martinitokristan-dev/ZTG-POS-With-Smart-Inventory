@@ -24,6 +24,13 @@ export default function HistoryTable({
             .catch(() => { /* logo silently absent */ });
     }, []);
 
+    // Close dropdowns on click outside or when interacting elsewhere
+    useEffect(() => {
+        const closeAll = () => setOpenDropdownId(null);
+        document.addEventListener('click', closeAll);
+        return () => document.removeEventListener('click', closeAll);
+    }, []);
+
     const toggleDropdown = (id, e) => {
         e.stopPropagation();
         setOpenDropdownId(openDropdownId === id ? null : id);
@@ -81,8 +88,8 @@ export default function HistoryTable({
     }
 
     return (
-        <div className="card table-card" style={{ minHeight: '280px', paddingBottom: openDropdownId ? '80px' : '0px', transition: 'padding-bottom 0.15s ease-out' }}>
-            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', minHeight: '280px', paddingBottom: openDropdownId ? '80px' : '0px' }}>
+        <div className="card table-card">
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                 <table className="data-table" style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead style={{ borderBottom: '2px solid var(--table-border)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B', background: 'var(--table-header-bg)' }}>
                         <tr>
@@ -112,6 +119,16 @@ export default function HistoryTable({
                                 ? (tx.refund_reason || tx.notes || 'Restocking item(s)') 
                                 : (tx.status === 'Refund' || tx.status === 'Return' ? (tx.refund_reason || '—') : tx.status === 'Void' ? (tx.void_reason || '—') : '—');
 
+                            const isPartialRefund = tx.is_partial_refund === true || (Number(tx.refunded_amount || 0) > 0 && Number(tx.amount || 0) > 0);
+                            const isFullRefund = (tx.status === 'Refund' || tx.status === 'Return') && !isPartialRefund;
+
+                            let rowStatus = tx.status || 'Completed';
+                            if (isPartialRefund) {
+                                rowStatus = 'Partial Refund';
+                            } else if (isFullRefund || (Number(tx.refunded_amount || 0) > 0 && Number(tx.amount || 0) === 0)) {
+                                rowStatus = 'Refund';
+                            }
+
                             return (
                                 <tr key={tx.id} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '48px' }}>
                                     <td style={{ padding: '12px 16px' }}>
@@ -129,7 +146,7 @@ export default function HistoryTable({
                                     <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>{tx.checker?.name || tx.cashier?.name || '—'}</td>
                                     <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>{paymentVal}</td>
                                     <td style={{ padding: '16px' }}>
-                                        <StatusBadge status={tx.status || 'Completed'} />
+                                        <StatusBadge status={rowStatus} />
                                     </td>
                                     <td style={{ padding: '16px', color: '#64748B', fontSize: '12px' }}>
                                         {reasonVal}
@@ -139,7 +156,10 @@ export default function HistoryTable({
                                             <button 
                                                 className="action-trigger-btn" 
                                                 data-tooltip="View Transaction"
-                                                onClick={() => handleOpenView(tx)}
+                                                onClick={() => {
+                                                    setOpenDropdownId(null);
+                                                    handleOpenView(tx);
+                                                }}
                                             >
                                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>

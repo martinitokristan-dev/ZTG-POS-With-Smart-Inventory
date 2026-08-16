@@ -63,7 +63,7 @@ export default function usePOS() {
 
     // If initial login context is empty, trigger product fetch immediately on mount
     useEffect(() => {
-        const token = localStorage.getItem('auth_token');
+        const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
         if (token && contextProducts.length === 0 && !contextLoading && refreshProducts) {
             refreshProducts();
         }

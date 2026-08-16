@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
  */
 export function getThemeStorageKey() {
     try {
-        const userStr = localStorage.getItem('auth_user');
+        const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         if (userStr) {
             const user = JSON.parse(userStr);
             if (user?.id) return `ztg_theme_user_${user.id}`;

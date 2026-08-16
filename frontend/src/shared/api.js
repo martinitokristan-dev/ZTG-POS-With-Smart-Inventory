@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAuthToken, removeAuthToken, removeAuthUser } from './auth';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || '/api',
@@ -10,7 +11,7 @@ const api = axios.create({
 
 // Auto-attach bearer token to header of all API requests
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('auth_token');
+    const token = getAuthToken();
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
@@ -24,12 +25,8 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('auth_user');
-            // Only redirect if we're NOT already on the login page.
-            // Prevents infinite reload when unauthenticated contexts
-            // (NotificationProvider, ProductProvider) fire requests
-            // before the user logs in.
+            removeAuthToken();
+            removeAuthUser();
             if (window.location.pathname !== '/login') {
                 window.location.href = '/login';
             }

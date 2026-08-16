@@ -39,7 +39,7 @@ export default function VoidModal({ isOpen, onClose, transaction, onSubmit, fmtD
 
     return (
         <div className="modal-overlay" style={{ zIndex: 999 }}>
-            <div className="modal-card" style={{ maxWidth: '520px', width: '95%', background: 'var(--bg-card)', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border)' }}>
+            <div className="modal-card" style={{ maxWidth: '580px', width: '95%', background: 'var(--bg-card)', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border)' }}>
                 <form onSubmit={handleSubmit}>
                     <div className="modal-header" style={{ position: 'relative', background: 'var(--danger-light)', borderBottom: '1px solid rgba(239,68,68,0.2)', padding: '20px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '8px' }}>
                         <button type="button" style={{ position: 'absolute', top: '16px', right: '16px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }} onClick={onClose}>
