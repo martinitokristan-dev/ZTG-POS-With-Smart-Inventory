@@ -46,7 +46,7 @@ class ProductService
     public function getAll(array $filters = [])
     {
         $query = Product::with(['category', 'variantOptions.type', 'variants' => function($q) use ($filters) {
-            $q->with('variantOptions.type');
+            $q->with(['variantOptions.type', 'parent']);
             if (!empty($filters['search'])) {
                 $q->where(function ($sub) use ($filters) {
                     $sub->where('name', 'like', '%' . $filters['search'] . '%')
@@ -138,7 +138,7 @@ class ProductService
             ->where('transactions.status', 'Completed');
 
         return Product::with(['category', 'variants' => function($q) use ($salesSubquery) {
-                $q->with('variantOptions.type')->select('products.*')->selectSub(clone $salesSubquery, 'sales_count');
+                $q->with(['variantOptions.type', 'parent'])->select('products.*')->selectSub(clone $salesSubquery, 'sales_count');
             }])
             ->select('products.*')
             ->selectSub(clone $salesSubquery, 'sales_count')
@@ -339,8 +339,9 @@ class ProductService
                     $currentVariants = Product::where('parent_product_id', $product->id)->get();
                     foreach ($currentVariants as $currentVariant) {
                         if (!in_array($currentVariant->id, $payloadVariantIds)) {
-                            if ($currentVariant->image) {
-                                $this->deleteCloudImage($currentVariant->image);
+                            $rawVariantImage = $currentVariant->getRawOriginal('image');
+                            if ($rawVariantImage && $rawVariantImage !== $product->getRawOriginal('image')) {
+                                $this->deleteCloudImage($rawVariantImage);
                             }
                             $currentVariant->variantOptions()->detach();
                             $currentVariant->delete();

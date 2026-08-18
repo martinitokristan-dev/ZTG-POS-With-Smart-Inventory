@@ -3,7 +3,7 @@ import IOSSelect from '../../../../shared/components/IOSSelect';
 import ImageUploadOverlay from '../../../../shared/components/ImageUploadOverlay';
 import api from '../../../../shared/api';
 
-const VariantImageUpload = ({ variant, idx, onUpdateVariantImage }) => {
+const VariantImageUpload = ({ variant, idx, onUpdateVariantImage, baseImage }) => {
     const [uploading, setUploading] = useState(false);
 
     const handleFileChange = async (e) => {
@@ -11,7 +11,7 @@ const VariantImageUpload = ({ variant, idx, onUpdateVariantImage }) => {
         if (!file) return;
         const fd = new FormData();
         fd.append('image', file);
-        if (variant.image) {
+        if (variant.image && variant.image !== baseImage) {
             fd.append('old_image', variant.image);
         }
 
@@ -34,10 +34,12 @@ const VariantImageUpload = ({ variant, idx, onUpdateVariantImage }) => {
         onUpdateVariantImage(idx, null);
     };
 
+    const hasCustomImage = variant.image && variant.image !== baseImage;
+
     return (
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
             <ImageUploadOverlay isUploading={uploading} borderRadius="6px" spinnerSize={18} />
-            {variant.image ? (
+            {hasCustomImage ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <img src={variant.image} alt="Variant preview" style={{ width: '32px', height: '32px', borderRadius: '4px', objectFit: 'cover', border: '1px solid var(--border)' }} />
                     <button
@@ -46,14 +48,22 @@ const VariantImageUpload = ({ variant, idx, onUpdateVariantImage }) => {
                         disabled={uploading}
                         style={{ fontSize: '11px', color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600 }}
                     >
-                        Remove Image
+                        Remove Custom Image
                     </button>
                 </div>
             ) : (
-                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--primary, #2563EB)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px dashed var(--primary)', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'rgba(37, 99, 235, 0.1)' }}>
-                    <input type="file" accept="image/*" onChange={handleFileChange} disabled={uploading} style={{ display: 'none' }} />
-                    + Upload Custom Image
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {baseImage && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.9 }} title="Inheriting base product image">
+                            <img src={baseImage} alt="Base preview" style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', border: '1.5px dashed var(--primary)' }} />
+                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>(Base Image)</span>
+                        </div>
+                    )}
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--primary, #2563EB)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px dashed var(--primary)', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'rgba(37, 99, 235, 0.1)' }}>
+                        <input type="file" accept="image/*" onChange={handleFileChange} disabled={uploading} style={{ display: 'none' }} />
+                        + Custom Image
+                    </label>
+                </div>
             )}
         </div>
     );
@@ -518,6 +528,7 @@ export default function ProductFormModal({
                                                     <VariantImageUpload
                                                         variant={variant}
                                                         idx={idx}
+                                                        baseImage={formData.image}
                                                         onUpdateVariantImage={(index, newUrl) => {
                                                             const nv = [...formData.variants];
                                                             nv[index].image = newUrl;

@@ -28,7 +28,8 @@ export default function SuccessModal({
                         <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '14px 16px', marginBottom: '20px', textAlign: 'left' }}>
                             {[
                                 ['Customer', successData?.customer?.name || successData?.customer_name || '—'],
-                                isCompleted ? ['C.R. No.', successData?.si_no || successData?.order_no || '—'] : null,
+                                !isCompleted ? ['Deposit C.R. No.', successData?.deposit_cr_no || '—'] : null,
+                                isCompleted ? ['Final C.R. No.', successData?.si_no || successData?.order_no || '—'] : null,
                                 ['Total Amount', fmt(successData.total)],
                                 ['Deposit Paid', fmt(successData.deposit)],
                                 isCompleted ? ['Balance Collected', fmt(Math.max(0, Number(successData.total || 0) - Number(successData.deposit || 0)))] : null,
@@ -43,7 +44,7 @@ export default function SuccessModal({
                     )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {isCompleted && onPrintCR && (
+                        {onPrintCR && (
                             <button 
                                 className="btn btn-primary" 
                                 style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '11px 16px', fontWeight: '700' }} 
@@ -54,11 +55,11 @@ export default function SuccessModal({
                                     <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
                                     <rect x="6" y="14" width="12" height="8"></rect>
                                 </svg>
-                                Print Collection Receipt (C.R.)
+                                {isCompleted ? 'Print Final Collection Receipt (C.R.)' : 'Print Deposit Collection Receipt (C.R.)'}
                             </button>
                         )}
                         <button 
-                            className={isCompleted ? "btn btn-secondary" : "btn btn-primary"} 
+                            className="btn btn-secondary" 
                             style={{ width: '100%', padding: '10px 16px', fontWeight: '600' }} 
                             onClick={onClose}
                         >

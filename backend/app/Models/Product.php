@@ -40,6 +40,26 @@ class Product extends Model
         ];
     }
 
+    /**
+     * Get product image, inheriting parent base product's image if variant has no custom image.
+     */
+    public function getImageAttribute($value): ?string
+    {
+        if (!empty($value)) {
+            return $value;
+        }
+
+        // If this is a child variant without its own custom image, inherit from parent base product
+        if (!empty($this->parent_product_id)) {
+            if ($this->relationLoaded('parent') && $this->parent) {
+                return $this->parent->image;
+            }
+            return Product::where('id', $this->parent_product_id)->value('image');
+        }
+
+        return null;
+    }
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);

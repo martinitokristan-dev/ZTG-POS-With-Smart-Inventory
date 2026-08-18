@@ -88,7 +88,7 @@ export default function RestockView({
                                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                                         <td className="py-3 px-4">
                                             <div className="flex items-center gap-3">
-                                                <img src={p.image || DEFAULT_PLACEHOLDER_IMAGE} alt={p.name}
+                                                <img src={p.image || p.parent?.image || p.parent_product?.image || DEFAULT_PLACEHOLDER_IMAGE} alt={p.name}
                                                     style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0, backgroundColor: 'var(--bg-secondary)' }}
                                                     onError={(e) => { e.target.src = DEFAULT_PLACEHOLDER_IMAGE; }} />
                                                 <div className="flex flex-col">

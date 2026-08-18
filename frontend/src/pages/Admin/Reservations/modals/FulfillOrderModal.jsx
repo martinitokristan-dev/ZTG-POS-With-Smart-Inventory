@@ -60,10 +60,11 @@ export default function FulfillOrderModal({
                                             ['Contact', selected.customer?.phone || selected.customer_phone || '—'],
                                             ['Order Date', fmtDate(selected.date || selected.created_at)],
                                             ['Pickup Date', fmtDate(selected.pickup_date)],
+                                            ['Deposit C.R. No.', selected.deposit_cr_no || '—'],
                                         ].map(([label, val]) => (
                                             <tr key={label} style={{ borderBottom: '1px solid var(--border)' }}>
                                                 <td style={{ padding: '8px 0', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 500 }}>{label}</td>
-                                                <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>{val}</td>
+                                                <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 600, color: label === 'Deposit C.R. No.' ? '#059669' : 'var(--text-primary)' }}>{val}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -208,13 +209,13 @@ export default function FulfillOrderModal({
                                 </div>
                                 <div className="form-group" style={{ marginBottom: '12px' }}>
                                     <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
-                                        Collection Receipt No. (C.R. No.) <span style={{ color: 'var(--danger)' }}>*</span>
+                                        {ffBalanceDue > 0 ? 'Balance Collection Receipt No. (C.R. No.)' : 'Collection Receipt No. (C.R. No.)'} <span style={{ color: 'var(--danger)' }}>*</span>
                                     </label>
                                     <input 
                                         type="text" 
                                         className="form-control" 
                                         required 
-                                        placeholder="e.g. CR-00340 or booklet number" 
+                                        placeholder={ffBalanceDue > 0 ? "e.g. CR-00499 from physical booklet" : "e.g. CR-00340 or booklet number"}
                                         value={ffSiNo} 
                                         onChange={(e) => setFfSiNo(e.target.value)} 
                                         style={{ fontSize: '13px', fontWeight: 600 }} 

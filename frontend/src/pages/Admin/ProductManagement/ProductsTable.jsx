@@ -93,7 +93,7 @@ export default function ProductsTable({
                 <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', maxWidth: '220px' }}>
                     <div className="flex items-center gap-3">
                         <img
-                            src={product.image || DEFAULT_PLACEHOLDER_IMAGE}
+                            src={product.image || parentProduct?.image || DEFAULT_PLACEHOLDER_IMAGE}
                             alt={product.name}
                             className="w-10 h-10 rounded-lg object-cover bg-slate-100 border border-slate-200 flex-shrink-0"
                             onError={(e) => { e.target.src = DEFAULT_PLACEHOLDER_IMAGE; }}

@@ -16,6 +16,7 @@ export default function useSalesLog() {
     const [cashiers, setCashiers] = useState([]);
 
     useEffect(() => {
+        
         const fetchCashiers = async () => {
             try {
                 const res = await api.get('/employees');

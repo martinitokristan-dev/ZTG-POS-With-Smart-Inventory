@@ -42,73 +42,91 @@ export default function CategoryModal({
     ];
 
     return (
-        <div className="modal-overlay" id="addCategoryModal" style={{ display: 'flex', zIndex: 1000, background: 'rgba(15, 23, 42, 0.6)' }}>
+        <div className="modal-overlay" id="addCategoryModal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
             <style>
                 {`
-                .variant-selector-card { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border: 1px solid var(--border, #e2e8f0); border-radius: 8px; cursor: pointer; transition: all 0.15s ease; user-select: none; margin-bottom: 8px; }
-                .variant-selector-card:hover { border-color: var(--primary, #2563eb); background: var(--primary-light, #eff6ff); }
-                .variant-selector-card:has(input:checked) { border-color: var(--primary, #2563eb); background: var(--primary-light, #eff6ff); box-shadow: 0 0 0 1px var(--primary, #2563eb); }
-                .variant-card-info { display: flex; flex-direction: column; gap: 2px; }
-                .variant-card-title { font-size: 13px; font-weight: 700; color: var(--text-primary, #1e293b); }
-                .variant-card-desc { font-size: 11px; color: var(--text-secondary, #64748b); }
-                .variant-card-indicator { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border, #e2e8f0); display: flex; align-items: center; justify-content: center; background: #ffffff; transition: all 0.15s ease; position: relative; }
-                .variant-selector-card:has(input:checked) .variant-card-indicator { border-color: var(--primary, #2563eb); background: var(--primary, #2563eb); }
-                .variant-selector-card:has(input:checked) .variant-card-indicator::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #ffffff; }
+                .category-modal-card { width: 100%; max-width: 460px; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-lg); background: var(--bg-card); border: 1px solid var(--border); }
+                .cat-variant-card { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.15s ease; user-select: none; margin-bottom: 8px; background: var(--bg-secondary); }
+                .cat-variant-card:hover { border-color: var(--primary); background: var(--primary-light); }
+                .cat-variant-card.selected { border-color: var(--primary); background: var(--primary-light); box-shadow: 0 0 0 1px var(--primary); }
+                .cat-variant-info { display: flex; flex-direction: column; gap: 2px; }
+                .cat-variant-title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+                .cat-variant-desc { font-size: 11.5px; color: var(--text-secondary); }
+                .cat-variant-indicator { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; background: var(--bg-card); transition: all 0.15s ease; flex-shrink: 0; }
+                .cat-variant-card.selected .cat-variant-indicator { border-color: var(--primary); background: var(--primary); }
+                .cat-variant-card.selected .cat-variant-indicator::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #ffffff; }
                 `}
             </style>
-            <div className="modal-card" style={{ maxWidth: '460px', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--shadow-lg)', margin: 'auto' }}>
-                <form onSubmit={handleCategorySubmit}>
-                    <div className="modal-header" style={{ borderBottom: '1px solid var(--border)', padding: '18px 24px', background: 'var(--bg-card)' }}>
-                        <h3 className="modal-title" style={{ fontSize: '15px', fontWeight: 700 }}>
+            <div className="modal-card category-modal-card">
+                <form onSubmit={handleCategorySubmit} className="no-float">
+                    <div className="modal-header" style={{ borderBottom: '1px solid var(--border)', padding: '16px 20px', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <h3 className="modal-title" style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
                             {selectedCategory ? 'Edit Category' : 'Add Category'}
                         </h3>
-                        <button type="button" onClick={() => setShowCategoryModal(false)} className="modal-close">
+                        <button type="button" onClick={() => setShowCategoryModal(false)} className="modal-close" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
                             <svg viewBox="0 0 24 24" style={{ width: '18px', height: '18px', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }}>
                                 <path d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
                     </div>
-                    <div className="modal-body" style={{ padding: '24px' }}>
-                        <div className="form-group" style={{ marginBottom: '20px' }}>
-                            <label className="form-label" style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '6px' }}>Category Name <span style={{ color: 'var(--danger, #dc2626)' }}>*</span></label>
+
+                    <div className="modal-body no-float" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px', background: 'var(--bg-card)' }}>
+                        
+                        {/* Category Name */}
+                        <div className="form-group no-float" style={{ margin: 0 }}>
+                            <label style={{ display: 'block', fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                                Category Name <span style={{ color: 'var(--danger)' }}>*</span>
+                            </label>
                             <input 
                                 type="text" 
                                 required 
                                 value={categoryName}
                                 onChange={(e) => setCategoryName(e.target.value)}
                                 className="form-control"
-                                style={{ height: '42px', fontSize: '13px' }}
+                                style={{ height: '42px', fontSize: '13.5px', width: '100%', borderRadius: '8px' }}
                                 placeholder="e.g. Apparel, Electronics"
                             />
                         </div>
 
-                        <div className="form-group">
-                            <label className="form-label" style={{ fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '8px' }}>Assign Variant Types <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 'normal' }}>(select up to 2)</span></label>
-                            {variantsList.map(v => {
-                                const currentVars = categoryVariants || [];
-                                const isSelected = currentVars.includes(v.key);
-                                const options = getOptionsForType ? getOptionsForType(v.typeName) : [];
-                                const optionsText = options.length > 0 ? `${options.length} options defined` : `no options defined`;
-                                
-                                return (
-                                    <label key={v.key} className="variant-selector-card">
-                                        <input type="checkbox" className="cat-var-check" style={{ display: 'none' }} checked={isSelected} onChange={() => toggleVariant(v.key)} />
-                                        <div className="variant-card-info">
-                                            <span className="variant-card-title">{v.title}</span>
-                                            <span className="variant-card-desc">({optionsText})</span>
+                        {/* Assign Variant Types */}
+                        <div className="form-group no-float" style={{ margin: 0 }}>
+                            <label style={{ display: 'block', fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                                Assign Variant Types <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 'normal' }}>(select up to 2)</span>
+                            </label>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {variantsList.map(v => {
+                                    const currentVars = categoryVariants || [];
+                                    const isSelected = currentVars.includes(v.key);
+                                    const options = getOptionsForType ? getOptionsForType(v.typeName) : [];
+                                    const optionsText = options.length > 0 ? `${options.length} options defined` : `no options defined`;
+                                    
+                                    return (
+                                        <div 
+                                            key={v.key} 
+                                            className={`cat-variant-card ${isSelected ? 'selected' : ''}`}
+                                            onClick={() => toggleVariant(v.key)}
+                                        >
+                                            <div className="cat-variant-info">
+                                                <span className="cat-variant-title">{v.title}</span>
+                                                <span className="cat-variant-desc">({optionsText})</span>
+                                            </div>
+                                            <div className="cat-variant-indicator"></div>
                                         </div>
-                                        <div className="variant-card-indicator"></div>
-                                    </label>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
+
                             {(categoryVariants || []).length >= 2 && (
-                                <p style={{ fontSize: '11px', color: 'var(--warning, #f59e0b)', marginTop: '10px', fontWeight: 600, background: '#fffbeb', border: '1px solid #fef3c7', padding: '8px 12px', borderRadius: '6px' }}>
-                                    ⚠ Maximum 2 variant types per category.
-                                </p>
+                                <div style={{ fontSize: '11.5px', color: '#D97706', marginTop: '10px', fontWeight: 600, background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.25)', padding: '8px 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <svg viewBox="0 0 24 24" style={{ width: '14px', height: '14px', fill: 'none', stroke: 'currentColor', strokeWidth: 2, flexShrink: 0 }}><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                    <span>Maximum 2 variant types per category.</span>
+                                </div>
                             )}
                         </div>
                     </div>
-                    <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', background: 'var(--bg-main)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+
+                    <div className="modal-footer" style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', background: 'var(--bg-main)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         <button type="button" onClick={() => setShowCategoryModal(false)} className="btn btn-secondary" disabled={categorySubmitting}>Cancel</button>
                         <button id="submitCategoryBtn" type="submit" className="btn btn-primary" disabled={categorySubmitting}>
                             {categorySubmitting ? (

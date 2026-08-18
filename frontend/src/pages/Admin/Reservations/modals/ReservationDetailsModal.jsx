@@ -3,7 +3,7 @@ import CopyableText from '../../../../shared/components/CopyableText';
 import StatusBadge from '../../../../shared/components/StatusBadge';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 
-export default function ReservationDetailsModal({ isOpen, onClose, reservation, fmt, fmtDate, onPrintCR }) {
+export default function ReservationDetailsModal({ isOpen, onClose, reservation, fmt, fmtDate, onPrintCR, onReprintDepositCR, onReprintBalanceCR }) {
     if (!isOpen || !reservation) return null;
 
     const r = reservation;
@@ -37,7 +37,7 @@ export default function ReservationDetailsModal({ isOpen, onClose, reservation, 
         : (isDirectFull ? dateReserved : null);
 
     const detailRow = (label, value, customStyle = {}) => {
-        const isCopyable = ['Order Number', 'C.R. No.', 'Collection Receipt (C.R. No.)'].includes(label) && value && value !== '—';
+        const isCopyable = ['Order Number', 'C.R. No.', 'Deposit C.R. No.', 'Balance C.R. No.', 'Collection Receipt (C.R. No.)'].includes(label) && value && value !== '—';
         return (
             <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--border)', fontSize: '13px', alignItems: 'center' }}>
                 <span style={{ color: 'var(--text-secondary)', fontWeight: '500', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>{label}</span>
@@ -74,7 +74,9 @@ export default function ReservationDetailsModal({ isOpen, onClose, reservation, 
                 <div className="modal-body audit-detail-body" style={{ padding: '20px 24px', maxHeight: '70vh', overflowY: 'auto', background: 'var(--bg-card)' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', columnGap: '32px' }}>
                         {detailRow('Order Number', r.order_no, { color: 'var(--primary)', fontWeight: '700' })}
-                        {crNo && detailRow('Collection Receipt (C.R. No.)', crNo, { color: '#059669', fontWeight: '700' })}
+                        {r.deposit_cr_no && detailRow('Deposit C.R. No.', r.deposit_cr_no, { color: '#059669', fontWeight: '700' })}
+                        {r.si_no && detailRow(isDirectFull && !r.deposit_cr_no ? 'Collection Receipt (C.R. No.)' : 'Balance C.R. No.', r.si_no, { color: '#059669', fontWeight: '700' })}
+                        {!r.deposit_cr_no && !r.si_no && crNo && detailRow('Collection Receipt (C.R. No.)', crNo, { color: '#059669', fontWeight: '700' })}
                         {detailRow('Customer Name', custName)}
                         {detailRow('Contact Phone', custPhone)}
                         {custEmail !== '—' && detailRow('Customer Email', custEmail)}
@@ -150,13 +152,14 @@ export default function ReservationDetailsModal({ isOpen, onClose, reservation, 
                 </div>
 
                 {/* Footer */}
-                <div className="modal-footer audit-detail-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', background: 'var(--table-header-bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                        {rawStatus === 'completed' && onPrintCR && (
+                <div className="modal-footer audit-detail-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', background: 'var(--table-header-bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        {/* Deposit C.R. Button */}
+                        {(r.deposit_cr_no || (depositVal > 0 && !isDirectFull)) && (
                             <button 
                                 type="button" 
                                 className="btn btn-outline" 
-                                onClick={() => onPrintCR(r)}
+                                onClick={() => onReprintDepositCR ? onReprintDepositCR(r) : (onPrintCR && onPrintCR(r))}
                                 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', color: '#059669', borderColor: '#A7F3D0' }}
                             >
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -164,7 +167,41 @@ export default function ReservationDetailsModal({ isOpen, onClose, reservation, 
                                     <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
                                     <rect x="6" y="14" width="12" height="8"></rect>
                                 </svg>
-                                Reprint Collection Receipt (C.R.)
+                                Reprint Deposit C.R. ({fmt(depositVal)})
+                            </button>
+                        )}
+
+                        {/* Balance C.R. Button */}
+                        {rawStatus === 'completed' && !isDirectFull && (
+                            <button 
+                                type="button" 
+                                className="btn btn-outline" 
+                                onClick={() => onReprintBalanceCR ? onReprintBalanceCR(r) : (onPrintCR && onPrintCR(r))}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', color: '#2563EB', borderColor: '#BFDBFE' }}
+                            >
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                    <rect x="6" y="14" width="12" height="8"></rect>
+                                </svg>
+                                Reprint Balance C.R. ({fmt(totalVal - depositVal)})
+                            </button>
+                        )}
+
+                        {/* Full Payment Upfront Single Button */}
+                        {isDirectFull && (onPrintCR || onReprintDepositCR) && (
+                            <button 
+                                type="button" 
+                                className="btn btn-outline" 
+                                onClick={() => onPrintCR ? onPrintCR(r) : (onReprintDepositCR && onReprintDepositCR(r))}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', color: '#059669', borderColor: '#A7F3D0' }}
+                            >
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                    <rect x="6" y="14" width="12" height="8"></rect>
+                                </svg>
+                                Reprint Collection Receipt ({fmt(totalVal)})
                             </button>
                         )}
                     </div>

@@ -210,6 +210,7 @@ class ReservationService
                 'cheque_number' => $chequeNo,
                 'payment_type' => $data['payment_type'],
                 'deposit' => $data['deposit_amount'],
+                'deposit_cr_no' => $data['deposit_cr_no'] ?? null,
                 'total' => $total,
                 'date' => now(),
                 'pickup_date' => $data['pickup_date'] ?? null,

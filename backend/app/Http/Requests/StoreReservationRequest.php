@@ -38,6 +38,7 @@ class StoreReservationRequest extends FormRequest
             'cheque_number'       => 'required_if:payment_method,Cheque|nullable|string|max:100',
             'payment_type'        => 'required|string|in:deposit50,full',
             'deposit_amount'      => 'required|numeric|min:0',
+            'deposit_cr_no'       => 'nullable|string|max:50',
         ];
     }
 }

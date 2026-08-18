@@ -9,6 +9,7 @@ export default function AddReservationModal({
     custName, setCustName, custPhone, setCustPhone, custEmail, setCustEmail, enginePlateNumber, setEnginePlateNumber,
     pickupDate, setPickupDate, pickupTime, setPickupTime, notes, setNotes,
     paymentType, setPaymentType, paymentMethod, setPaymentMethod, custChequeNumber, setCustChequeNumber,
+    depositCrNo, setDepositCrNo,
     cartItems, productSearch, suggestions, addError, addLoading,
     handleProductSearch, addToCart, addCustomItemToCart, removeFromCart, updateQty, updateCartItemPriceTier,
     subtotal, tax, total, depositAmt, balance, fmt
@@ -332,6 +333,20 @@ export default function AddReservationModal({
                                         <input type="text" className="form-control" required placeholder="e.g. CHK-987654" value={custChequeNumber} onChange={(e) => setCustChequeNumber(e.target.value)} style={{ fontSize: '13px', fontWeight: 600 }} />
                                     </div>
                                 )}
+                                <div className="form-group" style={{ marginBottom: '12px' }}>
+                                    <label className="form-label" style={{ fontSize: '12px', fontWeight: 500 }}>
+                                        Deposit Collection Receipt No. (C.R. No.) <span style={{ color: 'var(--danger)' }}>*</span>
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        className="form-control" 
+                                        required 
+                                        placeholder="e.g. CR-00451 from physical booklet" 
+                                        value={depositCrNo || ''} 
+                                        onChange={(e) => setDepositCrNo(e.target.value)} 
+                                        style={{ fontSize: '13px', fontWeight: 600 }} 
+                                    />
+                                </div>
                                 <div className="form-group" style={{ marginBottom: 0 }}>
                                     <label className="form-label" style={{ fontSize: '12px', fontWeight: 500 }}>Balance Due</label>
                                     <input type="text" className="form-control" readOnly value={fmt(balance)}

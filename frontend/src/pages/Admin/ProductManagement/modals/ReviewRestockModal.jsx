@@ -74,7 +74,7 @@ export default function ReviewRestockModal({
                                             <tr key={p.id} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '48px' }}>
                                                 <td style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                     <img 
-                                                        src={p.image || DEFAULT_PLACEHOLDER_IMAGE} 
+                                                        src={p.image || p.parent?.image || p.parent_product?.image || DEFAULT_PLACEHOLDER_IMAGE} 
                                                         alt={p.name}
                                                         style={{ width: '42px', height: '42px', borderRadius: '10px', objectFit: 'cover', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', flexShrink: 0 }}
                                                         onError={(e) => { e.target.src = DEFAULT_PLACEHOLDER_IMAGE; }} 

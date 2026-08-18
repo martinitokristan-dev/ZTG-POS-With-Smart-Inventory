@@ -74,6 +74,7 @@ export default function useReservations() {
     const [paymentType, setPaymentType] = useState('deposit50');
     const [paymentMethod, setPaymentMethod] = useState('Cash');
     const [custChequeNumber, setCustChequeNumber] = useState('');
+    const [depositCrNo, setDepositCrNo] = useState('');
     const [cartItems, setCartItems] = useState([]);
     const [productSearch, setProductSearch] = useState('');
     const [suggestions, setSuggestions] = useState([]);
@@ -292,7 +293,7 @@ export default function useReservations() {
     const resetAddForm = () => {
         setCustName(''); setCustPhone(''); setCustEmail(''); setEnginePlateNumber('');
         setPickupDate(''); setPickupTime(''); setNotes('');
-        setPaymentType('deposit50'); setPaymentMethod('Cash'); setCustChequeNumber('');
+        setPaymentType('deposit50'); setPaymentMethod('Cash'); setCustChequeNumber(''); setDepositCrNo('');
         setCartItems([]); setProductSearch(''); setSuggestions([]);
         setAddError('');
     };
@@ -319,6 +320,7 @@ export default function useReservations() {
                 payment_method: paymentMethod,
                 cheque_number: paymentMethod === 'Cheque' ? custChequeNumber.trim() : null,
                 deposit_amount: depositAmt,
+                deposit_cr_no: depositCrNo.trim() || null,
                 items: cartItems.map(c => ({
                     product_id: c.product_id || null,
                     item_name: c.item_name || c.name || 'Order Item',
@@ -411,31 +413,78 @@ export default function useReservations() {
         }
     };
 
-    /* ── Reprint Collection Receipt (C.R.) ── */
-    const handleReprintCR = (r) => {
+    /* ── Reprint Deposit Collection Receipt (C.R.) ── */
+    const handleReprintDepositCR = (r) => {
+        const target = r || successData || selected;
+        if (!target) return;
+
+        const totalAmt = Number(target.total || 0);
+        const depAmt = Number(target.deposit || 0);
+        const receiptNo = target.deposit_cr_no || target.si_no || target.order_no || '—';
+
+        printCollectionReceipt({
+            receiptNo: receiptNo,
+            orderNo: target.order_no,
+            date: fmtDate(target.date || target.created_at || new Date()),
+            customer: target.customer?.name || target.customer_name || 'Walk-in Customer',
+            address: target.customer?.address || [target.customer_phone || target.customer?.phone, target.engine_plate_number].filter(Boolean).join(' · ') || '—',
+            phone: target.customer?.phone || target.customer_phone,
+            enginePlate: target.engine_plate_number,
+            items: (target.items || []).map(it => ({
+                ...it,
+                name: `[DEPOSIT HOLD] ${it.product?.name || it.item_name || it.name || 'Item'}`,
+            })),
+            total: depAmt,
+            amount: depAmt,
+            balancePaid: 0,
+            deposit: depAmt,
+            paymentMethod: target.payment_method || 'Cash',
+            chequeNumber: target.cheque_number,
+            servedBy: target.reservedBy?.real_name || target.reservedBy?.name || userName || 'Staff',
+        });
+    };
+
+    /* ── Reprint Balance / Final Collection Receipt (C.R.) ── */
+    const handleReprintBalanceCR = (r) => {
         const target = r || successData || selected;
         if (!target) return;
 
         const totalAmt = Number(target.total || 0);
         const depAmt = Number(target.deposit || 0);
         const balAmt = Math.max(0, totalAmt - depAmt);
+        const receiptNo = target.si_no || target.order_no || '—';
 
         printCollectionReceipt({
-            receiptNo: target.si_no || target.order_no || '—',
+            receiptNo: receiptNo,
             orderNo: target.order_no,
             date: target.date_get ? fmtDate(target.date_get) : fmtDate(target.updated_at || target.date || new Date()),
             customer: target.customer?.name || target.customer_name || 'Walk-in Customer',
             address: target.customer?.address || [target.customer_phone || target.customer?.phone, target.engine_plate_number].filter(Boolean).join(' · ') || '—',
             phone: target.customer?.phone || target.customer_phone,
             enginePlate: target.engine_plate_number,
-            items: target.items || [],
-            total: totalAmt,
+            items: (target.items || []).map(it => ({
+                ...it,
+                name: balAmt > 0 ? `[BALANCE] ${it.product?.name || it.item_name || it.name || 'Item'}` : (it.product?.name || it.item_name || it.name || 'Item'),
+            })),
+            total: balAmt > 0 ? balAmt : totalAmt,
+            amount: balAmt > 0 ? balAmt : totalAmt,
             balancePaid: balAmt,
             deposit: depAmt,
             paymentMethod: target.payment_method || 'Cash',
             chequeNumber: target.cheque_number,
-            servedBy: target.fulfilledBy?.name || target.fulfilled_by?.name || target.reservedBy?.name || userName || 'Staff',
+            servedBy: target.fulfilledBy?.real_name || target.fulfilledBy?.name || target.fulfilled_by?.name || userName || 'Staff',
         });
+    };
+
+    /* ── Generic Reprint (Alias to Balance or Deposit) ── */
+    const handleReprintCR = (r) => {
+        const target = r || successData || selected;
+        const rawStatus = (target?.status?.value || target?.status || '').toLowerCase();
+        if (rawStatus === 'completed') {
+            handleReprintBalanceCR(target);
+        } else {
+            handleReprintDepositCR(target);
+        }
     };
 
     /* ──────────────────────────────────────────────── */
@@ -523,6 +572,7 @@ export default function useReservations() {
         custName, setCustName, custPhone, setCustPhone, custEmail, setCustEmail, enginePlateNumber, setEnginePlateNumber,
         pickupDate, setPickupDate, pickupTime, setPickupTime, notes, setNotes,
         paymentType, setPaymentType, paymentMethod, setPaymentMethod, custChequeNumber, setCustChequeNumber,
+        depositCrNo, setDepositCrNo,
         cartItems, productSearch, suggestions, addError, addLoading,
         handleProductSearch, addToCart, addCustomItemToCart, removeFromCart, updateQty, updateCartItemPriceTier,
         resetAddForm, handleAddReservation, refreshProducts,
@@ -532,7 +582,7 @@ export default function useReservations() {
         ffSiNo, setFfSiNo,
         ffPaymentMethod, setFfPaymentMethod, ffChequeNumber, setFfChequeNumber, ffAmountReceived, setFfAmountReceived,
         ffDocType, setFfDocType, ffNotes, setFfNotes, ffError, ffLoading,
-        openFulfill, handleFulfill, handleReprintCR, ffBalanceDue, ffChange,
+        openFulfill, handleFulfill, handleReprintCR, handleReprintDepositCR, handleReprintBalanceCR, ffBalanceDue, ffChange,
 
         // Cancel Modal State & Handlers
         cancelReason, setCancelReason, cancelLoading, openCancel, handleCancel

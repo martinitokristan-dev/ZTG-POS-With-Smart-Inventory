@@ -147,6 +147,8 @@ export default function Reservations() {
                         openCancel={res.openCancel}
                         openDetails={res.openDetails}
                         onReprintCR={res.handleReprintCR}
+                        onReprintDepositCR={res.handleReprintDepositCR}
+                        onReprintBalanceCR={res.handleReprintBalanceCR}
                         activeTab={activeTab}
                     />
                 </div>
@@ -168,6 +170,7 @@ export default function Reservations() {
                 paymentType={res.paymentType} setPaymentType={res.setPaymentType}
                 paymentMethod={res.paymentMethod} setPaymentMethod={res.setPaymentMethod}
                 custChequeNumber={res.custChequeNumber} setCustChequeNumber={res.setCustChequeNumber}
+                depositCrNo={res.depositCrNo} setDepositCrNo={res.setDepositCrNo}
                 cartItems={res.cartItems}
                 productSearch={res.productSearch}
                 suggestions={res.suggestions}
@@ -233,6 +236,8 @@ export default function Reservations() {
                 fmt={res.fmt}
                 fmtDate={res.fmtDate}
                 onPrintCR={res.handleReprintCR}
+                onReprintDepositCR={res.handleReprintDepositCR}
+                onReprintBalanceCR={res.handleReprintBalanceCR}
             />
         </div>
     );
