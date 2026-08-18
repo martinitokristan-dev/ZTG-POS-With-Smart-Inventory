@@ -501,6 +501,15 @@ CREATE transaction:
   reason: "Moved to damaged ({qty} units) — {reason}"
 ```
 
+### Variant Image Inheritance Architecture
+```
+ZERO-DUPLICATION STORAGE & DYNAMIC FALLBACK:
+1. Base Product Upload: When an admin uploads an image to the base product, all child variants automatically inherit and display that image if their specific variant image is left empty (image = NULL in database).
+2. Storage Optimization: Prevents redundant duplicate file uploads to Cloudinary storage.
+3. Live Synchronization: If the base product image is updated, all inheriting variants dynamically reflect the updated image immediately without updating individual variant rows.
+4. Independent Custom Overrides: Admins can optionally upload a unique custom photo for any specific variant (+ Custom Image). If the custom image is later removed, the variant automatically falls back to inheriting the base product image.
+```
+
 ### Laravel API Endpoints:
 ```
 GET    /api/products                       → List (with filters: search, category, status)
@@ -645,30 +654,44 @@ D.R. (Delivery Receipt):  DR-{YEAR}-{3 random digits}
 C.R. (Collection Receipt): CR-{YEAR}-{3 random digits}
 ```
 
-### Receipt/Invoice Content (BIR/EOPT Compliant)
+### Physical BIR Booklet Sales Invoice (S.I.) Print Layout
 ```
-┌──────────────────────────────┐
-│       ZTG HEAVY PARTS        │
-│         VAT Registered       │
-│    TIN: 000-123-456-000      │
-│  123 Industrial Ave, QC      │
-│──────────────────────────────│
-│       SALES INVOICE          │
-│  Invoice: SI-2026-142        │
-│  Date: Jun 14, 2026 2:30 PM  │
-│  Served By: Maria Santos     │
-│──────────────────────────────│
-│  SOLD TO: Juan dela Cruz     │
-│──────────────────────────────│
-│  Item    Unit Qty  Price  Amt│
-│  HP-001   pc   3  ₱2,500 ₱7,500│
-│──────────────────────────────│
-│  VATable Sales:    ₱6,696.43 │
-│  VAT (12%):          ₱803.57 │
-│  TOTAL:             ₱7,500   │
-│  Cash Tendered:     ₱8,000   │
-│  Change:              ₱500   │
-└──────────────────────────────┘
+1:1 PHYSICAL SALES INVOICE BOOKLET SPECIFICATIONS:
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│ ZTG HEAVY EQUIPMENT PARTS SUPPLY                                              SALES         │
+│ GERALDINE M. MUMAR - PROPRIETOR                                              INVOICE        │
+│ VAT Reg. TIN: 382-832-238-00002                                                             │
+│ Purok 5 Taguibo 8600 City of Butuan, Agusan del Norte, Philippines                           │
+│                                                                                             │
+│ [✔] CASH SALES      [ ] CHARGE SALES              Invoice No.: 10985                        │
+│                                                   Date: Aug 18, 2026                        │
+│ ┌─────────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ SOLD TO:                                                                                │ │
+│ │ Registered Name : JUAN DELA CRUZ                                                        │ │
+│ │ TIN             : 123-456-789-000                                                       │ │
+│ │ Business Address: BUTUAN CITY · 09171234567                                             │ │
+│ └─────────────────────────────────────────────────────────────────────────────────────────┘ │
+│ ┌────────────────────────────────────┬──────────┬──────────────────┬──────────────────────┐ │
+│ │ Item Description/Nature of Service │ Quantity │ Unit Cost/Price  │ Amount               │ │
+│ ├────────────────────────────────────┼──────────┼──────────────────┼──────────────────────┤ │
+│ │ HYDRAULIC PUMP [HP-001]            │    3     │     ₱ 2,500.00   │     ₱ 7,500.00       │ │
+│ │ (16-row continuous ruled table)    │          │                  │                      │ │
+│ ├────────────────────────────────────┼──────────┼──────────────────┼──────────────────────┤ │
+│ │ VATable Sales                      │₱ 6,696.43│Total Sales (VAT) │     ₱ 7,500.00       │ │
+│ │ VAT (12%)                          │  ₱ 803.57│Less: VAT         │       ₱ 803.57       │ │
+│ │ Zero-RATED Sales                   │    ₱ 0.00│Amount: Net of VAT│     ₱ 6,696.43       │ │
+│ │ VAT-Exempt Sales                   │    ₱ 0.00│Less Discount     │         ₱ 0.00       │ │
+│ │ [✔] Received the amount of ₱ 7,500 │          │Add: VAT          │       ₱ 803.57       │ │
+│ │                                    │          │Less: W/Tax       │         ₱ 0.00       │ │
+│ │          MARIA SANTOS              │          ├──────────────────┼──────────────────────┤ │
+│ │ ────────────────────────────────── │          │ TOTAL AMOUNT DUE │     ₱ 7,500.00       │ │
+│ │  Cashier/Authorized Representative │          └──────────────────┴──────────────────────┘ │
+│ └────────────────────────────────────┴─────────────────────────────┬──────────────────────┘ │
+│                                                                    │ SC/PWD/Solo Parent ID│ │
+│                                                                    │ Signature: _________ │ │
+│ ───────────────────────────────────────────────────────────────────┴─────────────────────── │
+│ PERMIT TO LOOSE LEAF NO.: _____ LIFEWORKS PRINT HUB BIR ATP: 103AU20260000004362            │
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Laravel API Endpoints:
@@ -859,35 +882,41 @@ POST   /api/transactions/verify-pin           → Verify admin PIN
   pickup_time: "15:00",
   date_get: "2026-06-18",       // Claim date upon fulfillment
   doc_type: "C.R.",             // Locked to Collection Receipt for reservation fulfillment
-  si_no: "CR-00340",            // Physical booklet C.R. number
+  deposit_cr_no: "CR-00340",    // Physical booklet Deposit C.R. number issued on booking
+  balance_cr_no: "CR-00385",    // Physical booklet Balance C.R. number issued on fulfillment
+  si_no: "CR-00385",            // Alias reference to C.R. number
   reserved_by_id: 1,
   fulfilled_by_id: 1,
   status: "Pending"             // "Pending", "Completed", "Cancelled"
 }
 ```
 
-### 2-Tab Navigation & Date Filtering Workflow
+### 2-Tab Navigation & Dual C.R. Action Workflow
 ```
 TAB 1: "For Order In China" (Pending Reservations)
-  - Shows all unfulfilled client product holds with deposits.
-  - Action buttons: "Fulfill Order", "Cancel Order", "View Details".
+  - Shows all unfulfilled client product holds with initial deposits.
+  - Action buttons: "Fulfill Order", "Cancel Order", "Print Deposit C.R.", "View Details".
 
 TAB 2: "Order Claimed And Paid" (Completed Reservations)
-  - Shows fulfilled orders where customers have paid the balance and claimed their parts.
+  - Shows fulfilled orders where customers have settled the balance and claimed their parts.
   - Date Filter Dropdown:
       • "Today" (Default) — orders claimed & fulfilled today.
       • "This Week" — orders claimed within the current week.
       • "This Month" — orders claimed within the current month.
       • "This Year" — orders claimed within the current calendar year.
       • "All Time" — all historical completed orders.
-  - Action buttons: "Reprint C.R." (Printer icon), "View Details".
+  - Action buttons: Dual Reprint Options:
+      • "Reprint Balance C.R." — prints the C.R. issued upon balance fulfillment.
+      • "Reprint Deposit C.R." — prints the original deposit C.R. issued upon booking.
+      • "View Details" — modal displaying both Deposit C.R. No. and Balance C.R. No. with separate reprint triggers.
 ```
 
-### Create Reservation Logic
+### Create Reservation Logic (with Deposit C.R.)
 ```
 INPUT:
   items[] (from reservation cart), customer_name, phone, email, engine_plate_number, notes,
-  payment_method, cheque_number, payment_type, deposit_amount, pickup_date, pickup_time
+  payment_method, cheque_number, payment_type, deposit_amount, deposit_cr_no (Optional/Required booklet no),
+  pickup_date, pickup_time
 
 VALIDATE:
   - At least 1 item in cart
@@ -897,12 +926,13 @@ VALIDATE:
 NOTE: Stock is NOT deducted at reservation booking time. Stock is reserved and deducted on fulfillment.
 
 SAVE RESERVATION:
-  INSERT INTO reservations (order_no = "RS-{YEAR}-{SEQ}", status = "Pending")
+  INSERT INTO reservations (order_no = "RS-{YEAR}-{SEQ}", deposit_cr_no = deposit_cr_no, status = "Pending")
   INSERT INTO reservation_items for each cart item
 
 SAVE TRANSACTION (deposit log):
   {
-    si_no: reservation.order_no,
+    si_no: deposit_cr_no || reservation.order_no,
+    doc_type: "C.R.",
     status: payment_type == "full" ? "Paid" : "Deposit",
     type: "reservation",
     amount: deposit_amount,
@@ -911,14 +941,14 @@ SAVE TRANSACTION (deposit log):
   }
 ```
 
-### Fulfill Reservation Logic (Locked to Collection Receipt)
+### Fulfill Reservation Logic (Locked to Balance Collection Receipt)
 ```
 INPUT:
-  reservation_id, si_no (C.R. Booklet Number *), payment_method, cheque_number, amount_received, notes
+  reservation_id, balance_cr_no (Balance C.R. Booklet Number *), payment_method, cheque_number, amount_received, notes
 
 VALIDATE:
   1. Reservation must be "Pending"
-  2. si_no (Collection Receipt Number from physical booklet) is REQUIRED
+  2. balance_cr_no / si_no (Collection Receipt Number from physical booklet) is REQUIRED
   3. ALL items must have sufficient stock
   4. Amount received >= balance due (total - deposit)
 
@@ -929,7 +959,7 @@ PROCESSING (DB transaction):
      SAVE products & emit InventoryUpdated events
   
   2. CREATE transaction:
-       si_no: si_no (C.R. Booklet Number)
+       si_no: balance_cr_no (Balance C.R. Booklet Number)
        doc_type: "C.R."
        status: "Completed"
        amount: balance_remaining
@@ -943,7 +973,8 @@ PROCESSING (DB transaction):
        fulfilled_by_id = current_user.id
        date_get = now()
        doc_type = "C.R."
-       si_no = si_no
+       balance_cr_no = balance_cr_no
+       si_no = balance_cr_no
 ```
 
 ### Physical BIR Booklet Collection Receipt (C.R.) Print Layout

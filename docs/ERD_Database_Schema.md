@@ -98,7 +98,7 @@ Master product catalog. Each variant is its own row (same `name`, different `var
 | `is_dead_stock` | BOOLEAN | DEFAULT FALSE | Flagged as dead stock |
 | `damaged` | INT | NOT NULL, DEFAULT 0 | Units marked damaged |
 | `variant_options` | VARCHAR(255) | NULLABLE | Display label e.g. "Heavy Duty" |
-| `image` | VARCHAR(500) | NULLABLE | Cloudinary image URL (aliased to `image_url`) |
+| `image` | VARCHAR(500) | NULLABLE | Cloudinary image URL. For variants (`parent_product_id IS NOT NULL`), if `NULL`, it dynamically inherits the base product's image via Eloquent accessor to save cloud storage. |
 | `notes` | TEXT | NULLABLE | Internal notes |
 | `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
 | `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | |
@@ -226,7 +226,9 @@ Order-based reservations with multi-item cart support, Collection Receipt fulfil
 | `pickup_time` | TIME | NULLABLE | Expected pickup time |
 | `date_get` | DATE | NULLABLE | Actual item fulfillment / claim date |
 | `doc_type` | VARCHAR(20) | DEFAULT 'C.R.' | Document type: 'C.R.' (Collection Receipt), 'S.I.', 'D.R.' |
-| `si_no` | VARCHAR(50) | NULLABLE | Physical Collection Receipt No. (C.R. No.) from booklet |
+| `deposit_cr_no` | VARCHAR(50) | NULLABLE | Physical Collection Receipt No. (C.R. No.) issued upon initial booking deposit |
+| `balance_cr_no` | VARCHAR(50) | NULLABLE | Physical Collection Receipt No. (C.R. No.) issued upon order fulfillment/balance payment |
+| `si_no` | VARCHAR(50) | NULLABLE | Physical Collection Receipt No. (C.R. No.) from booklet (backward compatible alias) |
 | `reserved_by_id` | BIGINT UNSIGNED | FK → `users.id`, NOT NULL | Cashier who booked |
 | `fulfilled_by_id` | BIGINT UNSIGNED | FK → `users.id`, NULLABLE | Cashier who fulfilled |
 | `status` | VARCHAR(50) | NOT NULL, DEFAULT 'Pending' | PHP Enum: `Pending`, `Completed`, `Cancelled` |
@@ -366,6 +368,8 @@ erDiagram
         date date
         date date_get
         string doc_type
+        string deposit_cr_no
+        string balance_cr_no
         string si_no
         string status
     }
@@ -424,7 +428,7 @@ TABLES:
 - customers (id PK, name, phone, email, tin, address, timestamps)
 - transactions (id PK, si_no UNIQUE, or_no, date DATETIME, customer_id FK->customers, cashier_id FK->users, checker_id FK->checkers, total_qty INT, amount DECIMAL, original_amount DECIMAL, refunded_amount DECIMAL, discount_amount DECIMAL, discount_type, discount_rate DECIMAL, amount_tendered DECIMAL, payment_method, cheque_number, cheque_bank, cheque_date DATE, doc_type, status, type, refund_reason, void_reason, action_type, inv_action, approver_id FK->users NULLABLE, approval_code, order_ref, business_snapshot TEXT, internal_notes TEXT, timestamps)
 - transaction_items (id PK, transaction_id FK->transactions CASCADE, product_id FK->products, item_name, part_no, qty INT, refunded_qty INT, price DECIMAL, original_price DECIMAL, discount DECIMAL, price_tier, unit VARCHAR, created_at)
-- reservations (id PK, order_no UNIQUE, customer_id FK->customers, customer_name, customer_phone, email, engine_plate_number, notes TEXT, payment_method, cheque_number, cheque_bank, cheque_date DATE, payment_type, deposit DECIMAL, total DECIMAL, date DATE, pickup_date DATE, pickup_time TIME, date_get DATE, doc_type DEFAULT 'C.R.', si_no VARCHAR(50), reserved_by_id FK->users, fulfilled_by_id FK->users NULLABLE, status, timestamps)
+- reservations (id PK, order_no UNIQUE, customer_id FK->customers, customer_name, customer_phone, email, engine_plate_number, notes TEXT, payment_method, cheque_number, cheque_bank, cheque_date DATE, payment_type, deposit DECIMAL, total DECIMAL, date DATE, pickup_date DATE, pickup_time TIME, date_get DATE, doc_type DEFAULT 'C.R.', deposit_cr_no VARCHAR(50), balance_cr_no VARCHAR(50), si_no VARCHAR(50), reserved_by_id FK->users, fulfilled_by_id FK->users NULLABLE, status, timestamps)
 - reservation_items (id PK, reservation_id FK->reservations CASCADE, product_id FK->products, part_no, item_name, engine_plate_number, qty INT, price DECIMAL)
 - report_logs (id PK, user_id FK->users NULLABLE, report_type, timeframe, created_at)
 - notifications (id PK, type, sub_type, title, message TEXT, link, product_id FK->products NULLABLE, transaction_id FK->transactions NULLABLE, is_read BOOL, user_id FK->users NULLABLE, created_at)

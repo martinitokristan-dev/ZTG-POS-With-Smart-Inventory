@@ -465,7 +465,7 @@ erDiagram
 | `product_variant_values` | `id`, `product_id`, `variant_option_id` | Product-specific variant combinations (junction table) |
 | `transactions` | `id`, `si_no`, `or_no`, `date`, `customer_id`, `cashier_id`, `checker_id`, `amount`, `original_amount`, `refunded_amount`, `payment_method`, `cheque_number`, `cheque_bank`, `cheque_date`, `doc_type`, `status` | Central sales, audit ledger, and refund tracking |
 | `transaction_items` | `id`, `transaction_id`, `product_id`, `item_name`, `part_no`, `qty`, `refunded_qty`, `price`, `original_price`, `discount`, `price_tier` | Line items per transaction with cumulative refund tracking |
-| `reservations` | `id`, `order_no`, `customer_id`, `customer_name`, `customer_phone`, `engine_plate_number`, `payment_method`, `cheque_number`, `payment_type`, `deposit`, `total`, `date`, `pickup_date`, `date_get`, `doc_type`, `si_no`, `status` | Pre-order holds with locked Collection Receipt fulfillment |
+| `reservations` | `id`, `order_no`, `customer_id`, `customer_name`, `customer_phone`, `engine_plate_number`, `payment_method`, `cheque_number`, `payment_type`, `deposit`, `total`, `date`, `pickup_date`, `date_get`, `doc_type`, `deposit_cr_no`, `balance_cr_no`, `si_no`, `status` | Pre-order holds with Dual Collection Receipt tracking (Deposit C.R. + Balance C.R.) |
 | `reservation_items` | `id`, `reservation_id`, `product_id`, `part_no`, `item_name`, `engine_plate_number`, `qty`, `price` | Line items per reservation order |
 | `customers` | `id`, `name`, `phone`, `email`, `tin`, `address` | Walk-in and registered customer registry |
 | `notifications` | `id`, `user_id`, `type`, `sub_type`, `title`, `message`, `link`, `is_read` | In-app real-time notification store |
@@ -1463,6 +1463,38 @@ This pattern dynamically allows any `*.pages.dev` subdomain, including both the 
 #### 5. Disabled Status Badge & Inventory Stock Visual Separation
 - **Distinct Red Disabled Badge:** Updated `Disabled` status badge tokens to high-contrast red (`#FEE2E2` background, `#DC2626` text, bold weight) across Product Management and Inventory tables.
 - **Accurate Stock Quantity Pill:** Enforced strict visual separation in `InventoryTable.jsx` so healthy stock quantities (e.g. 🟢 **90 units**) remain green, preventing disabled items from displaying misleading red stock badges.
+
+---
+
+### SPRINT 12 — Dual Collection Receipts, 1:1 BIR Sales Invoice Booklet, Variant Image Inheritance & Category Mobile Restoration
+**Date: August 2026**
+
+#### 1. Dual Collection Receipt (`C.R.`) System for Reservations
+- **Independent Deposit & Balance Booklet Tracking:** Resolved single receipt overwrite by engineering dual booklet tracking:
+  - `deposit_cr_no`: Preserves the physical BIR Collection Receipt number issued on initial reservation booking deposit.
+  - `balance_cr_no`: Preserves the physical BIR Collection Receipt number issued upon order fulfillment/balance completion.
+  - `si_no`: Maintained as backward-compatible alias pointing to the balance C.R.
+- **Instant Deposit C.R. Issuance:** Added immediate Deposit C.R. booklet number input on the booking modal (`AddReservationModal.jsx`) and automatic printable receipt generation.
+- **Dual Reprint Triggers:** Both Deposit C.R. and Balance C.R. are distinctly labeled and can be independently reprinted anytime from `ReservationDetailsModal.jsx` and `ReservationsTable.jsx`.
+- **Transaction Ledger Integrity:** Generates distinct `C.R.` transactions in the audit ledger for both the initial deposit and the final balance payment.
+
+#### 2. 1:1 BIR Sales Invoice (S.I.) Printable Booklet Template
+- **Unified Continuous Ruled Grid Table:** Re-architected `printSalesInvoice` in `printReceipt.js` using a fixed 4-column layout (`38%`, `14%`, `25%`, `23%`) with uniform 18px compact row heights and 16 item lines matching the physical BIR Sales Invoice booklet.
+- **Split-Screen Financial Reconciliation Grid:**
+  - **Left Section:** Itemized VAT breakdown (`VATable Sales`, `VAT 12%`, `Zero-RATED Sales`, `VAT-Exempt Sales`), `[✓] Received the amount of ₱...`, and Cashier Signature Line.
+  - **Right Section:** Gross and Net Sales calculations (`Total Sales`, `Less: VAT`, `Amount: Net of VAT`, `Less Discount`, `Add: VAT`, `Less: Withholding Tax`, `TOTAL AMOUNT DUE`), and **SC / PWD / NAAC / MOV / Solo Parent ID & Signature box**.
+- **Printer Accreditation Footer:** Embedded official BIR loose leaf permit metadata, Lifeworks Print Hub TIN, and Authority to Print series (`10751-18250`).
+
+#### 3. Product Variant Image Inheritance Architecture
+- **Zero-Duplication Cloud Storage:** Base product images are dynamically inherited by child variants when their specific variant image is left empty (`image = NULL` in database), eliminating redundant cloud uploads.
+- **Live Dynamic Cascading:** Updating the base product image immediately propagates to all child variants without requiring database modifications to individual variant rows.
+- **Cloudinary Deletion Safeguards:** Protected base product images from deletion when detaching or removing child variants using Eloquent `getRawOriginal('image')`.
+- **Visual Variant Previews:** Updated `ProductFormModal.jsx`, `ProductsTable.jsx`, and restock tables to show `(Base Image)` preview indicators alongside optional `+ Custom Image` upload overrides.
+
+#### 4. Category Modal Responsive Restoration & UI Polish
+- **Full Viewport Centered Modal:** Restored standard modal layout with `max-w-2xl`, responsive padding, and `max-h-[85vh]` internal scroll preventing offscreen button clipping on mobile screens.
+- **Collapsible Add Category Drawer:** Placed category creation inside a toggleable accordion drawer with quick prefix auto-suggestions (`HYD`, `ENG`, `FIL`).
+- **Dark Mode Inline SVGs:** Replaced raw emojis with crisp Lucide-compatible inline SVG icons and applied CSS variables (`bg-surface`, `border-border-color`) for theme compliance.
 
 ---
 
