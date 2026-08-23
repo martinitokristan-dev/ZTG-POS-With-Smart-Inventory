@@ -17,6 +17,7 @@ import Reports from './pages/Admin/Reports/index.jsx';
 import POS from './pages/Cashier/POS/index.jsx';
 import DailySales from './pages/Cashier/DailySales/index.jsx';
 import CustomerLog from './pages/Cashier/CustomerLog/index.jsx';
+import SystemStatus from './pages/Admin/SystemStatus/index.jsx';
 
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ProductProvider } from './contexts/ProductContext';
@@ -101,6 +102,13 @@ function App() {
                                 <Route path="/settings" element={
                                     <PrivateRoute allowedRoles={['Admin', 'Cashier', 'Supervisor']}>
                                         <Settings />
+                                    </PrivateRoute>
+                                } />
+
+                                {/* Secret Isolated System Status Route (Admin only, not in Sidebar) */}
+                                <Route path="/system-status" element={
+                                    <PrivateRoute allowedRoles={['Admin']}>
+                                        <SystemStatus />
                                     </PrivateRoute>
                                 } />
 

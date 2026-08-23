@@ -17,6 +17,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\CheckerController;
 use App\Http\Controllers\SettingLogoController;
 use App\Http\Controllers\MediaController;
+use App\Http\Controllers\SystemHealthController;
 use Illuminate\Support\Facades\Route;
 
 // Public authentication & media routes
@@ -45,6 +46,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Admin-only management routes
     Route::middleware('role:Admin')->group(function () {
+        // System health and incident root-cause analysis
+        Route::get('/system-health/diagnostics', [SystemHealthController::class, 'diagnostics']);
+
         // General Settings update
         Route::put('/settings', [SettingController::class, 'update']);
         // Business logo — Admin-only (different from per-user avatar scoping)
