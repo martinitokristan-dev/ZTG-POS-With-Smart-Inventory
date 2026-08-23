@@ -124,7 +124,9 @@ export default function useHistoryLogs() {
         setShowViewModal(false);
     };
 
-    const handleVoid = async (txId, payload) => {
+    const handleVoid = async (arg1, arg2) => {
+        const txId = (typeof arg1 === 'object' && arg1 !== null) ? (arg1.transaction_id || selectedTxForVoid?.id) : arg1;
+        const payload = (typeof arg1 === 'object' && arg1 !== null) ? arg1 : arg2;
         try {
             await api.post(`/transactions/${txId}/void`, payload);
             resetDashboardCache();

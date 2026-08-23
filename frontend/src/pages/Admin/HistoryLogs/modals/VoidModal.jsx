@@ -23,11 +23,14 @@ export default function VoidModal({ isOpen, onClose, transaction, onSubmit, fmtD
 
         setIsSubmitting(true);
         try {
+            const currentUser = (() => { try { return JSON.parse((sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'))); } catch { return null; } })();
             await onSubmit({
                 transaction_id: transaction.id,
+                void_reason: reason,
                 reason,
                 restore_stock: restoreStock,
                 admin_name: adminName,
+                admin_id: currentUser?.role === 'Admin' ? currentUser.id : undefined,
                 admin_pin: adminPin
             });
         } catch (err) {

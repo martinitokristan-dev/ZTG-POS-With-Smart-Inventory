@@ -343,9 +343,13 @@ export default function useSettings() {
             };
             setProfileData(updated);
             setInitialProfileData(updated);
+            if (updatedUser) {
+                setEmployees(prev => prev.map(emp => (emp.id === updatedUser.id || emp.username === updatedUser.username) ? { ...emp, ...updatedUser } : emp));
+            }
             setShowPasswordModal(false);
             setEditingTab(null);
             resetSettingsCache('user');
+            resetSettingsCache('employees');
             window.dispatchEvent(new Event('auth_user_updated'));
             showToast('Profile updated successfully!', 'success');
         } catch (err) {
@@ -879,6 +883,53 @@ export default function useSettings() {
                 const res = await api.put(`/employees/${selectedEmployee.id}`, payload);
                 const updated = res.data.employee || res.data;
                 setEmployees(prev => prev.map(emp => emp.id === selectedEmployee.id ? updated : emp));
+
+                // Dynamically sync auth_user and sidebar if editing currently logged-in account
+                const stored = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
+                if (stored) {
+                    try {
+                        const currentUser = JSON.parse(stored);
+                        const isCurrent = (currentUser.id && Number(currentUser.id) === Number(updated.id)) ||
+                            (currentUser.employee_id && currentUser.employee_id === (selectedEmployee.employee_id || updated.employee_id)) ||
+                            (currentUser.username && (currentUser.username === selectedEmployee.username || currentUser.username === updated.username));
+
+                        if (isCurrent) {
+                            const newAuthUser = {
+                                ...currentUser,
+                                ...updated,
+                                name: updated.real_name || updated.name || updated.username || currentUser.name,
+                                real_name: updated.real_name || currentUser.real_name,
+                                username: updated.username || currentUser.username,
+                                employee_id: updated.employee_id || currentUser.employee_id,
+                                email: updated.email || currentUser.email,
+                                role: updated.role || currentUser.role,
+                                pin: updated.pin !== undefined ? updated.pin : currentUser.pin,
+                                profile_photo: updated.profile_photo !== undefined ? updated.profile_photo : currentUser.profile_photo,
+                            };
+                            sessionStorage.setItem('auth_user', JSON.stringify(newAuthUser));
+                            localStorage.removeItem('auth_user');
+
+                            // Sync profile tab state so "My Profile" tab reflects changes immediately
+                            const updatedProfile = {
+                                name: newAuthUser.username || newAuthUser.name,
+                                real_name: newAuthUser.real_name || newAuthUser.name,
+                                email: newAuthUser.email || '',
+                                username: newAuthUser.username,
+                                role: newAuthUser.role,
+                                pin: updated.pin !== undefined ? updated.pin : (currentUser.pin || ''),
+                                profile_photo: newAuthUser.profile_photo ?? null,
+                            };
+                            setProfileData(prev => ({ ...prev, ...updatedProfile }));
+                            setInitialProfileData(prev => ({ ...prev, ...updatedProfile }));
+
+                            resetSettingsCache('user');
+                            window.dispatchEvent(new Event('auth_user_updated'));
+                        }
+                    } catch (err) {
+                        console.error('Error syncing auth_user after employee update:', err);
+                    }
+                }
+
                 showToast('Employee updated successfully!', 'success');
             } else {
                 const res = await api.post('/employees', payload);
@@ -906,8 +957,30 @@ export default function useSettings() {
         const nextStatus = emp.status === 'Active' ? 'Inactive' : 'Active';
         try {
             const res = await api.put(`/employees/${emp.id}`, { status: nextStatus });
-            setEmployees(prev => prev.map(e => e.id === emp.id ? res.data : e));
+            const updated = res.data.employee || res.data;
+            setEmployees(prev => prev.map(e => e.id === emp.id ? updated : e));
             resetSettingsCache('employees');
+
+            const stored = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
+            if (stored) {
+                try {
+                    const currentUser = JSON.parse(stored);
+                    const isCurrent = (currentUser.id && Number(currentUser.id) === Number(emp.id)) ||
+                        (currentUser.employee_id && currentUser.employee_id === emp.employee_id) ||
+                        (currentUser.username && currentUser.username === emp.username);
+
+                    if (isCurrent) {
+                        const newAuthUser = {
+                            ...currentUser,
+                            status: nextStatus,
+                        };
+                        sessionStorage.setItem('auth_user', JSON.stringify(newAuthUser));
+                        localStorage.removeItem('auth_user');
+                        window.dispatchEvent(new Event('auth_user_updated'));
+                    }
+                } catch (err) {}
+            }
+
             showToast(`Employee account set to ${nextStatus}.`, 'success');
         } catch (err) {
             showToast(err.response?.data?.message || 'Failed to toggle employee status.', 'error');
