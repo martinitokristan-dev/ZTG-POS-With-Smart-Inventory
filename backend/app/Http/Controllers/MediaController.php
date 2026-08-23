@@ -20,7 +20,7 @@ class MediaController extends Controller
 
         // Check local public storage (primary fallback for legacy files)
         if (Storage::disk('public')->exists($cleanPath)) {
-            return Storage::disk('public')->response($cleanPath, null, [
+            return response()->file(Storage::disk('public')->path($cleanPath), [
                 'Cache-Control'              => 'public, max-age=31536000, immutable',
                 'Access-Control-Allow-Origin' => '*',
             ]);

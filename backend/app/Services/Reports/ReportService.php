@@ -590,20 +590,20 @@ class ReportService
         })->count();
         $outOfStockCount = (clone $sellableQuery)->where('stock', 0)->count();
 
-        $salesSubquery = \App\Models\TransactionItem::selectRaw('COALESCE(SUM(qty), 0)')
+        $salesSubquery = TransactionItem::selectRaw('COALESCE(SUM(qty), 0)')
             ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
             ->whereColumn('transaction_items.product_id', 'products.id')
             ->where('transactions.status', 'Completed');
 
         if (!empty($filters['date_filter'])) {
             if ($filters['date_filter'] === 'today') {
-                $salesSubquery->where('transactions.date', '>=', \Carbon\Carbon::now()->startOfDay());
+                $salesSubquery->where('transactions.date', '>=', Carbon::now()->startOfDay());
             } elseif ($filters['date_filter'] === 'this_week') {
-                $salesSubquery->where('transactions.date', '>=', \Carbon\Carbon::now()->startOfWeek());
+                $salesSubquery->where('transactions.date', '>=', Carbon::now()->startOfWeek());
             } elseif ($filters['date_filter'] === 'this_month') {
-                $salesSubquery->where('transactions.date', '>=', \Carbon\Carbon::now()->startOfMonth());
+                $salesSubquery->where('transactions.date', '>=', Carbon::now()->startOfMonth());
             } elseif ($filters['date_filter'] === 'this_year') {
-                $salesSubquery->where('transactions.date', '>=', \Carbon\Carbon::now()->startOfYear());
+                $salesSubquery->where('transactions.date', '>=', Carbon::now()->startOfYear());
             }
         }
 
