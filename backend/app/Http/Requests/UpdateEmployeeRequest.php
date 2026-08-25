@@ -23,7 +23,7 @@ class UpdateEmployeeRequest extends FormRequest
             'email'        => ['required', 'email', 'max:255', \Illuminate\Validation\Rule::unique('user_profiles', 'email')->ignore($userId, 'user_id')],
             'username'     => 'required|string|max:50|unique:users,username,' . $userId,
             'password'     => ['nullable', 'string', 'min:6', 'regex:/[A-Z]/', 'regex:/[\W_]/'],
-            'pin'          => 'nullable|string|digits:4',
+            'pin'          => 'nullable|string|max:50',
             'role'         => 'required|string|in:Admin,Cashier,Supervisor',
             'status'       => 'nullable|string|in:Active,Inactive',
         ];
@@ -40,7 +40,6 @@ class UpdateEmployeeRequest extends FormRequest
             'username.unique'    => 'This username is already taken.',
             'password.min'       => 'Password must be at least 6 characters.',
             'password.regex'     => 'Password must contain at least one uppercase letter (A-Z) and one special symbol (e.g. *, !, @, #).',
-            'pin.digits'         => 'Manager PIN must be exactly 4 digits.',
         ];
     }
 }

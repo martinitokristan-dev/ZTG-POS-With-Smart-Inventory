@@ -19,7 +19,7 @@ class StoreEmployeeRequest extends FormRequest
             'email'        => 'required|email|unique:user_profiles,email|max:255',
             'username'     => 'required|string|unique:users,username|max:50',
             'password'     => ['required', 'string', 'min:6', 'regex:/[A-Z]/', 'regex:/[\W_]/'],
-            'pin'          => 'nullable|string|digits:4',
+            'pin'          => 'nullable|string|max:50',
             'role'         => 'required|string|in:Admin,Cashier,Supervisor',
             'status'       => 'nullable|string|in:Active,Inactive',
         ];
@@ -37,7 +37,6 @@ class StoreEmployeeRequest extends FormRequest
             'password.required'  => 'A password is required.',
             'password.min'       => 'Password must be at least 6 characters.',
             'password.regex'     => 'Password must contain at least one uppercase letter (A-Z) and one special symbol (e.g. *, !, @, #).',
-            'pin.digits'         => 'Manager PIN must be exactly 4 digits.',
         ];
     }
 }

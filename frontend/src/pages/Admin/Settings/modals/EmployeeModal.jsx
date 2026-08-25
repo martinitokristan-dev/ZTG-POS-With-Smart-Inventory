@@ -135,17 +135,15 @@ export default function EmployeeModal({
 
                         {employeeForm.role !== 'Cashier' && (
                             <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Manager PIN</label>
+                                <label className="form-label">Manager PIN / Approval Code</label>
                                 <div style={{ position: 'relative', width: '100%' }}>
                                     <input 
                                         type={showPin ? "text" : "password"} 
                                         className="form-control" 
-                                        placeholder="4-digit PIN (Optional)" 
-                                        maxLength="4" 
-                                        pattern="[0-9]{4}" 
+                                        placeholder="Custom PIN or Approval Code (Optional)" 
                                         style={{ paddingRight: '40px' }}
                                         value={employeeForm.pin || ''}
-                                        onChange={(e) => setEmployeeForm({...employeeForm, pin: e.target.value.replace(/\D/g, '')})}
+                                        onChange={(e) => setEmployeeForm({...employeeForm, pin: e.target.value})}
                                     />
                                     <button 
                                         type="button" 
@@ -168,7 +166,7 @@ export default function EmployeeModal({
                                     </button>
                                 </div>
                                 <small style={{ color: 'var(--text-secondary)', fontSize: '11px', marginTop: '4px', display: 'block' }}>
-                                    Optional: 4-digit PIN. Your login password can also be used as your authorization PIN.
+                                    Optional. If left blank, the employee's login password will automatically serve as their authorization PIN.
                                 </small>
                             </div>
                         )}
