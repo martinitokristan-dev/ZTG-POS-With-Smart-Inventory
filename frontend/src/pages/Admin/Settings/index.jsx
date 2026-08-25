@@ -385,7 +385,7 @@ export default function SettingsView() {
                                 <div className={`tab-content ${activeTab === 'employees' ? 'active' : ''}`}>
                                     {activeTab === 'employees' && (
                                         <EmployeesTab 
-                                            employees={employees} openEditEmployee={openEditEmployee} openAddEmployee={openAddEmployee} handleToggleEmployee={handleToggleEmployee}
+                                            employees={employees} openEditEmployee={openEditEmployee} openAddEmployee={openAddEmployee} handleToggleEmployee={handleToggleEmployee} handleDeleteEmployee={handleDeleteEmployee}
                                             setSelectedEmployee={setSelectedEmployee} setEmployeeForm={setEmployeeForm} setShowEmployeeModal={setShowEmployeeModal}
                                         />
                                     )}

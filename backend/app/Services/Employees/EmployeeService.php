@@ -108,4 +108,24 @@ class EmployeeService
         $employee->save();
         return $employee;
     }
+
+    /**
+     * Permanently delete an employee from database.
+     */
+    public function deleteEmployee(User $employee): bool
+    {
+        if ($employee->id === 1 || $employee->username === 'admin' || $employee->employee_id === 'EMP-000') {
+            throw ValidationException::withMessages([
+                'employee' => ['Cannot delete the default administrator (admin).'],
+            ]);
+        }
+
+        if (auth()->id() && (int)auth()->id() === (int)$employee->id) {
+            throw ValidationException::withMessages([
+                'employee' => ['You cannot delete your own account while logged in.'],
+            ]);
+        }
+
+        return $employee->delete();
+    }
 }

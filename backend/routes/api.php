@@ -82,6 +82,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/employees', [EmployeeController::class, 'store']);
         Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
         Route::patch('/employees/{employee}/toggle', [EmployeeController::class, 'toggle']);
+        Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
 
         // Checker Management
         Route::post('/checkers', [CheckerController::class, 'store']);

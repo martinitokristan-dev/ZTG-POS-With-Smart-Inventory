@@ -1051,6 +1051,25 @@ export default function useSettings() {
         }
     };
 
+    const handleDeleteEmployee = async (emp) => {
+        if (emp.id === 1 || emp.username === 'admin' || emp.employee_id === 'EMP-000') {
+            showToast('Cannot delete the default administrator account.', 'error');
+            return;
+        }
+
+        const confirmDelete = window.confirm(`Are you sure you want to permanently delete "${emp.full_name || emp.name || emp.username}"? This will completely remove the staff account from the database.`);
+        if (!confirmDelete) return;
+
+        try {
+            await api.delete(`/employees/${emp.id}`);
+            setEmployees(prev => prev.filter(e => e.id !== emp.id));
+            resetSettingsCache('employees');
+            showToast('Staff member deleted successfully.', 'success');
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Failed to delete staff member.', 'error');
+        }
+    };
+
     // ------------------------------------------------------------------------
     // TAB 6 ACTIONS: CHECKERS CRUD
     // ------------------------------------------------------------------------
@@ -1131,7 +1150,7 @@ export default function useSettings() {
 
         // Tab 5: Employees
         employees, showEmployeeModal, setShowEmployeeModal, employeeForm, setEmployeeForm, selectedEmployee, setSelectedEmployee,
-        handleEmployeeSubmit, openEditEmployee, handleToggleEmployee, openAddEmployee,
+        handleEmployeeSubmit, openEditEmployee, handleToggleEmployee, handleDeleteEmployee, openAddEmployee,
 
         // Tab 6: Checkers
         checkers, showCheckerModal, setShowCheckerModal, checkerForm, setCheckerForm, selectedChecker, setSelectedChecker,

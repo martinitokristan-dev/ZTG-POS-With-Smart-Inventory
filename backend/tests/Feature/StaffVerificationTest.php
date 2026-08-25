@@ -198,4 +198,32 @@ class StaffVerificationTest extends TestCase
             return $mail->user->id === $employee->id && $mail->hasTo('diana@ztg.com');
         });
     }
+
+    public function test_admin_can_delete_staff_member()
+    {
+        $employee = User::create([
+            'full_name' => 'To Be Deleted',
+            'email'     => 'delete_me@ztg.com',
+            'username'  => 'todelete',
+            'password'  => Hash::make('Pass*1234'),
+            'role'      => UserRole::CASHIER,
+            'status'    => UserStatus::ACTIVE,
+        ]);
+
+        $response = $this->actingAs($this->admin)->deleteJson("/api/employees/{$employee->id}");
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'message' => 'Employee deleted successfully.',
+            ]);
+
+        $this->assertNull(User::find($employee->id));
+    }
+
+    public function test_admin_cannot_delete_default_admin()
+    {
+        $response = $this->actingAs($this->admin)->deleteJson("/api/employees/{$this->admin->id}");
+
+        $response->assertStatus(422);
+    }
 }

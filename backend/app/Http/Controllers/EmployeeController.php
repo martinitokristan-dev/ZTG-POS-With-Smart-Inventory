@@ -63,4 +63,16 @@ class EmployeeController extends Controller
             'employee' => $updatedEmployee,
         ]);
     }
+
+    /**
+     * Remove the specified employee from storage.
+     */
+    public function destroy(User $employee): JsonResponse
+    {
+        $this->employeeService->deleteEmployee($employee);
+
+        return response()->json([
+            'message' => 'Employee deleted successfully.',
+        ]);
+    }
 }
