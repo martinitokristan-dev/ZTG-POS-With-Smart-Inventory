@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import IOSSelect from '../../../../shared/components/IOSSelect';
+import PasswordRequirementDetector from '../../../../shared/components/PasswordRequirementDetector';
 
 export default function EmployeeModal({
     showEmployeeModal, setShowEmployeeModal,
@@ -13,29 +14,41 @@ export default function EmployeeModal({
 
     return (
         <div className="modal-overlay" style={{ display: 'flex' }}>
-            <div className="modal-card" style={{ maxWidth: '460px' }}>
+            <div className="modal-card" style={{ maxWidth: '480px' }}>
                 <form onSubmit={handleEmployeeSubmit}>
                     <div className="modal-header">
-                        <h3 className="modal-title">{selectedEmployee ? 'Edit Employee Access' : 'Register New Employee'}</h3>
+                        <h3 className="modal-title">{selectedEmployee ? 'Edit Staff Account' : 'Register New Staff'}</h3>
                         <button type="button" className="modal-close" onClick={() => setShowEmployeeModal(false)}>
                             <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }}>
                                 <path d="M6 18L18 6M6 6l12 12"/>
                             </svg>
                         </button>
                     </div>
-                    <div className="modal-body">
-                        <div className="form-group">
+                    <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
                             <label className="form-label">Full Name <span style={{ color: '#DC2626' }}>*</span></label>
                             <input 
                                 type="text" 
                                 className="form-control" 
                                 required 
-                                placeholder="Enter employee's full name"
-                                value={employeeForm.real_name || ''}
-                                onChange={(e) => setEmployeeForm({...employeeForm, real_name: e.target.value})}
+                                placeholder="Enter staff's full name (e.g. Jane Doe)"
+                                value={employeeForm.full_name || employeeForm.name || ''}
+                                onChange={(e) => setEmployeeForm({...employeeForm, full_name: e.target.value})}
                             />
                         </div>
-                        <div className="form-group">
+
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Contact / Phone Number</label>
+                            <input 
+                                type="text" 
+                                className="form-control" 
+                                placeholder="e.g. 0912 345 6789"
+                                value={employeeForm.phone_number || ''}
+                                onChange={(e) => setEmployeeForm({...employeeForm, phone_number: e.target.value})}
+                            />
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: 0 }}>
                             <label className="form-label">Login Username <span style={{ color: '#DC2626' }}>*</span></label>
                             <input 
                                 type="text" 
@@ -46,26 +59,17 @@ export default function EmployeeModal({
                                 onChange={(e) => setEmployeeForm({...employeeForm, username: e.target.value})}
                             />
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">Employee ID</label>
-                            <input 
-                                type="text" 
-                                className="form-control" 
-                                placeholder={selectedEmployee ? '' : 'Auto-generated if left blank (EMP-XXX)'}
-                                value={employeeForm.employee_id || ''}
-                                onChange={(e) => setEmployeeForm({...employeeForm, employee_id: e.target.value})}
-                                readOnly={!!selectedEmployee}
-                                style={selectedEmployee ? { backgroundColor: 'var(--bg-canvas)' } : {}}
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Password {selectedEmployee ? <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 'normal' }}>(Leave blank to keep unchanged)</span> : <span style={{ color: '#DC2626' }}>*</span>}</label>
+
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">
+                                Password {selectedEmployee ? <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 'normal' }}>(Leave blank to keep unchanged)</span> : <span style={{ color: '#DC2626' }}>*</span>}
+                            </label>
                             <div style={{ position: 'relative', width: '100%' }}>
                                 <input 
                                     type={showPassword ? "text" : "password"} 
                                     className="form-control" 
                                     required={!selectedEmployee} 
-                                    placeholder={selectedEmployee ? "••••••••" : "Enter login password (min. 4 chars)"} 
+                                    placeholder={selectedEmployee ? "••••••••" : "e.g. Staff*123"} 
                                     style={{ paddingRight: '40px' }}
                                     value={employeeForm.password || ''}
                                     onChange={(e) => setEmployeeForm({...employeeForm, password: e.target.value})}
@@ -90,8 +94,13 @@ export default function EmployeeModal({
                                     </svg>
                                 </button>
                             </div>
+                            <PasswordRequirementDetector 
+                                password={employeeForm.password || ''} 
+                                showWhenEmpty={!selectedEmployee} 
+                            />
                         </div>
-                        <div className="form-group">
+
+                        <div className="form-group" style={{ marginBottom: 0 }}>
                             <label className="form-label">Assigned Role</label>
                             <IOSSelect
                                 value={employeeForm.role || 'Cashier'}
@@ -103,14 +112,15 @@ export default function EmployeeModal({
                                 ]}
                             />
                         </div>
+
                         {employeeForm.role !== 'Cashier' && (
-                            <div className="form-group" style={{ marginTop: '10px' }}>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label">Manager PIN</label>
                                 <div style={{ position: 'relative', width: '100%' }}>
                                     <input 
                                         type={showPin ? "text" : "password"} 
                                         className="form-control" 
-                                        placeholder="4-digit PIN" 
+                                        placeholder="4-digit PIN (Optional)" 
                                         maxLength="4" 
                                         pattern="[0-9]{4}" 
                                         style={{ paddingRight: '40px' }}
@@ -137,13 +147,15 @@ export default function EmployeeModal({
                                         </svg>
                                     </button>
                                 </div>
-                                <small style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Only Admin and Supervisor roles need a PIN.</small>
+                                <small style={{ color: 'var(--text-secondary)', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+                                    Optional: 4-digit PIN. Your login password can also be used as your authorization PIN.
+                                </small>
                             </div>
                         )}
                     </div>
-                    <div className="modal-footer" style={{ padding: '12px 20px' }}>
+                    <div className="modal-footer" style={{ padding: '16px 20px', marginTop: '8px' }}>
                         <button type="button" className="btn btn-secondary" onClick={() => setShowEmployeeModal(false)}>Cancel</button>
-                        <button type="submit" className="btn btn-primary">{selectedEmployee ? 'Save Profile' : 'Save Employee'}</button>
+                        <button type="submit" className="btn btn-primary">{selectedEmployee ? 'Save Profile' : 'Save Staff'}</button>
                     </div>
                 </form>
             </div>

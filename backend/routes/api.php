@@ -18,10 +18,14 @@ use App\Http\Controllers\CheckerController;
 use App\Http\Controllers\SettingLogoController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\SystemHealthController;
+use App\Http\Controllers\ForgotPasswordController;
+use App\Http\Controllers\ActivityLogController;
 use Illuminate\Support\Facades\Route;
 
 // Public authentication & media routes
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink']);
+Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword']);
 Route::get('/media/{path}', [MediaController::class, 'show'])->where('path', '.*');
 
 // Authenticated routes
@@ -37,6 +41,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // General read routes (available to all roles)
     Route::get('/settings', [SettingController::class, 'index']);
+    // SI numbering preview — read-only, no counter increment. Cashier calls this on checkout open.
+    Route::get('/settings/si-preview', [SettingController::class, 'siPreview']);
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/variants', [VariantController::class, 'index']);
 
@@ -92,6 +98,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/products/restock', [ProductController::class, 'restock']);
         Route::post('/products/{product}/damaged', [ProductController::class, 'logDamaged']);
         Route::post('/products/upload-image', [ProductController::class, 'uploadImage']);
+
+        // Activity Logs & Active User Sessions (Admin only)
+        Route::get('/activity-logs', [ActivityLogController::class, 'index']);
+        Route::get('/activity-logs/summary', [ActivityLogController::class, 'summary']);
+        Route::get('/activity-logs/active-sessions', [ActivityLogController::class, 'activeSessions']);
+        Route::post('/activity-logs/active-sessions/{token_id}/revoke', [ActivityLogController::class, 'revokeSession']);
+        Route::post('/activity-logs/users/{user_id}/force-logout', [ActivityLogController::class, 'forceLogoutUser']);
     });
 
     // POS routes: Admin and Cashier

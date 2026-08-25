@@ -130,7 +130,7 @@ All project specifications and design documents are available in the [`docs/`](f
 1. **[Master Capstone Documentation](file:///d:/ZTG-main/docs/ZTG_Capstone_Documentation.md)** — Full SDLC, architecture, technology stack, security, deployment, and sprint logs.
 2. **[Master Implementation Plan](file:///d:/ZTG-main/docs/ZTG_Implementation_Plan.md)** — Step-by-step technical implementation roadmap, phase deliverables, and verification matrices.
 3. **[System Logic Flows & Blueprints](file:///d:/ZTG-main/docs/SystemLogicFlows.md)** — Algorithm flows, checkout validations, refund calculations, and Mermaid sequence diagrams.
-4. **[ERD Database Schema](file:///d:/ZTG-main/docs/ERD_Database_Schema.md)** — 15 relational tables, column constraints, indexes, and Lucid Chart prompts.
+4. **[ERD Database Schema](file:///d:/PROJECTS/ZTG-POS-With-Smart-Inventory-main/docs/ERD_Database_Schema.md)** — Complete relational schema with separated `users` and `user_profiles`, column constraints, compound indexes, and Lucid Chart prompts.
 5. **[UI Color Palette & Styling Guide](file:///d:/ZTG-main/docs/UI_Color_Palette.md)** — Design tokens, dark/light theme tokens, typography, and SVG vector standards.
 
 ---

@@ -7,7 +7,7 @@ import { flattenToSellableSKUs } from '../../../../shared/utils/skuHelpers';
 export function useDashboard() {
     const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
     const user = userStr ? JSON.parse(userStr) : null;
-    const name = user ? user.real_name || user.name : 'Administrator';
+    const name = user ? user.full_name || user.name : 'Administrator';
     const [loading, setLoading] = useState(true);
 
     const [currentTimeRange, setCurrentTimeRange] = useState('Today');

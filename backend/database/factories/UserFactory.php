@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\User;
+use App\Models\UserProfile;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -25,21 +26,32 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+            'username'       => fake()->unique()->userName(),
+            'password'       => static::$password ??= Hash::make('Admin*123'),
+            'role'           => 'Cashier',
+            'status'         => 'Active',
             'remember_token' => Str::random(10),
         ];
     }
 
     /**
-     * Indicate that the model's email address should be unverified.
+     * Configure the model factory.
      */
-    public function unverified(): static
+    public function configure(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
-        ]);
+        return $this->afterCreating(function (User $user) {
+            $data = $user->virtualProfileAttributes;
+
+            UserProfile::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'full_name'     => $data['full_name'] ?? ($user->profile?->full_name ?? fake()->name()),
+                    'phone_number'  => array_key_exists('phone_number', $data) ? $data['phone_number'] : ($user->profile?->phone_number ?? fake()->phoneNumber()),
+                    'email'         => array_key_exists('email', $data) ? $data['email'] : ($user->profile?->email ?? fake()->unique()->safeEmail()),
+                    'profile_photo' => array_key_exists('profile_photo', $data) ? $data['profile_photo'] : ($user->profile?->profile_photo ?? null),
+                ]
+            );
+            $user->load('profile');
+        });
     }
 }

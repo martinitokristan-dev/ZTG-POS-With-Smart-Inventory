@@ -69,27 +69,25 @@ class SettingsToggleTest extends TestCase
         parent::setUp();
 
         $this->admin = User::create([
-            'employee_id' => 'EMP-000',
-            'name'        => 'Administrator',
-            'real_name'   => 'Admin User',
-            'email'       => 'admin@ztg.com',
-            'username'    => 'admin',
-            'password'    => Hash::make('password'),
-            'pin'         => '1234',
-            'role'        => UserRole::ADMIN,
-            'status'      => UserStatus::ACTIVE,
+            'full_name'    => 'Admin User',
+            'phone_number' => '09123456789',
+            'email'        => 'admin@ztg.com',
+            'username'     => 'admin',
+            'password'     => Hash::make('password'),
+            'pin'          => '1234',
+            'role'         => UserRole::ADMIN,
+            'status'       => UserStatus::ACTIVE,
         ]);
 
         $this->cashier = User::create([
-            'employee_id' => 'EMP-001',
-            'name'        => 'Test Cashier',
-            'real_name'   => 'Cashier User',
-            'email'       => 'cashier@ztg.com',
-            'username'    => 'cashier',
-            'password'    => Hash::make('password'),
-            'pin'         => '5678',
-            'role'        => UserRole::CASHIER,
-            'status'      => UserStatus::ACTIVE,
+            'full_name'    => 'Cashier User',
+            'phone_number' => '09987654321',
+            'email'        => 'cashier@ztg.com',
+            'username'     => 'cashier',
+            'password'     => Hash::make('password'),
+            'pin'          => '5678',
+            'role'         => UserRole::CASHIER,
+            'status'       => UserStatus::ACTIVE,
         ]);
 
         // Seed all toggle defaults to 'true' so we can test disabling them

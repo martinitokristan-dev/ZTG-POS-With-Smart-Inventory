@@ -16,11 +16,11 @@ class UpdateProfileRequest extends FormRequest
         $myId = $this->user()->id;
 
         return [
-            'name' => 'required|string|max:100',
-            'real_name' => 'required|string|max:100',
-            'email' => 'nullable|email|max:255|unique:users,email,' . $myId,
-            'username' => 'required|string|max:50|unique:users,username,' . $myId,
-            'pin' => 'nullable|string|max:10',
+            'full_name'    => 'required|string|max:100',
+            'phone_number' => 'nullable|string|max:30',
+            'email'        => ['nullable', 'email', 'max:255', \Illuminate\Validation\Rule::unique('user_profiles', 'email')->ignore($myId, 'user_id')],
+            'username'     => 'required|string|max:50|unique:users,username,' . $myId,
+            'pin'          => 'nullable|string|max:10',
         ];
     }
 }

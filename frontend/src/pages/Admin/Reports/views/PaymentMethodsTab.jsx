@@ -12,7 +12,7 @@ export default function PaymentMethodsTab({ salesSummary, employees = [], fmt, s
             employees.forEach(emp => {
                 const role = (emp.role || '').toLowerCase();
                 if (role === 'cashier') {
-                    const name = emp.real_name || emp.name;
+                    const name = emp.full_name || emp.name;
                     if (name) set.add(name.trim());
                 }
             });
@@ -22,7 +22,7 @@ export default function PaymentMethodsTab({ salesSummary, employees = [], fmt, s
                 if (tx.cashier) {
                     const role = (tx.cashier.role || '').toLowerCase();
                     if (role === 'cashier') {
-                        const name = tx.cashier.real_name || tx.cashier.name;
+                        const name = tx.cashier.full_name || tx.cashier.name;
                         if (name) set.add(name.trim());
                     }
                 }

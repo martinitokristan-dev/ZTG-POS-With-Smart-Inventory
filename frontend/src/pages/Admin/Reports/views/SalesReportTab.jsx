@@ -25,7 +25,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
             employees.forEach(emp => {
                 const role = (emp.role || '').toLowerCase();
                 if (role === 'cashier') {
-                    const name = emp.real_name || emp.name;
+                    const name = emp.full_name || emp.name;
                     if (name) set.add(name.trim());
                 }
             });
@@ -35,7 +35,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                 if (tx.cashier) {
                     const role = (tx.cashier.role || '').toLowerCase();
                     if (role === 'cashier') {
-                        const name = tx.cashier.real_name || tx.cashier.name;
+                        const name = tx.cashier.full_name || tx.cashier.name;
                         if (name) set.add(name.trim());
                     }
                 }
@@ -78,7 +78,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                 return false;
             }
             if (selectedCashier !== 'All') {
-                const cashierName = tx.cashier?.real_name || tx.cashier?.name || '';
+                const cashierName = tx.cashier?.full_name || tx.cashier?.name || '';
                 if (cashierName !== selectedCashier) return false;
             }
             if (selectedPayment !== 'All') {
@@ -378,7 +378,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                     const grossRowAmount = displayQty * unitPrice;
                                     const netRowAmount = Math.max(0, grossRowAmount - discountVal);
                                     const customerVal = tx.customer_name || tx.customer?.name || (tx.customer_id ? `Customer #${tx.customer_id}` : 'WALK-IN');
-                                    const serveByVal = tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || '—';
+                                    const serveByVal = tx.checker?.name || tx.cashier?.full_name || tx.cashier?.name || '—';
 
                                      const fullDate = fmtDate(tx.date || tx.created_at) || '';
                                      const [displayDate, ...timeParts] = fullDate.split(', ');

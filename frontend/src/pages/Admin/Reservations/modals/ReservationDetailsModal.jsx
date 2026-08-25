@@ -25,8 +25,8 @@ export default function ReservationDetailsModal({ isOpen, onClose, reservation, 
     const custName = r.customer?.name || r.customer_name || '—';
     const custPhone = r.customer?.phone || r.customer_phone || '—';
     const custEmail = r.customer?.email || r.email || '—';
-    const reservedByName = r.reserved_by?.real_name || r.reserved_by?.name || '—';
-    const fulfilledByName = r.fulfilled_by?.real_name || r.fulfilled_by?.name || null;
+    const reservedByName = r.reserved_by?.full_name || r.reserved_by?.name || '—';
+    const fulfilledByName = r.fulfilled_by?.full_name || r.fulfilled_by?.name || null;
     const items = r.items || [];
     const chequeNo = r.cheque_number || (r.payment_method && r.payment_method.includes('(#') ? r.payment_method.match(/\(#([^)]+)\)/)?.[1] : null);
     const crNo = r.si_no || (rawStatus === 'completed' ? r.order_no : null);

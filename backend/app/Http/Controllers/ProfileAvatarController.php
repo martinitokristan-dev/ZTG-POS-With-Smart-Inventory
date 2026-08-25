@@ -47,7 +47,11 @@ class ProfileAvatarController extends Controller
         ]);
         $url = $result['secure_url'] ?? $result['url'];
 
-        $user->update(['profile_photo' => $url]);
+        $user->profile()->updateOrCreate(
+            ['user_id' => $user->id],
+            ['profile_photo' => $url]
+        );
+        $user->load('profile');
 
         return response()->json([
             'message'       => 'Profile photo uploaded successfully.',
@@ -65,7 +69,11 @@ class ProfileAvatarController extends Controller
 
         if ($user->profile_photo) {
             $this->deleteCloudinaryImage($user->profile_photo);
-            $user->update(['profile_photo' => null]);
+            $user->profile()->updateOrCreate(
+                ['user_id' => $user->id],
+                ['profile_photo' => null]
+            );
+            $user->load('profile');
         }
 
         return response()->json([

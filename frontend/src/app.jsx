@@ -3,6 +3,8 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import PrivateRoute from './shared/PrivateRoute';
 import AppShell from './shared/AppShell';
 
@@ -18,6 +20,7 @@ import POS from './pages/Cashier/POS/index.jsx';
 import DailySales from './pages/Cashier/DailySales/index.jsx';
 import CustomerLog from './pages/Cashier/CustomerLog/index.jsx';
 import SystemStatus from './pages/Admin/SystemStatus/index.jsx';
+import ActivityLogs from './pages/Admin/ActivityLogs/index.jsx';
 
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ProductProvider } from './contexts/ProductContext';
@@ -43,8 +46,10 @@ function App() {
                 <InventoryProvider>
                     <BrowserRouter>
                         <Routes>
-                            {/* Public Route */}
+                            {/* Public Routes */}
                             <Route path="/login" element={<Login />} />
+                            <Route path="/forgot-password" element={<ForgotPassword />} />
+                            <Route path="/reset-password" element={<ResetPassword />} />
 
                             {/*
                              * All authenticated routes share AppShell as a
@@ -78,6 +83,8 @@ function App() {
                                         <HistoryLogs />
                                     </PrivateRoute>
                                 } />
+
+                                <Route path="/activity-logs" element={<Navigate to="/settings?tab=activity" replace />} />
 
                                 <Route path="/sales-log" element={
                                     <PrivateRoute allowedRoles={['Admin']}>

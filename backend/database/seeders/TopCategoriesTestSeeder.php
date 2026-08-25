@@ -41,16 +41,15 @@ class TopCategoriesTestSeeder extends Seeder
     {
         // ── Ensure a cashier exists ──────────────────────────────────────────────
         $cashier = User::updateOrCreate(
-            ['employee_id' => 'EMP-001'],
+            ['username' => 'cashier'],
             [
-                'name'     => 'Test Cashier',
-                'real_name' => 'Jane Doe',
-                'email'    => 'cashier@ztg.com',
-                'username' => 'cashier',
-                'password' => Hash::make('password'),
-                'pin'      => '5678',
-                'role'     => UserRole::CASHIER,
-                'status'   => UserStatus::ACTIVE,
+                'full_name'    => 'Jane Doe',
+                'phone_number' => '09987654321',
+                'email'        => 'cashier@ztg.com',
+                'password'     => Hash::make('Cashier*123'),
+                'pin'          => '5678',
+                'role'         => UserRole::CASHIER,
+                'status'       => UserStatus::ACTIVE,
             ]
         );
 

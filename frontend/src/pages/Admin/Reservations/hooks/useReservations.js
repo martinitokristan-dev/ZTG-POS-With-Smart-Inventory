@@ -16,7 +16,7 @@ export default function useReservations() {
 
     /* ── User Session ── */
     const user = (() => { try { return JSON.parse((sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'))); } catch { return null; } })();
-    const userName = user?.real_name || user?.name || 'Staff';
+    const userName = user?.full_name || user?.name || 'Staff';
 
     /* ── List State ── */
     const [reservations, setReservations] = useState([]);
@@ -440,7 +440,7 @@ export default function useReservations() {
             deposit: depAmt,
             paymentMethod: target.payment_method || 'Cash',
             chequeNumber: target.cheque_number,
-            servedBy: target.reservedBy?.real_name || target.reservedBy?.name || userName || 'Staff',
+            servedBy: target.reservedBy?.full_name || target.reservedBy?.name || userName || 'Staff',
         });
     };
 
@@ -472,7 +472,7 @@ export default function useReservations() {
             deposit: depAmt,
             paymentMethod: target.payment_method || 'Cash',
             chequeNumber: target.cheque_number,
-            servedBy: target.fulfilledBy?.real_name || target.fulfilledBy?.name || target.fulfilled_by?.name || userName || 'Staff',
+            servedBy: target.fulfilledBy?.full_name || target.fulfilledBy?.name || target.fulfilled_by?.name || userName || 'Staff',
         });
     };
 

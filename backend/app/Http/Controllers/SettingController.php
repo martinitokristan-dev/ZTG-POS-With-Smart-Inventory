@@ -31,8 +31,19 @@ class SettingController extends Controller
         $this->settingService->updateSettings($request->validated()['settings']);
 
         return response()->json([
-            'message' => 'Settings updated successfully.',
+            'message'  => 'Settings updated successfully.',
             'settings' => $this->settingService->getAll()
         ]);
     }
+
+    /**
+     * Return the current next SI number for each doc type (read-only, no increment).
+     * Called by the Checkout Modal on open so it can pre-fill the SI field in Auto mode.
+     * Cashier never sees the "mode" label — this is silently consumed by the frontend.
+     */
+    public function siPreview(): JsonResponse
+    {
+        return response()->json($this->settingService->getSiPreview());
+    }
 }
+

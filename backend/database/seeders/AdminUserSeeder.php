@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\UserProfile;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use Illuminate\Database\Seeder;
@@ -15,32 +16,22 @@ class AdminUserSeeder extends Seeder
      */
     public function run(): void
     {
-        User::updateOrCreate(
-            ['employee_id' => 'EMP-000'],
+        $user = User::updateOrCreate(
+            ['username' => 'admin'],
             [
-                'name' => 'Administrator',
-                'real_name' => 'Kyla',
-                'email' => 'admin@ztg.com',
-                'username' => 'admin',
-                'password' => Hash::make('password'),
-                'pin' => '1234',
-                'role' => UserRole::ADMIN,
-                'status' => UserStatus::ACTIVE,
+                'password' => Hash::make('Admin*123'),
+                'pin'      => 'Admin*123',
+                'role'     => UserRole::ADMIN,
+                'status'   => UserStatus::ACTIVE,
             ]
         );
 
-        // Let's also seed a cashier for testing RBAC redirection
-        User::updateOrCreate(
-            ['employee_id' => 'EMP-001'],
+        UserProfile::updateOrCreate(
+            ['user_id' => $user->id],
             [
-                'name' => 'Jane Doe',
-                'real_name' => 'Jane Doe',
-                'email' => 'cashier@ztg.com',
-                'username' => 'cashier',
-                'password' => Hash::make('password'),
-                'pin' => '5678',
-                'role' => UserRole::CASHIER,
-                'status' => UserStatus::ACTIVE,
+                'full_name'    => 'Kyla',
+                'phone_number' => '09123456789',
+                'email'        => 'admin@ztg.com',
             ]
         );
     }

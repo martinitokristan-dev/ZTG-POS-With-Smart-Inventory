@@ -188,7 +188,7 @@ export const copySalesToClipboard = async (transactionsItems = []) => {
     const paymentStyle = isPo ? 'color: #C00000;' : 'color: #000000;';
 
     const siDrVal = tx.si_no || tx.receipt_number || '—';
-    const serveByVal = (tx.checker?.real_name || tx.checker?.name || tx.cashier?.real_name || tx.cashier?.name || 'SYSTEM').toUpperCase();
+    const serveByVal = (tx.checker?.name || tx.cashier?.full_name || tx.cashier?.name || 'SYSTEM').toUpperCase();
 
     const formattedUnitPrice = unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const formattedFinalSales = finalSalesAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

@@ -7,7 +7,7 @@ import { resetReportsCache } from '../../../../shared/hooks/useReportsCache';
 export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fmtDate, fmt, onSearchTransaction }) {
     // Read the actual logged-in user from localStorage
     const currentUser = (() => { try { return JSON.parse((sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'))); } catch { return null; } })();
-    const currentUserName = currentUser?.real_name || currentUser?.name || 'Current User';
+    const currentUserName = currentUser?.full_name || currentUser?.name || 'Current User';
     const { sheetRef, dragHandleProps } = useMobileSheet({ onClose });
     const [actionType, setActionType] = useState('Refund');
     const [reason, setReason] = useState('Defective / Damaged Item');
@@ -271,7 +271,7 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
                                             <span style={{ color: 'var(--text-secondary)' }}>Served By</span>
-                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{txToUse ? (txToUse.checker?.real_name || txToUse.checker?.name || txToUse.cashier?.real_name || txToUse.cashier?.name || '—') : '-'}</span>
+                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{txToUse ? (txToUse.checker?.name || txToUse.cashier?.full_name || txToUse.cashier?.name || '—') : '-'}</span>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
                                             <span style={{ color: 'var(--text-secondary)' }}>Original Amount</span>

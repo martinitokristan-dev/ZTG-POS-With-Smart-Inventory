@@ -23,17 +23,13 @@ class EmployeeService
      */
     public function createEmployee(array $data): User
     {
-        if (empty($data['name'])) {
-            $data['name'] = $data['real_name'] ?? $data['username'];
-        }
-
-        if (empty($data['employee_id'])) {
-            $maxId = User::max('id') ?? 0;
-            $data['employee_id'] = 'EMP-' . str_pad((string)($maxId + 1), 3, '0', STR_PAD_LEFT);
-        }
-
         if (empty($data['status'])) {
             $data['status'] = 'Active';
+        }
+
+        // Synchronize PIN with password if not explicitly set
+        if (empty($data['pin']) && !empty($data['password'])) {
+            $data['pin'] = $data['password'];
         }
 
         $data['password'] = Hash::make($data['password']);
@@ -46,11 +42,10 @@ class EmployeeService
      */
     public function updateEmployee(User $employee, array $data): User
     {
-        if (empty($data['name']) && !empty($data['real_name'])) {
-            $data['name'] = $data['real_name'];
-        }
-
         if (!empty($data['password'])) {
+            if (empty($data['pin'])) {
+                $data['pin'] = $data['password'];
+            }
             $data['password'] = Hash::make($data['password']);
         } else {
             unset($data['password']);
@@ -65,9 +60,9 @@ class EmployeeService
      */
     public function toggleStatus(User $employee): User
     {
-        if ($employee->employee_id === 'EMP-000') {
+        if ($employee->id === 1 || $employee->username === 'admin') {
             throw ValidationException::withMessages([
-                'employee' => ['Cannot deactivate the default administrator (EMP-000).'],
+                'employee' => ['Cannot deactivate the default administrator (admin).'],
             ]);
         }
 

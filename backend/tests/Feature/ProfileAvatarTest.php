@@ -42,27 +42,25 @@ class ProfileAvatarTest extends TestCase
         parent::setUp();
 
         $this->user = User::create([
-            'employee_id' => 'EMP-001',
-            'name'        => 'testuser',
-            'real_name'   => 'Test User',
-            'email'       => 'test@ztg.com',
-            'username'    => 'testuser',
-            'password'    => Hash::make('password'),
-            'pin'         => '1234',
-            'role'        => UserRole::ADMIN,
-            'status'      => UserStatus::ACTIVE,
+            'full_name'    => 'Test User',
+            'phone_number' => '09123456789',
+            'email'        => 'test@ztg.com',
+            'username'     => 'testuser',
+            'password'     => Hash::make('password'),
+            'pin'          => '1234',
+            'role'         => UserRole::ADMIN,
+            'status'       => UserStatus::ACTIVE,
         ]);
 
         $this->otherUser = User::create([
-            'employee_id' => 'EMP-002',
-            'name'        => 'other',
-            'real_name'   => 'Other User',
-            'email'       => 'other@ztg.com',
-            'username'    => 'other',
-            'password'    => Hash::make('password'),
-            'pin'         => null,
-            'role'        => UserRole::CASHIER,
-            'status'      => UserStatus::ACTIVE,
+            'full_name'    => 'Other User',
+            'phone_number' => '09987654321',
+            'email'        => 'other@ztg.com',
+            'username'     => 'other',
+            'password'     => Hash::make('password'),
+            'pin'          => null,
+            'role'         => UserRole::CASHIER,
+            'status'       => UserStatus::ACTIVE,
         ]);
     }
 

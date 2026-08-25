@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 import IOSSelect from '../../../../shared/components/IOSSelect';
 
@@ -31,6 +31,36 @@ export default function CartSidebar({
 }) {
     const [error, setError] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    // Close customer search dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    const isExistingCustomerActive = Boolean(selectedCustomer || existingCustomerSearch.trim() !== '');
+    const isNewCustomerActive = Boolean(newCustomerName.trim() !== '');
+
+    const handleClearExistingCustomer = () => {
+        setExistingCustomerSearch('');
+        setSelectedCustomer(null);
+        setCustomerPhone('');
+        setCustomerTin('');
+        setCustomerAddress('');
+        setIsDropdownOpen(false);
+    };
+
+    const handleClearNewCustomer = () => {
+        setNewCustomerName('');
+    };
 
     // Filter existing customers for the dropdown
     const filteredCustomers = useMemo(() => {
@@ -81,32 +111,67 @@ export default function CartSidebar({
 
                 {/* Customer Information Section — Compact 2-Column POS Layout */}
                 <div className="cart-customer-section" style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '10px' }}>
-                    <div className="form-group" style={{ position: 'relative' }}>
+                    {/* Existing Customer Autocomplete */}
+                    <div className="form-group" style={{ position: 'relative' }} ref={dropdownRef}>
                         <label className="form-label" htmlFor="existingCustomerSearch">Existing Customer</label>
-                        <input 
-                            type="text" 
-                            id="existingCustomerSearch"
-                            className="form-control" 
-                            placeholder="Search existing customer..." 
-                            value={existingCustomerSearch}
-                            onFocus={() => setIsDropdownOpen(true)}
-                            onChange={(e) => {
-                                setExistingCustomerSearch(e.target.value);
-                                setIsDropdownOpen(true);
-                                if (e.target.value) setNewCustomerName('');
-                            }}
-                        />
-                        {isDropdownOpen && customersToDisplay.length > 0 && (
+                        <div style={{ position: 'relative' }}>
+                            <input 
+                                type="text" 
+                                id="existingCustomerSearch"
+                                className="form-control" 
+                                placeholder={isNewCustomerActive ? "Disabled (New customer entered)" : "Search existing customer..."} 
+                                value={existingCustomerSearch}
+                                disabled={isNewCustomerActive}
+                                onFocus={() => {
+                                    if (!isNewCustomerActive) setIsDropdownOpen(true);
+                                }}
+                                onChange={(e) => {
+                                    setExistingCustomerSearch(e.target.value);
+                                    setIsDropdownOpen(true);
+                                    if (e.target.value) setNewCustomerName('');
+                                }}
+                                style={{
+                                    paddingRight: isExistingCustomerActive ? '30px' : '10px',
+                                    background: isNewCustomerActive ? 'var(--bg-secondary, #F1F5F9)' : 'var(--bg-card)',
+                                    cursor: isNewCustomerActive ? 'not-allowed' : 'text',
+                                    opacity: isNewCustomerActive ? 0.7 : 1
+                                }}
+                            />
+                            {isExistingCustomerActive && (
+                                <button
+                                    type="button"
+                                    onClick={handleClearExistingCustomer}
+                                    style={{
+                                        position: 'absolute',
+                                        right: '8px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#94A3B8',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        padding: '2px 4px',
+                                        lineHeight: 1
+                                    }}
+                                    title="Clear existing customer"
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
+                        {isDropdownOpen && !isNewCustomerActive && customersToDisplay.length > 0 && (
                             <div style={{ 
                                 position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, 
                                 backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', 
-                                maxHeight: '150px', overflowY: 'auto', boxShadow: 'var(--shadow-md)', marginTop: '2px' 
+                                maxHeight: '160px', overflowY: 'auto', boxShadow: 'var(--shadow-md)', marginTop: '2px' 
                             }}>
                                 {customersToDisplay.map((c, index) => (
                                     <div 
                                         key={c.id || c.customer_id || `cust-${c.name || ''}-${index}`} 
                                         style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '13px', borderBottom: '1px solid var(--border)' }}
-                                        onMouseDown={() => {
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
                                             setExistingCustomerSearch(c.name);
                                             setSelectedCustomer(c);
                                             setCustomerPhone(c.phone || '');
@@ -125,22 +190,55 @@ export default function CartSidebar({
                         )}
                     </div>
 
+                    {/* New Customer Name */}
                     <div className="form-group">
                         <label className="form-label" htmlFor="newCustomerName">New Customer Name</label>
-                        <input 
-                            type="text" 
-                            id="newCustomerName"
-                            className="form-control" 
-                            placeholder="Enter new customer name" 
-                            value={newCustomerName}
-                            onChange={(e) => {
-                                setNewCustomerName(e.target.value);
-                                if (e.target.value) {
-                                    setExistingCustomerSearch('');
-                                    setError('');
-                                }
-                            }}
-                        />
+                        <div style={{ position: 'relative' }}>
+                            <input 
+                                type="text" 
+                                id="newCustomerName"
+                                className="form-control" 
+                                placeholder={isExistingCustomerActive ? "Disabled (Existing customer selected)" : "Enter new customer name"} 
+                                value={newCustomerName}
+                                disabled={isExistingCustomerActive}
+                                onChange={(e) => {
+                                    setNewCustomerName(e.target.value);
+                                    if (e.target.value) {
+                                        setExistingCustomerSearch('');
+                                        setSelectedCustomer(null);
+                                        setError('');
+                                    }
+                                }}
+                                style={{
+                                    paddingRight: isNewCustomerActive ? '30px' : '10px',
+                                    background: isExistingCustomerActive ? 'var(--bg-secondary, #F1F5F9)' : 'var(--bg-card)',
+                                    cursor: isExistingCustomerActive ? 'not-allowed' : 'text',
+                                    opacity: isExistingCustomerActive ? 0.7 : 1
+                                }}
+                            />
+                            {isNewCustomerActive && (
+                                <button
+                                    type="button"
+                                    onClick={handleClearNewCustomer}
+                                    style={{
+                                        position: 'absolute',
+                                        right: '8px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#94A3B8',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        padding: '2px 4px',
+                                        lineHeight: 1
+                                    }}
+                                    title="Clear new customer"
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>

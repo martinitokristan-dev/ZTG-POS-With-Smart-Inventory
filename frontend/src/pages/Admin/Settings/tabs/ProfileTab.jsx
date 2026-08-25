@@ -45,13 +45,14 @@ export default function ProfileTab({
     // Compute display avatar — server URL or initials fallback
     const photoUrl = fixImageUrl(profileData.profile_photo);
     const hasPhoto = !!photoUrl && !imgError;
-    const initials = profileData.real_name
-        ? profileData.real_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+    const displayName = profileData.full_name || profileData.name || '';
+    const initials = displayName
+        ? displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
         : (profileData.username ? profileData.username.slice(0, 2).toUpperCase() : (profileData.role === 'Cashier' ? 'CA' : 'AD'));
 
     // Determine which required fields are missing
     const missing = [];
-    if (!profileData.real_name?.trim()) missing.push('Full Name');
+    if (!displayName.trim()) missing.push('Full Name');
     if (!profileData.email?.trim()) missing.push('Email Address');
     if (!profileData.username?.trim()) missing.push('Login Username');
     const hasIncomplete = missing.length > 0;
@@ -180,7 +181,7 @@ export default function ProfileTab({
                         <div className="profile-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: '12px' }}>
                             <div>
                                 <h2 className="profile-section-title" style={{ marginBottom: '4px' }}>Personal Information</h2>
-                                <p className="profile-section-desc" style={{ margin: 0 }}>Your name is shown on the dashboard greeting and reservation records.</p>
+                                <p className="profile-section-desc" style={{ margin: 0 }}>Your name is shown on the dashboard greeting and transaction receipts.</p>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span className="profile-account-badge">{profileData.role || 'Cashier'}</span>
@@ -212,10 +213,24 @@ export default function ProfileTab({
                                         id="profileName"
                                         className="form-control profile-input"
                                         required
-                                        value={profileData.real_name}
-                                        onChange={(e) => setProfileData({...profileData, real_name: e.target.value})}
+                                        value={profileData.full_name || profileData.name || ''}
+                                        onChange={(e) => setProfileData({...profileData, full_name: e.target.value, name: e.target.value})}
                                         disabled={!isEditing}
-                                        style={{ borderColor: !profileData.real_name?.trim() ? '#FCA5A5' : '' }}
+                                        style={{ borderColor: !displayName?.trim() ? '#FCA5A5' : '' }}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label" htmlFor="profilePhone">
+                                        Phone / Contact Number
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="profilePhone"
+                                        className="form-control profile-input"
+                                        placeholder="0912 345 6789"
+                                        value={profileData.phone_number || ''}
+                                        onChange={(e) => setProfileData({...profileData, phone_number: e.target.value})}
+                                        disabled={!isEditing}
                                     />
                                 </div>
                                 <div className="form-group">
@@ -227,7 +242,7 @@ export default function ProfileTab({
                                         id="profileEmail"
                                         className="form-control profile-input"
                                         required
-                                        value={profileData.email}
+                                        value={profileData.email || ''}
                                         onChange={(e) => setProfileData({...profileData, email: e.target.value})}
                                         disabled={!isEditing}
                                         style={{ borderColor: !profileData.email?.trim() ? '#FCA5A5' : '' }}
@@ -242,14 +257,14 @@ export default function ProfileTab({
                                         id="profileUsername"
                                         className="form-control profile-input"
                                         required
-                                        value={profileData.username}
+                                        value={profileData.username || ''}
                                         onChange={(e) => setProfileData({...profileData, username: e.target.value})}
                                         disabled={!isEditing}
                                         style={{ borderColor: !profileData.username?.trim() ? '#FCA5A5' : '' }}
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">Account</label>
+                                    <label className="form-label">Account Role</label>
                                     <div className="profile-readonly-field">{profileData.role || 'Cashier'}</div>
                                 </div>
                             </div>

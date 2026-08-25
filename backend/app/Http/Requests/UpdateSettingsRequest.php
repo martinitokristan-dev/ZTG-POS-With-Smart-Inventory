@@ -20,8 +20,15 @@ class UpdateSettingsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'settings' => 'required|array',
-            'settings.*' => 'nullable|string',
+            'settings'                       => 'required|array',
+            'settings.*'                     => 'nullable|string',
+            // SI / OR Numbering (Hybrid Manual + Auto-Increment)
+            'settings.si_numbering_mode'     => 'sometimes|nullable|in:manual,auto',
+            'settings.si_counter_si'         => 'sometimes|nullable|string|max:20',
+            'settings.si_counter_dr'         => 'sometimes|nullable|string|max:20',
+            'settings.si_counter_cr'         => 'sometimes|nullable|string|max:20',
+            'settings.si_auto_digits'        => 'sometimes|nullable|integer|min:4|max:10',
         ];
     }
+
 }

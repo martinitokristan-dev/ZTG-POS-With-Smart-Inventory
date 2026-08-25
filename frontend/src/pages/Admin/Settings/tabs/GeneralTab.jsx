@@ -406,6 +406,214 @@ export default function GeneralTab({
                 </div>
             </div>
 
+            {/* ── Invoice & Receipt Numbering Configuration (BIR Sequential Standards) ── */}
+            <div className="settings-section" style={{ marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '12px', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                        <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--primary)' }}>
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            Invoice & Receipt Numbering (BIR Compliance)
+                        </h3>
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0' }}>
+                            Select the invoicing method: manual ATP pre-printed booklet or system-generated electronic series
+                        </p>
+                    </div>
+
+                    {/* Mode Status Pill */}
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', backgroundColor: settings.si_numbering_mode === 'auto' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(59, 130, 246, 0.12)', color: settings.si_numbering_mode === 'auto' ? '#059669' : '#2563EB', fontSize: '11px', fontWeight: '700' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'currentColor' }}></span>
+                        {settings.si_numbering_mode === 'auto' ? 'System-Generated Active (POS/CAS)' : 'Manual ATP Booklet Active'}
+                    </div>
+                </div>
+
+                {/* Mode Selector Cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '20px' }}>
+                    {/* Manual Mode Option */}
+                    <div
+                        onClick={() => {
+                            if (!isEditing && onStartEdit) onStartEdit();
+                            if (handleSettingInputChange) {
+                                handleSettingInputChange('si_numbering_mode', 'manual');
+                            }
+                        }}
+                        style={{
+                            border: (settings.si_numbering_mode || 'manual') === 'manual' ? '2px solid #3B82F6' : '1px solid var(--border)',
+                            borderRadius: '12px',
+                            padding: '14px 16px',
+                            backgroundColor: (settings.si_numbering_mode || 'manual') === 'manual' ? 'rgba(59, 130, 246, 0.04)' : 'var(--bg-card)',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            boxShadow: (settings.si_numbering_mode || 'manual') === 'manual' ? '0 2px 8px rgba(59, 130, 246, 0.1)' : 'none'
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M12 20h9"></path>
+                                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                    </svg>
+                                </div>
+                                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>Manual ATP Booklet</span>
+                            </div>
+                            <input
+                                type="radio"
+                                name="si_numbering_mode_choice"
+                                checked={(settings.si_numbering_mode || 'manual') === 'manual'}
+                                onChange={() => {
+                                    if (!isEditing && onStartEdit) onStartEdit();
+                                    handleSettingInputChange('si_numbering_mode', 'manual');
+                                }}
+                                style={{ accentColor: '#2563EB', cursor: 'pointer' }}
+                            />
+                        </div>
+                        <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', margin: '0 0 0 36px', lineHeight: 1.4 }}>
+                            Authority to Print (ATP) paper booklet. Cashier inputs the pre-printed serial number from the physical booklet.
+                        </p>
+                    </div>
+
+                    {/* System-Generated POS Invoicing Option */}
+                    <div
+                        onClick={() => {
+                            if (!isEditing && onStartEdit) onStartEdit();
+                            if (handleSettingInputChange) {
+                                handleSettingInputChange('si_numbering_mode', 'auto');
+                            }
+                        }}
+                        style={{
+                            border: settings.si_numbering_mode === 'auto' ? '2px solid #10B981' : '1px solid var(--border)',
+                            borderRadius: '12px',
+                            padding: '14px 16px',
+                            backgroundColor: settings.si_numbering_mode === 'auto' ? 'rgba(16, 185, 129, 0.04)' : 'var(--bg-card)',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            boxShadow: settings.si_numbering_mode === 'auto' ? '0 2px 8px rgba(16, 185, 129, 0.1)' : 'none'
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#059669' }}>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polyline>
+                                    </svg>
+                                </div>
+                                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>System-Generated (POS / CAS)</span>
+                            </div>
+                            <input
+                                type="radio"
+                                name="si_numbering_mode_choice"
+                                checked={settings.si_numbering_mode === 'auto'}
+                                onChange={() => {
+                                    if (!isEditing && onStartEdit) onStartEdit();
+                                    handleSettingInputChange('si_numbering_mode', 'auto');
+                                }}
+                                style={{ accentColor: '#059669', cursor: 'pointer' }}
+                            />
+                        </div>
+                        <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', margin: '0 0 0 36px', lineHeight: 1.4 }}>
+                            Compliant Computerized Accounting / POS system. The system automatically records and advances sequential serial numbers.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Sub-settings visible when System-Generated mode is selected */}
+                {settings.si_numbering_mode === 'auto' && (
+                    <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: 'var(--text-secondary)', fontSize: '12px' }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#059669', flexShrink: 0 }}>
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                            <span>Set the starting sequence for each independent document series (BIR RR 18-2012 / RR 7-2024 compliance).</span>
+                        </div>
+
+                        <div className="grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '14px' }}>
+                            {/* Sales Invoice (S.I.) Counter */}
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label" htmlFor="siCounterSi" style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>S.I. Next Series No.</span>
+                                    <span style={{ color: '#2563EB', fontWeight: '700' }}>Preview: {String(settings.si_counter_si || '1').padStart(parseInt(settings.si_auto_digits || 6, 10), '0')}</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    id="siCounterSi"
+                                    className="form-control"
+                                    value={settings.si_counter_si || '000001'}
+                                    onChange={(e) => handleSettingInputChange('si_counter_si', e.target.value.replace(/\D/g, ''))}
+                                    placeholder="000001"
+                                    disabled={!isEditing}
+                                    style={{ fontFamily: 'monospace', fontWeight: '700', fontSize: '13px' }}
+                                />
+                            </div>
+
+                            {/* Delivery Receipt (D.R.) Counter */}
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label" htmlFor="siCounterDr" style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>D.R. Next Series No.</span>
+                                    <span style={{ color: '#059669', fontWeight: '700' }}>Preview: {String(settings.si_counter_dr || '1').padStart(parseInt(settings.si_auto_digits || 6, 10), '0')}</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    id="siCounterDr"
+                                    className="form-control"
+                                    value={settings.si_counter_dr || '000001'}
+                                    onChange={(e) => handleSettingInputChange('si_counter_dr', e.target.value.replace(/\D/g, ''))}
+                                    placeholder="000001"
+                                    disabled={!isEditing}
+                                    style={{ fontFamily: 'monospace', fontWeight: '700', fontSize: '13px' }}
+                                />
+                            </div>
+
+                            {/* Collection Receipt (C.R.) Counter */}
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label" htmlFor="siCounterCr" style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>C.R. Next Series No.</span>
+                                    <span style={{ color: '#7C3AED', fontWeight: '700' }}>Preview: {String(settings.si_counter_cr || '1').padStart(parseInt(settings.si_auto_digits || 6, 10), '0')}</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    id="siCounterCr"
+                                    className="form-control"
+                                    value={settings.si_counter_cr || '000001'}
+                                    onChange={(e) => handleSettingInputChange('si_counter_cr', e.target.value.replace(/\D/g, ''))}
+                                    placeholder="000001"
+                                    disabled={!isEditing}
+                                    style={{ fontFamily: 'monospace', fontWeight: '700', fontSize: '13px' }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Digits Pad Length Control */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px dashed var(--border)', flexWrap: 'wrap', gap: '10px' }}>
+                            <label className="form-label" htmlFor="siAutoDigits" style={{ fontSize: '11.5px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: 0 }}>
+                                Zero-Padding Digit Length (4 to 10 digits):
+                            </label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <input
+                                    type="number"
+                                    id="siAutoDigits"
+                                    className="form-control form-control-sm"
+                                    min="4"
+                                    max="10"
+                                    value={settings.si_auto_digits || '6'}
+                                    onChange={(e) => handleSettingInputChange('si_auto_digits', e.target.value)}
+                                    disabled={!isEditing}
+                                    style={{ width: '70px', textAlign: 'center', fontWeight: '700' }}
+                                />
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>digits (e.g. 6 → 000001)</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
             <div className="settings-section" style={{ marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
                 <h3 style={{ fontSize: '14px', fontWeight: '700', borderBottom: '1px solid var(--border)', paddingBottom: '8px', marginBottom: '16px', color: 'var(--text-primary)' }}>
                     Reservation Configuration

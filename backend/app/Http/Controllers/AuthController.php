@@ -3,14 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\ActivityLogs\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    protected ActivityLogService $activityLogService;
+
+    public function __construct(ActivityLogService $activityLogService)
+    {
+        $this->activityLogService = $activityLogService;
+    }
+
     /**
-     * Handle authentication login attempt.
+     * Handle authentication login attempt with 5-attempt / 1-minute lockout protection.
      */
     public function login(Request $request)
     {
@@ -20,40 +30,122 @@ class AuthController extends Controller
             'role'     => 'nullable|string',
         ]);
 
-        // Find user by either username or employee_id
-        $user = User::where(function ($query) use ($request) {
-            $query->where('username', $request->login_id)
-                  ->orWhere('employee_id', $request->login_id);
-        })
-        ->first();
+        $throttleKey = Str::transliterate(Str::lower($request->login_id) . '|' . $request->ip());
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        // 1. Check if user is locked out due to >= 5 failed attempts within 60 seconds
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
             throw ValidationException::withMessages([
-                'login_id' => ['Invalid username, employee ID, or password.'],
+                'login_id' => ["Too many failed login attempts. Please wait {$seconds} second(s) before trying again."],
             ]);
         }
 
+        // Find user by username on users table, or email/phone_number on linked user_profiles table
+        $user = User::where('username', $request->login_id)
+            ->orWhereHas('profile', function ($query) use ($request) {
+                $query->where('email', $request->login_id)
+                      ->orWhere('phone_number', $request->login_id);
+            })
+            ->first();
+
+        // 2. Validate user existence and password
+        if (! $user || ! Hash::check($request->password, $user->password)) {
+            RateLimiter::hit($throttleKey, 60);
+            $attempts = RateLimiter::attempts($throttleKey);
+
+            if ($attempts >= 5) {
+                // Log critical abnormal event and notify Admin
+                $this->activityLogService->logAbnormal(
+                    action: 'login_lockout',
+                    description: "Abnormal Security Alert: Account '{$request->login_id}' locked for 1 minute due to 5 consecutive failed login attempts from IP {$request->ip()}",
+                    metadata: [
+                        'login_id'   => $request->login_id,
+                        'ip_address' => $request->ip(),
+                        'attempts'   => $attempts,
+                        'lockout_s'  => 60,
+                    ],
+                    userId: $user?->id,
+                    request: $request
+                );
+
+                $seconds = RateLimiter::availableIn($throttleKey);
+                throw ValidationException::withMessages([
+                    'login_id' => ["Too many failed login attempts. Please wait {$seconds} second(s) before trying again."],
+                ]);
+            }
+
+            // Normal failed attempt logging
+            $this->activityLogService->log(
+                action: 'login',
+                module: 'Auth',
+                description: "Failed login attempt for '{$request->login_id}' (Attempt {$attempts}/5)",
+                status: 'Failed',
+                severity: 'warning',
+                metadata: [
+                    'login_id'   => $request->login_id,
+                    'ip_address' => $request->ip(),
+                    'attempt'    => $attempts,
+                ],
+                userId: $user?->id,
+                request: $request
+            );
+
+            throw ValidationException::withMessages([
+                'login_id' => ['Invalid username, email, or password.'],
+            ]);
+        }
+
+        // 3. Validate user active status
         $userStatus = is_object($user->status) ? $user->status->value : $user->status;
         if (strtolower((string)$userStatus) !== 'active') {
+            $this->activityLogService->log(
+                action: 'login',
+                module: 'Auth',
+                description: "Inactive account login blocked for {$user->full_name} ({$user->username})",
+                status: 'Failed',
+                severity: 'warning',
+                metadata: ['user_id' => $user->id, 'status' => $userStatus],
+                userId: $user->id,
+                request: $request
+            );
+
             throw ValidationException::withMessages([
                 'login_id' => ['Your account is currently inactive. Please contact an administrator.'],
             ]);
         }
 
-        // Generate Sanctum access token
+        // 4. Success — clear rate limiter & issue token
+        RateLimiter::clear($throttleKey);
+
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        // Log successful login
+        $this->activityLogService->log(
+            action: 'login',
+            module: 'Auth',
+            description: "User {$user->full_name} ({$user->role->value}) logged in successfully",
+            status: 'Success',
+            severity: 'info',
+            metadata: [
+                'user_id' => $user->id,
+                'role'    => $user->role->value ?? $user->role,
+            ],
+            userId: $user->id,
+            request: $request
+        );
 
         return response()->json([
             'token' => $token,
             'user' => [
                 'id'            => $user->id,
-                'employee_id'   => $user->employee_id,
-                'name'          => $user->name,
-                'real_name'     => $user->real_name,
+                'full_name'     => $user->full_name,
+                'phone_number'  => $user->phone_number,
                 'email'         => $user->email,
                 'username'      => $user->username,
                 'role'          => $user->role->value ?? $user->role,
                 'profile_photo' => $user->profile_photo,
+                'name'          => $user->full_name,
             ],
         ]);
     }
@@ -63,7 +155,22 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+
+        if ($user) {
+            $this->activityLogService->log(
+                action: 'logout',
+                module: 'Auth',
+                description: "User {$user->full_name} ({$user->role->value}) logged out",
+                status: 'Success',
+                severity: 'info',
+                metadata: ['user_id' => $user->id],
+                userId: $user->id,
+                request: $request
+            );
+        }
+
+        $request->user()->currentAccessToken()?->delete();
 
         return response()->json([
             'message' => 'Logged out successfully',
@@ -79,13 +186,13 @@ class AuthController extends Controller
         return response()->json([
             'user' => [
                 'id'            => $user->id,
-                'employee_id'   => $user->employee_id,
-                'name'          => $user->name,
-                'real_name'     => $user->real_name,
+                'full_name'     => $user->full_name,
+                'phone_number'  => $user->phone_number,
                 'email'         => $user->email,
                 'username'      => $user->username,
                 'role'          => $user->role->value ?? $user->role,
                 'profile_photo' => $user->profile_photo,
+                'name'          => $user->full_name,
             ]
         ]);
     }

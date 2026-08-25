@@ -241,23 +241,25 @@ auto_deduct_stock   = true
 
 ### Login Logic
 ```
-INPUT:  username, password
-QUERY:  SELECT * FROM users WHERE username = ? AND status = 'Active'
+INPUT:  login_id (username, email, or phone_number), password
+QUERY:  SELECT * FROM users JOIN user_profiles WHERE (username = ? OR email = ? OR phone_number = ?) AND status = 'Active'
 CHECK:  Hash::check(password, user.password)
-OUTPUT: { token, user: { id, employee_id, name, real_name, role, profile_photo } }
+OUTPUT: { token, user: { id, full_name, phone_number, email, username, role, profile_photo } }
 REDIRECT:
   - Admin/Supervisor → /dashboard
   - Cashier → /pos
 ```
 
-### Session Data (stored in React state + localStorage token)
+### Session Data (stored in React state + sessionStorage/localStorage)
 ```
 {
-  id: "EMP-000",
-  name: "Administrator",
-  real_name: "Kyla",
+  id: 1,
+  full_name: "Kyla",
+  phone_number: "09123456789",
+  email: "kyla@ztg.com",
+  username: "admin",
   role: "Admin",
-  profile_photo: ""
+  profile_photo: null
 }
 ```
 

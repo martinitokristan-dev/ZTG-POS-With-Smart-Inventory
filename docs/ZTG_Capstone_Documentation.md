@@ -378,13 +378,20 @@ erDiagram
 
     users {
         bigint id PK
-        string employee_id UK
-        string name
-        string real_name
         string username UK
         string password
+        string pin
         string role
         string status
+    }
+
+    user_profiles {
+        bigint id PK
+        bigint user_id FK
+        string full_name
+        string phone_number
+        string email UK
+        string profile_photo
     }
 
     products {
@@ -457,7 +464,9 @@ erDiagram
 
 | Table | Key Columns | Description |
 |---|---|---|
-| `users` | `id`, `name`, `real_name`, `employee_id`, `role`, `pin`, `status`, `profile_photo` | System users with role-based access (Admin, Cashier, Supervisor) |
+| `users` | `id`, `username`, `password`, `pin`, `role`, `status`, `remember_token` | Authentication credentials & access identity (Admin, Cashier, Supervisor) |
+| `user_profiles` | `id`, `user_id`, `full_name`, `phone_number`, `email`, `profile_photo` | 1-to-1 personal identity, contact details, and Cloudinary avatars |
+| `checkers` | `id`, `name`, `status` | Supervisor and floor checker staff profiles |
 | `products` | `id`, `parent_product_id`, `name`, `chinese_name`, `part_no`, `category_id`, `address`, `stock`, `alert_limit`, `price1`, `price2`, `status`, `is_dead_stock`, `damaged`, `image`, `notes` | Master inventory items and variants (supports nullable name/part_no for unclassified goods) |
 | `categories` | `id`, `name`, `prefix`, `chinese_name`, `allow_variants` | Product categorization with variant toggles |
 | `variant_types` | `id`, `name` | e.g., "Size", "Color", "Material" |
@@ -470,7 +479,6 @@ erDiagram
 | `customers` | `id`, `name`, `phone`, `email`, `tin`, `address` | Walk-in and registered customer registry |
 | `notifications` | `id`, `user_id`, `type`, `sub_type`, `title`, `message`, `link`, `is_read` | In-app real-time notification store |
 | `settings` | `id`, `key`, `value` | System-wide configuration store (business info, thresholds) |
-| `checkers` | `id`, `name`, `status` | Supervisor and floor checker staff profiles |
 | `report_logs` | `id`, `user_id`, `report_type`, `timeframe`, `created_at` | Report generation and export audit trail |
 
 ---
@@ -1458,7 +1466,7 @@ This pattern dynamically allows any `*.pages.dev` subdomain, including both the 
   - **Detailed Line Items:** Item descriptions with Part Numbers (`P/N`), price tier badges (`P1` / `P2`), quantities, unit prices, and line totals.
   - **BIR Tax Breakdown:** Itemized Subtotal, Discounts, VATable Sales (12%), VAT Amount (12%), and VAT-Exempt Sales.
   - **Settlement Details:** Payment Method, Cash Received, Change Due, Cheque Number, and Split Payment breakdowns.
-- **Real Name Priority Resolution (`real_name || name`):** Standardized employee name resolution across receipts, audit modals (`TransactionDetailsModal`, `VoidModal`, `RefundModal`), and reporting logs.
+- **Full Name Resolution (`full_name || name`):** Standardized employee name resolution linked to `user_profiles` across receipts, audit modals (`TransactionDetailsModal`, `VoidModal`, `RefundModal`), and reporting logs.
 
 #### 5. Disabled Status Badge & Inventory Stock Visual Separation
 - **Distinct Red Disabled Badge:** Updated `Disabled` status badge tokens to high-contrast red (`#FEE2E2` background, `#DC2626` text, bold weight) across Product Management and Inventory tables.
@@ -1597,8 +1605,51 @@ Previously, logging into the **Admin** account in Tab 1 and the **Cashier** acco
 
 ---
 
+### SPRINT 13 — Hybrid Manual & Auto-Increment Sequential SI/OR Numbering Architecture
+**Date: August 2026**
+
+#### 1. BIR-Compliant Sequential Document Numbering
+- **Independent Document Counters (BIR RR 18-2012 & RR 7-2024):** In strict accordance with Philippine Bureau of Internal Revenue (BIR) regulations, every document type maintains its own distinct and continuous serial sequence:
+  - **Sales Invoice (`S.I.`):** Independent counter (`si_counter_si`, e.g. `000001` &rarr; `000002`...).
+  - **Delivery Receipt (`D.R.`):** Independent counter (`si_counter_dr`, e.g. `000001` &rarr; `000002`...).
+  - **Collection Receipt (`C.R.`):** Independent counter (`si_counter_cr`, e.g. `000001` &rarr; `000002`...).
+- **Configurable Zero-Padding:** Supports 4 to 10 digit zero-padding formats (default: 6 digits, e.g. `000001`).
+
+#### 2. Dual-Mode Admin Configuration & Cashier Experience
+- **Admin-Controlled Mode Switch:** Only Admin/Supervisor can configure the numbering mode in Settings (`Manual Booklet` vs `Auto-Increment`).
+- **Seamless Cashier Experience:**
+  - **Manual Booklet Mode:** Cashier sees a blank input with mandatory validation to enter the physical serial number from pre-printed paper booklets.
+  - **Auto-Increment Mode:** Cashier sees a pre-filled, green-highlighted sequential number with 0 extra steps required. Cashier can override the number if necessary; custom overrides are saved directly without advancing the system counter.
+- **Race Condition Protection:** Counter incrementing executes inside a database transaction with `lockForUpdate()` and checks the `transactions` table to guarantee zero duplicate numbers during high-concurrency checkouts.
+- **Preview Endpoint (`GET /api/settings/si-preview`):** Lightweight, read-only endpoint that serves live next numbers to the POS checkout modal without consuming or incrementing the counter.
+
+---
+
+### SPRINT 14 — Activity Logs, Abnormal Activity Tracking & Active Sessions Security Architecture
+**Date: August 2026**
+
+#### 1. Reconstructed System Settings Architecture
+- **Unified "My Account" Hub:** Consolidated user profile management, alert configurations, and system security under a clean tabbed structure:
+  - **`My Profile`:** Personal Information, Profile Photo (avatar), and Password & PIN management.
+  - **`Alert Rules`:** Inventory thresholds, transaction triggers, and automated reports.
+  - **`Activity Logs`:** Card-free, sleek audit logs and real-time session monitor.
+- **Top-Level Navigation:** `My Account` | `General` | `Products Settings` | `Employee's role` | `Checkers`.
+- **Cashier Experience:** Cashiers cleanly access their isolated `My Account` tab containing their personal profile and password controls.
+
+#### 2. Sleek, Card-Free Activity Logs & Live Session Monitor
+- **Clean Tab Switcher:** `Active Sessions` | `Activity Audit Trail` | `Security Alerts & Anomalies`.
+- **Active Sessions & Remote Force Logout:** Live listing of active tokens across all devices with one-click revocation (`POST /api/activity-logs/active-sessions/{token_id}/revoke`), instantly forcing the target terminal back to `/login` via 401 response handling.
+- **Abnormal Activity Detection & Rate Limiting:**
+  - **5 Failed Passwords &rarr; 1-Minute Lockout:** Locks the account/IP for 60 seconds with countdown and logs an `Abnormal` security alert (`login_lockout`).
+  - **Forgot Password Rate Limiter:** 5 attempts per hour; blocks the 6th attempt and logs `rate_limit_exceeded`.
+- **Consistent Shared Date Picker:** Reuses `<IOSDatePicker />` across all audit trail filter controls.
+
+---
+
 *End of ZTG Heavy Parts Capstone Project Documentation v2.0*
 
 *Document updated: August 2026*
+
+
 
 

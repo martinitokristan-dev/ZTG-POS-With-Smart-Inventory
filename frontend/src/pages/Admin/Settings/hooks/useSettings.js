@@ -8,8 +8,33 @@ import { showToast } from '../../../../utils/toast';
 export default function useSettings() {
     const { count: notificationsCount } = useNotifications();
 
-    // Primary Active Tab: 'profile', 'general', 'products', 'alerts', 'employees'
-    const [activeTab, setActiveTab] = useState(() => localStorage.getItem('settingsActiveTab') || 'profile');
+    // Primary Active Tab: 'account', 'general', 'products', 'employees', 'checkers'
+    const [activeTab, setActiveTab] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        const tabParam = params.get('tab');
+        if (tabParam === 'activity' || tabParam === 'alerts' || tabParam === 'profile' || tabParam === 'account') {
+            return 'account';
+        }
+        if (tabParam && ['general', 'products', 'employees', 'checkers'].includes(tabParam)) {
+            return tabParam;
+        }
+        const saved = localStorage.getItem('settingsActiveTab');
+        if (saved === 'profile' || saved === 'alerts') return 'account';
+        return saved || 'account';
+    });
+
+    // Account Nested Sub-tab: 'profile', 'inventory', 'transaction', 'reservation', 'reports', 'activity'
+    const [activeAccountSubTab, setActiveAccountSubTab] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        const tabParam = params.get('tab') || params.get('sub');
+        if (tabParam === 'activity' || tabParam === 'activity-logs') return 'activity';
+        if (tabParam === 'inventory') return 'inventory';
+        if (tabParam === 'transaction') return 'transaction';
+        if (tabParam === 'reservation') return 'reservation';
+        if (tabParam === 'reports') return 'reports';
+        if (tabParam === 'alerts') return 'inventory';
+        return localStorage.getItem('settingsAccountSubTab') || 'profile';
+    });
 
     // Tab edit mode state: null | 'profile' | 'general'
     const [editingTab, setEditingTab] = useState(null);
@@ -18,6 +43,10 @@ export default function useSettings() {
         localStorage.setItem('settingsActiveTab', activeTab);
         setEditingTab(null);
     }, [activeTab]);
+
+    useEffect(() => {
+        localStorage.setItem('settingsAccountSubTab', activeAccountSubTab);
+    }, [activeAccountSubTab]);
 
     // Products Settings Nested Sub-tab: 'info', 'categories', 'sizes', 'quality', 'colors', 'pricing', 'warehouse'
     const [activeSubTab, setActiveSubTab] = useState('info');
@@ -31,8 +60,9 @@ export default function useSettings() {
     // TAB 1: PROFILE DATA STATE
     // ------------------------------------------------------------------------
     const [profileData, setProfileData] = useState({
+        full_name: '',
         name: '',
-        real_name: '',
+        phone_number: '',
         email: '',
         username: '',
         pin: '',
@@ -116,7 +146,13 @@ export default function useSettings() {
         additional_email_recipients: 'email1@example.com, email2@example.com',
         send_daily_sales_report: 'false',
         send_weekly_inventory_report: 'false',
-        send_monthly_performance_report: 'false'
+        send_monthly_performance_report: 'false',
+        // SI / OR Numbering Configuration (Hybrid Manual / Auto)
+        si_numbering_mode: 'manual',
+        si_counter_si: '000001',
+        si_counter_dr: '000001',
+        si_counter_cr: '000001',
+        si_auto_digits: '6'
     });
     const [initialSettings, setInitialSettings] = useState({});
 
@@ -166,8 +202,8 @@ export default function useSettings() {
     const [showEmployeeModal, setShowEmployeeModal] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [employeeForm, setEmployeeForm] = useState({
-        name: '',
-        email: '',
+        full_name: '',
+        phone_number: '',
         username: '',
         role: 'Cashier',
         pin: '',
@@ -197,9 +233,11 @@ export default function useSettings() {
             const profileDataResponse = await fetchSettingData('user', '/user');
             if (profileDataResponse?.user) {
                 const u = profileDataResponse.user;
+                const loadedFullName = u.full_name || u.name || '';
                 const loadedProfile = {
-                    name: u.username || '',
-                    real_name: u.real_name || '',
+                    full_name: loadedFullName,
+                    name: loadedFullName,
+                    phone_number: u.phone_number || '',
                     email: u.email || '',
                     username: u.username || '',
                     pin: u.pin || '',
@@ -215,7 +253,14 @@ export default function useSettings() {
                 const stored = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
                 if (stored) {
                     const parsed = JSON.parse(stored);
-                    sessionStorage.setItem('auth_user', JSON.stringify({ ...parsed, profile_photo: u.profile_photo || null })); localStorage.removeItem('auth_user');
+                    sessionStorage.setItem('auth_user', JSON.stringify({
+                        ...parsed,
+                        full_name: loadedFullName,
+                        phone_number: u.phone_number || '',
+                        name: loadedFullName,
+                        profile_photo: u.profile_photo || null
+                    }));
+                    localStorage.removeItem('auth_user');
                     window.dispatchEvent(new Event('auth_user_updated'));
                 }
             }
@@ -310,31 +355,46 @@ export default function useSettings() {
     // ------------------------------------------------------------------------
     const handleProfileSubmit = async (e) => {
         e.preventDefault();
-        if (!profileData.real_name?.trim() || !profileData.email?.trim() || !profileData.username?.trim()) {
+        const fullName = (profileData.full_name || profileData.name || '').trim();
+        if (!fullName || !profileData.email?.trim() || !profileData.username?.trim()) {
             showToast('Please fill in all required profile fields: Full Name, Email, and Username.', 'error');
             return;
         }
 
         try {
-            const res = await api.put('/profile', profileData);
+            const payload = {
+                ...profileData,
+                full_name: fullName,
+                name: fullName,
+                phone_number: profileData.phone_number?.trim() || null,
+                email: profileData.email.trim(),
+                username: profileData.username.trim(),
+            };
+            const res = await api.put('/profile', payload);
             const updatedUser = res.data?.user;
+            const updatedFullName = updatedUser?.full_name || updatedUser?.name || fullName;
+
             if (updatedUser) {
                 const stored = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
                 if (stored) {
                     const parsed = JSON.parse(stored);
                     sessionStorage.setItem('auth_user', JSON.stringify({
                         ...parsed,
+                        full_name: updatedFullName,
+                        name: updatedFullName,
+                        phone_number: updatedUser.phone_number ?? parsed.phone_number,
                         username: updatedUser.username,
-                        real_name: updatedUser.real_name,
                         email: updatedUser.email,
                         profile_photo: updatedUser.profile_photo ?? parsed.profile_photo
-                    })); localStorage.removeItem('auth_user');
+                    }));
+                    localStorage.removeItem('auth_user');
                 }
             }
 
             const updated = {
-                name: updatedUser?.username || profileData.username,
-                real_name: updatedUser?.real_name || profileData.real_name,
+                full_name: updatedFullName,
+                name: updatedFullName,
+                phone_number: updatedUser?.phone_number || profileData.phone_number,
                 email: updatedUser?.email || profileData.email,
                 username: updatedUser?.username || profileData.username,
                 pin: profileData.pin,
@@ -834,10 +894,9 @@ export default function useSettings() {
     const openAddEmployee = () => {
         setSelectedEmployee(null);
         setEmployeeForm({
-            employee_id: '',
+            full_name: '',
+            phone_number: '',
             username: '',
-            real_name: '',
-            name: '',
             password: '',
             role: 'Cashier',
             pin: '',
@@ -849,10 +908,9 @@ export default function useSettings() {
     const openEditEmployee = (emp) => {
         setSelectedEmployee(emp);
         setEmployeeForm({
-            employee_id: emp.employee_id || '',
+            full_name: emp.full_name || emp.name || '',
+            phone_number: emp.phone_number || '',
             username: emp.username || '',
-            real_name: emp.real_name || emp.name || '',
-            name: emp.name || emp.real_name || '',
             password: '',
             role: emp.role || 'Cashier',
             pin: emp.pin || '',
@@ -864,13 +922,15 @@ export default function useSettings() {
     const handleEmployeeSubmit = async (e) => {
         e.preventDefault();
         try {
+            const fullName = (employeeForm.full_name || employeeForm.name || '').trim();
             const payload = {
                 ...employeeForm,
-                name: employeeForm.real_name?.trim() || employeeForm.username?.trim(),
-                real_name: employeeForm.real_name?.trim(),
+                full_name: fullName,
+                name: fullName,
+                phone_number: employeeForm.phone_number?.trim() || null,
                 username: employeeForm.username?.trim(),
-                employee_id: employeeForm.employee_id?.trim() || undefined,
             };
+            delete payload.employee_id;
 
             if (payload.role === 'Cashier') {
                 delete payload.pin;
@@ -890,17 +950,17 @@ export default function useSettings() {
                     try {
                         const currentUser = JSON.parse(stored);
                         const isCurrent = (currentUser.id && Number(currentUser.id) === Number(updated.id)) ||
-                            (currentUser.employee_id && currentUser.employee_id === (selectedEmployee.employee_id || updated.employee_id)) ||
                             (currentUser.username && (currentUser.username === selectedEmployee.username || currentUser.username === updated.username));
 
                         if (isCurrent) {
+                            const newFullName = updated.full_name || updated.name || currentUser.full_name || currentUser.name;
                             const newAuthUser = {
                                 ...currentUser,
                                 ...updated,
-                                name: updated.real_name || updated.name || updated.username || currentUser.name,
-                                real_name: updated.real_name || currentUser.real_name,
+                                full_name: newFullName,
+                                name: newFullName,
+                                phone_number: updated.phone_number ?? currentUser.phone_number,
                                 username: updated.username || currentUser.username,
-                                employee_id: updated.employee_id || currentUser.employee_id,
                                 email: updated.email || currentUser.email,
                                 role: updated.role || currentUser.role,
                                 pin: updated.pin !== undefined ? updated.pin : currentUser.pin,
@@ -911,8 +971,9 @@ export default function useSettings() {
 
                             // Sync profile tab state so "My Profile" tab reflects changes immediately
                             const updatedProfile = {
-                                name: newAuthUser.username || newAuthUser.name,
-                                real_name: newAuthUser.real_name || newAuthUser.name,
+                                full_name: newFullName,
+                                name: newFullName,
+                                phone_number: newAuthUser.phone_number || '',
                                 email: newAuthUser.email || '',
                                 username: newAuthUser.username,
                                 role: newAuthUser.role,
@@ -930,19 +991,19 @@ export default function useSettings() {
                     }
                 }
 
-                showToast('Employee updated successfully!', 'success');
+                showToast('Staff profile updated successfully!', 'success');
             } else {
                 const res = await api.post('/employees', payload);
                 const created = res.data.employee || res.data;
                 setEmployees(prev => [created, ...prev]);
-                showToast('New employee added successfully!', 'success');
+                showToast('New staff registered successfully!', 'success');
             }
             setShowEmployeeModal(false);
             resetSettingsCache('employees');
         } catch (err) {
-            console.error('Failed to save employee:', err);
+            console.error('Failed to save staff:', err);
             const errData = err.response?.data;
-            let errMsg = 'Failed to save employee.';
+            let errMsg = 'Failed to save staff.';
             if (errData?.errors) {
                 const firstKey = Object.keys(errData.errors)[0];
                 errMsg = errData.errors[firstKey]?.[0] || errMsg;
@@ -966,7 +1027,6 @@ export default function useSettings() {
                 try {
                     const currentUser = JSON.parse(stored);
                     const isCurrent = (currentUser.id && Number(currentUser.id) === Number(emp.id)) ||
-                        (currentUser.employee_id && currentUser.employee_id === emp.employee_id) ||
                         (currentUser.username && currentUser.username === emp.username);
 
                     if (isCurrent) {
@@ -1036,6 +1096,7 @@ export default function useSettings() {
 
         // Tab Navigation
         activeTab, setActiveTab,
+        activeAccountSubTab, setActiveAccountSubTab,
         editingTab, handleStartEditTab, handleCancelEditTab,
         activeSubTab, setActiveSubTab,
         activeAlertsSubTab, setActiveAlertsSubTab,

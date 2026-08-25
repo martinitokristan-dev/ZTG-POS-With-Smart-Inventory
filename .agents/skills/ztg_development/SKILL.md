@@ -19,7 +19,8 @@ This skill defines the development workflows, architectural constraints, and fol
       // Data operations
   });
   ```
-* **Security & Authentication:** Use Laravel Sanctum for API token-based authentication.
+* **Security & Authentication:** Use Laravel Sanctum for API token-based authentication. Passwords and PINs must be encrypted using Bcrypt.
+* **User & Profile Architecture:** Maintain strict separation between `users` (credentials, role, status, hashed PIN) and `user_profiles` (full name, phone, email, avatar). Always use the 1:1 `User hasOne UserProfile` relationship.
 * **Database Enums:** All static options (roles, statuses) must be stored in database as `VARCHAR` columns and validated/casted using native **PHP Enums** in `app/Enums/`.
 
 ### Frontend (React)

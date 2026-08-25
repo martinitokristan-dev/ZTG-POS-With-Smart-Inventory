@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../shared/api';
 import { applyGlobalTheme } from '../shared/hooks/useTheme';
 
@@ -120,7 +120,7 @@ function Login() {
             if (err.response && err.response.data && err.response.data.errors) {
                 const errors = err.response.data.errors;
                 const firstKey = Object.keys(errors)[0];
-                setError(errors[firstKey]?.[0] || 'Invalid username, employee ID, or password.');
+                setError(errors[firstKey]?.[0] || 'Invalid username, email, or password.');
             } else if (err.response && err.response.data && err.response.data.message) {
                 setError(err.response.data.message);
             } else {
@@ -185,7 +185,7 @@ function Login() {
 
                 <form id="loginForm" onSubmit={handleLogin}>
                     <div className="form-group">
-                        <label className="form-label" htmlFor="username">Employee ID or Username</label>
+                        <label className="form-label" htmlFor="username">Username, Email, or Phone</label>
                         <div className="input-wrapper" style={{ position: 'relative' }}>
                             <svg className="input-icon" viewBox="0 0 24 24" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', stroke: 'var(--text-muted)', fill: 'none', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round', transition: 'all 0.2s ease', zIndex: 5 }}>
                                 <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/>
@@ -194,7 +194,7 @@ function Login() {
                                 type="text" 
                                 id="username" 
                                 className="form-control" 
-                                placeholder="Enter username or employee ID" 
+                                placeholder="Enter username, email, or phone" 
                                 autoComplete="username"
                                 value={loginId}
                                 onChange={(e) => setLoginId(e.target.value)}
@@ -206,7 +206,21 @@ function Login() {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label" htmlFor="password">Password</label>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <label className="form-label" htmlFor="password" style={{ marginBottom: 0 }}>Password</label>
+                            <Link 
+                                to="/forgot-password"
+                                style={{ 
+                                    color: 'var(--primary, #3B82F6)', 
+                                    fontSize: '12.5px', 
+                                    fontWeight: '600', 
+                                    textDecoration: 'none',
+                                    transition: 'color 0.2s ease'
+                                }}
+                            >
+                                Forgot password?
+                            </Link>
+                        </div>
                         <div className="input-wrapper" style={{ position: 'relative' }}>
                             <svg className="input-icon" viewBox="0 0 24 24" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', stroke: 'var(--text-muted)', fill: 'none', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round', transition: 'all 0.2s ease', zIndex: 5 }}>
                                 <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4"/>
@@ -260,6 +274,7 @@ function Login() {
                     </button>
                 </form>
             </div>
+
             <style>{`
                 .input-wrapper:focus-within .input-icon {
                     stroke: var(--primary) !important;

@@ -28,15 +28,14 @@ class ProductImageInheritanceTest extends TestCase
         parent::setUp();
 
         $this->admin = User::create([
-            'employee_id' => 'EMP-000',
-            'name'        => 'Administrator',
-            'real_name'   => 'Admin',
-            'email'       => 'admin@ztg.com',
-            'username'    => 'admin',
-            'password'    => Hash::make('password'),
-            'pin'         => '1234',
-            'role'        => UserRole::ADMIN,
-            'status'      => UserStatus::ACTIVE,
+            'full_name'    => 'Admin',
+            'phone_number' => '09123456789',
+            'email'        => 'admin@ztg.com',
+            'username'     => 'admin',
+            'password'     => Hash::make('password'),
+            'pin'          => '1234',
+            'role'         => UserRole::ADMIN,
+            'status'       => UserStatus::ACTIVE,
         ]);
 
         $this->category = Category::create(['name' => 'Hydraulics']);

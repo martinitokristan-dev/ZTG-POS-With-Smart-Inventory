@@ -40,6 +40,8 @@ export default function CheckoutModal({
 }) {
     const [docType, setDocType] = useState('S.I.');
     const [siNo, setSiNo] = useState('');
+    const [siNumberingMode, setSiNumberingMode] = useState('manual');
+    const [nextNumbers, setNextNumbers] = useState({ 'S.I.': '', 'D.R.': '', 'C.R.': '' });
     const [paymentMethod, setPaymentMethod] = useState('Cash');
     
     // Cash Fields
@@ -88,7 +90,7 @@ export default function CheckoutModal({
             .catch(() => { /* logo silently absent */ });
     }, []);
 
-    // Reset state when modal opens
+    // Reset state & fetch SI preview when modal opens
     useEffect(() => {
         if (isOpen) {
             setDocType('S.I.');
@@ -97,12 +99,42 @@ export default function CheckoutModal({
             setChequeNumber('');
             setSplitAmount1('');
             setSplitAmount2('');
-            setSiNo('');
             setCheckoutSuccess(false);
             setCompletedTx(null);
             setError(null);
+
+            // Fetch current SI numbering preview silently
+            api.get('/settings/si-preview')
+                .then(res => {
+                    const mode = res.data?.mode || 'manual';
+                    const next = res.data?.next || {};
+                    setSiNumberingMode(mode);
+                    setNextNumbers(next);
+                    if (mode === 'auto') {
+                        setSiNo(next['S.I.'] || '');
+                    } else {
+                        setSiNo('');
+                    }
+                })
+                .catch(() => {
+                    setSiNumberingMode('manual');
+                    setSiNo('');
+                });
         }
     }, [isOpen]);
+
+    // Update SI pre-fill when cashier changes docType in auto mode
+    const handleDocTypeChange = (newDocType) => {
+        const prevDocType = docType;
+        setDocType(newDocType);
+        if (siNumberingMode === 'auto') {
+            const currentAutoVal = nextNumbers[prevDocType] || '';
+            // If cashier hasn't typed a custom override, update to new docType's auto number
+            if (!siNo || siNo === currentAutoVal) {
+                setSiNo(nextNumbers[newDocType] || '');
+            }
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -154,7 +186,7 @@ export default function CheckoutModal({
             paymentData = { method: paymentMethod };
         }
 
-        if (!siNo.trim()) {
+        if (siNumberingMode === 'manual' && !siNo.trim()) {
             const docLabel = docType === 'D.R.' ? 'Delivery Receipt No.' : docType === 'C.R.' ? 'Collection Receipt No.' : 'Sales Invoice No.';
             setError(`Please enter the physical ${docLabel} from your paper booklet.`);
             return;
@@ -164,7 +196,7 @@ export default function CheckoutModal({
         try {
             const payload = {
                 doc_type: docType,
-                si_no: siNo.trim(),
+                si_no: siNo.trim() || null,
                 payment: paymentData
             };
 
@@ -200,7 +232,7 @@ export default function CheckoutModal({
 
         const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         const user = userStr ? JSON.parse(userStr) : {};
-        const cashierName = user.real_name || user.name || 'Cashier';
+        const cashierName = user.full_name || user.name || 'Cashier';
 
         // Map items structured for printUnifiedReceipt
         const mappedItems = (completedTx.items || []).map(item => ({
@@ -225,7 +257,7 @@ export default function CheckoutModal({
             payment: completedTx.payment_method,
             tendered: completedTx.amount_tendered || 0,
             change: Math.max(0, (completedTx.amount_tendered || 0) - completedTx.amount),
-            servedBy: completedTx.cashier?.real_name || completedTx.cashier?.name || cashierName,
+            servedBy: completedTx.cashier?.full_name || completedTx.cashier?.name || cashierName,
             docType: completedTx.doc_type || docType,
             splitDetails: splitDetails,
             // BIR compliance: use frozen snapshot from this transaction;
@@ -249,7 +281,7 @@ export default function CheckoutModal({
     if (checkoutSuccess && completedTx) {
         const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         const user = userStr ? JSON.parse(userStr) : {};
-        const cashierName = completedTx.cashier?.real_name || completedTx.cashier?.name || user.real_name || user.name || 'Cashier';
+        const cashierName = completedTx.cashier?.full_name || completedTx.cashier?.name || user.full_name || user.name || 'Cashier';
         const checkerName = completedTx.checker?.name || completedTx.checker?.checker_name || null;
         
         // Business info from snapshot
@@ -718,20 +750,26 @@ export default function CheckoutModal({
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                             <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Doc Type</label>
-                                <IOSSelect value={docType} onChange={e => setDocType(e.target.value)} options={docTypeOptions} />
+                                <IOSSelect value={docType} onChange={e => handleDocTypeChange(e.target.value)} options={docTypeOptions} />
                             </div>
                             <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>
-                                    {docType === 'D.R.' ? 'Delivery Receipt No.' : docType === 'C.R.' ? 'Collection Receipt No.' : 'Sales Invoice No.'} <span style={{ color: 'var(--danger, #EF4444)' }}>*</span>
+                                    {docType === 'D.R.' ? 'Delivery Receipt No.' : docType === 'C.R.' ? 'Collection Receipt No.' : 'Sales Invoice No.'} {siNumberingMode === 'manual' && <span style={{ color: 'var(--danger, #EF4444)' }}>*</span>}
                                 </label>
                                 <input 
                                     type="text" 
                                     className="form-control form-control-sm" 
-                                    placeholder={docType === 'D.R.' ? 'e.g. DR-00120' : docType === 'C.R.' ? 'e.g. CR-00340' : 'e.g. 004501'} 
-                                    style={{ fontSize: '13px', fontWeight: '700', letterSpacing: '0.5px' }} 
+                                    placeholder={siNumberingMode === 'auto' ? 'e.g. 000001 (Auto)' : (docType === 'D.R.' ? 'e.g. DR-00120' : docType === 'C.R.' ? 'e.g. CR-00340' : 'e.g. 004501')} 
+                                    style={{ 
+                                        fontSize: '13px', 
+                                        fontWeight: '700', 
+                                        letterSpacing: '0.5px',
+                                        border: siNumberingMode === 'auto' && siNo ? '1.5px solid #10B981' : '1px solid var(--border)',
+                                        backgroundColor: siNumberingMode === 'auto' && siNo ? '#F0FDF4' : '#FFFFFF'
+                                    }} 
                                     value={siNo} 
                                     onChange={e => setSiNo(e.target.value)} 
-                                    required 
+                                    required={siNumberingMode === 'manual'} 
                                     autoFocus 
                                 />
                             </div>

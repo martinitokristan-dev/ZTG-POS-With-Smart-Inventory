@@ -22,39 +22,36 @@ class LoginTest extends TestCase
         parent::setUp();
 
         $this->admin = User::create([
-            'employee_id' => 'EMP-ADM-001',
-            'name'        => 'Admin',
-            'real_name'   => 'System Administrator',
-            'email'       => 'admin@ztg.com',
-            'username'    => 'admin',
-            'password'    => Hash::make('password123'),
-            'pin'         => '1234',
-            'role'        => UserRole::ADMIN,
-            'status'      => UserStatus::ACTIVE,
+            'full_name'    => 'System Administrator',
+            'phone_number' => '09123456789',
+            'email'        => 'admin@ztg.com',
+            'username'     => 'admin',
+            'password'     => Hash::make('password123'),
+            'pin'          => '1234',
+            'role'         => UserRole::ADMIN,
+            'status'       => UserStatus::ACTIVE,
         ]);
 
         $this->cashier = User::create([
-            'employee_id' => 'EMP-CSH-001',
-            'name'        => 'Cashier',
-            'real_name'   => 'Jane Cashier',
-            'email'       => 'cashier@ztg.com',
-            'username'    => 'cashier1',
-            'password'    => Hash::make('cashier123'),
-            'pin'         => '5678',
-            'role'        => UserRole::CASHIER,
-            'status'      => UserStatus::ACTIVE,
+            'full_name'    => 'Jane Cashier',
+            'phone_number' => '09987654321',
+            'email'        => 'cashier@ztg.com',
+            'username'     => 'cashier1',
+            'password'     => Hash::make('cashier123'),
+            'pin'          => '5678',
+            'role'         => UserRole::CASHIER,
+            'status'       => UserStatus::ACTIVE,
         ]);
 
         $this->inactiveUser = User::create([
-            'employee_id' => 'EMP-INA-001',
-            'name'        => 'Inactive',
-            'real_name'   => 'Disabled User',
-            'email'       => 'disabled@ztg.com',
-            'username'    => 'disabled_user',
-            'password'    => Hash::make('secret123'),
-            'pin'         => '9999',
-            'role'        => UserRole::CASHIER,
-            'status'      => UserStatus::INACTIVE,
+            'full_name'    => 'Disabled User',
+            'phone_number' => '09000000000',
+            'email'        => 'disabled@ztg.com',
+            'username'     => 'disabled_user',
+            'password'     => Hash::make('secret123'),
+            'pin'          => '9999',
+            'role'         => UserRole::CASHIER,
+            'status'       => UserStatus::INACTIVE,
         ]);
     }
 
@@ -69,20 +66,21 @@ class LoginTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonStructure(['token', 'user'])
             ->assertJsonPath('user.username', 'admin')
+            ->assertJsonPath('user.full_name', 'System Administrator')
             ->assertJsonPath('user.role', 'Admin');
     }
 
     /** @test */
-    public function test_user_can_login_with_employee_id(): void
+    public function test_user_can_login_with_email_or_phone(): void
     {
         $response = $this->postJson('/api/login', [
-            'login_id' => 'EMP-CSH-001',
+            'login_id' => 'cashier@ztg.com',
             'password' => 'cashier123',
         ]);
 
         $response->assertStatus(200)
             ->assertJsonStructure(['token', 'user'])
-            ->assertJsonPath('user.employee_id', 'EMP-CSH-001')
+            ->assertJsonPath('user.username', 'cashier1')
             ->assertJsonPath('user.role', 'Cashier');
     }
 
@@ -96,7 +94,7 @@ class LoginTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['login_id'])
-            ->assertJsonPath('errors.login_id.0', 'Invalid username, employee ID, or password.');
+            ->assertJsonPath('errors.login_id.0', 'Invalid username, email, or password.');
     }
 
     /** @test */
@@ -109,7 +107,7 @@ class LoginTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['login_id'])
-            ->assertJsonPath('errors.login_id.0', 'Invalid username, employee ID, or password.');
+            ->assertJsonPath('errors.login_id.0', 'Invalid username, email, or password.');
     }
 
     /** @test */

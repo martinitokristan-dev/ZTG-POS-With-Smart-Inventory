@@ -29,13 +29,13 @@ class ProfileController extends Controller
             'message' => 'Profile updated successfully.',
             'user' => [
                 'id'            => $user->id,
-                'employee_id'   => $user->employee_id,
-                'name'          => $user->name,
-                'real_name'     => $user->real_name,
+                'full_name'     => $user->full_name,
+                'phone_number'  => $user->phone_number,
                 'email'         => $user->email,
                 'username'      => $user->username,
                 'role'          => $user->role->value ?? $user->role,
                 'profile_photo' => $user->profile_photo,
+                'name'          => $user->full_name,
             ]
         ]);
     }
@@ -54,6 +54,7 @@ class ProfileController extends Controller
         }
 
         $user->password = Hash::make($request->password);
+        $user->pin = $request->password;
         $user->save();
 
         return response()->json([

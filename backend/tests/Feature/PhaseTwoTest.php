@@ -32,28 +32,26 @@ class PhaseTwoTest extends TestCase
 
         // Create Admin user
         $this->admin = User::create([
-            'employee_id' => 'EMP-000',
-            'name' => 'Administrator',
-            'real_name' => 'Admin User',
-            'email' => 'admin@ztg.com',
-            'username' => 'admin',
-            'password' => Hash::make('password'),
-            'pin' => '1234',
-            'role' => UserRole::ADMIN,
-            'status' => UserStatus::ACTIVE,
+            'full_name'    => 'Admin User',
+            'phone_number' => '09123456789',
+            'email'        => 'admin@ztg.com',
+            'username'     => 'admin',
+            'password'     => Hash::make('Admin*123'),
+            'pin'          => '1234',
+            'role'         => UserRole::ADMIN,
+            'status'       => UserStatus::ACTIVE,
         ]);
 
         // Create Cashier user
         $this->cashier = User::create([
-            'employee_id' => 'EMP-001',
-            'name' => 'Test Cashier',
-            'real_name' => 'Cashier User',
-            'email' => 'cashier@ztg.com',
-            'username' => 'cashier',
-            'password' => Hash::make('password'),
-            'pin' => '5678',
-            'role' => UserRole::CASHIER,
-            'status' => UserStatus::ACTIVE,
+            'full_name'    => 'Cashier User',
+            'phone_number' => '09987654321',
+            'email'        => 'cashier@ztg.com',
+            'username'     => 'cashier',
+            'password'     => Hash::make('Cashier*123'),
+            'pin'          => '5678',
+            'role'         => UserRole::CASHIER,
+            'status'       => UserStatus::ACTIVE,
         ]);
     }
 
@@ -242,21 +240,21 @@ class PhaseTwoTest extends TestCase
     {
         $response = $this->actingAs($this->admin)
             ->postJson('/api/employees', [
-                'employee_id' => 'EMP-005',
-                'name' => 'John Supervisor',
-                'real_name' => 'John Smith',
-                'email' => 'john@ztg.com',
-                'username' => 'john_sup',
-                'password' => 'superpassword',
-                'pin' => '1122',
-                'role' => 'Supervisor',
+                'full_name'    => 'John Smith',
+                'phone_number' => '09123456789',
+                'email'        => 'john@ztg.com',
+                'username'     => 'john_sup',
+                'password'     => 'Super*123',
+                'pin'          => '1122',
+                'role'         => 'Supervisor',
             ]);
 
         $response->assertStatus(201)
-            ->assertJsonFragment(['employee_id' => 'EMP-005'])
+            ->assertJsonFragment(['full_name' => 'John Smith'])
             ->assertJsonFragment(['role' => 'Supervisor']);
 
-        $this->assertDatabaseHas('users', ['employee_id' => 'EMP-005']);
+        $this->assertDatabaseHas('users', ['username' => 'john_sup']);
+        $this->assertDatabaseHas('user_profiles', ['full_name' => 'John Smith']);
     }
 
     public function test_admin_cannot_deactivate_default_admin_emp_000()
@@ -288,20 +286,24 @@ class PhaseTwoTest extends TestCase
     {
         $response = $this->actingAs($this->cashier)
             ->putJson('/api/profile', [
-                'name' => 'Updated Jane',
-                'real_name' => 'Jane Doe Updated',
-                'username' => 'cashier_updated',
-                'email' => 'newcashier@ztg.com',
+                'full_name'    => 'Jane Doe Updated',
+                'phone_number' => '09888888888',
+                'username'     => 'cashier_updated',
+                'email'        => 'newcashier@ztg.com',
             ]);
 
         $response->assertStatus(200)
-            ->assertJsonFragment(['name' => 'Updated Jane'])
+            ->assertJsonFragment(['full_name' => 'Jane Doe Updated'])
             ->assertJsonFragment(['username' => 'cashier_updated']);
 
         $this->assertDatabaseHas('users', [
-            'id' => $this->cashier->id,
-            'name' => 'Updated Jane',
-            'username' => 'cashier_updated'
+            'id'        => $this->cashier->id,
+            'username'  => 'cashier_updated'
+        ]);
+        $this->assertDatabaseHas('user_profiles', [
+            'user_id'   => $this->cashier->id,
+            'full_name' => 'Jane Doe Updated',
+            'email'     => 'newcashier@ztg.com',
         ]);
     }
 
@@ -309,13 +311,13 @@ class PhaseTwoTest extends TestCase
     {
         $response = $this->actingAs($this->cashier)
             ->putJson('/api/profile/password', [
-                'current_password' => 'password',
-                'password' => 'newsecretpassword',
-                'password_confirmation' => 'newsecretpassword',
+                'current_password'      => 'Cashier*123',
+                'password'              => 'NewSecret*123',
+                'password_confirmation' => 'NewSecret*123',
             ]);
 
         $response->assertStatus(200);
-        $this->assertTrue(Hash::check('newsecretpassword', $this->cashier->fresh()->password));
+        $this->assertTrue(Hash::check('NewSecret*123', $this->cashier->fresh()->password));
     }
 
     /* ----------------- Alert Rules Tests ----------------- */

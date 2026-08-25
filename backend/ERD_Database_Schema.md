@@ -12,13 +12,12 @@ Stores all system users (Admin, Cashier, Checker, Supervisor).
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | `id` | BIGINT UNSIGNED | PK, AUTO_INCREMENT | |
-| `employee_id` | VARCHAR(20) | UNIQUE, NOT NULL | Format: `EMP-000`, `EMP-001` |
-| `name` | VARCHAR(100) | NOT NULL | Display name |
-| `real_name` | VARCHAR(100) | NOT NULL | Legal/real name |
+| `full_name` | VARCHAR(100) | NOT NULL | Staff full legal name |
+| `phone_number` | VARCHAR(25) | NULLABLE | Contact number |
 | `email` | VARCHAR(255) | NULLABLE, UNIQUE | |
 | `username` | VARCHAR(50) | UNIQUE, NOT NULL | Login username |
-| `password` | VARCHAR(255) | NOT NULL | Hashed (bcrypt in Laravel) |
-| `pin` | VARCHAR(10) | NULLABLE | Manager approval PIN |
+| `password` | VARCHAR(255) | NOT NULL | Hashed (bcrypt) — min 6 chars, uppercase & special symbol |
+| `pin` | VARCHAR(10) | NULLABLE | Quick 4-digit PIN (password also accepted as PIN) |
 | `role` | VARCHAR(50) | NOT NULL, DEFAULT 'Cashier' | Enum: 'Admin', 'Cashier', 'Supervisor' |
 | `status` | VARCHAR(50) | NOT NULL, DEFAULT 'Active' | Enum: 'Active', 'Inactive' |
 | `profile_photo` | VARCHAR(500) | NULLABLE | File path or Cloudinary/R2 URL |
@@ -333,7 +332,7 @@ reservations (1) ─< reservation_items (M)      [reservation_id]
 Create an Entity Relationship Diagram for a POS and Inventory Management System called "ZTG Heavy Parts" with these tables and relationships:
 
 TABLES:
-- users (id PK, employee_id UNIQUE, name, real_name, email, username UNIQUE, password, pin, role, status, profile_photo, timestamps)
+- users (id PK, full_name, phone_number, email, username UNIQUE, password, pin, role, status, profile_photo, timestamps)
 - checkers (id PK, name, status, timestamps)
 - categories (id PK, name UNIQUE, prefix, chinese_name, allow_variants BOOL, timestamps)
 - variant_types (id PK, name UNIQUE, created_at)

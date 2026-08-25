@@ -36,7 +36,7 @@ export default function useProductManagement() {
     // ── User session ────────────────────────────────────────────
     const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
     const user = userStr ? JSON.parse(userStr) : null;
-    const currentUserName = user ? user.real_name || user.name : 'Administrator';
+    const currentUserName = user ? user.full_name || user.name : 'Administrator';
 
     // ── Data ────────────────────────────────────────────────────
     const { products: globalProducts, optimisticUpdateProduct, optimisticDeleteProduct, refetch: refetchProducts } = useProducts();

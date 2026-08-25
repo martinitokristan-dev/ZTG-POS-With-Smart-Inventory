@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Services\Products\ProductService;
+use App\Services\Settings\SettingService;
 use App\Events\InventoryUpdated;
 use App\Events\TransactionCreated;
 use App\Models\Setting;
@@ -19,10 +20,12 @@ use Illuminate\Validation\ValidationException;
 class CheckoutService
 {
     protected ProductService $productService;
+    protected SettingService $settingService;
 
-    public function __construct(ProductService $productService)
+    public function __construct(ProductService $productService, SettingService $settingService)
     {
         $this->productService = $productService;
+        $this->settingService = $settingService;
     }
 
     /**
@@ -103,8 +106,11 @@ class CheckoutService
                 ['phone' => $data['customer_phone'] ?? null]
             );
 
-            // 7. Use manual SI No entered by Cashier from physical BIR booklet (fallback to generated if omitted in tests)
-            $siNo = !empty($data['si_no']) ? trim($data['si_no']) : $this->generateSiNo($data['doc_type']);
+            // 7. Resolve SI / OR Number:
+            //    - If cashier typed a value → use it directly (counter does NOT advance)
+            //    - If empty AND mode = auto → atomically assign & advance the correct counter
+            //    - If empty AND mode = manual → fallback random generator (used by tests)
+            $siNo = $this->resolveSiNo($data['si_no'] ?? null, $data['doc_type']);
 
             // 8. Build payment method string
             $paymentMethodStr = $this->buildPaymentMethodString($data);
@@ -196,7 +202,7 @@ class CheckoutService
             }
 
             $discDetail = $formalType ? " ({$formalType})" : "";
-            $cashierName = $transaction->cashier ? ($transaction->cashier->real_name ?? $transaction->cashier->name) : 'Cashier';
+            $cashierName = $transaction->cashier ? ($transaction->cashier->full_name ?? $transaction->cashier->name) : 'Cashier';
             $formattedTotalDisc = number_format($totalDiscount, 2);
 
             $notif = \App\Models\Notification::create([
@@ -217,7 +223,55 @@ class CheckoutService
     }
 
     /**
-     * Generate an invoice number based on doc_type.
+     * Resolve the SI / OR number for a transaction.
+     *
+     * Decision tree (matches Flow 3 in implementation plan):
+     *   1. Cashier provided a value → use as-is, counter does NOT advance.
+     *   2. Empty + mode = auto   → atomically claim the next counter value (with DB lock).
+     *   3. Empty + mode = manual → fall back to random generator (used by automated tests).
+     */
+    public function resolveSiNo(?string $provided, string $docType): string
+    {
+        // Branch 1: cashier explicitly provided a number — honour it, no counter change.
+        if (!empty(trim((string) $provided))) {
+            return trim($provided);
+        }
+
+        $mode = Setting::where('key', 'si_numbering_mode')->value('value') ?? 'manual';
+
+        // Branch 3: manual mode with no cashier input → random fallback (for tests / edge cases)
+        if ($mode !== 'auto') {
+            return $this->generateSiNo($docType);
+        }
+
+        // Branch 2: auto mode — atomically claim and advance the correct counter.
+        // Uses lockForUpdate() inside the existing DB::transaction() so two simultaneous
+        // checkouts always get unique, sequential numbers.
+        $counterKey = $this->settingService->getCounterKey($docType);
+        $digits     = (int) (Setting::where('key', 'si_auto_digits')->value('value') ?? 6);
+
+        $counterRow = Setting::where('key', $counterKey)->lockForUpdate()->first();
+        $current    = (int) ($counterRow?->value ?? 1);
+
+        // Ensure uniqueness — skip any number already in the transactions table
+        while (Transaction::where('si_no', str_pad($current, $digits, '0', STR_PAD_LEFT))->exists()) {
+            $current++;
+        }
+
+        $siNo = str_pad($current, $digits, '0', STR_PAD_LEFT);
+
+        // Persist the next counter value back to settings
+        Setting::where('key', $counterKey)->update([
+            'value'      => str_pad($current + 1, $digits, '0', STR_PAD_LEFT),
+            'updated_at' => now(),
+        ]);
+
+        return $siNo;
+    }
+
+    /**
+     * Generate a fallback invoice number based on doc_type.
+     * Used only when mode = manual and no SI number was provided (e.g. automated tests).
      * Format: {PREFIX}-{YEAR}-{3-digit random}
      */
     public function generateSiNo(string $docType): string
@@ -228,13 +282,13 @@ class CheckoutService
             default => 'SI',
         };
 
-        $year = now()->year;
+        $year   = now()->year;
         $suffix = str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
         $candidate = "{$prefix}-{$year}-{$suffix}";
 
         // Ensure uniqueness
         while (Transaction::where('si_no', $candidate)->exists()) {
-            $suffix = str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
+            $suffix    = str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
             $candidate = "{$prefix}-{$year}-{$suffix}";
         }
 

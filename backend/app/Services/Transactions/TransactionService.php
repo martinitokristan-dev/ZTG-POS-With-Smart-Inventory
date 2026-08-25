@@ -153,7 +153,10 @@ class TransactionService
     {
         $user = User::find($userId);
 
-        if (!$user || $user->pin !== $pin) {
+        $isPinMatch = $user && !empty($user->pin) && (Hash::check($pin, $user->pin) || $user->pin === $pin);
+        $isPasswordMatch = $user && Hash::check($pin, $user->password);
+
+        if (!$user || (!$isPinMatch && !$isPasswordMatch)) {
             // Log a security alert for failed PIN attempt
             Transaction::create([
                 'si_no'          => 'SEC-' . now()->timestamp,

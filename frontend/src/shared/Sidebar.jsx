@@ -186,7 +186,7 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
     }, []);
 
     const role = user ? user.role : 'Guest';
-    const name = user ? user.real_name || user.name : 'User';
+    const name = user ? user.full_name || user.name : 'User';
 
     // Get initials for profile avatar bubble
     const getInitials = (userName) => {
@@ -307,7 +307,7 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
         {
             title: 'Account',
             items: [
-                { path: '/settings', label: 'My Profile', icon: (
+                { path: '/settings', label: 'My Account', icon: (
                     <svg style={{ width: 18, height: 18, stroke: 'currentColor', fill: 'none', strokeWidth: 2, flexShrink: 0 }} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>

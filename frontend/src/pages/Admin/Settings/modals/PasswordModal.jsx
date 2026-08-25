@@ -1,4 +1,5 @@
 import React from 'react';
+import PasswordRequirementDetector from '../../../../shared/components/PasswordRequirementDetector';
 
 export default function PasswordModal({
     showPasswordModal, setShowPasswordModal,
@@ -45,6 +46,7 @@ export default function PasswordModal({
                                 className="form-control"
                                 style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px' }}
                             />
+                            <PasswordRequirementDetector password={passwordData.password || ''} showWhenEmpty={true} />
                         </div>
 
                         <div className="form-group" style={{ marginBottom: 0 }}>

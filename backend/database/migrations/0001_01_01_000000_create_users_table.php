@@ -13,16 +13,11 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('employee_id', 20)->unique();
-            $table->string('name', 100);
-            $table->string('real_name', 100);
-            $table->string('email', 255)->nullable()->unique();
             $table->string('username', 50)->unique();
             $table->string('password');
-            $table->string('pin', 10)->nullable();
+            $table->string('pin', 255)->nullable();
             $table->string('role', 50)->default('Cashier'); // PHP Enum: Admin, Cashier, Supervisor
             $table->string('status', 50)->default('Active'); // PHP Enum: Active, Inactive
-            $table->string('profile_photo', 500)->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

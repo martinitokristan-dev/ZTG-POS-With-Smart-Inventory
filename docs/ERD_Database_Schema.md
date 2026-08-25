@@ -7,27 +7,39 @@
 ## Entity Definitions
 
 ### 1. `users`
-Stores all system users (Admin, Cashier, Checker, Supervisor).
+Stores all authentication credentials and security access states (Admin, Cashier, Supervisor).
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
-| `id` | BIGINT UNSIGNED | PK, AUTO_INCREMENT | |
-| `employee_id` | VARCHAR(20) | UNIQUE, NOT NULL | Format: `EMP-000`, `EMP-001` |
-| `name` | VARCHAR(100) | NOT NULL | Display name |
-| `real_name` | VARCHAR(100) | NOT NULL | Legal/real name |
-| `email` | VARCHAR(255) | NULLABLE, UNIQUE | |
-| `username` | VARCHAR(50) | UNIQUE, NOT NULL | Login username |
-| `password` | VARCHAR(255) | NOT NULL | Hashed (bcrypt in Laravel) |
-| `pin` | VARCHAR(10) | NULLABLE | Manager approval PIN |
-| `role` | VARCHAR(50) | NOT NULL, DEFAULT 'Cashier' | Enum: 'Admin', 'Cashier', 'Supervisor' |
-| `status` | VARCHAR(50) | NOT NULL, DEFAULT 'Active' | Enum: 'Active', 'Inactive' |
-| `profile_photo` | VARCHAR(500) | NULLABLE | File path or Cloudinary/R2 URL |
+| `id` | BIGINT UNSIGNED | PK, AUTO_INCREMENT | Unique user identifier |
+| `username` | VARCHAR(50) | UNIQUE, NOT NULL | Unique login handle |
+| `password` | VARCHAR(255) | NOT NULL | Hashed via Bcrypt |
+| `pin` | VARCHAR(255) | NULLABLE | Manager approval PIN (hashed via Bcrypt) |
+| `role` | VARCHAR(50) | NOT NULL, DEFAULT 'Cashier' | PHP Enum: `Admin`, `Cashier`, `Supervisor` |
+| `status` | VARCHAR(50) | NOT NULL, DEFAULT 'Active' | PHP Enum: `Active`, `Inactive` |
+| `remember_token` | VARCHAR(100) | NULLABLE | Session remember token |
 | `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
 | `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | |
 
 ---
 
-### 2. `checkers`
+### 2. `user_profiles`
+Stores personal identity and contact information in a 1-to-1 relationship with `users`.
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED | PK, AUTO_INCREMENT | Unique profile identifier |
+| `user_id` | BIGINT UNSIGNED | FK → `users.id`, UNIQUE, NOT NULL, ON DELETE CASCADE | 1-to-1 link to user account |
+| `full_name` | VARCHAR(100) | NOT NULL | Employee full display / legal name |
+| `phone_number` | VARCHAR(30) | NULLABLE | Contact telephone / mobile number |
+| `email` | VARCHAR(255) | NULLABLE, UNIQUE | Email address for alerts & password resets |
+| `profile_photo` | VARCHAR(500) | NULLABLE | Cloudinary avatar image URL |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
+| `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | |
+
+---
+
+### 3. `checkers`
 Stores checker profiles assigned to sales transactions for supervisor verification.
 
 | Column | Type | Constraints | Notes |
@@ -40,7 +52,7 @@ Stores checker profiles assigned to sales transactions for supervisor verificati
 
 ---
 
-### 3. `categories`
+### 4. `categories`
 Product categories managed from Settings.
 
 | Column | Type | Constraints | Notes |
@@ -55,7 +67,7 @@ Product categories managed from Settings.
 
 ---
 
-### 4. `variant_types`
+### 5. `variant_types`
 Defines variant dimensions (e.g. Size, Color, Voltage).
 
 | Column | Type | Constraints | Notes |
@@ -66,7 +78,7 @@ Defines variant dimensions (e.g. Size, Color, Voltage).
 
 ---
 
-### 5. `variant_options`
+### 6. `variant_options`
 Individual options within a variant type.
 
 | Column | Type | Constraints | Notes |
@@ -78,7 +90,7 @@ Individual options within a variant type.
 
 ---
 
-### 6. `products`
+### 7. `products`
 Master product catalog. Each variant is its own row (same `name`, different `variant_options`).
 
 | Column | Type | Constraints | Notes |
@@ -98,55 +110,54 @@ Master product catalog. Each variant is its own row (same `name`, different `var
 | `is_dead_stock` | BOOLEAN | DEFAULT FALSE | Flagged as dead stock |
 | `damaged` | INT | NOT NULL, DEFAULT 0 | Units marked damaged |
 | `variant_options` | VARCHAR(255) | NULLABLE | Display label e.g. "Heavy Duty" |
-| `image` | VARCHAR(500) | NULLABLE | Cloudinary image URL. For variants (`parent_product_id IS NOT NULL`), if `NULL`, it dynamically inherits the base product's image via Eloquent accessor to save cloud storage. |
+| `image` | VARCHAR(500) | NULLABLE | Product image URL (inheritable by variants) |
 | `notes` | TEXT | NULLABLE | Internal notes |
 | `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
 | `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | |
 
 ---
 
-### 7. `product_variant_values`
-Junction table linking a product variant row to its variant option(s).
+### 8. `product_variant_values`
+Join table mapping products to their assigned variant options.
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | `id` | BIGINT UNSIGNED | PK, AUTO_INCREMENT | |
-| `product_id` | BIGINT UNSIGNED | FK → `products.id`, NOT NULL | |
-| `variant_option_id` | BIGINT UNSIGNED | FK → `variant_options.id`, NOT NULL | |
-
-**UNIQUE** constraint on (`product_id`, `variant_option_id`).
+| `product_id` | BIGINT UNSIGNED | FK → `products.id`, NOT NULL, ON DELETE CASCADE | |
+| `variant_option_id` | BIGINT UNSIGNED | FK → `variant_options.id`, NOT NULL, ON DELETE CASCADE | |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
 
 ---
 
-### 8. `customers`
-Extracted customer registry for transactions and reservations.
+### 9. `customers`
+Customer records for invoicing and transaction tracking.
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | `id` | BIGINT UNSIGNED | PK, AUTO_INCREMENT | |
-| `name` | VARCHAR(255) | NOT NULL | Customer name |
-| `phone` | VARCHAR(30) | NULLABLE | Contact phone |
-| `email` | VARCHAR(255) | NULLABLE | Contact email |
-| `tin` | VARCHAR(30) | NULLABLE | Tax Identification Number |
-| `address` | TEXT | NULLABLE | Billing / Delivery address |
+| `name` | VARCHAR(100) | NOT NULL | Customer name |
+| `phone` | VARCHAR(30) | NULLABLE | Contact number |
+| `email` | VARCHAR(255) | NULLABLE | Email address |
+| `tin` | VARCHAR(50) | NULLABLE | Tax Identification Number |
+| `address` | TEXT | NULLABLE | Business / Delivery address |
 | `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
 | `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | |
 
 ---
 
-### 9. `transactions`
-Central sales and audit ledger for Sales, Refunds, Returns, Voids, Restocks, and Security Alerts.
+### 10. `transactions`
+Core sales, inventory adjustments, and security audit log entries.
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | `id` | BIGINT UNSIGNED | PK, AUTO_INCREMENT | |
-| `si_no` | VARCHAR(50) | UNIQUE, NOT NULL, INDEX | Invoice number: `SI-2026-000001`, `DR-2026-000001`, `CR-2026-000001` |
-| `or_no` | VARCHAR(50) | NULLABLE | Official receipt no. for refund/return/void |
-| `date` | DATETIME | NOT NULL, INDEX | Transaction timestamp |
-| `customer_id` | BIGINT UNSIGNED | FK → `customers.id`, NULLABLE, INDEX | |
-| `cashier_id` | BIGINT UNSIGNED | FK → `users.id`, NOT NULL, INDEX | Cashier who processed |
-| `checker_id` | BIGINT UNSIGNED | FK → `checkers.id`, NULLABLE, INDEX | Supervisor / Checker assigned |
-| `total_qty` | INT | NOT NULL, DEFAULT 0 | Total item quantity |
+| `si_no` | VARCHAR(50) | UNIQUE, NOT NULL | Sales Invoice / Document No. Format: `SI-YYYY-XXX`, `DR-YYYY-XXX` |
+| `or_no` | VARCHAR(50) | NULLABLE | Official Receipt / Refund Ref (e.g., `OR-RFD-YYYY-XXX`, `OR-RET-YYYY-XXX`) |
+| `date` | DATETIME | NOT NULL | Transaction timestamp |
+| `customer_id` | BIGINT UNSIGNED | FK → `customers.id`, NULLABLE | |
+| `cashier_id` | BIGINT UNSIGNED | FK → `users.id`, NOT NULL | Cashier who processed transaction |
+| `checker_id` | BIGINT UNSIGNED | FK → `checkers.id`, NULLABLE | Assigned checker |
+| `total_qty` | INT | NOT NULL | Total units in transaction |
 | `amount` | DECIMAL(12,2) | NOT NULL, DEFAULT 0 | Current net transaction total (adjusted upon partial refund/void) |
 | `original_amount` | DECIMAL(12,2) | NULLABLE | Frozen original sale amount at checkout (for net sales & refund auditing) |
 | `refunded_amount` | DECIMAL(12,2) | NOT NULL, DEFAULT 0 | Cumulative total refunded amount |
@@ -173,14 +184,9 @@ Central sales and audit ledger for Sales, Refunds, Returns, Voids, Restocks, and
 | `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
 | `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | |
 
-**Compound Indexes:**
-- `INDEX (date, status)` — for fast date-filtered sales summary and report generation
-- `INDEX (customer_id, date)` — for customer purchase histories
-- `INDEX (cashier_id, date)` — for cashier daily sales reconciliation
-
 ---
 
-### 10. `transaction_items`
+### 11. `transaction_items`
 Line items for each sales transaction or inventory adjustment.
 
 | Column | Type | Constraints | Notes |
@@ -201,7 +207,7 @@ Line items for each sales transaction or inventory adjustment.
 
 ---
 
-### 11. `reservations`
+### 12. `reservations`
 Order-based reservations with multi-item cart support, Collection Receipt fulfillment, and vehicle tracking.
 
 | Column | Type | Constraints | Notes |
@@ -237,7 +243,7 @@ Order-based reservations with multi-item cart support, Collection Receipt fulfil
 
 ---
 
-### 12. `reservation_items`
+### 13. `reservation_items`
 Line items within a reservation order.
 
 | Column | Type | Constraints | Notes |
@@ -253,7 +259,36 @@ Line items within a reservation order.
 
 ---
 
-### 13. `report_logs`
+### 14. `personal_access_tokens`
+Laravel Sanctum Bearer token storage for API session authentication.
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED | PK, AUTO_INCREMENT | |
+| `tokenable_type` | VARCHAR(255) | NOT NULL | Model class (`App\Models\User`) |
+| `tokenable_id` | BIGINT UNSIGNED | NOT NULL | Target user ID |
+| `name` | VARCHAR(255) | NOT NULL | e.g. `auth_token` |
+| `token` | VARCHAR(64) | UNIQUE, NOT NULL | Hashed SHA-256 token |
+| `abilities` | TEXT | NULLABLE | Allowed scopes |
+| `last_used_at` | TIMESTAMP | NULLABLE | Last active request timestamp |
+| `expires_at` | TIMESTAMP | NULLABLE | Token expiration |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
+| `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | |
+
+---
+
+### 15. `password_reset_tokens`
+Secure token storage for password recovery via transactional reset email links.
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `email` | VARCHAR(255) | PK | User email address |
+| `token` | VARCHAR(255) | NOT NULL | Hashed 64-character token |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Enforces 60-minute expiry |
+
+---
+
+### 16. `report_logs`
 Audit log recording report generation and export events.
 
 | Column | Type | Constraints | Notes |
@@ -266,7 +301,7 @@ Audit log recording report generation and export events.
 
 ---
 
-### 14. `notifications`
+### 17. `notifications`
 System-generated alerts (low stock, transactions, reservations).
 
 | Column | Type | Constraints | Notes |
@@ -285,7 +320,7 @@ System-generated alerts (low stock, transactions, reservations).
 
 ---
 
-### 15. `settings`
+### 18. `settings`
 Key-value store for system configuration settings.
 
 | Column | Type | Constraints | Notes |
@@ -301,6 +336,8 @@ Key-value store for system configuration settings.
 
 ```mermaid
 erDiagram
+    users ||--|| user_profiles : "has profile (user_id)"
+    users ||--o{ personal_access_tokens : "issues (tokenable_id)"
     users ||--o{ transactions : "processes (cashier_id)"
     users ||--o{ transactions : "approves (approver_id)"
     users ||--o{ reservations : "books (reserved_by_id)"
@@ -331,13 +368,35 @@ erDiagram
 
     users {
         bigint id PK
-        string employee_id UK
-        string name
-        string real_name
         string username UK
         string password
+        string pin
         string role
         string status
+    }
+
+    user_profiles {
+        bigint id PK
+        bigint user_id FK
+        string full_name
+        string phone_number
+        string email UK
+        string profile_photo
+    }
+
+    personal_access_tokens {
+        bigint id PK
+        string tokenable_type
+        bigint tokenable_id
+        string name
+        string token UK
+        timestamp last_used_at
+    }
+
+    password_reset_tokens {
+        string email PK
+        string token
+        timestamp created_at
     }
 
     products {
@@ -418,7 +477,10 @@ erDiagram
 Create an Entity Relationship Diagram for a POS and Inventory Management System called "ZTG Heavy Parts" with these tables and relationships:
 
 TABLES:
-- users (id PK, employee_id UNIQUE, name, real_name, email, username UNIQUE, password, pin, role, status, profile_photo, timestamps)
+- users (id PK, username UNIQUE, password, pin, role, status, remember_token, timestamps)
+- user_profiles (id PK, user_id FK->users UNIQUE ON DELETE CASCADE, full_name, phone_number, email UNIQUE, profile_photo, timestamps)
+- personal_access_tokens (id PK, tokenable_type, tokenable_id, name, token UNIQUE, abilities, last_used_at, expires_at, timestamps)
+- password_reset_tokens (email PK, token, created_at)
 - checkers (id PK, name, status, timestamps)
 - categories (id PK, name UNIQUE, prefix, chinese_name, allow_variants BOOL, timestamps)
 - variant_types (id PK, name UNIQUE, created_at)
@@ -435,6 +497,8 @@ TABLES:
 - settings (id PK, key UNIQUE, value TEXT, updated_at)
 
 RELATIONSHIPS:
+- users 1:1 user_profiles (user_id)
+- users 1:M personal_access_tokens (tokenable_id)
 - users 1:M transactions (cashier_id)
 - users 1:M transactions (approver_id)
 - users 1:M reservations (reserved_by_id)

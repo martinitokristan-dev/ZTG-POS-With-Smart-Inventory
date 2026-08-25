@@ -37,23 +37,21 @@ class SeedScalabilityData extends Command
         $this->info("Step 1/4: Validating core prerequisites (Users, Categories, Checkers, Customers)...");
         
         $admin = User::where('role', 'Admin')->first() ?? User::create([
-            'employee_id' => 'EMP-001',
-            'name' => 'Admin User',
-            'real_name' => 'Administrator',
+            'full_name' => 'Administrator',
+            'phone_number' => '09123456789',
             'username' => 'admin',
             'email' => 'admin@ztg.com',
-            'password' => bcrypt('admin123'),
+            'password' => bcrypt('Admin*123'),
             'role' => 'Admin',
             'status' => 'Active'
         ]);
 
         $cashier = User::where('role', 'Cashier')->first() ?? User::create([
-            'employee_id' => 'EMP-002',
-            'name' => 'Jane Cashier',
-            'real_name' => 'Jane Doe',
+            'full_name' => 'Jane Doe',
+            'phone_number' => '09987654321',
             'username' => 'cashier',
             'email' => 'cashier@ztg.com',
-            'password' => bcrypt('cashier123'),
+            'password' => bcrypt('Cashier*123'),
             'role' => 'Cashier',
             'status' => 'Active'
         ]);

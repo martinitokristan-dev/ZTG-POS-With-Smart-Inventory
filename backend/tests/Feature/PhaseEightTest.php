@@ -45,27 +45,25 @@ class PhaseEightTest extends TestCase
         parent::setUp();
 
         $this->admin = User::create([
-            'employee_id' => 'EMP-ADM',
-            'name'        => 'Administrator',
-            'real_name'   => 'Admin User',
-            'email'       => 'admin@ztg.com',
-            'username'    => 'admin',
-            'password'    => Hash::make('password'),
-            'pin'         => '1234',
-            'role'        => UserRole::ADMIN,
-            'status'      => UserStatus::ACTIVE,
+            'full_name'    => 'Admin User',
+            'phone_number' => '09123456789',
+            'email'        => 'admin@ztg.com',
+            'username'     => 'admin',
+            'password'     => Hash::make('password'),
+            'pin'          => '1234',
+            'role'         => UserRole::ADMIN,
+            'status'       => UserStatus::ACTIVE,
         ]);
 
         $this->cashier = User::create([
-            'employee_id' => 'EMP-CSH',
-            'name'        => 'Cashier',
-            'real_name'   => 'Jane Doe',
-            'email'       => 'cashier@ztg.com',
-            'username'    => 'cashier',
-            'password'    => Hash::make('password'),
-            'pin'         => '5678',
-            'role'        => UserRole::CASHIER,
-            'status'      => UserStatus::ACTIVE,
+            'full_name'    => 'Jane Doe',
+            'phone_number' => '09987654321',
+            'email'        => 'cashier@ztg.com',
+            'username'     => 'cashier',
+            'password'     => Hash::make('password'),
+            'pin'          => '5678',
+            'role'         => UserRole::CASHIER,
+            'status'       => UserStatus::ACTIVE,
         ]);
 
         $this->category = Category::create(['name' => 'Engine Parts']);
