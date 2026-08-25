@@ -2,14 +2,23 @@ import React from 'react';
 import PasswordRequirementDetector from '../../../../shared/components/PasswordRequirementDetector';
 
 export default function PasswordModal({
-    showPasswordModal, setShowPasswordModal,
-    passwordData, setPasswordData, handlePasswordSubmit
+    isOpen, showPasswordModal,
+    onClose, setShowPasswordModal,
+    passwordData, setPasswordData,
+    onSubmit, handlePasswordSubmit
 }) {
-    if (!showPasswordModal) return null;
+    const isVisible = isOpen ?? showPasswordModal;
+    const handleClose = () => {
+        if (onClose) onClose();
+        if (setShowPasswordModal) setShowPasswordModal(false);
+    };
+    const handleSubmit = onSubmit || handlePasswordSubmit;
+
+    if (!isVisible) return null;
     return (
         <div className="modal-overlay" style={{ zIndex: 999 }}>
             <div className="modal-card" style={{ maxWidth: '450px', width: '95%', background: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.12)', border: '1px solid #E2E8F0' }}>
-                <form onSubmit={handlePasswordSubmit}>
+                <form onSubmit={handleSubmit}>
                     <div className="modal-header" style={{ background: '#FFFFFF', borderBottom: '1px solid #F1F5F9', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                             <h3 style={{ color: '#1E293B', fontSize: '18px', fontWeight: '700', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -18,7 +27,7 @@ export default function PasswordModal({
                             </h3>
                             <p style={{ color: '#64748B', fontSize: '11.5px', margin: 0 }}>Update your login credentials securely</p>
                         </div>
-                        <button type="button" onClick={() => setShowPasswordModal(false)} style={{ color: '#94A3B8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', transition: 'color 0.2s' }}>
+                        <button type="button" onClick={handleClose} style={{ color: '#94A3B8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', transition: 'color 0.2s' }}>
                             <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
@@ -63,7 +72,7 @@ export default function PasswordModal({
                     </div>
 
                     <div className="modal-footer" style={{ padding: '20px 24px', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                        <button type="button" onClick={() => setShowPasswordModal(false)} className="btn" style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#475569', fontWeight: '600', padding: '10px 20px', borderRadius: '8px' }}>
+                        <button type="button" onClick={handleClose} className="btn" style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#475569', fontWeight: '600', padding: '10px 20px', borderRadius: '8px' }}>
                             Cancel
                         </button>
                         <button type="submit" className="btn" style={{ background: '#3B82F6', color: '#FFFFFF', border: 'none', fontWeight: '600', padding: '10px 24px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.2)' }}>

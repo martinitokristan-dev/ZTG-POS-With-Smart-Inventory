@@ -415,6 +415,9 @@ export default function SettingsView() {
                 onSubmit={handleCategorySubmit}
                 selectedCategory={selectedCategory}
                 submitting={categorySubmitting}
+                categoryVariants={categoryVariants}
+                setCategoryVariants={setCategoryVariants}
+                getOptionsForType={getOptionsForType}
             />
 
             <EmployeeModal

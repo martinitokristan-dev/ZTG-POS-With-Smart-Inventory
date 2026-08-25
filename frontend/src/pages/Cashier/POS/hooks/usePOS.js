@@ -403,10 +403,6 @@ export default function usePOS() {
                 cheque_number: paymentObj.cheque_number || payload.cheque_number || null,
                 doc_type: docTypeStr,
                 amount_tendered: amountTenderedVal,
-                split_method_1: paymentObj.split?.[0]?.method || null,
-                split_amount_1: paymentObj.split?.[0]?.amount || null,
-                split_method_2: paymentObj.split?.[1]?.method || null,
-                split_amount_2: paymentObj.split?.[1]?.amount || null,
                 discount_amount: cartTotals.orderDiscountAmount,
                 discount_type: orderDiscountType !== 'None' ? orderDiscountType : null,
                 discount_rate: cartTotals.discountRate

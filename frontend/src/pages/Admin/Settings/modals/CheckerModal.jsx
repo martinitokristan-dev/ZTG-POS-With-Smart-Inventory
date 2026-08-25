@@ -1,19 +1,27 @@
 import React from 'react';
 
 export default function CheckerModal({ 
-    showCheckerModal, setShowCheckerModal, 
+    isOpen, showCheckerModal,
+    onClose, setShowCheckerModal, 
     selectedChecker, checkerForm, setCheckerForm, 
-    handleCheckerSubmit 
+    onSubmit, handleCheckerSubmit 
 }) {
-    if (!showCheckerModal) return null;
+    const isVisible = isOpen ?? showCheckerModal;
+    const handleClose = () => {
+        if (onClose) onClose();
+        if (setShowCheckerModal) setShowCheckerModal(false);
+    };
+    const handleSubmit = onSubmit || handleCheckerSubmit;
+
+    if (!isVisible) return null;
 
     return (
         <div className="modal-overlay" style={{ display: 'flex' }}>
             <div className="modal-card" style={{ maxWidth: '400px' }}>
-                <form onSubmit={handleCheckerSubmit}>
+                <form onSubmit={handleSubmit}>
                     <div className="modal-header">
                         <h3 className="modal-title">{selectedChecker ? 'Edit Checker' : 'Add Checker'}</h3>
-                        <button type="button" className="modal-close" onClick={() => setShowCheckerModal(false)}>
+                        <button type="button" className="modal-close" onClick={handleClose}>
                             <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }}>
                                 <path d="M6 18L18 6M6 6l12 12"/>
                             </svg>
@@ -49,7 +57,7 @@ export default function CheckerModal({
                         </div>
                     </div>
                     <div className="modal-footer" style={{ padding: '12px 20px' }}>
-                        <button type="button" className="btn btn-secondary" onClick={() => setShowCheckerModal(false)}>Cancel</button>
+                        <button type="button" className="btn btn-secondary" onClick={handleClose}>Cancel</button>
                         <button type="submit" className="btn btn-primary">Save Checker</button>
                     </div>
                 </form>

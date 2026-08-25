@@ -15,14 +15,7 @@ const paymentMethodOptions = [
     { value: 'GCash', label: 'GCash' },
     { value: 'Bank Transfer', label: 'Bank Transfer' },
     { value: 'Cheque', label: 'Cheque' },
-    { value: 'Split', label: 'Split Payment' },
     { value: 'P.O. (Pending)', label: 'P.O. (Pending)' }
-];
-
-const splitMethodOptions = [
-    { value: 'Cash', label: 'Cash' },
-    { value: 'GCash', label: 'GCash' },
-    { value: 'Bank Transfer', label: 'Bank Transfer' }
 ];
 
 export default function CheckoutModal({ 
@@ -44,17 +37,11 @@ export default function CheckoutModal({
     const [nextNumbers, setNextNumbers] = useState({ 'S.I.': '', 'D.R.': '', 'C.R.': '' });
     const [paymentMethod, setPaymentMethod] = useState('Cash');
     
-    // Cash Fields
+    // Amount Tendered / Received Fields (Cash, GCash, Bank Transfer)
     const [amountTendered, setAmountTendered] = useState('');
     
     // Cheque Fields
     const [chequeNumber, setChequeNumber] = useState('');
-    
-    // Split Fields
-    const [splitMethod1, setSplitMethod1] = useState('GCash');
-    const [splitAmount1, setSplitAmount1] = useState('');
-    const [splitMethod2, setSplitMethod2] = useState('Cash');
-    const [splitAmount2, setSplitAmount2] = useState('');
 
     // Success & Error State
     const [checkoutSuccess, setCheckoutSuccess] = useState(false);
@@ -97,8 +84,6 @@ export default function CheckoutModal({
             setPaymentMethod('Cash');
             setAmountTendered('');
             setChequeNumber('');
-            setSplitAmount1('');
-            setSplitAmount2('');
             setCheckoutSuccess(false);
             setCompletedTx(null);
             setError(null);
@@ -140,7 +125,7 @@ export default function CheckoutModal({
 
     const tenderedVal = parseFloat(amountTendered || 0);
     const changeDue = Math.max(0, tenderedVal - cartTotals.total);
-    const isChangeSufficient = paymentMethod === 'Cash' ? (tenderedVal >= cartTotals.total) : true;
+    const isChangeSufficient = ['Cash', 'GCash', 'Bank Transfer'].includes(paymentMethod) ? (tenderedVal >= cartTotals.total) : true;
     const changeDueColor = isChangeSufficient ? '#10B981' : '#EF4444';
     const changeDueBg = isChangeSufficient ? '#ECFDF5' : '#FEF2F2';
 
@@ -148,27 +133,14 @@ export default function CheckoutModal({
         setError(null);
         let paymentData = {};
         
-        if (paymentMethod === 'Split') {
-            const s1 = parseFloat(splitAmount1 || 0);
-            const s2 = parseFloat(splitAmount2 || 0);
-            if ((s1 + s2) < cartTotals.total) {
-                setError("Split amounts do not cover the total due.");
-                return;
-            }
-            paymentData = {
-                method: 'Split',
-                split: [
-                    { method: splitMethod1, amount: s1 },
-                    { method: splitMethod2, amount: s2 }
-                ]
-            };
-        } else if (paymentMethod === 'Cash') {
+        if (['Cash', 'GCash', 'Bank Transfer'].includes(paymentMethod)) {
             if (tenderedVal < cartTotals.total) {
-                setError("Cash received is less than the total due.");
+                const methodLabel = paymentMethod === 'Cash' ? 'Cash' : paymentMethod;
+                setError(`${methodLabel} amount received is less than the total due.`);
                 return;
             }
             paymentData = {
-                method: 'Cash',
+                method: paymentMethod,
                 amount_tendered: tenderedVal,
                 change: changeDue
             };
@@ -214,21 +186,6 @@ export default function CheckoutModal({
 
     const handlePrint = () => {
         if (!completedTx) return;
-
-        let splitDetails = '';
-        if (completedTx.payment_method && completedTx.payment_method.startsWith('Split:')) {
-            splitDetails += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Payment Method:</td><td style="padding:3px 0;font-size:11px;text-align:right;font-weight:600;">Split Payment</td></tr>`;
-            const parts = completedTx.payment_method.replace('Split: ', '').split(/\s*[+&]\s*/);
-            parts.forEach(p => {
-                const match = p.match(/^(.+)\s+₱?([\d,.]+)/);
-                if (match) splitDetails += `<tr><td style="padding:2px 0 2px 8px;font-size:11px;color:#374151;">- ${match[1]}:</td><td style="padding:2px 0;font-size:11px;text-align:right;">&#8369;${match[2]}</td></tr>`;
-            });
-            if (completedTx.amount_tendered && completedTx.amount_tendered > 0) {
-                splitDetails += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Cash Received:</td><td style="padding:3px 0;font-size:11px;text-align:right;">&#8369;${Number(completedTx.amount_tendered).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;
-                const cd = Math.max(0, completedTx.amount_tendered - completedTx.amount);
-                splitDetails += `<tr><td style="padding:3px 0;font-size:11px;color:#374151;">Change:</td><td style="padding:3px 0;font-size:11px;text-align:right;">&#8369;${Number(cd).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;
-            }
-        }
 
         const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         const user = userStr ? JSON.parse(userStr) : {};
@@ -506,33 +463,16 @@ export default function CheckoutModal({
                                             <span style={{ fontWeight: '600', color: '#1E293B' }}>{completedTx.cheque_number}</span>
                                         </div>
                                     )}
-                                    {!isSplit ? (
-                                        completedTx.payment_method === 'Cash' && (
-                                            <>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                    <span>Cash Received:</span>
-                                                    <span style={{ fontWeight: '600', color: '#1E293B' }}>₱{parseFloat(completedTx.amount_tendered || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                </div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                    <span>Change Due:</span>
-                                                    <span style={{ fontWeight: '700', color: '#15803D' }}>₱{Math.max(0, parseFloat(completedTx.amount_tendered || 0) - totalVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                </div>
-                                            </>
-                                        )
-                                    ) : (
+                                    {['Cash', 'GCash', 'Bank Transfer', 'Bank'].includes(completedTx.payment_method) && (
                                         <>
-                                            {completedTx.amount_tendered > 0 && (
-                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                    <span>Cash Received:</span>
-                                                    <span style={{ fontWeight: '600', color: '#1E293B' }}>₱{parseFloat(completedTx.amount_tendered || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                </div>
-                                            )}
-                                            {completedTx.amount_tendered > 0 && (
-                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                    <span>Change:</span>
-                                                    <span style={{ fontWeight: '700', color: '#15803D' }}>₱{Math.max(0, parseFloat(completedTx.amount_tendered || 0) - totalVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                </div>
-                                            )}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span>{completedTx.payment_method === 'Cash' ? 'Cash Received:' : `${completedTx.payment_method} Amount Received:`}</span>
+                                                <span style={{ fontWeight: '600', color: '#1E293B' }}>₱{parseFloat(completedTx.amount_tendered || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span>Change Due:</span>
+                                                <span style={{ fontWeight: '700', color: '#15803D' }}>₱{Math.max(0, parseFloat(completedTx.amount_tendered || 0) - totalVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            </div>
                                         </>
                                     )}
                                 </div>
@@ -790,11 +730,13 @@ export default function CheckoutModal({
                             </div>
                         )}
 
-                        {paymentMethod === 'Cash' && (
+                        {['Cash', 'GCash', 'Bank Transfer'].includes(paymentMethod) && (
                             <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                     <div className="form-group" style={{ marginBottom: 0 }}>
-                                        <label className="form-label" style={{ fontSize: '9px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Cash Received *</label>
+                                        <label className="form-label" style={{ fontSize: '9px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>
+                                            {paymentMethod === 'Cash' ? 'Cash Received *' : `${paymentMethod} Amount Received *`}
+                                        </label>
                                         <input 
                                             type="number" 
                                             className="form-control form-control-sm" 
@@ -813,44 +755,6 @@ export default function CheckoutModal({
                                         <label className="form-label" style={{ fontSize: '9px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Change Due</label>
                                         <input type="text" className="form-control form-control-sm" placeholder="₱0.00" readOnly style={{ fontSize: '13px', fontWeight: '700', textAlign: 'right', color: changeDueColor, backgroundColor: changeDueBg }} value={fmt(changeDue)} />
                                     </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {paymentMethod === 'Split' && (
-                            <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <div style={{ fontSize: '9px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Split Payment Details</div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', alignItems: 'center' }}>
-                                    <IOSSelect value={splitMethod1} onChange={e => setSplitMethod1(e.target.value)} options={splitMethodOptions} />
-                                    <input 
-                                        type="number" 
-                                        className="form-control form-control-sm" 
-                                        placeholder="Amount 1" 
-                                        style={{ fontWeight: '700', textAlign: 'right' }} 
-                                        value={splitAmount1} 
-                                        onChange={e => setSplitAmount1(e.target.value)} 
-                                        onKeyDown={(e) => {
-                                            if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
-                                                e.preventDefault();
-                                            }
-                                        }}
-                                    />
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', alignItems: 'center' }}>
-                                    <IOSSelect value={splitMethod2} onChange={e => setSplitMethod2(e.target.value)} options={splitMethodOptions} />
-                                    <input 
-                                        type="number" 
-                                        className="form-control form-control-sm" 
-                                        placeholder="Amount 2" 
-                                        style={{ fontWeight: '700', textAlign: 'right' }} 
-                                        value={splitAmount2} 
-                                        onChange={e => setSplitAmount2(e.target.value)} 
-                                        onKeyDown={(e) => {
-                                            if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
-                                                e.preventDefault();
-                                            }
-                                        }}
-                                    />
                                 </div>
                             </div>
                         )}

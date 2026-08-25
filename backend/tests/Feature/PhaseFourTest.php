@@ -223,67 +223,68 @@ class PhaseFourTest extends TestCase
         $this->assertDatabaseCount('transactions', 0);
     }
 
-    public function test_checkout_allows_gcash_without_tendered_amount()
+    public function test_checkout_allows_gcash_with_amount_tendered()
     {
         $response = $this->actingAs($this->cashier)
             ->postJson('/api/pos/checkout', [
                 'cart' => [
                     ['product_id' => $this->productA->id, 'qty' => 1, 'price_tier' => 'price1'],
                 ],
-                'customer_name'  => 'GCash Customer',
-                'payment_method' => 'GCash',
-                'doc_type'       => 'S.I.',
-                'checker_id'     => $this->checker->id,
+                'customer_name'   => 'GCash Customer',
+                'payment_method'  => 'GCash',
+                'doc_type'        => 'S.I.',
+                'checker_id'      => $this->checker->id,
+                'amount_tendered' => 2500.00,
             ]);
 
         $response->assertStatus(201)
             ->assertJsonPath('transaction.status', 'Completed');
 
-        $this->assertDatabaseHas('transactions', ['payment_method' => 'GCash']);
+        $this->assertDatabaseHas('transactions', [
+            'payment_method'  => 'GCash',
+            'amount_tendered' => 2500.00,
+        ]);
     }
 
-    public function test_checkout_blocks_split_payment_if_amounts_dont_sum_to_total()
+    public function test_checkout_blocks_gcash_if_amount_tendered_is_insufficient()
     {
         $response = $this->actingAs($this->cashier)
             ->postJson('/api/pos/checkout', [
                 'cart' => [
-                    ['product_id' => $this->productA->id, 'qty' => 1, 'price_tier' => 'price1'],
+                    ['product_id' => $this->productA->id, 'qty' => 1, 'price_tier' => 'price1'], // 2500.00
                 ],
-                'customer_name'  => 'Split Fail',
-                'payment_method' => 'Split',
-                'doc_type'       => 'S.I.',
-                'checker_id'     => $this->checker->id,
-                'split_method_1' => 'Cash',
-                'split_amount_1' => 1000.00,
-                'split_method_2' => 'GCash',
-                'split_amount_2' => 500.00, // Total should be 2500, but 1000+500=1500
+                'customer_name'   => 'GCash Underpaid',
+                'payment_method'  => 'GCash',
+                'doc_type'        => 'S.I.',
+                'checker_id'      => $this->checker->id,
+                'amount_tendered' => 2000.00,
             ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors('split_amount_1');
+            ->assertJsonValidationErrors('amount_tendered');
     }
 
-    public function test_checkout_allows_valid_split_payment()
+    public function test_checkout_allows_bank_transfer_with_amount_tendered()
     {
         $response = $this->actingAs($this->cashier)
             ->postJson('/api/pos/checkout', [
                 'cart' => [
-                    ['product_id' => $this->productA->id, 'qty' => 1, 'price_tier' => 'price1'],
+                    ['product_id' => $this->productA->id, 'qty' => 1, 'price_tier' => 'price1'], // 2500.00
                 ],
-                'customer_name'  => 'Split Customer',
-                'payment_method' => 'Split',
-                'doc_type'       => 'S.I.',
-                'checker_id'     => $this->checker->id,
-                'split_method_1' => 'Cash',
-                'split_amount_1' => 1500.00,
-                'split_method_2' => 'GCash',
-                'split_amount_2' => 1000.00, // Total = 2500.00
+                'customer_name'   => 'Bank Customer',
+                'payment_method'  => 'Bank Transfer',
+                'doc_type'        => 'S.I.',
+                'checker_id'      => $this->checker->id,
+                'amount_tendered' => 3000.00,
             ]);
 
         $response->assertStatus(201)
             ->assertJsonPath('transaction.status', 'Completed');
 
-        $this->assertDatabaseHas('transactions', ['payment_method' => 'Split: Cash ₱1,500.00 + GCash ₱1,000.00']);
+        $this->assertDatabaseHas('transactions', [
+            'payment_method'  => 'Bank Transfer',
+            'amount_tendered' => 3000.00,
+        ]);
     }
 
     public function test_checkout_recalculates_product_status_after_deduction()

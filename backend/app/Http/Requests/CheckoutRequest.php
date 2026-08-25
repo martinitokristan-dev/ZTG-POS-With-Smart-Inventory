@@ -37,14 +37,8 @@ class CheckoutRequest extends FormRequest
             'cheque_number'          => 'required_if:payment_method,Cheque|nullable|string|max:100',
             'doc_type'               => 'required|string|in:S.I.,D.R.,C.R.',
 
-            // Cash payment
-            'amount_tendered'        => 'required_if:payment_method,Cash|nullable|numeric|min:0',
-
-            // Split payment
-            'split_method_1'         => 'required_if:payment_method,Split|nullable|string',
-            'split_amount_1'         => 'required_if:payment_method,Split|nullable|numeric|min:0',
-            'split_method_2'         => 'required_if:payment_method,Split|nullable|string',
-            'split_amount_2'         => 'required_if:payment_method,Split|nullable|numeric|min:0',
+            // Cash, GCash, Bank payment amount tendered / received
+            'amount_tendered'        => 'required_if:payment_method,Cash,GCash,Bank,Bank Transfer|nullable|numeric|min:0',
         ];
     }
 }

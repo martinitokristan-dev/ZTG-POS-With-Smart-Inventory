@@ -117,11 +117,10 @@ class CheckoutService
 
             // 9. Determine Amount Tendered
             $amountTendered = match ($data['payment_method']) {
-                'Cash'           => $data['amount_tendered'],
-                'Split'          => $data['split_amount_1'] + $data['split_amount_2'],
-                'P.O. (Pending)' => 0,
-                'Cheque'         => $data['amount_tendered'] ?? $grandTotal,
-                default          => $grandTotal, // GCash/Bank: auto-set to total
+                'Cash', 'GCash', 'Bank Transfer', 'Bank' => (float) ($data['amount_tendered'] ?? $grandTotal),
+                'P.O. (Pending)'                          => 0,
+                'Cheque'                                  => (float) ($data['amount_tendered'] ?? $grandTotal),
+                default                                   => (float) ($data['amount_tendered'] ?? $grandTotal),
             };
 
             // 10. Create Transaction record with frozen business snapshot & discounts
@@ -300,16 +299,7 @@ class CheckoutService
      */
     public function buildPaymentMethodString(array $data): string
     {
-        if ($data['payment_method'] !== 'Split') {
-            return $data['payment_method'];
-        }
-
-        $m1 = $data['split_method_1'] ?? 'Method 1';
-        $m2 = $data['split_method_2'] ?? 'Method 2';
-        $a1 = number_format($data['split_amount_1'], 2);
-        $a2 = number_format($data['split_amount_2'], 2);
-
-        return "Split: {$m1} ₱{$a1} + {$m2} ₱{$a2}";
+        return $data['payment_method'];
     }
 
     /**
@@ -319,19 +309,10 @@ class CheckoutService
     {
         $method = $data['payment_method'];
 
-        if ($method === 'Cash') {
+        if (in_array($method, ['Cash', 'GCash', 'Bank Transfer', 'Bank'])) {
             if (($data['amount_tendered'] ?? 0) < $grandTotal) {
                 throw ValidationException::withMessages([
-                    'amount_tendered' => ['Cash received must be greater than or equal to the grand total.'],
-                ]);
-            }
-        }
-
-        if ($method === 'Split') {
-            $sum = ($data['split_amount_1'] ?? 0) + ($data['split_amount_2'] ?? 0);
-            if (abs($sum - $grandTotal) > 0.01) { // float tolerance
-                throw ValidationException::withMessages([
-                    'split_amount_1' => ['Split payment amounts must sum exactly to the grand total of ₱' . number_format($grandTotal, 2) . '.'],
+                    'amount_tendered' => ['Amount received must be greater than or equal to the grand total of ₱' . number_format($grandTotal, 2) . '.'],
                 ]);
             }
         }

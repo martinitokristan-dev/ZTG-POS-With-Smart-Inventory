@@ -1,14 +1,24 @@
 import React, { useEffect } from 'react';
 
 export default function CategoryModal({
-    showCategoryModal, setShowCategoryModal,
+    isOpen, showCategoryModal,
+    onClose, setShowCategoryModal,
     selectedCategory, categoryName, setCategoryName,
     categoryVariants, setCategoryVariants, getOptionsForType,
-    handleCategorySubmit, categorySubmitting = false
+    onSubmit, handleCategorySubmit,
+    submitting, categorySubmitting = false
 }) {
+    const isVisible = isOpen ?? showCategoryModal;
+    const handleClose = () => {
+        if (onClose) onClose();
+        if (setShowCategoryModal) setShowCategoryModal(false);
+    };
+    const handleSubmit = onSubmit || handleCategorySubmit;
+    const isSubmitting = submitting ?? categorySubmitting;
+
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (showCategoryModal && e.key === 'Enter') {
+            if (isVisible && e.key === 'Enter') {
                 if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') return;
                 // prevent default to avoid double firing if focused on the form input
                 e.preventDefault();
@@ -18,15 +28,16 @@ export default function CategoryModal({
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [showCategoryModal]);
+    }, [isVisible]);
 
-    if (!showCategoryModal) return null;
+    if (!isVisible) return null;
 
-    const submitLabel = categorySubmitting 
+    const submitLabel = isSubmitting 
         ? (selectedCategory ? 'Updating Category...' : 'Saving Category...') 
         : (selectedCategory ? 'Update Category' : 'Save Category');
 
     const toggleVariant = (key) => {
+        if (!setCategoryVariants) return;
         setCategoryVariants(prev => {
             const current = prev || [];
             if (current.includes(key)) return current.filter(k => k !== key);
@@ -58,12 +69,12 @@ export default function CategoryModal({
                 `}
             </style>
             <div className="modal-card category-modal-card">
-                <form onSubmit={handleCategorySubmit} className="no-float">
+                <form onSubmit={handleSubmit} className="no-float">
                     <div className="modal-header" style={{ borderBottom: '1px solid var(--border)', padding: '16px 20px', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <h3 className="modal-title" style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
                             {selectedCategory ? 'Edit Category' : 'Add Category'}
                         </h3>
-                        <button type="button" onClick={() => setShowCategoryModal(false)} className="modal-close" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                        <button type="button" onClick={handleClose} className="modal-close" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
                             <svg viewBox="0 0 24 24" style={{ width: '18px', height: '18px', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }}>
                                 <path d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -127,8 +138,8 @@ export default function CategoryModal({
                     </div>
 
                     <div className="modal-footer" style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', background: 'var(--bg-main)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                        <button type="button" onClick={() => setShowCategoryModal(false)} className="btn btn-secondary" disabled={categorySubmitting}>Cancel</button>
-                        <button id="submitCategoryBtn" type="submit" className="btn btn-primary" disabled={categorySubmitting}>
+                        <button type="button" onClick={handleClose} className="btn btn-secondary" disabled={isSubmitting}>Cancel</button>
+                        <button id="submitCategoryBtn" type="submit" className="btn btn-primary" disabled={isSubmitting}>
                             {categorySubmitting ? (
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                                     <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ width: '13px', height: '13px', borderWidth: '2px' }}></span>

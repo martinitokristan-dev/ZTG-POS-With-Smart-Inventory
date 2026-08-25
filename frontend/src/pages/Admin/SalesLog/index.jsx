@@ -81,8 +81,7 @@ export default function SalesLog() {
                                         { value: 'GCash', label: 'GCash' },
                                         { value: 'Bank Transfer', label: 'Bank Transfer' },
                                         { value: 'Cheque', label: 'Cheque' },
-                                        { value: 'P.O. (Pending)', label: 'P.O. (Pending)' },
-                                        { value: 'Split', label: 'Split' }
+                                        { value: 'P.O. (Pending)', label: 'P.O. (Pending)' }
                                     ]}
                                 />
                             </div>

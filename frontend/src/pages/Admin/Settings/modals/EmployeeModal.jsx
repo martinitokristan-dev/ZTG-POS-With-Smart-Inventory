@@ -3,22 +3,30 @@ import IOSSelect from '../../../../shared/components/IOSSelect';
 import PasswordRequirementDetector from '../../../../shared/components/PasswordRequirementDetector';
 
 export default function EmployeeModal({
-    showEmployeeModal, setShowEmployeeModal,
+    isOpen, showEmployeeModal,
+    onClose, setShowEmployeeModal,
     selectedEmployee, employeeForm, setEmployeeForm,
-    handleEmployeeSubmit
+    onSubmit, handleEmployeeSubmit
 }) {
     const [showPassword, setShowPassword] = useState(false);
     const [showPin, setShowPin] = useState(false);
 
-    if (!showEmployeeModal) return null;
+    const isVisible = isOpen ?? showEmployeeModal;
+    const handleClose = () => {
+        if (onClose) onClose();
+        if (setShowEmployeeModal) setShowEmployeeModal(false);
+    };
+    const handleSubmit = onSubmit || handleEmployeeSubmit;
+
+    if (!isVisible) return null;
 
     return (
         <div className="modal-overlay" style={{ display: 'flex' }}>
             <div className="modal-card" style={{ maxWidth: '480px' }}>
-                <form onSubmit={handleEmployeeSubmit}>
+                <form onSubmit={handleSubmit}>
                     <div className="modal-header">
                         <h3 className="modal-title">{selectedEmployee ? 'Edit Staff Account' : 'Register New Staff'}</h3>
-                        <button type="button" className="modal-close" onClick={() => setShowEmployeeModal(false)}>
+                        <button type="button" className="modal-close" onClick={handleClose}>
                             <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }}>
                                 <path d="M6 18L18 6M6 6l12 12"/>
                             </svg>
@@ -154,7 +162,7 @@ export default function EmployeeModal({
                         )}
                     </div>
                     <div className="modal-footer" style={{ padding: '16px 20px', marginTop: '8px' }}>
-                        <button type="button" className="btn btn-secondary" onClick={() => setShowEmployeeModal(false)}>Cancel</button>
+                        <button type="button" className="btn btn-secondary" onClick={handleClose}>Cancel</button>
                         <button type="submit" className="btn btn-primary">{selectedEmployee ? 'Save Profile' : 'Save Staff'}</button>
                     </div>
                 </form>
