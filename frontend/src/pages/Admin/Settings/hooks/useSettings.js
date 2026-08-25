@@ -1019,11 +1019,11 @@ export default function useSettings() {
     };
 
     const handleToggleEmployee = async (emp) => {
-        const nextStatus = emp.status === 'Active' ? 'Inactive' : 'Active';
         try {
-            const res = await api.put(`/employees/${emp.id}`, { status: nextStatus });
+            const res = await api.patch(`/employees/${emp.id}/toggle`);
             const updated = res.data.employee || res.data;
-            setEmployees(prev => prev.map(e => e.id === emp.id ? updated : e));
+            const newStatus = updated.status || (emp.status === 'Active' ? 'Inactive' : 'Active');
+            setEmployees(prev => prev.map(e => e.id === emp.id ? { ...e, ...updated, status: newStatus } : e));
             resetSettingsCache('employees');
 
             const stored = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
@@ -1036,7 +1036,7 @@ export default function useSettings() {
                     if (isCurrent) {
                         const newAuthUser = {
                             ...currentUser,
-                            status: nextStatus,
+                            status: newStatus,
                         };
                         sessionStorage.setItem('auth_user', JSON.stringify(newAuthUser));
                         localStorage.removeItem('auth_user');
@@ -1045,7 +1045,7 @@ export default function useSettings() {
                 } catch (err) {}
             }
 
-            showToast(`Employee account set to ${nextStatus}.`, 'success');
+            showToast(`Employee account set to ${newStatus}.`, 'success');
         } catch (err) {
             showToast(err.response?.data?.message || 'Failed to toggle employee status.', 'error');
         }
