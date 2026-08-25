@@ -155,6 +155,8 @@ class CheckoutService
                 TransactionItem::create([
                     'transaction_id' => $transaction->id,
                     'product_id'     => $product->id,
+                    'item_name'      => $item['name'] ?? $item['item_name'] ?? $product->name,
+                    'part_no'        => $item['part_no'] ?? $product->part_no,
                     'qty'            => $item['qty'],
                     'price'          => $origPrice,
                     'original_price' => $origPrice,
