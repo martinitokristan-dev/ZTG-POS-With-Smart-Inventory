@@ -32,7 +32,7 @@ export default function SettingsView() {
         employees, showEmployeeModal, setShowEmployeeModal, employeeForm, setEmployeeForm, selectedEmployee, setSelectedEmployee,
         handleProfileSubmit, handlePasswordSubmit, handleCategorySubmit, handleDeleteCategory, handleAddVariantOption, handleUpdateVariantOption, handleDeleteVariantOption, getOptionsForType,
         handleRuleSubmit, handleToggleRule, handleDeleteRule,
-        handleEmployeeSubmit, openEditEmployee, handleToggleEmployee, openAddEmployee,
+        handleEmployeeSubmit, openEditEmployee, handleToggleEmployee, handleDeleteEmployee, openAddEmployee,
         checkers, showCheckerModal, setShowCheckerModal, checkerForm, setCheckerForm, selectedChecker, setSelectedChecker, handleCheckerSubmit, openEditChecker, openAddChecker
     } = useSettings();
 
