@@ -11,13 +11,14 @@ import EmployeeModal from './modals/EmployeeModal';
 import PasswordModal from './modals/PasswordModal';
 import CheckerModal from './modals/CheckerModal';
 import ConfirmSaveModal from './modals/ConfirmSaveModal';
+import DeleteEmployeeModal from './modals/DeleteEmployeeModal';
 import LoadingSpinner from '../../../shared/components/LoadingSpinner';
 
 export default function SettingsView() {
     const {
         loading, isProfileDirty, isSettingsDirty, notificationsCount,
         activeTab, setActiveTab, activeAccountSubTab, setActiveAccountSubTab,
-        activeSubTab, setActiveSubTab,
+        activeSubTab, setActiveSubTab, activeAlertsSubTab, setActiveAlertsSubTab,
         editingTab, handleStartEditTab, handleCancelEditTab,
         profileData, setProfileData, avatarUploading, avatarProgress, avatarRemoving, handleAvatarUpload, handleAvatarRemove,
         confirmingRemove, handleAvatarRemoveConfirmed, handleAvatarRemoveCancel,
@@ -30,9 +31,10 @@ export default function SettingsView() {
         newOptionValue, setNewOptionValue,
         alertRules, showRuleModal, setShowRuleModal, ruleForm, setRuleForm,
         employees, showEmployeeModal, setShowEmployeeModal, employeeForm, setEmployeeForm, selectedEmployee, setSelectedEmployee,
+        showDeleteEmployeeModal, setShowDeleteEmployeeModal, employeeToDelete, setEmployeeToDelete,
         handleProfileSubmit, handlePasswordSubmit, handleCategorySubmit, handleDeleteCategory, handleAddVariantOption, handleUpdateVariantOption, handleDeleteVariantOption, getOptionsForType,
         handleRuleSubmit, handleToggleRule, handleDeleteRule,
-        handleEmployeeSubmit, openEditEmployee, handleToggleEmployee, handleDeleteEmployee, openAddEmployee,
+        handleEmployeeSubmit, openEditEmployee, handleToggleEmployee, handleDeleteEmployee, handleConfirmDeleteEmployee, openAddEmployee,
         checkers, showCheckerModal, setShowCheckerModal, checkerForm, setCheckerForm, selectedChecker, setSelectedChecker, handleCheckerSubmit, openEditChecker, openAddChecker
     } = useSettings();
 
@@ -322,7 +324,7 @@ export default function SettingsView() {
                                                             <div style={{ height: '1px', background: 'var(--border)', margin: '16px 0' }}></div>
 
                                                             <div className="checkbox-group" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                                                                <label className="toggle-row" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+                                                                <label className="toggle-row" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '12px 0' }}>
                                                                     <span className="toggle-label" style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>Remind admin to report the daily sales at 4:30 PM and 5:00 PM (Mon-Sat)</span>
                                                                     <input type="checkbox" checked={settings.remind_daily_sales_report === 'true'} onChange={() => handleToggleSetting('remind_daily_sales_report')} />
                                                                 </label>
@@ -356,12 +358,12 @@ export default function SettingsView() {
                                             handleSaveBulkSettings={handleSaveBulkSettings}
                                             logoUrl={logoUrl}
                                             sidebarLogoUrl={sidebarLogoUrl}
-                                            onLogoUpload={handleLogoUpload}
-                                            onLogoUploadWithCrop={handleLogoUploadWithCrop}
-                                            onLogoRemove={handleLogoRemove}
                                             logoUploading={logoUploading}
                                             logoProgress={logoProgress}
                                             logoRemoving={logoRemoving}
+                                            handleLogoUpload={handleLogoUpload}
+                                            handleLogoUploadWithCrop={handleLogoUploadWithCrop}
+                                            handleLogoRemove={handleLogoRemove}
                                             isEditing={editingTab === 'general'}
                                             onStartEdit={() => handleStartEditTab('general')}
                                             onCancelEdit={() => handleCancelEditTab('general')}
@@ -373,10 +375,41 @@ export default function SettingsView() {
                                 <div className={`tab-content ${activeTab === 'products' ? 'active' : ''}`}>
                                     {activeTab === 'products' && (
                                         <ProductsTab 
-                                            activeSubTab={activeSubTab} setActiveSubTab={setActiveSubTab} settings={settings} handleSettingInputChange={handleSettingInputChange} handleToggleSetting={handleToggleSetting}
-                                            categories={categories} setSelectedCategory={setSelectedCategory} setCategoryName={setCategoryName} setShowCategoryModal={setShowCategoryModal} handleDeleteCategory={handleDeleteCategory} setCategoryVariants={setCategoryVariants}
-                                            newOptionValue={newOptionValue} setNewOptionValue={setNewOptionValue} handleAddVariantOption={handleAddVariantOption} handleUpdateVariantOption={handleUpdateVariantOption} handleDeleteVariantOption={handleDeleteVariantOption} getOptionsForType={getOptionsForType}
+                                            settings={settings}
+                                            handleToggleSetting={handleToggleSetting}
+                                            handleSettingInputChange={handleSettingInputChange}
                                             handleSaveBulkSettings={handleSaveBulkSettings}
+                                            activeSubTab={activeSubTab}
+                                            setActiveSubTab={setActiveSubTab}
+                                            activeAlertsSubTab={activeAlertsSubTab}
+                                            setActiveAlertsSubTab={setActiveAlertsSubTab}
+                                            categories={categories}
+                                            showCategoryModal={showCategoryModal}
+                                            setShowCategoryModal={setShowCategoryModal}
+                                            selectedCategory={selectedCategory}
+                                            setSelectedCategory={setSelectedCategory}
+                                            categoryName={categoryName}
+                                            setCategoryName={setCategoryName}
+                                            categoryVariants={categoryVariants}
+                                            setCategoryVariants={setCategoryVariants}
+                                            handleDeleteCategory={handleDeleteCategory}
+                                            handleAddVariantOption={handleAddVariantOption}
+                                            handleUpdateVariantOption={handleUpdateVariantOption}
+                                            handleDeleteVariantOption={handleDeleteVariantOption}
+                                            getOptionsForType={getOptionsForType}
+                                            newOptionValue={newOptionValue}
+                                            setNewOptionValue={setNewOptionValue}
+                                            alertRules={alertRules}
+                                            showRuleModal={showRuleModal}
+                                            setShowRuleModal={setShowRuleModal}
+                                            ruleForm={ruleForm}
+                                            setRuleForm={setRuleForm}
+                                            handleRuleSubmit={handleRuleSubmit}
+                                            handleToggleRule={handleToggleRule}
+                                            handleDeleteRule={handleDeleteRule}
+                                            isEditing={editingTab === 'products'}
+                                            onStartEdit={() => handleStartEditTab('products')}
+                                            onCancelEdit={() => handleCancelEditTab('products')}
                                         />
                                     )}
                                 </div>
@@ -385,8 +418,14 @@ export default function SettingsView() {
                                 <div className={`tab-content ${activeTab === 'employees' ? 'active' : ''}`}>
                                     {activeTab === 'employees' && (
                                         <EmployeesTab 
-                                            employees={employees} openEditEmployee={openEditEmployee} openAddEmployee={openAddEmployee} handleToggleEmployee={handleToggleEmployee} handleDeleteEmployee={handleDeleteEmployee}
-                                            setSelectedEmployee={setSelectedEmployee} setEmployeeForm={setEmployeeForm} setShowEmployeeModal={setShowEmployeeModal}
+                                            employees={employees}
+                                            openEditEmployee={openEditEmployee}
+                                            openAddEmployee={openAddEmployee}
+                                            handleToggleEmployee={handleToggleEmployee}
+                                            handleDeleteEmployee={handleDeleteEmployee}
+                                            setSelectedEmployee={setSelectedEmployee}
+                                            setEmployeeForm={setEmployeeForm}
+                                            setShowEmployeeModal={setShowEmployeeModal}
                                         />
                                     )}
                                 </div>
@@ -395,8 +434,12 @@ export default function SettingsView() {
                                 <div className={`tab-content ${activeTab === 'checkers' ? 'active' : ''}`}>
                                     {activeTab === 'checkers' && (
                                         <CheckersTab 
-                                            checkers={checkers} openEditChecker={openEditChecker} openAddChecker={openAddChecker}
-                                            setSelectedChecker={setSelectedChecker} setCheckerForm={setCheckerForm} setShowCheckerModal={setShowCheckerModal}
+                                            checkers={checkers}
+                                            openEditChecker={openEditChecker}
+                                            openAddChecker={openAddChecker}
+                                            setSelectedChecker={setSelectedChecker}
+                                            setCheckerForm={setCheckerForm}
+                                            setShowCheckerModal={setShowCheckerModal}
                                         />
                                     )}
                                 </div>
@@ -450,6 +493,16 @@ export default function SettingsView() {
                 isOpen={showConfirmSaveModal}
                 onConfirm={handleConfirmSaveBulkSettings}
                 onCancel={handleCancelSaveBulkSettings}
+            />
+
+            <DeleteEmployeeModal
+                isOpen={showDeleteEmployeeModal}
+                onClose={() => {
+                    setShowDeleteEmployeeModal(false);
+                    setEmployeeToDelete(null);
+                }}
+                employee={employeeToDelete}
+                onConfirm={handleConfirmDeleteEmployee}
             />
         </>
     );

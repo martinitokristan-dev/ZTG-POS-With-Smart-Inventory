@@ -201,6 +201,8 @@ export default function useSettings() {
     const [employees, setEmployees] = useState([]);
     const [showEmployeeModal, setShowEmployeeModal] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
+    const [showDeleteEmployeeModal, setShowDeleteEmployeeModal] = useState(false);
+    const [employeeToDelete, setEmployeeToDelete] = useState(null);
     const [employeeForm, setEmployeeForm] = useState({
         full_name: '',
         phone_number: '',
@@ -1051,22 +1053,29 @@ export default function useSettings() {
         }
     };
 
-    const handleDeleteEmployee = async (emp) => {
+    const openDeleteEmployeeModal = (emp) => {
         if (emp.id === 1 || emp.username === 'admin' || emp.employee_id === 'EMP-000') {
             showToast('Cannot delete the default administrator account.', 'error');
             return;
         }
+        setEmployeeToDelete(emp);
+        setShowDeleteEmployeeModal(true);
+    };
 
-        const confirmDelete = window.confirm(`Are you sure you want to permanently delete "${emp.full_name || emp.name || emp.username}"? This will completely remove the staff account from the database.`);
-        if (!confirmDelete) return;
+    const handleConfirmDeleteEmployee = async (emp) => {
+        const target = emp || employeeToDelete;
+        if (!target) return;
 
         try {
-            await api.delete(`/employees/${emp.id}`);
-            setEmployees(prev => prev.filter(e => e.id !== emp.id));
+            await api.delete(`/employees/${target.id}`);
+            setEmployees(prev => prev.filter(e => e.id !== target.id));
             resetSettingsCache('employees');
-            showToast('Staff member deleted successfully.', 'success');
+            showToast('Staff member permanently deleted.', 'success');
+            setShowDeleteEmployeeModal(false);
+            setEmployeeToDelete(null);
         } catch (err) {
             showToast(err.response?.data?.message || 'Failed to delete staff member.', 'error');
+            throw err;
         }
     };
 
@@ -1150,7 +1159,9 @@ export default function useSettings() {
 
         // Tab 5: Employees
         employees, showEmployeeModal, setShowEmployeeModal, employeeForm, setEmployeeForm, selectedEmployee, setSelectedEmployee,
-        handleEmployeeSubmit, openEditEmployee, handleToggleEmployee, handleDeleteEmployee, openAddEmployee,
+        showDeleteEmployeeModal, setShowDeleteEmployeeModal, employeeToDelete, setEmployeeToDelete,
+        handleEmployeeSubmit, openEditEmployee, handleToggleEmployee, handleDeleteEmployee: openDeleteEmployeeModal,
+        openDeleteEmployeeModal, handleConfirmDeleteEmployee, openAddEmployee,
 
         // Tab 6: Checkers
         checkers, showCheckerModal, setShowCheckerModal, checkerForm, setCheckerForm, selectedChecker, setSelectedChecker,
