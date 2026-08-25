@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import VerifyCredentials from './pages/Auth/VerifyCredentials';
 import PrivateRoute from './shared/PrivateRoute';
 import AppShell from './shared/AppShell';
 
@@ -50,6 +51,7 @@ function App() {
                             <Route path="/login" element={<Login />} />
                             <Route path="/forgot-password" element={<ForgotPassword />} />
                             <Route path="/reset-password" element={<ResetPassword />} />
+                            <Route path="/verify-credentials" element={<VerifyCredentials />} />
 
                             {/*
                              * All authenticated routes share AppShell as a

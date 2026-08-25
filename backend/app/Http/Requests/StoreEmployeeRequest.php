@@ -16,7 +16,7 @@ class StoreEmployeeRequest extends FormRequest
         return [
             'full_name'    => 'required|string|max:100',
             'phone_number' => 'nullable|string|max:30',
-            'email'        => 'nullable|email|unique:user_profiles,email|max:255',
+            'email'        => 'required|email|unique:user_profiles,email|max:255',
             'username'     => 'required|string|unique:users,username|max:50',
             'password'     => ['required', 'string', 'min:6', 'regex:/[A-Z]/', 'regex:/[\W_]/'],
             'pin'          => 'nullable|string|digits:4',
@@ -29,6 +29,9 @@ class StoreEmployeeRequest extends FormRequest
     {
         return [
             'full_name.required' => 'The full name is required.',
+            'email.required'     => 'The email address is required.',
+            'email.email'        => 'Please provide a valid email address.',
+            'email.unique'       => 'This email address is already in use by another staff member.',
             'username.required'  => 'The login username is required.',
             'username.unique'    => 'This username is already taken.',
             'password.required'  => 'A password is required.',

@@ -20,12 +20,15 @@ use App\Http\Controllers\MediaController;
 use App\Http\Controllers\SystemHealthController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\StaffVerificationController;
 use Illuminate\Support\Facades\Route;
 
 // Public authentication & media routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink']);
 Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword']);
+Route::post('/auth/reveal-credentials', [StaffVerificationController::class, 'revealCredentials']);
+Route::post('/auth/send-credential-backup', [StaffVerificationController::class, 'sendBackupEmail']);
 Route::get('/media/{path}', [MediaController::class, 'show'])->where('path', '.*');
 
 // Authenticated routes

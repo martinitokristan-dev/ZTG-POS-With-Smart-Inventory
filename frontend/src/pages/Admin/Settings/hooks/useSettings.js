@@ -204,6 +204,7 @@ export default function useSettings() {
     const [employeeForm, setEmployeeForm] = useState({
         full_name: '',
         phone_number: '',
+        email: '',
         username: '',
         role: 'Cashier',
         pin: '',
@@ -896,6 +897,7 @@ export default function useSettings() {
         setEmployeeForm({
             full_name: '',
             phone_number: '',
+            email: '',
             username: '',
             password: '',
             role: 'Cashier',
@@ -910,6 +912,7 @@ export default function useSettings() {
         setEmployeeForm({
             full_name: emp.full_name || emp.name || '',
             phone_number: emp.phone_number || '',
+            email: emp.email || emp.user_profile?.email || '',
             username: emp.username || '',
             password: '',
             role: emp.role || 'Cashier',
@@ -928,6 +931,7 @@ export default function useSettings() {
                 full_name: fullName,
                 name: fullName,
                 phone_number: employeeForm.phone_number?.trim() || null,
+                email: employeeForm.email?.trim() || null,
                 username: employeeForm.username?.trim(),
             };
             delete payload.employee_id;
@@ -996,7 +1000,7 @@ export default function useSettings() {
                 const res = await api.post('/employees', payload);
                 const created = res.data.employee || res.data;
                 setEmployees(prev => [created, ...prev]);
-                showToast('New staff registered successfully!', 'success');
+                showToast('New staff registered! Verification email sent with credentials access.', 'success');
             }
             setShowEmployeeModal(false);
             resetSettingsCache('employees');

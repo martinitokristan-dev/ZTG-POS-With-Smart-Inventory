@@ -20,7 +20,7 @@ class UpdateEmployeeRequest extends FormRequest
         return [
             'full_name'    => 'required|string|max:100',
             'phone_number' => 'nullable|string|max:30',
-            'email'        => ['nullable', 'email', 'max:255', \Illuminate\Validation\Rule::unique('user_profiles', 'email')->ignore($userId, 'user_id')],
+            'email'        => ['required', 'email', 'max:255', \Illuminate\Validation\Rule::unique('user_profiles', 'email')->ignore($userId, 'user_id')],
             'username'     => 'required|string|max:50|unique:users,username,' . $userId,
             'password'     => ['nullable', 'string', 'min:6', 'regex:/[A-Z]/', 'regex:/[\W_]/'],
             'pin'          => 'nullable|string|digits:4',
@@ -33,6 +33,9 @@ class UpdateEmployeeRequest extends FormRequest
     {
         return [
             'full_name.required' => 'The full name is required.',
+            'email.required'     => 'The email address is required.',
+            'email.email'        => 'Please provide a valid email address.',
+            'email.unique'       => 'This email address is already in use by another staff member.',
             'username.required'  => 'The login username is required.',
             'username.unique'    => 'This username is already taken.',
             'password.min'       => 'Password must be at least 6 characters.',

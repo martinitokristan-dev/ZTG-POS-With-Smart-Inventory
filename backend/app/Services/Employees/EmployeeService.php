@@ -3,9 +3,15 @@
 namespace App\Services\Employees;
 
 use App\Models\User;
+use App\Models\StaffVerificationToken;
+use App\Mail\StaffVerificationMail;
 use App\Enums\UserStatus;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class EmployeeService
@@ -24,17 +30,41 @@ class EmployeeService
     public function createEmployee(array $data): User
     {
         if (empty($data['status'])) {
-            $data['status'] = 'Active';
+            $data['status'] = UserStatus::ACTIVE;
         }
+
+        $rawPassword = $data['password'] ?? '';
 
         // Synchronize PIN with password if not explicitly set
-        if (empty($data['pin']) && !empty($data['password'])) {
-            $data['pin'] = $data['password'];
+        if (empty($data['pin']) && !empty($rawPassword)) {
+            $data['pin'] = $rawPassword;
         }
 
-        $data['password'] = Hash::make($data['password']);
+        $data['password'] = Hash::make($rawPassword);
 
-        return User::create($data);
+        $user = User::create($data);
+
+        // Generate secure 1-time verification token and save encrypted initial password
+        if (!empty($rawPassword)) {
+            $token = Str::random(64);
+
+            StaffVerificationToken::create([
+                'user_id'            => $user->id,
+                'token'              => $token,
+                'encrypted_password' => Crypt::encryptString($rawPassword),
+                'expires_at'         => now()->addHours(48),
+            ]);
+
+            if (!empty($user->email)) {
+                try {
+                    app(\App\Services\Mail\BrevoMailService::class)->sendStaffVerification($user, $token, 48);
+                } catch (\Throwable $e) {
+                    Log::error("Failed to send staff verification email to {$user->email}: " . $e->getMessage());
+                }
+            }
+        }
+
+        return $user;
     }
 
     /**
@@ -56,7 +86,8 @@ class EmployeeService
     }
 
     /**
-     * Toggle the active status of an employee.
+     * Toggle an employee's status between Active and Inactive.
+     * Cannot deactivate the default admin (id=1 or username=admin).
      */
     public function toggleStatus(User $employee): User
     {
@@ -68,10 +99,10 @@ class EmployeeService
 
         $currentStatus = is_object($employee->status) ? $employee->status->value : $employee->status;
         
-        if ($currentStatus === 'Active') {
-            $employee->status = 'Inactive';
+        if ($currentStatus === UserStatus::ACTIVE->value || $currentStatus === 'Active') {
+            $employee->status = UserStatus::INACTIVE;
         } else {
-            $employee->status = 'Active';
+            $employee->status = UserStatus::ACTIVE;
         }
 
         $employee->save();

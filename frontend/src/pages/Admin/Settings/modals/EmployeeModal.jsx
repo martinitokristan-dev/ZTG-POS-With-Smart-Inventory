@@ -57,6 +57,18 @@ export default function EmployeeModal({
                         </div>
 
                         <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Email Address <span style={{ color: '#DC2626' }}>*</span></label>
+                            <input 
+                                type="email" 
+                                className="form-control" 
+                                required 
+                                placeholder="e.g. staff@ztgparts.com"
+                                value={employeeForm.email || ''}
+                                onChange={(e) => setEmployeeForm({...employeeForm, email: e.target.value})}
+                            />
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: 0 }}>
                             <label className="form-label">Login Username <span style={{ color: '#DC2626' }}>*</span></label>
                             <input 
                                 type="text" 

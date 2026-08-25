@@ -17,6 +17,7 @@ export default function EmployeesTab({
                             <tr>
                                 <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--table-text-secondary)', letterSpacing: '0.02em' }}>Full Name</th>
                                 <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--table-text-secondary)', letterSpacing: '0.02em' }}>Login Username</th>
+                                <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--table-text-secondary)', letterSpacing: '0.02em' }}>Email Address</th>
                                 <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--table-text-secondary)', letterSpacing: '0.02em' }}>Role</th>
                                 <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--table-text-secondary)', letterSpacing: '0.02em' }}>Phone Number</th>
                                 <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--table-text-secondary)', letterSpacing: '0.02em' }}>Status</th>
@@ -33,6 +34,9 @@ export default function EmployeesTab({
                                         </td>
                                         <td style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--table-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
                                             @{emp.username}
+                                        </td>
+                                        <td style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--table-text-secondary)' }}>
+                                            {emp.email || emp.user_profile?.email || '—'}
                                         </td>
                                         <td style={{ padding: '12px 16px' }}>
                                             <span style={{ fontSize: '12px', background: 'var(--bg-main)', color: 'var(--table-text-secondary)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', fontWeight: '600' }}>
