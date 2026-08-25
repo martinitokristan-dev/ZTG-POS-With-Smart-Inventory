@@ -29,7 +29,7 @@ class UpdateProductRequest extends FormRequest
             'price2'      => 'required|numeric|min:0',
             'status'      => 'required|string|in:Active,Low Stock,No Stock,Disabled',
             'notes'       => 'nullable|string',
-            'image'       => 'required|string|max:255',
+            'image'       => 'nullable|string|max:255',
             'is_dead_stock'=> 'nullable|boolean',
             'damaged'     => 'nullable|integer|min:0',
 
@@ -55,7 +55,6 @@ class UpdateProductRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'image.required'                    => 'Product image is required.',
             'variants.*.part_no.different'      => 'A variant cannot have the same part number as the main product.',
             'variants.*.part_no.distinct'       => 'Each variant must have a unique part number.',
             'variants.*.option_ids.required_with'=> 'Please select a variant option for each added variant.',

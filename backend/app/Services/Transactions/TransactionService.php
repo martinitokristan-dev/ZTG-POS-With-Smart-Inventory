@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Events\InventoryUpdated;
 use App\Events\TransactionUpdated;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 
 class TransactionService
 {
@@ -58,11 +60,7 @@ class TransactionService
         if (!empty($filters['payment_method'])) {
             $method = $filters['payment_method'];
             if ($method === 'Cash') {
-                $query->where(function ($q) {
-                    $q->where('payment_method', 'Cash')
-                      ->orWhere('payment_method', 'like', 'Split: Cash %')
-                      ->orWhere('payment_method', 'like', '% + Cash %');
-                });
+                $query->where('payment_method', 'Cash');
             } elseif ($method === 'Bank') {
                 $query->where('payment_method', 'like', '%Bank%');
             } elseif ($method === 'Cheque') {
@@ -83,23 +81,23 @@ class TransactionService
         $timeframe = $filters['timeframe'] ?? $filters['time_filter'] ?? null;
         if ($timeframe && strtolower($timeframe) !== 'all') {
             $norm = str_replace([' ', '_'], '', strtolower($timeframe));
-            $nowLocal = \Carbon\Carbon::now('Asia/Manila');
+            $nowLocal = Carbon::now('Asia/Manila');
             [$startDate, $endDate] = match ($norm) {
                 'today'     => [$nowLocal->format('Y-m-d'), $nowLocal->format('Y-m-d')],
-                'thisweek'  => [$nowLocal->copy()->startOfWeek(\Carbon\Carbon::SUNDAY)->format('Y-m-d'), $nowLocal->format('Y-m-d')],
+                'thisweek'  => [$nowLocal->copy()->startOfWeek(0)->format('Y-m-d'), $nowLocal->format('Y-m-d')],
                 'thismonth' => [$nowLocal->copy()->startOfMonth()->format('Y-m-d'), $nowLocal->format('Y-m-d')],
                 default     => [null, null],
             };
             if ($startDate && $endDate) {
-                $utcStart = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $startDate . ' 00:00:00', 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
-                $utcEnd = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $endDate . ' 23:59:59', 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
+                $utcStart = Carbon::createFromFormat('Y-m-d H:i:s', $startDate . ' 00:00:00', 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
+                $utcEnd = Carbon::createFromFormat('Y-m-d H:i:s', $endDate . ' 23:59:59', 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
                 $query->whereBetween('date', [$utcStart, $utcEnd]);
             }
         } elseif (!empty($filters['date_from']) || !empty($filters['date_to'])) {
             $startDate = $filters['date_from'] ?? '1970-01-01';
             $endDate = $filters['date_to'] ?? '2099-12-31';
-            $utcStart = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $startDate . ' 00:00:00', 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
-            $utcEnd = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $endDate . ' 23:59:59', 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
+            $utcStart = Carbon::createFromFormat('Y-m-d H:i:s', $startDate . ' 00:00:00', 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
+            $utcEnd = Carbon::createFromFormat('Y-m-d H:i:s', $endDate . ' 23:59:59', 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
             $query->whereBetween('date', [$utcStart, $utcEnd]);
         }
 
@@ -156,24 +154,37 @@ class TransactionService
         $isPinMatch = $user && !empty($user->pin) && (Hash::check($pin, $user->pin) || $user->pin === $pin);
         $isPasswordMatch = $user && Hash::check($pin, $user->password);
 
-        if (!$user || (!$isPinMatch && !$isPasswordMatch)) {
-            // Log a security alert for failed PIN attempt
-            Transaction::create([
-                'si_no'          => 'SEC-' . now()->timestamp,
-                'date'           => now(),
-                'cashier_id'     => $userId,
-                'total_qty'      => 0,
-                'amount'         => 0,
-                'payment_method' => 'N/A',
-                'status'         => TransactionStatus::SECURITY_ALERT->value,
-                'type'           => TransactionType::SYSTEM->value,
-                'internal_notes' => 'Failed PIN attempt' . ($context ? " — {$context}" : '') . '. Approver ID: ' . $userId,
-            ]);
-
-            return false;
+        if ($isPinMatch || $isPasswordMatch) {
+            return true;
         }
 
-        return true;
+        // If target user didn't match (e.g., if $userId was a cashier), check if $pin matches ANY Admin or Supervisor
+        $matchingAdmin = User::whereIn('role', ['Admin', 'Supervisor'])
+            ->get()
+            ->first(function ($admin) use ($pin) {
+                $pinMatch = !empty($admin->pin) && (Hash::check($pin, $admin->pin) || $admin->pin === $pin);
+                $passMatch = Hash::check($pin, $admin->password);
+                return $pinMatch || $passMatch;
+            });
+
+        if ($matchingAdmin) {
+            return true;
+        }
+
+        // Log a security alert for failed PIN/Password attempt
+        Transaction::create([
+            'si_no'          => 'SEC-' . now()->timestamp,
+            'date'           => now(),
+            'cashier_id'     => $userId,
+            'total_qty'      => 0,
+            'amount'         => 0,
+            'payment_method' => 'N/A',
+            'status'         => TransactionStatus::SECURITY_ALERT->value,
+            'type'           => TransactionType::SYSTEM->value,
+            'internal_notes' => 'Failed PIN/Password attempt' . ($context ? " — {$context}" : '') . '. Approver ID: ' . $userId,
+        ]);
+
+        return false;
     }
 
     /**
@@ -190,7 +201,7 @@ class TransactionService
                 TransactionStatus::REFUND->value,
                 TransactionStatus::RETURN->value,
             ])
-            ->whereDate('date', today())
+            ->whereBetween('date', [Carbon::today()->startOfDay(), Carbon::today()->endOfDay()])
             ->count();
 
         if ($todayVoids >= $limit) {

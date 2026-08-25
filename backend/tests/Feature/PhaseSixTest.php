@@ -229,7 +229,7 @@ class PhaseSixTest extends TestCase
             ->postJson('/api/reservations', $this->reservationPayload());
 
         $this->assertDatabaseHas('customers', ['name' => 'Mark Anthony']);
-        $this->assertEquals(1, \App\Models\Customer::where('name', 'Mark Anthony')->count());
+        $this->assertEquals(1, Customer::where('name', 'Mark Anthony')->count());
     }
 
     public function test_reservation_fails_if_qty_exceeds_stock()

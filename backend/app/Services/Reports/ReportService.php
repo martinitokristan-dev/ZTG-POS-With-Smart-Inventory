@@ -113,7 +113,7 @@ class ReportService
 
         // Revenue by payment method
         $paymentMethodsQuery = Transaction::select(
-            DB::raw("CASE WHEN payment_method LIKE 'Cheque%' THEN 'Cheque' WHEN payment_method LIKE 'Split%' THEN 'Split' ELSE payment_method END as payment_method_normalized"),
+            DB::raw("CASE WHEN payment_method LIKE 'Cheque%' THEN 'Cheque' ELSE payment_method END as payment_method_normalized"),
             DB::raw('SUM(amount) as total_sales'),
             DB::raw('COUNT(*) as tx_count')
         )

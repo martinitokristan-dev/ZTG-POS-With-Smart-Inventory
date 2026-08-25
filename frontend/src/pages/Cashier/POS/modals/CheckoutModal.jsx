@@ -125,7 +125,7 @@ export default function CheckoutModal({
 
     const tenderedVal = parseFloat(amountTendered || 0);
     const changeDue = Math.max(0, tenderedVal - cartTotals.total);
-    const isChangeSufficient = ['Cash', 'GCash', 'Bank Transfer'].includes(paymentMethod) ? (tenderedVal >= cartTotals.total) : true;
+    const isChangeSufficient = ['Cash', 'GCash', 'Bank Transfer', 'Cheque'].includes(paymentMethod) ? (tenderedVal >= cartTotals.total) : true;
     const changeDueColor = isChangeSufficient ? '#10B981' : '#EF4444';
     const changeDueBg = isChangeSufficient ? '#ECFDF5' : '#FEF2F2';
 
@@ -133,26 +133,21 @@ export default function CheckoutModal({
         setError(null);
         let paymentData = {};
         
-        if (['Cash', 'GCash', 'Bank Transfer'].includes(paymentMethod)) {
+        if (['Cash', 'GCash', 'Bank Transfer', 'Cheque'].includes(paymentMethod)) {
+            if (paymentMethod === 'Cheque' && !chequeNumber.trim()) {
+                setError("Please enter the Cheque Number.");
+                return;
+            }
             if (tenderedVal < cartTotals.total) {
-                const methodLabel = paymentMethod === 'Cash' ? 'Cash' : paymentMethod;
+                const methodLabel = paymentMethod === 'Cash' ? 'Cash' : paymentMethod === 'Cheque' ? 'Cheque / Cash' : paymentMethod;
                 setError(`${methodLabel} amount received is less than the total due.`);
                 return;
             }
             paymentData = {
                 method: paymentMethod,
                 amount_tendered: tenderedVal,
-                change: changeDue
-            };
-        } else if (paymentMethod === 'Cheque') {
-            if (!chequeNumber.trim()) {
-                setError("Please enter the Cheque Number.");
-                return;
-            }
-            paymentData = {
-                method: 'Cheque',
-                cheque_number: chequeNumber.trim(),
-                amount_tendered: tenderedVal || cartTotals.total
+                change: changeDue,
+                ...(paymentMethod === 'Cheque' ? { cheque_number: chequeNumber.trim() } : {})
             };
         } else {
             paymentData = { method: paymentMethod };
@@ -216,7 +211,6 @@ export default function CheckoutModal({
             change: Math.max(0, (completedTx.amount_tendered || 0) - completedTx.amount),
             servedBy: completedTx.cashier?.full_name || completedTx.cashier?.name || cashierName,
             docType: completedTx.doc_type || docType,
-            splitDetails: splitDetails,
             // BIR compliance: use frozen snapshot from this transaction;
             // fall back to empty object for legacy transactions with no snapshot.
             businessInfo: completedTx.business_snapshot || {},
@@ -265,7 +259,6 @@ export default function CheckoutModal({
         const vatAmount = totalVal - vatableSales;
         const discountAmount = Number(completedTx.discount_amount || cartTotals.discount || 0);
         const subtotalVal = totalVal + discountAmount;
-        const isSplit = completedTx.payment_method?.startsWith('Split:');
 
         return (
             <div className="modal-overlay" style={{ display: 'flex', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, alignItems: 'center', justifyContent: 'center' }}>
@@ -463,7 +456,7 @@ export default function CheckoutModal({
                                             <span style={{ fontWeight: '600', color: '#1E293B' }}>{completedTx.cheque_number}</span>
                                         </div>
                                     )}
-                                    {['Cash', 'GCash', 'Bank Transfer', 'Bank'].includes(completedTx.payment_method) && (
+                                    {['Cash', 'GCash', 'Bank Transfer', 'Bank', 'Cheque'].includes(completedTx.payment_method) && (
                                         <>
                                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <span>{completedTx.payment_method === 'Cash' ? 'Cash Received:' : `${completedTx.payment_method} Amount Received:`}</span>
@@ -730,12 +723,12 @@ export default function CheckoutModal({
                             </div>
                         )}
 
-                        {['Cash', 'GCash', 'Bank Transfer'].includes(paymentMethod) && (
+                        {['Cash', 'GCash', 'Bank Transfer', 'Cheque'].includes(paymentMethod) && (
                             <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                     <div className="form-group" style={{ marginBottom: 0 }}>
                                         <label className="form-label" style={{ fontSize: '9px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>
-                                            {paymentMethod === 'Cash' ? 'Cash Received *' : `${paymentMethod} Amount Received *`}
+                                            {paymentMethod === 'Cash' ? 'Cash Received *' : paymentMethod === 'Cheque' ? 'Cheque / Cash Received *' : `${paymentMethod} Amount Received *`}
                                         </label>
                                         <input 
                                             type="number" 

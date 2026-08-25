@@ -129,10 +129,7 @@ export default function ActivityTrailView({
 
             {/* Table or Loading */}
             {loading ? (
-                <div style={{ padding: '60px 0', textAlign: 'center' }}>
-                    <LoadingSpinner />
-                    <p style={{ marginTop: '12px', fontSize: '13px', color: 'var(--text-secondary)' }}>Loading audit logs…</p>
-                </div>
+                <LoadingSpinner text="Loading audit logs..." minHeight="300px" />
             ) : logs.length === 0 ? (
                 <div style={{ padding: '60px 20px', textAlign: 'center', backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" style={{ margin: '0 auto 12px' }}>

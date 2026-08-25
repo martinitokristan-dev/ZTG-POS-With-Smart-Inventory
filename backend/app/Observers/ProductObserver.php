@@ -24,11 +24,11 @@ class ProductObserver
         if ($statusStr !== 'Disabled' && $statusStr !== ProductStatus::DISABLED->value) {
             $alertLimit = $product->alert_limit ?? 5;
             if ($product->stock <= 0) {
-                $product->status = ProductStatus::NO_STOCK->value;
+                $product->status = ProductStatus::NO_STOCK;
             } elseif ($product->stock <= $alertLimit) {
-                $product->status = ProductStatus::LOW_STOCK->value;
+                $product->status = ProductStatus::LOW_STOCK;
             } else {
-                $product->status = ProductStatus::ACTIVE->value;
+                $product->status = ProductStatus::ACTIVE;
             }
         }
     }

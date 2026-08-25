@@ -224,7 +224,7 @@ class PhaseThreeTest extends TestCase
         ]);
     }
 
-    public function test_create_product_fails_without_image()
+    public function test_create_product_succeeds_without_image()
     {
         $response = $this->actingAs($this->admin)
             ->postJson('/api/products', [
@@ -235,8 +235,8 @@ class PhaseThreeTest extends TestCase
                 'price2'      => 600.00,
             ]);
 
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors('image');
+        $response->assertStatus(201)
+            ->assertJsonPath('image', null);
     }
 
     public function test_admin_can_create_product_with_variants()

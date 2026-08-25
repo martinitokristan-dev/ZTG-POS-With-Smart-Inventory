@@ -46,16 +46,12 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
 
     // Extract unique Payment methods
     const paymentOptions = useMemo(() => {
-        const baseOptions = ['Cash', 'GCash', 'Bank Transfer', 'Cheque', 'Split'];
+        const baseOptions = ['Cash', 'GCash', 'Bank Transfer', 'Cheque'];
         if (!salesSummary?.transactions) return baseOptions;
         const set = new Set(baseOptions);
         salesSummary.transactions.forEach(tx => {
             if (tx.payment_method && tx.payment_method !== 'P.O. (Pending)') {
-                if (tx.payment_method.startsWith('Split')) {
-                    set.add('Split');
-                } else {
-                    set.add(tx.payment_method);
-                }
+                set.add(tx.payment_method);
             }
         });
         return Array.from(set);
@@ -83,9 +79,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
             }
             if (selectedPayment !== 'All') {
                 const pm = tx.payment_method || '';
-                if (selectedPayment === 'Split') {
-                    if (!pm.startsWith('Split')) return false;
-                } else if (!pm.includes(selectedPayment)) {
+                if (!pm.includes(selectedPayment)) {
                     return false;
                 }
             }

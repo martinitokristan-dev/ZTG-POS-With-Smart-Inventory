@@ -10,14 +10,25 @@ export default function VoidModal({ isOpen, onClose, transaction, onSubmit, fmtD
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
 
+    React.useEffect(() => {
+        if (isOpen) {
+            setAdminPin('');
+            setShowPin(false);
+            setErrorMessage('');
+            setIsSubmitting(false);
+            setReason('Wrong Transaction / Input Error');
+            setRestoreStock(true);
+        }
+    }, [isOpen]);
+
     if (!isOpen || !transaction) return null;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setErrorMessage('');
 
-        if (!adminPin || adminPin.length !== 4) {
-            setErrorMessage('Please enter a valid 4-digit admin PIN.');
+        if (!adminPin.trim()) {
+            setErrorMessage('Please enter the Admin Password or PIN for approval.');
             return;
         }
 
@@ -31,7 +42,7 @@ export default function VoidModal({ isOpen, onClose, transaction, onSubmit, fmtD
                 restore_stock: restoreStock,
                 admin_name: adminName,
                 admin_id: currentUser?.role === 'Admin' ? currentUser.id : undefined,
-                admin_pin: adminPin
+                admin_pin: adminPin.trim()
             });
         } catch (err) {
             setErrorMessage(err.response?.data?.message || err.message || 'Failed to void transaction.');
@@ -157,9 +168,17 @@ export default function VoidModal({ isOpen, onClose, transaction, onSubmit, fmtD
                             </div>
                             
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)' }}>4-Digit Admin PIN <span style={{ color: 'var(--danger)' }}>*</span></label>
+                                <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)' }}>Admin Password / Approval PIN <span style={{ color: 'var(--danger)' }}>*</span></label>
                                 <div style={{ position: 'relative', width: '100%' }}>
-                                    <input type={showPin ? "text" : "password"} className="form-control" maxLength="4" pattern="\d{4}" required placeholder="••••" value={adminPin} onChange={(e) => setAdminPin(e.target.value.replace(/\D/g, ''))} style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 40px 12px 40px', fontSize: '20px', width: '100%', letterSpacing: '10px', textAlign: 'center', background: 'var(--bg-card)', color: 'var(--text-primary)', boxSizing: 'border-box', outline: 'none' }} />
+                                    <input 
+                                        type={showPin ? "text" : "password"} 
+                                        className="form-control" 
+                                        required 
+                                        placeholder="Enter admin password or PIN" 
+                                        value={adminPin} 
+                                        onChange={(e) => setAdminPin(e.target.value)} 
+                                        style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 40px 10px 14px', fontSize: '14px', width: '100%', background: 'var(--bg-card)', color: 'var(--text-primary)', boxSizing: 'border-box', outline: 'none' }} 
+                                    />
                                     <button type="button" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', padding: '4px', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }} onClick={() => setShowPin(!showPin)}>
                                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
                                             {showPin ? (

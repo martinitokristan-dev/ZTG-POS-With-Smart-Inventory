@@ -8,6 +8,12 @@ const fixImageUrl = (url) => {
     if (!url) return null;
     if (typeof url !== 'string') return url;
     let cleanUrl = url.trim();
+
+    // Automatically upgrade http to https for production URLs to avoid Mixed Content errors
+    if (cleanUrl.startsWith('http://') && !cleanUrl.includes('localhost') && !cleanUrl.includes('127.0.0.1')) {
+        cleanUrl = cleanUrl.replace(/^http:\/\//i, 'https://');
+    }
+
     if (cleanUrl.includes('localhost') || cleanUrl.includes('127.0.0.1')) {
         if (cleanUrl.includes('/storage/')) {
             cleanUrl = '/storage/' + cleanUrl.split('/storage/')[1];
@@ -34,6 +40,9 @@ export default function GeneralTab({
     logoUploading, 
     logoProgress = 0, 
     logoRemoving,
+    handleLogoUpload,
+    handleLogoUploadWithCrop,
+    handleLogoRemove,
     onLogoUpload,
     onLogoUploadWithCrop,
     onLogoRemove, 
@@ -54,6 +63,9 @@ export default function GeneralTab({
 
     const cleanLogoUrl = fixImageUrl(logoUrl);
 
+    const uploadWithCropHandler = handleLogoUploadWithCrop || onLogoUploadWithCrop;
+    const removeHandler = handleLogoRemove || onLogoRemove;
+
     const handleFileSelect = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -65,8 +77,8 @@ export default function GeneralTab({
     const handleCropConfirm = (originalFile, croppedSidebarBlob) => {
         setShowCropModal(false);
         setPendingFile(null);
-        if (onLogoUploadWithCrop) {
-            onLogoUploadWithCrop(originalFile, croppedSidebarBlob);
+        if (uploadWithCropHandler) {
+            uploadWithCropHandler(originalFile, croppedSidebarBlob);
         }
     };
 
@@ -168,7 +180,7 @@ export default function GeneralTab({
                                                 backgroundColor: '#FEF2F2',
                                                 whiteSpace: 'nowrap'
                                             }}
-                                            onClick={onLogoRemove}
+                                            onClick={removeHandler}
                                             disabled={logoUploading || logoRemoving}
                                         >
                                             {logoRemoving ? 'Removing…' : 'Remove'}

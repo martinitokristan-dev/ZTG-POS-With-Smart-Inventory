@@ -45,7 +45,7 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
                 cheque_number: paymentMethod === 'Cheque' ? chequeNumber.trim() : null,
                 amount_tendered: Number(amountTendered || transaction.amount),
                 admin_id: adminId,
-                admin_pin: adminPin
+                admin_pin: adminPin.trim()
             };
 
             await onSubmit(transaction.id, payload);
@@ -157,13 +157,13 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
                             )}
 
                             <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>
-                                    {paymentMethod === 'Cheque' ? 'Cheque Amount' : 'Cash Received'} <span style={{ color: '#EF4444' }}>*</span>
+                                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>
+                                    {paymentMethod === 'Cash' ? 'Cash Received' : paymentMethod === 'Cheque' ? 'Cheque / Cash Received' : `${paymentMethod} Amount Received`} <span style={{ color: '#EF4444' }}>*</span>
                                 </label>
                                 <input 
                                     type="number" 
                                     className="form-control" 
-                                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px' }}
+                                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '14px', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
                                     value={amountTendered}
                                     onChange={(e) => setAmountTendered(e.target.value)}
                                     onKeyDown={(e) => {
@@ -178,7 +178,7 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
                                 />
                             </div>
 
-                            {amountTendered !== '' && paymentMethod === 'Cash' && (
+                            {amountTendered !== '' && (
                                 <div style={{ background: isChangeSufficient ? '#ECFDF5' : '#FEF2F2', border: `1px solid ${isChangeSufficient ? '#D1FAE5' : '#FECACA'}`, borderRadius: '8px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span style={{ fontSize: '13px', fontWeight: '600', color: isChangeSufficient ? '#059669' : '#DC2626' }}>Change Due</span>
                                     <span style={{ fontSize: '16px', fontWeight: '800', color: isChangeSufficient ? '#10B981' : '#EF4444' }}>
@@ -188,29 +188,23 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
                             )}
     
                             <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>Admin PIN Verification <span style={{ color: '#EF4444' }}>*</span></label>
+                                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>Admin Password / Approval PIN <span style={{ color: '#EF4444' }}>*</span></label>
                                 <div style={{ position: 'relative' }}>
                                     <input 
                                         type={showPin ? "text" : "password"} 
                                         className="form-control" 
-                                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '16px', letterSpacing: showPin ? 'normal' : '4px' }}
+                                        style={{ width: '100%', padding: '10px 40px 10px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '14px', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
                                         value={adminPin}
-                                        onChange={(e) => setAdminPin(e.target.value.replace(/\D/g, ''))}
-                                        onKeyDown={(e) => {
-                                            if (!/^[0-9]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
-                                                e.preventDefault();
-                                            }
-                                        }}
-                                        placeholder="Enter PIN"
+                                        onChange={(e) => setAdminPin(e.target.value)}
+                                        placeholder="Enter admin password or PIN"
                                         required
-                                        maxLength={6}
                                         autoComplete="new-password"
                                         disabled={isSubmitting}
                                     />
                                     <button 
                                         type="button" 
                                         onClick={() => setShowPin(!showPin)}
-                                        style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', padding: '4px' }}
+                                        style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}
                                         disabled={isSubmitting}
                                     >
                                         {showPin ? (
@@ -224,11 +218,11 @@ export default function PayModal({ isOpen, onClose, onSubmit, transaction, fmtDa
                         </div>
                     </div>
     
-                    <div className="modal-footer" style={{ padding: '20px 24px', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                        <button type="button" className="btn" style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#475569', fontWeight: '600', padding: '10px 20px', borderRadius: '8px' }} onClick={onClose} disabled={isSubmitting}>
+                    <div className="modal-footer" style={{ padding: '20px 24px', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                        <button type="button" className="btn" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontWeight: '600', padding: '10px 20px', borderRadius: '8px' }} onClick={onClose} disabled={isSubmitting}>
                             Cancel
                         </button>
-                        <button type="submit" className="btn" style={{ background: '#10B981', color: '#FFFFFF', border: 'none', fontWeight: '600', padding: '10px 24px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)', opacity: isSubmitting ? 0.7 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer' }} disabled={!adminPin || !paymentMethod || (paymentMethod === 'Cheque' && !chequeNumber.trim()) || !amountTendered || isSubmitting}>
+                        <button type="submit" className="btn" style={{ background: '#10B981', color: '#FFFFFF', border: 'none', fontWeight: '600', padding: '10px 24px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)', opacity: isSubmitting ? 0.7 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer' }} disabled={!adminPin.trim() || !paymentMethod || (paymentMethod === 'Cheque' && !chequeNumber.trim()) || !amountTendered || isSubmitting}>
                             {isSubmitting ? 'Processing Payment...' : 'Confirm Payment'}
                         </button>
                     </div>

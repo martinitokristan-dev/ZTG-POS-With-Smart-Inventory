@@ -3,12 +3,7 @@ import LoadingSpinner from '../../../../shared/components/LoadingSpinner';
 
 export default function ActiveSessionsView({ sessions, loading, onForceLogout, onRefresh }) {
     if (loading) {
-        return (
-            <div style={{ padding: '60px 0', textAlign: 'center' }}>
-                <LoadingSpinner />
-                <p style={{ marginTop: '12px', fontSize: '13px', color: 'var(--text-secondary)' }}>Loading active user sessions…</p>
-            </div>
-        );
+        return <LoadingSpinner text="Loading active user sessions..." minHeight="300px" />;
     }
 
     return (

@@ -41,10 +41,7 @@ export default function AbnormalAlertsView({ logs, loading, onViewDetails, onRef
 
             {/* List */}
             {loading ? (
-                <div style={{ padding: '60px 0', textAlign: 'center' }}>
-                    <LoadingSpinner />
-                    <p style={{ marginTop: '12px', fontSize: '13px', color: 'var(--text-secondary)' }}>Scanning security logs…</p>
-                </div>
+                <LoadingSpinner text="Scanning security logs..." minHeight="300px" />
             ) : abnormalLogs.length === 0 ? (
                 <div style={{ padding: '60px 20px', textAlign: 'center', backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
                     <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#ECFDF5', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
@@ -110,7 +107,7 @@ export default function AbnormalAlertsView({ logs, loading, onViewDetails, onRef
                                     className="btn btn-secondary btn-sm"
                                     style={{ fontSize: '12px', padding: '6px 14px', fontWeight: '600' }}
                                 >
-                                    Inspect Event
+                                    View Details
                                 </button>
                             </div>
                         );
