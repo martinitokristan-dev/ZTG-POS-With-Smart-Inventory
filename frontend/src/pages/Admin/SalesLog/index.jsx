@@ -1,9 +1,30 @@
-import React from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import useSalesLog from './hooks/useSalesLog';
 import SalesTable from './views/SalesTable';
 import IOSSelect from '../../../shared/components/IOSSelect';
+import TablePagination from '../../../shared/components/TablePagination';
+
 export default function SalesLog() {
     const sl = useSalesLog();
+    const [itemPage, setItemPage] = useState(1);
+    const [perPage, setPerPage] = useState(20);
+
+    // Reset pagination to page 1 when search or filters change
+    useEffect(() => {
+        setItemPage(1);
+    }, [sl.searchQuery, sl.paymentFilter, sl.timeFilter, sl.cashierFilter, sl.sortFilter, sl.activeTab]);
+
+    const totalItemsCount = sl.filteredItems.length;
+
+    // Slice items for current page
+    const displayedItems = useMemo(() => {
+        if (perPage === 'All' || perPage === 'all' || perPage >= 999999) {
+            return sl.filteredItems;
+        }
+        const numericLimit = Number(perPage) || 20;
+        const startIndex = (itemPage - 1) * numericLimit;
+        return sl.filteredItems.slice(startIndex, startIndex + numericLimit);
+    }, [sl.filteredItems, itemPage, perPage]);
 
     return (
         <div className="main-workspace">
@@ -117,37 +138,25 @@ export default function SalesLog() {
                     </div>
 
                     <SalesTable 
-                        items={sl.filteredItems} 
+                        items={displayedItems} 
                         loading={sl.loading} 
                         fmt={sl.fmt} 
                         fmtDate={sl.fmtDate} 
                     />
 
-                    {/* Pagination Controls */}
-                    {sl.pagination.last_page > 1 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', background: '#FFFFFF', padding: '12px 24px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                Showing page {sl.pagination.current_page} of {sl.pagination.last_page} ({sl.pagination.total} total records)
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button 
-                                    className="btn btn-sm" 
-                                    style={{ border: '1px solid var(--border)', background: '#fff' }}
-                                    disabled={sl.page <= 1}
-                                    onClick={() => sl.setPage(sl.page - 1)}
-                                >
-                                    Previous
-                                </button>
-                                <button 
-                                    className="btn btn-sm" 
-                                    style={{ border: '1px solid var(--border)', background: '#fff' }}
-                                    disabled={sl.page >= sl.pagination.last_page}
-                                    onClick={() => sl.setPage(sl.page + 1)}
-                                >
-                                    Next
-                                </button>
-                            </div>
-                        </div>
+                    {/* Standardized System Pagination Card */}
+                    {!sl.loading && totalItemsCount > 0 && (
+                        <TablePagination
+                            currentPage={itemPage}
+                            totalItems={totalItemsCount}
+                            perPage={perPage}
+                            onPageChange={(newPage) => setItemPage(newPage)}
+                            onPerPageChange={(newLimit) => {
+                                setPerPage(newLimit);
+                                setItemPage(1);
+                            }}
+                            label="sales items"
+                        />
                     )}
 
             </div>

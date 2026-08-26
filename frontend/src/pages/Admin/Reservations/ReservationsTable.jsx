@@ -3,6 +3,7 @@ import LoadingSpinner from '../../../shared/components/LoadingSpinner';
 import StatusBadge from '../../../shared/components/StatusBadge';
 import IOSSelect from '../../../shared/components/IOSSelect';
 import FormattedProductName from '../../../shared/components/FormattedProductName';
+import TablePagination from '../../../shared/components/TablePagination';
 
 export default function ReservationsTable({
     reservations, loading,
@@ -320,41 +321,25 @@ export default function ReservationsTable({
                                                             <circle cx="12" cy="12" r="3"></circle>
                                                         </svg>
                                                     </button>
-                                                    {(activeTab === 'completed' || !isPending) && (
-                                                        <button 
-                                                            className="action-trigger-btn" 
-                                                            aria-label="Reprint Final Collection Receipt" 
-                                                            data-tooltip="Reprint Final C.R." 
-                                                            onClick={() => onReprintBalanceCR ? onReprintBalanceCR(r) : (onReprintCR && onReprintCR(r))}
-                                                            style={{ color: '#059669' }}
+                                                    {isDepositOnly && (
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-primary btn-sm"
+                                                            onClick={() => openFulfill(r)}
+                                                            style={{ padding: '4px 10px', fontSize: '12px', fontWeight: '600' }}
                                                         >
-                                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                                                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                                                                <rect x="6" y="14" width="12" height="8"></rect>
-                                                            </svg>
+                                                            Claim & Settle
                                                         </button>
                                                     )}
-                                                    {activeTab === 'deposit' && isPending && (
-                                                        <button 
-                                                            className="action-trigger-btn" 
-                                                            aria-label="Reprint Deposit Collection Receipt" 
-                                                            data-tooltip="Reprint Deposit C.R." 
-                                                            onClick={() => onReprintDepositCR ? onReprintDepositCR(r) : (onReprintCR && onReprintCR(r))}
-                                                            style={{ color: '#059669' }}
+                                                    {!isCancelled && !isCompleted && (
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-outline btn-sm"
+                                                            onClick={() => openCancel(r)}
+                                                            style={{ padding: '4px 8px', fontSize: '12px', color: 'var(--danger)', borderColor: 'rgba(220,38,38,0.3)' }}
                                                         >
-                                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                                                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                                                                <rect x="6" y="14" width="12" height="8"></rect>
-                                                            </svg>
+                                                            Cancel
                                                         </button>
-                                                    )}
-                                                    {activeTab === 'deposit' && isPending && (
-                                                        <button className="btn btn-success btn-sm" onClick={() => openFulfill(r)}>Fulfill</button>
-                                                    )}
-                                                    {activeTab === 'deposit' && isPending && (
-                                                        <button className="btn btn-danger-outline btn-sm" onClick={() => openCancel(r)}>Cancel</button>
                                                     )}
                                                 </div>
                                             </td>
@@ -366,33 +351,15 @@ export default function ReservationsTable({
                     </table>
                 </div>
 
-                {/* Pagination Controls */}
-                {pagination && pagination.lastPage > 1 && (
-                    <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                            Showing page <strong>{pagination.currentPage}</strong> of <strong>{pagination.lastPage}</strong> ({pagination.total ? pagination.total.toLocaleString() : 0} total orders)
-                        </span>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                                type="button"
-                                className="btn btn-outline btn-sm"
-                                disabled={pagination.currentPage <= 1}
-                                onClick={() => setPage && setPage(prev => Math.max(1, prev - 1))}
-                                style={{ minHeight: '44px', padding: '0 16px', fontWeight: '600' }}
-                            >
-                                Previous
-                            </button>
-                            <button
-                                type="button"
-                                className="btn btn-outline btn-sm"
-                                disabled={pagination.currentPage >= pagination.lastPage}
-                                onClick={() => setPage && setPage(prev => Math.min(pagination.lastPage, prev + 1))}
-                                style={{ minHeight: '44px', padding: '0 16px', fontWeight: '600' }}
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </div>
+                {/* Standardized Pagination Controls */}
+                {pagination && (
+                    <TablePagination
+                        currentPage={pagination.currentPage || 1}
+                        totalItems={pagination.total || 0}
+                        perPage={20}
+                        onPageChange={(newPage) => setPage && setPage(newPage)}
+                        label="orders"
+                    />
                 )}
             </div>
         </>

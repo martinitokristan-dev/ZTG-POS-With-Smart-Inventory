@@ -431,6 +431,100 @@ class ReportFlowsSeeder extends Seeder
             'created_at'  => $today->copy()->setTime(16, 05, 00),
         ]);
 
-        $this->command?->info('✓ Successfully seeded 8 comprehensive flow transactions and matching POS Activity Logs for today!');
+        // ─────────────────────────────────────────────────────────────
+        // 9. Extra 50+ realistic sales transactions for pagination testing
+        // ─────────────────────────────────────────────────────────────
+        $paymentMethods = ['Cash', 'GCash', 'Bank Transfer', 'Cheque'];
+        $productPool = [$oilFilter, $brakePad, $radiatorHose, $fuelFilter, $sparkPlug, $belt, $clutchDisc, $hydraulicFluid];
+        $customerPool = [$customerWalkIn, $customerEnterprise];
+
+        // Ensure 50+ total catalog products exist for Product Management & Inventory pagination
+        for ($p = 10; $p <= 65; $p++) {
+            Product::firstOrCreate(
+                ['part_no' => sprintf('ZTG-PART-%03d', $p)],
+                [
+                    'name'        => "Heavy Equipment Spare Part #{$p}",
+                    'category_id' => $category->id,
+                    'stock'       => rand(15, 120),
+                    'price1'      => rand(500, 8500),
+                    'price2'      => rand(450, 8000),
+                    'status'      => 'Active',
+                    'address'     => 'Shelf ' . chr(65 + ($p % 6)) . '-' . (($p % 10) + 1),
+                ]
+            );
+        }
+
+        $extraSiNos = [];
+        for ($i = 201; $i <= 250; $i++) {
+            $extraSiNos[] = sprintf('SI-2026-%05d', $i);
+        }
+        $existingExtraIds = Transaction::whereIn('si_no', $extraSiNos)->pluck('id');
+        TransactionItem::whereIn('transaction_id', $existingExtraIds)->delete();
+        Transaction::whereIn('id', $existingExtraIds)->delete();
+
+        for ($k = 1; $k <= 50; $k++) {
+            $siNo = sprintf('SI-2026-%05d', 200 + $k);
+            $payMethod = $paymentMethods[$k % count($paymentMethods)];
+            $cust = $customerPool[$k % count($customerPool)];
+            
+            // Distribute across today, yesterday, and past 3 days
+            $txHour = 8 + ($k % 10);
+            $txMin = ($k * 7) % 60;
+            $txDate = $today->copy()->subHours($k)->setTime($txHour, $txMin, 0);
+
+            // Select 1 to 3 items per transaction
+            $itemCount = 1 + ($k % 3);
+            $selectedProducts = [];
+            for ($j = 0; $j < $itemCount; $j++) {
+                $selectedProducts[] = $productPool[($k + $j) % count($productPool)];
+            }
+
+            $txTotal = 0;
+            $totalUnits = 0;
+            $lineItemsData = [];
+            foreach ($selectedProducts as $sp) {
+                $qty = 1 + ($k % 2);
+                $unitPrice = (float) ($sp->price1 ?? 500);
+                $lineTotal = $qty * $unitPrice;
+                $txTotal += $lineTotal;
+                $totalUnits += $qty;
+
+                $lineItemsData[] = [
+                    'product_id'     => $sp->id,
+                    'qty'            => $qty,
+                    'price'          => $unitPrice,
+                    'original_price' => $unitPrice,
+                    'discount'       => 0,
+                ];
+            }
+
+            $tx = Transaction::create([
+                'si_no'           => $siNo,
+                'doc_type'        => DocType::SI,
+                'customer_id'     => $cust->id,
+                'cashier_id'      => $cashier->id,
+                'checker_id'      => $checker->id,
+                'date'            => $txDate,
+                'type'            => TransactionType::SALE,
+                'status'          => TransactionStatus::COMPLETED,
+                'payment_method'  => $payMethod,
+                'total_qty'       => $totalUnits,
+                'amount'          => $txTotal,
+                'original_amount' => $txTotal,
+                'refunded_amount' => 0,
+                'amount_tendered' => $txTotal,
+                'discount_amount' => 0,
+                'created_at'      => $txDate,
+                'updated_at'      => $txDate,
+            ]);
+
+            foreach ($lineItemsData as $lid) {
+                TransactionItem::create(array_merge($lid, [
+                    'transaction_id' => $tx->id,
+                ]));
+            }
+        }
+
+        $this->command?->info('✓ Successfully seeded 58 comprehensive transactions and 65 catalog products for pagination verification!');
     }
 }

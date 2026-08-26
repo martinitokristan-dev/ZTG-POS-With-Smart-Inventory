@@ -184,42 +184,31 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                         let totalDamaged = 0;
 
                         products.forEach(p => {
-                            if (matchesStatusFilter(p, statusFilter)) {
-                                totalStock += Number(p.stock || 0);
-                                totalSold += Number(p.sales_count || 0);
-                                totalDamaged += Number(p.damaged || 0);
-                            }
-                            if (p.variants && p.variants.length > 0) {
+                            if (p.has_variants && p.variants && p.variants.length > 0) {
                                 p.variants.forEach(v => {
                                     if (matchesStatusFilter(v, statusFilter)) {
                                         totalStock += Number(v.stock || 0);
-                                        totalSold += Number(v.sales_count || 0);
-                                        totalDamaged += Number(v.damaged || 0);
+                                        totalSold += Number(v.total_sold || 0);
+                                        totalDamaged += Number(v.damaged_count || 0);
                                     }
                                 });
+                            } else {
+                                totalStock += Number(p.stock || 0);
+                                totalSold += Number(p.total_sold || 0);
+                                totalDamaged += Number(p.damaged_count || 0);
                             }
                         });
 
                         return (
                             <tfoot>
-                                <tr style={{ borderTop: '2.5px solid var(--border)', background: '#F8FAFC', fontWeight: 'bold' }}>
-                                    <td style={{ padding: '16px', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 800 }}>Total:</td>
+                                <tr style={{ background: '#F8FAFC', fontWeight: 'bold' }}>
+                                    <td colSpan="4" style={{ padding: '12px 16px' }}>Total</td>
+                                    <td style={{ padding: '12px 16px' }}>{totalStock}</td>
+                                    <td colSpan="3"></td>
+                                    <td style={{ padding: '12px 16px' }}>{totalSold}</td>
+                                    <td colSpan="2"></td>
+                                    <td style={{ padding: '12px 16px' }}>{totalDamaged}</td>
                                     <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td style={{ padding: '16px', color: 'var(--text-primary)' }}>
-                                        <span style={{ fontSize: '13px', fontWeight: 800 }}>{totalStock}</span>
-                                        <span style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', marginLeft: '4px' }}>Units</span>
-                                    </td>
-                                    <td style={{ padding: '16px' }}></td>
-                                    <td style={{ padding: '16px' }}></td>
-                                    <td style={{ padding: '16px', color: 'var(--primary)', fontSize: '13px', fontWeight: 800, whiteSpace: 'nowrap' }}>{totalSold} sold</td>
-                                    <td style={{ padding: '16px' }}></td>
-                                    <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>
-                                        <span style={{ fontSize: '13px', fontWeight: 800, color: totalDamaged > 0 ? 'var(--danger)' : 'inherit' }}>{totalDamaged}</span>
-                                        <span style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', marginLeft: '4px', color: totalDamaged > 0 ? 'var(--danger)' : 'inherit' }}>Damaged</span>
-                                    </td>
-                                    <td style={{ padding: '16px' }}></td>
                                 </tr>
                             </tfoot>
                         );
@@ -227,30 +216,14 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                 </table>
             </div>
             
-            {pagination && pagination.last_page > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderTop: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                        Showing page {pagination.current_page} of {pagination.last_page} ({pagination.total} total items)
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <button 
-                            className="btn btn-outline" 
-                            disabled={pagination.current_page === 1}
-                            onClick={() => pagination.onPageChange(pagination.current_page - 1)}
-                            style={{ padding: '6px 12px', fontSize: '13px' }}
-                        >
-                            Previous
-                        </button>
-                        <button 
-                            className="btn btn-outline" 
-                            disabled={pagination.current_page === pagination.last_page}
-                            onClick={() => pagination.onPageChange(pagination.current_page + 1)}
-                            style={{ padding: '6px 12px', fontSize: '13px' }}
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
+            {pagination && (
+                <TablePagination
+                    currentPage={pagination.current_page}
+                    totalItems={pagination.total}
+                    perPage={pagination.per_page || 20}
+                    onPageChange={(newPage) => pagination.onPageChange(newPage)}
+                    label="inventory items"
+                />
             )}
         </div>
     );

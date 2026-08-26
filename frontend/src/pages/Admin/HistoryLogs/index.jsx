@@ -7,6 +7,7 @@ import VoidModal from './modals/VoidModal';
 import TransactionDetailsModal from './modals/TransactionDetailsModal';
 import PayModal from './modals/PayModal';
 import IOSSelect from '../../../shared/components/IOSSelect';
+import TablePagination from '../../../shared/components/TablePagination';
 
 export default function HistoryLogs() {
     const hl = useHistoryLogs();
@@ -106,31 +107,15 @@ export default function HistoryLogs() {
                                 handleOpenPay={hl.handleOpenPay}
                             />
                             
-                            {/* Pagination Controls */}
-                            {hl.pagination && hl.pagination.last_page > 1 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', background: 'var(--bg-card)', padding: '12px 24px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                        Showing page {hl.pagination.current_page} of {hl.pagination.last_page} ({hl.pagination.total} total records)
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button 
-                                            className="btn btn-sm" 
-                                            style={{ border: '1px solid var(--border)', background: '#fff' }}
-                                            disabled={hl.page <= 1}
-                                            onClick={() => hl.setPage(hl.page - 1)}
-                                        >
-                                            Previous
-                                        </button>
-                                        <button 
-                                            className="btn btn-sm" 
-                                            style={{ border: '1px solid var(--border)', background: '#fff' }}
-                                            disabled={hl.page >= hl.pagination.last_page}
-                                            onClick={() => hl.setPage(hl.page + 1)}
-                                        >
-                                            Next
-                                        </button>
-                                    </div>
-                                </div>
+                            {/* Standardized Pagination Controls */}
+                            {hl.pagination && (
+                                <TablePagination
+                                    currentPage={hl.page}
+                                    totalItems={hl.pagination.total || hl.transactions.length}
+                                    perPage={20}
+                                    onPageChange={(newPage) => hl.setPage(newPage)}
+                                    label="transactions"
+                                />
                             )}
                         </>
                     ) : (

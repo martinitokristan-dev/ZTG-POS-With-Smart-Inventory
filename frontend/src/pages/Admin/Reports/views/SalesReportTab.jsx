@@ -8,6 +8,7 @@ import StatusBadge from '../../../../shared/components/StatusBadge';
 import { showToast } from '../../../../utils/toast';
 import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
+import TablePagination from '../../../../shared/components/TablePagination';
 
 export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtDate, isReportGenerated, setIsReportGenerated, startDate, setStartDate, endDate, setEndDate }) {
     const [confirming, setConfirming] = useState(false);
@@ -18,6 +19,13 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
     const [selectedPayment, setSelectedPayment] = useState('All');
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [modalError, setModalError] = useState('');
+    const [reportPage, setReportPage] = useState(1);
+    const [perPage, setPerPage] = useState(20);
+
+    // Reset pagination when date or cashier/payment filters change
+    React.useEffect(() => {
+        setReportPage(1);
+    }, [startDate, endDate, selectedCashier, selectedPayment]);
 
     // Extract unique Cashiers (users with Cashier role, excluding Admin role)
     const cashierOptions = useMemo(() => {
@@ -173,6 +181,15 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
             });
         });
     }
+
+    const displayedReportItems = useMemo(() => {
+        if (perPage === 'All' || perPage === 'all' || perPage >= 999999) {
+            return flattenedTransactionsItems;
+        }
+        const numericLimit = Number(perPage) || 20;
+        const startIndex = (reportPage - 1) * numericLimit;
+        return flattenedTransactionsItems.slice(startIndex, startIndex + numericLimit);
+    }, [flattenedTransactionsItems, reportPage, perPage]);
 
     const handleCopySales = async () => {
         if (flattenedTransactionsItems.length === 0) return;
@@ -396,7 +413,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                     </td>
                                 </tr>
                             ) : (
-                                flattenedTransactionsItems.map((item, i) => {
+                                displayedReportItems.map((item, i) => {
                                     const tx = item.tx || {};
                                     const isPartialRefund = tx.is_partial_refund === true;
                                     // Full deduction = refund/void with NO net sale remaining
@@ -478,6 +495,23 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                         )}
                     </table>
                 </div>
+
+                {/* Standardized System Pagination Card */}
+                {flattenedTransactionsItems.length > 0 && (
+                    <div style={{ padding: '0 16px 16px 16px' }}>
+                        <TablePagination
+                            currentPage={reportPage}
+                            totalItems={flattenedTransactionsItems.length}
+                            perPage={perPage}
+                            onPageChange={(newPage) => setReportPage(newPage)}
+                            onPerPageChange={(newLimit) => {
+                                setPerPage(newLimit);
+                                setReportPage(1);
+                            }}
+                            label="sales items"
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Confirm Report Modal */}
