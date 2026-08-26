@@ -326,10 +326,9 @@ export default function ReservationsTable({
                                                     </button>
                                                     {(activeTab === 'completed' || !isPending) && (
                                                         <button 
-                                                            type="button"
                                                             className="action-trigger-btn" 
-                                                            aria-label="Reprint Collection Receipt" 
-                                                            data-tooltip="Reprint C.R." 
+                                                            aria-label="Reprint Final Collection Receipt" 
+                                                            data-tooltip="Reprint Final C.R." 
                                                             onClick={() => onReprintBalanceCR ? onReprintBalanceCR(r) : (onReprintCR && onReprintCR(r))}
                                                             style={{ color: '#059669' }}
                                                         >
@@ -340,25 +339,26 @@ export default function ReservationsTable({
                                                             </svg>
                                                         </button>
                                                     )}
-                                                    {isDepositOnly && (
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-primary btn-sm"
-                                                            onClick={() => openFulfill(r)}
-                                                            style={{ padding: '4px 10px', fontSize: '12px', fontWeight: '600' }}
+                                                    {activeTab === 'deposit' && isPending && (
+                                                        <button 
+                                                            className="action-trigger-btn" 
+                                                            aria-label="Reprint Deposit Collection Receipt" 
+                                                            data-tooltip="Reprint Deposit C.R." 
+                                                            onClick={() => onReprintDepositCR ? onReprintDepositCR(r) : (onReprintCR && onReprintCR(r))}
+                                                            style={{ color: '#059669' }}
                                                         >
-                                                            Claim & Settle
+                                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                                                <rect x="6" y="14" width="12" height="8"></rect>
+                                                            </svg>
                                                         </button>
                                                     )}
-                                                    {!isCancelled && !isCompleted && (
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-outline btn-sm"
-                                                            onClick={() => openCancel(r)}
-                                                            style={{ padding: '4px 8px', fontSize: '12px', color: 'var(--danger)', borderColor: 'rgba(220,38,38,0.3)' }}
-                                                        >
-                                                            Cancel
-                                                        </button>
+                                                    {activeTab === 'deposit' && isPending && (
+                                                        <button className="btn btn-success btn-sm" onClick={() => openFulfill(r)}>Fulfill</button>
+                                                    )}
+                                                    {activeTab === 'deposit' && isPending && (
+                                                        <button className="btn btn-danger-outline btn-sm" onClick={() => openCancel(r)}>Cancel</button>
                                                     )}
                                                 </div>
                                             </td>
