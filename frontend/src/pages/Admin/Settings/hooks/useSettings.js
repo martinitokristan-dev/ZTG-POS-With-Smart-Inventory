@@ -196,6 +196,13 @@ export default function useSettings() {
     });
 
     // ------------------------------------------------------------------------
+    // TAB 1 & 5: SUBMITTING LOADING STATES
+    // ------------------------------------------------------------------------
+    const [profileSubmitting, setProfileSubmitting] = useState(false);
+    const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+    const [employeeSubmitting, setEmployeeSubmitting] = useState(false);
+
+    // ------------------------------------------------------------------------
     // TAB 5: EMPLOYEES STATE
     // ------------------------------------------------------------------------
     const [employees, setEmployees] = useState([]);
@@ -357,13 +364,14 @@ export default function useSettings() {
     // TAB 1 ACTIONS: PROFILE UPDATES & AVATAR
     // ------------------------------------------------------------------------
     const handleProfileSubmit = async (e) => {
-        e.preventDefault();
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
         const fullName = (profileData.full_name || profileData.name || '').trim();
         if (!fullName || !profileData.email?.trim() || !profileData.username?.trim()) {
             showToast('Please fill in all required profile fields: Full Name, Email, and Username.', 'error');
             return;
         }
 
+        setProfileSubmitting(true);
         try {
             const payload = {
                 ...profileData,
@@ -417,6 +425,8 @@ export default function useSettings() {
             showToast('Profile updated successfully!', 'success');
         } catch (err) {
             showToast(err.response?.data?.message || 'Failed to update profile.', 'error');
+        } finally {
+            setProfileSubmitting(false);
         }
     };
 
@@ -502,7 +512,8 @@ export default function useSettings() {
     };
 
     const handlePasswordSubmit = async (e) => {
-        e.preventDefault();
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        setPasswordSubmitting(true);
         try {
             await api.put('/profile/password', passwordData);
             showToast('Password changed successfully!', 'success');
@@ -510,6 +521,8 @@ export default function useSettings() {
             setPasswordData({ current_password: '', password: '', password_confirmation: '' });
         } catch (err) {
             showToast(err.response?.data?.message || 'Failed to update login password.', 'error');
+        } finally {
+            setPasswordSubmitting(false);
         }
     };
 
@@ -937,7 +950,8 @@ export default function useSettings() {
     };
 
     const handleEmployeeSubmit = async (e) => {
-        e.preventDefault();
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        setEmployeeSubmitting(true);
         try {
             const fullName = (employeeForm.full_name || employeeForm.name || '').trim();
             const payload = {
@@ -1029,6 +1043,8 @@ export default function useSettings() {
                 errMsg = errData.message;
             }
             showToast(errMsg, 'error');
+        } finally {
+            setEmployeeSubmitting(false);
         }
     };
 
@@ -1153,6 +1169,7 @@ export default function useSettings() {
         avatarUploading, avatarProgress, avatarRemoving, handleAvatarUpload, handleAvatarRemove,
         confirmingRemove, handleAvatarRemoveConfirmed, handleAvatarRemoveCancel,
         handleProfileSubmit, handlePasswordSubmit,
+        profileSubmitting, passwordSubmitting, employeeSubmitting,
 
         // Tab 2: General System Settings & Logo
         settings, handleSettingInputChange, handleToggleSetting, handleSaveBulkSettings,

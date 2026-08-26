@@ -64,10 +64,10 @@ class BrevoMailService
     /**
      * Send staff credential backup email via Brevo REST API v3, or fallback to Laravel Mail.
      */
-    public function sendStaffCredentialBackup(User $user): bool
+    public function sendStaffCredentialBackup(User $user, ?string $password = null): bool
     {
         $apiKey = config('services.brevo.api_key');
-        $mailable = new StaffCredentialBackupMail($user);
+        $mailable = new StaffCredentialBackupMail($user, $password);
 
         if (!empty($apiKey) && !app()->environment('testing')) {
             $businessName = $this->getBusinessName();

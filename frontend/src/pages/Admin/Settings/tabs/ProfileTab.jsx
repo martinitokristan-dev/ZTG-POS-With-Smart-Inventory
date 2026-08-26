@@ -33,7 +33,8 @@ export default function ProfileTab({
     setShowPasswordModal, showPIN, setShowPIN, isProfileDirty,
     handleAvatarUpload, handleAvatarRemove, avatarUploading, avatarProgress = 0, avatarRemoving,
     confirmingRemove, handleAvatarRemoveConfirmed, handleAvatarRemoveCancel,
-    isEditing, onStartEdit, onCancelEdit
+    isEditing, onStartEdit, onCancelEdit,
+    profileSubmitting
 }) {
     const fileInputRef = useRef(null);
     const [imgError, setImgError] = React.useState(false);
@@ -75,7 +76,7 @@ export default function ProfileTab({
                         marginBottom: '8px',
                     }}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" style={{ width: '18px', height: '18px', flexShrink: 0, marginTop: '1px' }}>
-                            <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                            <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
                         </svg>
                         <div>
                             <div style={{ fontSize: '13px', fontWeight: '700', color: '#DC2626', marginBottom: '4px' }}>
@@ -191,11 +192,18 @@ export default function ProfileTab({
                                     </button>
                                 ) : (
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button type="button" className="btn btn-secondary btn-sm" style={{ padding: '6px 14px' }} onClick={onCancelEdit}>
+                                        <button type="button" className="btn btn-secondary btn-sm" style={{ padding: '6px 14px' }} onClick={onCancelEdit} disabled={profileSubmitting}>
                                             Cancel
                                         </button>
-                                        <button type="button" className="btn btn-primary btn-sm" style={{ padding: '6px 14px' }} onClick={handleProfileSubmit} disabled={!isProfileDirty || hasIncomplete}>
-                                            Save Changes
+                                        <button type="button" className="btn btn-primary btn-sm" style={{ padding: '6px 14px', minWidth: '110px' }} onClick={handleProfileSubmit} disabled={profileSubmitting || !isProfileDirty || hasIncomplete}>
+                                            {profileSubmitting ? (
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ width: '12px', height: '12px', borderWidth: '2px' }}></span>
+                                                    <span>Saving...</span>
+                                                </span>
+                                            ) : (
+                                                'Save Changes'
+                                            )}
                                         </button>
                                     </div>
                                 )}

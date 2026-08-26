@@ -5,10 +5,13 @@ export default function PasswordModal({
     isOpen, showPasswordModal,
     onClose, setShowPasswordModal,
     passwordData, setPasswordData,
-    onSubmit, handlePasswordSubmit
+    onSubmit, handlePasswordSubmit,
+    submitting, isSubmitting
 }) {
     const isVisible = isOpen ?? showPasswordModal;
+    const isBusy = Boolean(submitting || isSubmitting);
     const handleClose = () => {
+        if (isBusy) return;
         if (onClose) onClose();
         if (setShowPasswordModal) setShowPasswordModal(false);
     };
@@ -27,7 +30,7 @@ export default function PasswordModal({
                             </h3>
                             <p style={{ color: '#64748B', fontSize: '11.5px', margin: 0 }}>Update your login credentials securely</p>
                         </div>
-                        <button type="button" onClick={handleClose} style={{ color: '#94A3B8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', transition: 'color 0.2s' }}>
+                        <button type="button" onClick={handleClose} disabled={isBusy} style={{ color: '#94A3B8', background: 'none', border: 'none', cursor: isBusy ? 'not-allowed' : 'pointer', padding: '4px', transition: 'color 0.2s' }}>
                             <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px', fill: 'none', stroke: 'currentColor', strokeWidth: '2' }}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
@@ -72,11 +75,18 @@ export default function PasswordModal({
                     </div>
 
                     <div className="modal-footer" style={{ padding: '20px 24px', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                        <button type="button" onClick={handleClose} className="btn" style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#475569', fontWeight: '600', padding: '10px 20px', borderRadius: '8px' }}>
+                        <button type="button" onClick={handleClose} disabled={isBusy} className="btn" style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#475569', fontWeight: '600', padding: '10px 20px', borderRadius: '8px' }}>
                             Cancel
                         </button>
-                        <button type="submit" className="btn" style={{ background: '#3B82F6', color: '#FFFFFF', border: 'none', fontWeight: '600', padding: '10px 24px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.2)' }}>
-                            Change Password
+                        <button type="submit" disabled={isBusy} className="btn" style={{ background: '#3B82F6', color: '#FFFFFF', border: 'none', fontWeight: '600', padding: '10px 24px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.2)', minWidth: '150px' }}>
+                            {isBusy ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ width: '13px', height: '13px', borderWidth: '2px' }}></span>
+                                    <span>Updating...</span>
+                                </span>
+                            ) : (
+                                'Change Password'
+                            )}
                         </button>
                     </div>
                 </form>

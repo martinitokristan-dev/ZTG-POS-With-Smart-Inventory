@@ -6,13 +6,16 @@ export default function EmployeeModal({
     isOpen, showEmployeeModal,
     onClose, setShowEmployeeModal,
     selectedEmployee, employeeForm, setEmployeeForm,
-    onSubmit, handleEmployeeSubmit
+    onSubmit, handleEmployeeSubmit,
+    submitting, isSubmitting
 }) {
     const [showPassword, setShowPassword] = useState(false);
     const [showPin, setShowPin] = useState(false);
 
     const isVisible = isOpen ?? showEmployeeModal;
+    const isBusy = Boolean(submitting || isSubmitting);
     const handleClose = () => {
+        if (isBusy) return;
         if (onClose) onClose();
         if (setShowEmployeeModal) setShowEmployeeModal(false);
     };
@@ -183,8 +186,19 @@ export default function EmployeeModal({
                         )}
                     </div>
                     <div className="modal-footer" style={{ padding: '16px 20px', marginTop: '8px' }}>
-                        <button type="button" className="btn btn-secondary" onClick={handleClose}>Cancel</button>
-                        <button type="submit" className="btn btn-primary">{selectedEmployee ? 'Save Profile' : 'Save Staff'}</button>
+                        <button type="button" className="btn btn-secondary" onClick={handleClose} disabled={isBusy}>
+                            Cancel
+                        </button>
+                        <button type="submit" className="btn btn-primary" disabled={isBusy} style={{ minWidth: '120px' }}>
+                            {isBusy ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ width: '13px', height: '13px', borderWidth: '2px' }}></span>
+                                    <span>{selectedEmployee ? 'Saving Profile...' : 'Registering...'}</span>
+                                </span>
+                            ) : (
+                                selectedEmployee ? 'Save Profile' : 'Save Staff'
+                            )}
+                        </button>
                     </div>
                 </form>
             </div>

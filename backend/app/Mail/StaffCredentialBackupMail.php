@@ -15,13 +15,15 @@ class StaffCredentialBackupMail extends Mailable
     use Queueable, SerializesModels;
 
     public User $user;
+    public ?string $password;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(User $user)
+    public function __construct(User $user, ?string $password = null)
     {
         $this->user = $user;
+        $this->password = $password;
     }
 
     /**
@@ -66,6 +68,21 @@ class StaffCredentialBackupMail extends Mailable
         $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173'));
         $loginUrl = rtrim($frontendUrl, '/') . '/login';
         $currentYear = date('Y');
+
+        $passwordHtml = '';
+        if (!empty($this->password)) {
+            $safePassword = htmlspecialchars($this->password, ENT_QUOTES, 'UTF-8');
+            $passwordHtml = <<<ROW
+                                <tr>
+                                    <td style="padding: 6px 0; font-size: 12.5px; color: #64748B; font-weight: 600;">
+                                        Temporary Password:
+                                    </td>
+                                    <td style="padding: 6px 0; font-size: 13.5px; color: #0F172A; font-weight: 700; font-family: monospace;">
+                                        {$safePassword}
+                                    </td>
+                                </tr>
+ROW;
+        }
 
         return <<<HTML
 <!DOCTYPE html>
@@ -123,9 +140,10 @@ class StaffCredentialBackupMail extends Mailable
                                         Login Username:
                                     </td>
                                     <td style="padding: 6px 0; font-size: 13.5px; color: #2563EB; font-weight: 700; font-family: monospace;">
-                                        @{$username}
+                                        {$username}
                                     </td>
                                 </tr>
+                                {$passwordHtml}
                                 <tr>
                                     <td style="padding: 6px 0; font-size: 12.5px; color: #64748B; font-weight: 600;">
                                         Assigned Role:

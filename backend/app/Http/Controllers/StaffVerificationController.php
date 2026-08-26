@@ -115,8 +115,17 @@ class StaffVerificationController extends Controller
             ], 422);
         }
 
+        $decryptedPassword = null;
+        if (!empty($tokenRecord->encrypted_password)) {
+            try {
+                $decryptedPassword = Crypt::decryptString($tokenRecord->encrypted_password);
+            } catch (\Throwable $e) {
+                Log::warning("Could not decrypt password for backup email (token {$token}): " . $e->getMessage());
+            }
+        }
+
         try {
-            app(\App\Services\Mail\BrevoMailService::class)->sendStaffCredentialBackup($user);
+            app(\App\Services\Mail\BrevoMailService::class)->sendStaffCredentialBackup($user, $decryptedPassword);
             $tokenRecord->update(['backup_sent_at' => now()]);
         } catch (\Throwable $e) {
             Log::error("Failed to send staff credential backup email: " . $e->getMessage());
