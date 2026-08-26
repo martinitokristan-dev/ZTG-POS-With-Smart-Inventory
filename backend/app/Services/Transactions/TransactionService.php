@@ -13,19 +13,24 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 use App\Events\InventoryUpdated;
 use App\Events\TransactionUpdated;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 
+use App\Services\ActivityLogs\ActivityLogService;
+
 class TransactionService
 {
     protected ProductService $productService;
+    protected ActivityLogService $activityLogService;
 
-    public function __construct(ProductService $productService)
+    public function __construct(ProductService $productService, ActivityLogService $activityLogService)
     {
         $this->productService = $productService;
+        $this->activityLogService = $activityLogService;
     }
 
     /**
@@ -144,17 +149,28 @@ class TransactionService
     }
 
     /**
-     * Verify a user's PIN.
+     * Verify a user's PIN with brute-force rate limiting (5 attempts / 60 seconds).
      * On failure, logs a Security Alert transaction.
      */
     public function verifyPin(int $userId, string $pin, ?string $context = null): bool
     {
+        $ip = request()?->ip() ?? '127.0.0.1';
+        $throttleKey = "pin-verify|{$userId}|{$ip}";
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            throw ValidationException::withMessages([
+                'approval_pin' => ["Too many failed PIN verification attempts. Please wait {$seconds} second(s) before trying again."],
+            ]);
+        }
+
         $user = User::find($userId);
 
         $isPinMatch = $user && !empty($user->pin) && (Hash::check($pin, $user->pin) || $user->pin === $pin);
         $isPasswordMatch = $user && Hash::check($pin, $user->password);
 
         if ($isPinMatch || $isPasswordMatch) {
+            RateLimiter::clear($throttleKey);
             return true;
         }
 
@@ -168,8 +184,12 @@ class TransactionService
             });
 
         if ($matchingAdmin) {
+            RateLimiter::clear($throttleKey);
             return true;
         }
+
+        RateLimiter::hit($throttleKey, 60);
+        $attempts = RateLimiter::attempts($throttleKey);
 
         // Log a security alert for failed PIN/Password attempt
         Transaction::create([
@@ -181,8 +201,15 @@ class TransactionService
             'payment_method' => 'N/A',
             'status'         => TransactionStatus::SECURITY_ALERT->value,
             'type'           => TransactionType::SYSTEM->value,
-            'internal_notes' => 'Failed PIN/Password attempt' . ($context ? " — {$context}" : '') . '. Approver ID: ' . $userId,
+            'internal_notes' => "Failed PIN/Password attempt (Attempt {$attempts}/5)" . ($context ? " — {$context}" : '') . '. Approver ID: ' . $userId,
         ]);
+
+        if ($attempts >= 5) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            throw ValidationException::withMessages([
+                'approval_pin' => ["Too many failed PIN verification attempts. Please wait {$seconds} second(s) before trying again."],
+            ]);
+        }
 
         return false;
     }
@@ -345,7 +372,7 @@ class TransactionService
                 'action_type'       => $actionType,
                 'inv_action'        => implode('; ', $invActions) ?: 'No Stock Action',
                 'approver_id'       => $approverId,
-                'approval_code'     => $pin,
+                'approval_code'     => 'VERIFIED',
                 'or_no'             => $orNo,
                 // original_amount: stays frozen at checkout value
                 'original_amount'   => $originalAmount,
@@ -378,6 +405,28 @@ class TransactionService
             }
         }
         event(new TransactionUpdated($updated));
+
+        try {
+            $isPartial = (float) $updated->amount > 0 && (float) $updated->refunded_amount > 0;
+            $flowName = $isPartial ? "Partial {$refundType}" : "Full {$refundType}";
+            $refundedFormatted = number_format((float) $updated->refunded_amount, 2);
+            $this->activityLogService->log(
+                action: strtolower($refundType),
+                module: 'POS',
+                description: "{$flowName} processed on {$updated->si_no} (Refunded: ₱{$refundedFormatted}). Reason: {$reason}",
+                status: 'Success',
+                severity: 'warning',
+                userId: $cashierId,
+                metadata: [
+                    'transaction_id'  => $updated->id,
+                    'si_no'           => $updated->si_no,
+                    'refund_type'     => $refundType,
+                    'refunded_amount' => (float) $updated->refunded_amount,
+                    'net_amount'      => (float) $updated->amount,
+                    'reason'          => $reason,
+                ]
+            );
+        } catch (\Throwable $e) {}
 
         return $updated;
     }
@@ -457,7 +506,7 @@ class TransactionService
                 'status'          => TransactionStatus::VOID->value,
                 'void_reason'     => $voidReason,
                 'approver_id'     => $adminId,
-                'approval_code'   => $adminPin,
+                'approval_code'   => 'VERIFIED',
                 'or_no'           => $orNo,
                 'inv_action'      => $invAction,
                 // Freeze the original amount, record full refund, zero out net sale
@@ -487,6 +536,24 @@ class TransactionService
         }
         event(new TransactionUpdated($updated));
 
+        try {
+            $voidAmountFormatted = number_format((float) ($updated->original_amount ?? $updated->amount), 2);
+            $this->activityLogService->log(
+                action: 'void',
+                module: 'POS',
+                description: "Voided transaction {$updated->si_no} (Total: ₱{$voidAmountFormatted}). Reason: {$voidReason}",
+                status: 'Success',
+                severity: 'warning',
+                userId: $adminId,
+                metadata: [
+                    'transaction_id' => $updated->id,
+                    'si_no'          => $updated->si_no,
+                    'void_reason'    => $voidReason,
+                    'amount'         => (float) $updated->original_amount,
+                ]
+            );
+        } catch (\Throwable $e) {}
+
         return $updated;
     }
 
@@ -509,7 +576,14 @@ class TransactionService
             ]);
         }
 
-        // 2. Verify admin PIN
+        // 2. Validate payment amount received covers balance
+        if ((float) $amountTendered < (float) $transaction->amount) {
+            throw ValidationException::withMessages([
+                'amount_tendered' => ['Amount received must be greater than or equal to the balance of ₱' . number_format($transaction->amount, 2) . '.'],
+            ]);
+        }
+
+        // 3. Verify admin PIN
         $contextMsg = "Pay pending order invoice {$transaction->si_no}. Admin ID: {$adminId}";
         if (!$this->verifyPin($adminId, $adminPin, $contextMsg)) {
             throw ValidationException::withMessages([
@@ -529,7 +603,7 @@ class TransactionService
                 'cheque_number'   => $chequeNumber,
                 'amount_tendered' => $amountTendered,
                 'approver_id'     => $adminId,
-                'approval_code'   => $adminPin,
+                'approval_code'   => 'VERIFIED',
                 'action_type'     => "Paid via {$formattedMethod}",
             ]);
 
@@ -538,6 +612,24 @@ class TransactionService
 
         // Dispatch real-time events outside the DB transaction block
         event(new TransactionUpdated($updated));
+
+        try {
+            $paidFormatted = number_format((float) $updated->amount, 2);
+            $this->activityLogService->log(
+                action: 'pay_po',
+                module: 'POS',
+                description: "Fulfilled pending P.O payment for {$updated->si_no} (Amount: ₱{$paidFormatted} via {$formattedMethod})",
+                status: 'Success',
+                severity: 'info',
+                userId: $adminId,
+                metadata: [
+                    'transaction_id' => $updated->id,
+                    'si_no'          => $updated->si_no,
+                    'amount'         => (float) $updated->amount,
+                    'payment_method' => $formattedMethod,
+                ]
+            );
+        } catch (\Throwable $e) {}
 
         return $updated;
     }

@@ -30,8 +30,17 @@ export const NotificationProvider = ({ children }) => {
     }, []);
 
     const fetchNotifications = useCallback(async () => {
-        // Skip fetch entirely when not authenticated
-        if (!(sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'))) return;
+        // Skip fetch entirely when not authenticated or if not Admin/Supervisor
+        const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
+        if (!token) return;
+
+        const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
+        let user = null;
+        try { user = userStr ? JSON.parse(userStr) : null; } catch {}
+        if (!user || !['Admin', 'Supervisor'].includes(user.role)) {
+            setNotifications([]);
+            return;
+        }
 
         const fetchStart = Date.now();
         try {

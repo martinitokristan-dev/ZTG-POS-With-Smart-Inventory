@@ -326,8 +326,46 @@ Key-value store for system configuration settings.
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | `id` | BIGINT UNSIGNED | PK, AUTO_INCREMENT | |
-| `key` | VARCHAR(100) | UNIQUE, NOT NULL | `business_name`, `business_address`, `tin`, `daily_void_limit`, etc. |
+| `key` | VARCHAR(100) | UNIQUE, NOT NULL | `business_name`, `business_address`, `tin`, `daily_void_limit`, `auto_si_numbering`, `next_si_number`, etc. |
 | `value` | TEXT | NULLABLE | Config value |
+| `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | |
+
+---
+
+### 19. `staff_verification_tokens`
+Stores secure single-use revelation tokens and encrypted temporary passwords for newly registered staff accounts.
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED | PK, AUTO_INCREMENT | Unique token identifier |
+| `user_id` | BIGINT UNSIGNED | FK → `users.id`, NOT NULL, ON DELETE CASCADE | Target staff account |
+| `token` | VARCHAR(64) | UNIQUE, INDEX, NOT NULL | Cryptographic token sent via email verification link |
+| `encrypted_password` | TEXT | NOT NULL | AES-256 encrypted password (revealed only once) |
+| `expires_at` | TIMESTAMP | NOT NULL | Expiry threshold (24 hours from creation) |
+| `viewed_at` | TIMESTAMP | NULLABLE | Timestamp when staff revealed credentials (blocks second view) |
+| `backup_sent_at` | TIMESTAMP | NULLABLE | Timestamp when credential backup email was dispatched |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
+| `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | |
+
+---
+
+### 20. `activity_logs`
+Enterprise security audit trail tracking staff authentication, security lockouts, configuration edits, staff management, inventory updates, and POS transactions.
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED | PK, AUTO_INCREMENT | Unique audit log entry ID |
+| `user_id` | BIGINT UNSIGNED | FK → `users.id`, NULLABLE, ON DELETE SET NULL | Staff member who performed the action |
+| `action` | VARCHAR(60) | INDEX, NOT NULL | `login`, `logout`, `checkout`, `refund`, `return`, `void`, `employee_create`, etc. |
+| `module` | VARCHAR(40) | INDEX, NOT NULL, DEFAULT 'Auth' | `Auth`, `Security`, `Settings`, `Employees`, `Inventory`, `POS` |
+| `description` | TEXT | NOT NULL | Human-readable audit description |
+| `ip_address` | VARCHAR(45) | NULLABLE | Client IP address (`127.0.0.1 (Localhost)` or Public/LAN IP) |
+| `user_agent` | TEXT | NULLABLE | Browser and OS User-Agent header |
+| `device` | VARCHAR(100) | NULLABLE | Parsed device string (e.g., `Chrome on Windows 10/11`) |
+| `status` | VARCHAR(30) | INDEX, NOT NULL, DEFAULT 'Success' | `Success`, `Warning`, `Abnormal`, `Terminated` |
+| `severity` | VARCHAR(20) | INDEX, NOT NULL, DEFAULT 'info' | `info`, `warning`, `critical` |
+| `metadata` | JSON | NULLABLE | JSON payload with context IDs, old/new values, and amounts |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
 | `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | |
 
 ---
@@ -338,6 +376,8 @@ Key-value store for system configuration settings.
 erDiagram
     users ||--|| user_profiles : "has profile (user_id)"
     users ||--o{ personal_access_tokens : "issues (tokenable_id)"
+    users ||--o{ staff_verification_tokens : "receives (user_id)"
+    users ||--o{ activity_logs : "generates (user_id)"
     users ||--o{ transactions : "processes (cashier_id)"
     users ||--o{ transactions : "approves (approver_id)"
     users ||--o{ reservations : "books (reserved_by_id)"
@@ -382,6 +422,27 @@ erDiagram
         string phone_number
         string email UK
         string profile_photo
+    }
+
+    staff_verification_tokens {
+        bigint id PK
+        bigint user_id FK
+        string token UK
+        text encrypted_password
+        timestamp expires_at
+        timestamp viewed_at
+    }
+
+    activity_logs {
+        bigint id PK
+        bigint user_id FK
+        string action
+        string module
+        text description
+        string ip_address
+        string device
+        string status
+        string severity
     }
 
     personal_access_tokens {
@@ -479,6 +540,8 @@ Create an Entity Relationship Diagram for a POS and Inventory Management System 
 TABLES:
 - users (id PK, username UNIQUE, password, pin, role, status, remember_token, timestamps)
 - user_profiles (id PK, user_id FK->users UNIQUE ON DELETE CASCADE, full_name, phone_number, email UNIQUE, profile_photo, timestamps)
+- staff_verification_tokens (id PK, user_id FK->users ON DELETE CASCADE, token UNIQUE, encrypted_password TEXT, expires_at TIMESTAMP, viewed_at TIMESTAMP, backup_sent_at TIMESTAMP, timestamps)
+- activity_logs (id PK, user_id FK->users NULLABLE, action VARCHAR(60), module VARCHAR(40), description TEXT, ip_address VARCHAR(45), user_agent TEXT, device VARCHAR(100), status VARCHAR(30), severity VARCHAR(20), metadata JSON, timestamps)
 - personal_access_tokens (id PK, tokenable_type, tokenable_id, name, token UNIQUE, abilities, last_used_at, expires_at, timestamps)
 - password_reset_tokens (email PK, token, created_at)
 - checkers (id PK, name, status, timestamps)
@@ -498,6 +561,8 @@ TABLES:
 
 RELATIONSHIPS:
 - users 1:1 user_profiles (user_id)
+- users 1:M staff_verification_tokens (user_id)
+- users 1:M activity_logs (user_id)
 - users 1:M personal_access_tokens (tokenable_id)
 - users 1:M transactions (cashier_id)
 - users 1:M transactions (approver_id)
@@ -518,3 +583,4 @@ RELATIONSHIPS:
 
 Use crow's foot notation. Group related tables visually.
 ```
+

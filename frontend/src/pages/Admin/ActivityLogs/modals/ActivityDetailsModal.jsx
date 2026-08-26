@@ -166,7 +166,7 @@ export default function ActivityDetailsModal({ isOpen, onClose, log }) {
                                 Network Address
                             </span>
                             <span style={{ fontSize: '13px', fontWeight: '600', color: '#0F172A' }}>
-                                {log.ip_address || '—'}
+                                {log.ip_address === '::1' || log.ip_address === '127.0.0.1' ? '127.0.0.1 (Localhost)' : (log.ip_address || '—')}
                             </span>
                         </div>
 

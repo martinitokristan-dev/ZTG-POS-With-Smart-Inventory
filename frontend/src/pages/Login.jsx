@@ -38,7 +38,6 @@ function Login() {
     const [loginId, setLoginId] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [logoUrl, setLogoUrl] = useState(() => {
@@ -120,7 +119,7 @@ function Login() {
             if (err.response && err.response.data && err.response.data.errors) {
                 const errors = err.response.data.errors;
                 const firstKey = Object.keys(errors)[0];
-                setError(errors[firstKey]?.[0] || 'Invalid username, email, or password.');
+                setError(errors[firstKey]?.[0] || 'Invalid username or password.');
             } else if (err.response && err.response.data && err.response.data.message) {
                 setError(err.response.data.message);
             } else {
@@ -158,7 +157,7 @@ function Login() {
                 <p className="login-subtitle" style={{ marginTop: '4px', marginBottom: '24px' }}>
                     Sign in to access your account
                 </p>
-                
+
                 {error && (
                     <div style={{ 
                         backgroundColor: '#FEF2F2', 
@@ -173,7 +172,7 @@ function Login() {
                         alignItems: 'center',
                         gap: '10px',
                         lineHeight: '1.4'
-                    }}>
+                    }} role="alert">
                         <svg style={{ width: '18px', height: '18px', flexShrink: 0, color: '#DC2626' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="12" cy="12" r="10"></circle>
                             <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -185,7 +184,7 @@ function Login() {
 
                 <form id="loginForm" onSubmit={handleLogin}>
                     <div className="form-group">
-                        <label className="form-label" htmlFor="username">Username, Email, or Phone</label>
+                        <label className="form-label" htmlFor="username">Username</label>
                         <div className="input-wrapper" style={{ position: 'relative' }}>
                             <svg className="input-icon" viewBox="0 0 24 24" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', stroke: 'var(--text-muted)', fill: 'none', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round', transition: 'all 0.2s ease', zIndex: 5 }}>
                                 <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/>
@@ -194,7 +193,7 @@ function Login() {
                                 type="text" 
                                 id="username" 
                                 className="form-control" 
-                                placeholder="Enter username, email, or phone" 
+                                placeholder="Enter your username" 
                                 autoComplete="username"
                                 value={loginId}
                                 onChange={(e) => setLoginId(e.target.value)}
@@ -205,22 +204,8 @@ function Login() {
                         </div>
                     </div>
 
-                    <div className="form-group">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <label className="form-label" htmlFor="password" style={{ marginBottom: 0 }}>Password</label>
-                            <Link 
-                                to="/forgot-password"
-                                style={{ 
-                                    color: 'var(--primary, #3B82F6)', 
-                                    fontSize: '12.5px', 
-                                    fontWeight: '600', 
-                                    textDecoration: 'none',
-                                    transition: 'color 0.2s ease'
-                                }}
-                            >
-                                Forgot password?
-                            </Link>
-                        </div>
+                    <div className="form-group" style={{ marginBottom: '8px' }}>
+                        <label className="form-label" htmlFor="password">Password</label>
                         <div className="input-wrapper" style={{ position: 'relative' }}>
                             <svg className="input-icon" viewBox="0 0 24 24" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', stroke: 'var(--text-muted)', fill: 'none', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round', transition: 'all 0.2s ease', zIndex: 5 }}>
                                 <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4"/>
@@ -258,18 +243,22 @@ function Login() {
                         </div>
                     </div>
 
-                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input 
-                            type="checkbox" 
-                            id="rememberMe" 
-                            checked={rememberMe}
-                            onChange={(e) => setRememberMe(e.target.checked)}
-                            disabled={loading}
-                        />
-                        <label className="form-label" htmlFor="rememberMe" style={{ marginBottom: 0, cursor: 'pointer', userSelect: 'none' }}>Remember me on this device</label>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+                        <Link 
+                            to="/forgot-password"
+                            style={{ 
+                                color: 'var(--primary, #3B82F6)', 
+                                fontSize: '12.5px', 
+                                fontWeight: '600', 
+                                textDecoration: 'none',
+                                transition: 'color 0.2s ease'
+                            }}
+                        >
+                            Forgot password?
+                        </Link>
                     </div>
 
-                    <button type="submit" className="btn login-btn" style={{ width: '100%', marginTop: '14px' }} disabled={loading}>
+                    <button type="submit" className="btn login-btn" style={{ width: '100%' }} disabled={loading}>
                         {loading ? 'Signing In...' : 'Sign In'}
                     </button>
                 </form>

@@ -96,12 +96,14 @@ export default function AddReservationModal({
                                         type="tel" 
                                         className="form-control" 
                                         required 
-                                        placeholder="09XX-XXX-XXXX" 
+                                        placeholder="09XXXXXXXXX" 
                                         value={custPhone} 
-                                        onChange={(e) => setCustPhone(e.target.value.replace(/[^\d+ -]/g, ''))} 
+                                        maxLength={11}
+                                        inputMode="numeric"
+                                        onChange={(e) => setCustPhone(e.target.value.replace(/\D/g, '').slice(0, 11))} 
                                         onKeyDown={(e) => {
                                             if (
-                                                !/^[0-9+ -]$/.test(e.key) && 
+                                                !/^[0-9]$/.test(e.key) && 
                                                 !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) &&
                                                 !e.ctrlKey && !e.metaKey
                                             ) {

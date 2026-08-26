@@ -55,6 +55,14 @@ export default function AppShell() {
     const rawLogo = localStorage.getItem('cached_sidebar_logo') || localStorage.getItem('cached_business_logo');
     const cachedLogo = fixImageUrl(rawLogo) || "/ztg-icon.png";
     const cachedName = localStorage.getItem('cached_business_name') || "ZTG Heavy Parts";
+    const currentUser = (() => {
+        try {
+            return JSON.parse(sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
+        } catch {
+            return null;
+        }
+    })();
+    const isAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'Supervisor';
 
     return (
         <div className="app-container" style={{ flexDirection: isMobile ? 'column' : 'row' }}>
@@ -113,7 +121,7 @@ export default function AppShell() {
                     </div>
                     <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
                         <ThemeToggleButton />
-                        <NotificationsDropdown />
+                        {isAdmin && <NotificationsDropdown />}
                     </div>
                 </header>
             )}
@@ -139,7 +147,7 @@ export default function AppShell() {
                     gap: '10px'
                 }}>
                     <ThemeToggleButton />
-                    <NotificationsDropdown />
+                    {isAdmin && <NotificationsDropdown />}
                 </div>
             )}
 

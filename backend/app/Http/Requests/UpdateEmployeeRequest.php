@@ -19,7 +19,7 @@ class UpdateEmployeeRequest extends FormRequest
 
         return [
             'full_name'    => 'required|string|max:100',
-            'phone_number' => 'nullable|string|max:30',
+            'phone_number' => ['nullable', 'string', 'regex:/^09\d{9}$/'],
             'email'        => ['required', 'email', 'max:255', \Illuminate\Validation\Rule::unique('user_profiles', 'email')->ignore($userId, 'user_id')],
             'username'     => 'required|string|max:50|unique:users,username,' . $userId,
             'password'     => ['nullable', 'string', 'min:6', 'regex:/[A-Z]/', 'regex:/[\W_]/'],
@@ -32,6 +32,7 @@ class UpdateEmployeeRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'phone_number.regex' => 'Phone number must be a valid 11-digit Philippine mobile number starting with 09 (e.g. 09XXXXXXXXX).',
             'full_name.required' => 'The full name is required.',
             'email.required'     => 'The email address is required.',
             'email.email'        => 'Please provide a valid email address.',

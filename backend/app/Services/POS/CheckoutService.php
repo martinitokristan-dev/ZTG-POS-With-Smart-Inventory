@@ -17,15 +17,22 @@ use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
+use App\Services\ActivityLogs\ActivityLogService;
+
 class CheckoutService
 {
     protected ProductService $productService;
     protected SettingService $settingService;
+    protected ActivityLogService $activityLogService;
 
-    public function __construct(ProductService $productService, SettingService $settingService)
-    {
+    public function __construct(
+        ProductService $productService, 
+        SettingService $settingService,
+        ActivityLogService $activityLogService
+    ) {
         $this->productService = $productService;
         $this->settingService = $settingService;
+        $this->activityLogService = $activityLogService;
     }
 
     /**
@@ -58,17 +65,31 @@ class CheckoutService
             }
 
             // 3. Calculate grand total considering item discounts & order-wide discount
-            $grandTotal = 0;
+            $subtotal = 0;
             foreach ($cart as $item) {
                 $product = $products->get($item['product_id']);
                 $origPrice = $item['price_tier'] === 'price2' ? $product->price2 : $product->price1;
                 $origLineTotal = $origPrice * $item['qty'];
                 $itemDiscount = (float)($item['item_discount'] ?? 0);
+
+                if ($itemDiscount > $origLineTotal) {
+                    throw ValidationException::withMessages([
+                        'cart' => ["Discount for {$product->name} (₱{$itemDiscount}) cannot exceed the line total of ₱" . number_format($origLineTotal, 2) . "."],
+                    ]);
+                }
+
                 $lineTotal = max(0, $origLineTotal - $itemDiscount);
-                $grandTotal += $lineTotal;
+                $subtotal += $lineTotal;
             }
+
             $orderDiscount = (float)($data['discount_amount'] ?? 0);
-            $grandTotal = max(0, $grandTotal - $orderDiscount);
+            if ($orderDiscount > $subtotal) {
+                throw ValidationException::withMessages([
+                    'discount_amount' => ['Order discount (₱' . number_format($orderDiscount, 2) . ') cannot exceed the subtotal of ₱' . number_format($subtotal, 2) . '.'],
+                ]);
+            }
+
+            $grandTotal = max(0, $subtotal - $orderDiscount);
 
             // 4. Validate payment amounts
             $this->validatePayment($data, $grandTotal);
@@ -220,6 +241,24 @@ class CheckoutService
 
         event(new TransactionCreated($transaction));
 
+        try {
+            $cashierName = $transaction->cashier ? ($transaction->cashier->full_name ?? $transaction->cashier->name) : 'Cashier';
+            $amountFormatted = number_format((float) $transaction->amount, 2);
+            $this->activityLogService->log(
+                action: 'checkout',
+                module: 'POS',
+                description: "{$cashierName} completed sale {$transaction->si_no} for ₱{$amountFormatted} ({$transaction->payment_method})",
+                userId: $cashierId,
+                metadata: [
+                    'transaction_id' => $transaction->id,
+                    'si_no'          => $transaction->si_no,
+                    'amount'         => (float) $transaction->amount,
+                    'payment_method' => $transaction->payment_method,
+                    'total_qty'      => (int) $transaction->total_qty,
+                ]
+            );
+        } catch (\Throwable $e) {}
+
         return $transaction;
     }
 
@@ -311,7 +350,7 @@ class CheckoutService
     {
         $method = $data['payment_method'];
 
-        if (in_array($method, ['Cash', 'GCash', 'Bank Transfer', 'Bank'])) {
+        if (in_array($method, ['Cash', 'GCash', 'Bank Transfer', 'Bank', 'Cheque'])) {
             if (($data['amount_tendered'] ?? 0) < $grandTotal) {
                 throw ValidationException::withMessages([
                     'amount_tendered' => ['Amount received must be greater than or equal to the grand total of ₱' . number_format($grandTotal, 2) . '.'],

@@ -101,16 +101,20 @@ export default function HistoryTable({
                             const paymentVal = (isRestock || tx.payment_method === 'N/A') ? '—' : (tx.payment_method ? String(tx.payment_method).replace(/\s*\([^)]*\)/g, '').trim() : '—');
                             const reasonVal = isRestock 
                                 ? (tx.refund_reason || tx.notes || 'Restocking item(s)') 
-                                : (tx.status === 'Refund' || tx.status === 'Return' ? (tx.refund_reason || '—') : tx.status === 'Void' ? (tx.void_reason || '—') : '—');
+                                : (tx.reason || tx.refund_reason || tx.void_reason || tx.internal_notes || '—');
 
                             const isPartialRefund = tx.is_partial_refund === true || (Number(tx.refunded_amount || 0) > 0 && Number(tx.amount || 0) > 0);
                             const isFullRefund = (tx.status === 'Refund' || tx.status === 'Return') && !isPartialRefund;
 
                             let rowStatus = tx.status || 'Completed';
                             if (isPartialRefund) {
-                                rowStatus = 'Partial Refund';
-                            } else if (isFullRefund || (Number(tx.refunded_amount || 0) > 0 && Number(tx.amount || 0) === 0)) {
+                                rowStatus = tx.status === 'Return' ? 'Partial Return' : 'Partial Refund';
+                            } else if (tx.status === 'Return') {
+                                rowStatus = 'Return';
+                            } else if (tx.status === 'Refund') {
                                 rowStatus = 'Refund';
+                            } else if (tx.status === 'Void') {
+                                rowStatus = 'Void';
                             }
 
                             return (

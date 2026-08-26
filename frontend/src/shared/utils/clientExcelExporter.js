@@ -150,7 +150,7 @@ const writeClipboardRichSales = async (htmlRows, tsvRows) => {
 };
 
 /**
- * Primary Exporter: Headerless Rich TSV & HTML Clipboard Copy
+ * Clipboard Exporter: Headerless Rich TSV & HTML Clipboard Copy
  * Copies pure data rows directly to clipboard for direct Excel paste (Ctrl+V)
  * with BOLD font on every column data exactly matching the client's reference sheet:
  * DATE | QTY | PART NUMBER | PART NAME | PRICE | SALES | CUSTOMER NAME | PAYMENT | DISCOUNTED | S.I./C.R./D.R. | SERVE BY
@@ -166,14 +166,15 @@ export const copySalesToClipboard = async (transactionsItems = []) => {
 
   transactionsItems.forEach((item) => {
     const tx = item.tx || {};
-    const isDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void');
+    const isPartialRefund = tx.is_partial_refund === true;
+    const isDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void') && !isPartialRefund;
     let resolvedName = item.product?.name || item.name || 'Unknown Product';
     const variantOpt = item.variant_option || item.variant || item.variant_name || item.variantOption;
     if (variantOpt && !resolvedName.toLowerCase().includes(String(variantOpt).toLowerCase())) {
         resolvedName = `${resolvedName} (${variantOpt})`;
     }
-    const resolvedPartNo = item.product?.part_no || item.partNo || '—';
-    const qty = Number(item.qty || 1);
+    const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
+    const qty = Number(item.displayQty ?? item.qty ?? 1);
     const rawPrice = Number(item.original_price || item.price || 0);
     const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, qty));
     const discountVal = getItemDiscountAmount(item, tx);
@@ -239,6 +240,144 @@ export const copySalesToClipboard = async (transactionsItems = []) => {
       success: false,
       count: 0,
       message: 'Failed to access clipboard: ' + (err.message || err)
+    };
+  }
+};
+
+/**
+ * File Exporter: HTML Excel Spreadsheet (.xls / .xlsx)
+ * Opens cleanly in Microsoft Excel matching the client's exact 11-column template with green banner header.
+ */
+export const exportSalesToExcel = (transactionsItems = [], options = {}) => {
+  if (transactionsItems.length === 0) {
+    return { success: false, count: 0, message: 'No sales records to export' };
+  }
+
+  const monthYearLabel = getMonthYearLabel(options.startDate, options.endDate);
+  const filename = options.filename 
+    ? options.filename.replace(/\.xlsx$/i, '.xls')
+    : `Daily_Sales_${monthYearLabel.replace(/\s+/g, '_')}.xls`;
+
+  let tableRows = '';
+  const cellStyle = 'border: 1px solid #000000; padding: 4px 8px; font-family: Calibri, Segoe UI, sans-serif; font-size: 10pt; font-weight: bold; vertical-align: middle;';
+
+  transactionsItems.forEach((item) => {
+    const tx = item.tx || {};
+    const isPartialRefund = tx.is_partial_refund === true;
+    const isDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void') && !isPartialRefund;
+    let resolvedName = item.product?.name || item.name || 'Unknown Product';
+    const variantOpt = item.variant_option || item.variant || item.variant_name || item.variantOption;
+    if (variantOpt && !resolvedName.toLowerCase().includes(String(variantOpt).toLowerCase())) {
+        resolvedName = `${resolvedName} (${variantOpt})`;
+    }
+    const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
+    const qty = Number(item.displayQty ?? item.qty ?? 1);
+    const rawPrice = Number(item.original_price || item.price || 0);
+    const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, qty));
+    const discountVal = getItemDiscountAmount(item, tx);
+    const grossSalesAmount = qty * unitPrice;
+    const netSalesAmount = Math.max(0, grossSalesAmount - discountVal);
+    const finalSalesAmount = isDeduction ? -netSalesAmount : netSalesAmount;
+
+    const dateVal = formatDate(tx.date || tx.created_at);
+    const customerVal = (tx.customer_name || tx.customer?.name || (tx.customer_id ? `Customer #${tx.customer_id}` : 'WALK-IN')).toUpperCase();
+    const paymentVal = formatPaymentMethod(tx.payment_method).toUpperCase();
+    const isPo = paymentVal === 'P.O';
+    const paymentStyle = isPo ? 'color: #C00000; font-weight: bold;' : 'color: #000000; font-weight: bold;';
+
+    const siDrVal = tx.si_no || tx.receipt_number || '—';
+    const serveByVal = (tx.checker?.name || tx.cashier?.full_name || tx.cashier?.name || 'SYSTEM').toUpperCase();
+
+    tableRows += `
+      <tr style="height: 24px;">
+        <td style="${cellStyle} text-align: center; mso-number-format:'Short Date';">${escapeHtml(dateVal)}</td>
+        <td style="${cellStyle} text-align: center; mso-number-format:'0';">${qty}</td>
+        <td style="${cellStyle} text-align: center; mso-number-format:'\\@';">${escapeHtml(resolvedPartNo)}</td>
+        <td style="${cellStyle} text-align: left; mso-number-format:'\\@';">${escapeHtml(resolvedName)}</td>
+        <td style="${cellStyle} text-align: right; mso-number-format:'#,##0.00';">${unitPrice.toFixed(2)}</td>
+        <td style="${cellStyle} text-align: right; mso-number-format:'#,##0.00';">${finalSalesAmount.toFixed(2)}</td>
+        <td style="${cellStyle} text-align: left; mso-number-format:'\\@';">${escapeHtml(customerVal)}</td>
+        <td style="${cellStyle} text-align: center; ${paymentStyle} mso-number-format:'\\@';">${escapeHtml(paymentVal)}</td>
+        <td style="${cellStyle} text-align: right; mso-number-format:'#,##0.00';">${discountVal > 0 ? discountVal.toFixed(2) : ''}</td>
+        <td style="${cellStyle} text-align: center; mso-number-format:'\\@';">${escapeHtml(siDrVal)}</td>
+        <td style="${cellStyle} text-align: center; mso-number-format:'\\@';">${escapeHtml(serveByVal)}</td>
+      </tr>`;
+  });
+
+  const htmlContent = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <!--[if gte mso 9]>
+      <xml>
+        <x:ExcelWorkbook>
+          <x:ExcelWorksheets>
+            <x:ExcelWorksheet>
+              <x:Name>${escapeHtml(monthYearLabel)}</x:Name>
+              <x:WorksheetOptions>
+                <x:DisplayGridlines/>
+              </x:WorksheetOptions>
+            </x:ExcelWorksheet>
+          </x:ExcelWorksheets>
+        </x:ExcelWorkbook>
+      </xml>
+      <![endif]-->
+      <style>
+        body { font-family: 'Segoe UI', Calibri, sans-serif; font-size: 10pt; }
+        table { border-collapse: collapse; table-layout: auto; }
+        th { background-color: #E2EFDA; color: #000000; font-weight: bold; text-align: center; border: 1px solid #000000; height: 28px; padding: 4px 10px; font-size: 10pt; }
+        .banner { background-color: #006100; color: #FFFFFF; font-size: 16pt; font-weight: bold; text-align: center; height: 42px; border: 1px solid #000000; }
+      </style>
+    </head>
+    <body>
+      <table>
+        <thead>
+          <tr>
+            <th colspan="11" class="banner">DAILY SALES ${escapeHtml(monthYearLabel)}</th>
+          </tr>
+          <tr>
+            <th style="min-width: 90px;">DATE</th>
+            <th style="min-width: 50px;">QTY</th>
+            <th style="min-width: 220px;">PART NUMBER</th>
+            <th style="min-width: 340px;">PART NAME</th>
+            <th style="min-width: 100px;">PRICE</th>
+            <th style="min-width: 110px;">SALES</th>
+            <th style="min-width: 180px;">CUSTOMER NAME</th>
+            <th style="min-width: 90px;">PAYMENT</th>
+            <th style="min-width: 110px;">DISCOUNTED</th>
+            <th style="min-width: 110px;">S.I./C.I./D.R.</th>
+            <th style="min-width: 100px;">SERVE BY</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `;
+
+  try {
+    const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return {
+      success: true,
+      count: transactionsItems.length,
+      filename,
+      message: `Downloaded ${filename} successfully!`
+    };
+  } catch (err) {
+    return {
+      success: false,
+      count: 0,
+      message: 'Failed to export file: ' + (err.message || err)
     };
   }
 };

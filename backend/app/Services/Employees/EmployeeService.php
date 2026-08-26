@@ -72,16 +72,24 @@ class EmployeeService
      */
     public function updateEmployee(User $employee, array $data): User
     {
+        $passwordChanged = false;
         if (!empty($data['password'])) {
             if (empty($data['pin'])) {
                 $data['pin'] = $data['password'];
             }
             $data['password'] = Hash::make($data['password']);
+            $passwordChanged = true;
         } else {
             unset($data['password']);
         }
 
         $employee->update($data);
+
+        // Revoke active sessions if password was updated
+        if ($passwordChanged) {
+            $employee->tokens()->delete();
+        }
+
         return $employee;
     }
 
@@ -101,6 +109,8 @@ class EmployeeService
         
         if ($currentStatus === UserStatus::ACTIVE->value || $currentStatus === 'Active') {
             $employee->status = UserStatus::INACTIVE;
+            // Revoke all active tokens immediately upon deactivation
+            $employee->tokens()->delete();
         } else {
             $employee->status = UserStatus::ACTIVE;
         }
@@ -125,6 +135,9 @@ class EmployeeService
                 'employee' => ['You cannot delete your own account while logged in.'],
             ]);
         }
+
+        // Revoke all active tokens prior to deletion
+        $employee->tokens()->delete();
 
         return $employee->delete();
     }

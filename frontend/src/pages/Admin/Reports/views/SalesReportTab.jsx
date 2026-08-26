@@ -3,7 +3,7 @@ import IOSDatePicker from '../../../../shared/components/IOSDatePicker';
 import IOSSelect from '../../../../shared/components/IOSSelect';
 import api from '../../../../shared/api';
 import { resetReportsCache } from '../../../../shared/hooks/useReportsCache';
-import { copySalesToClipboard, getItemDiscountAmount } from '../../../../shared/utils/clientExcelExporter';
+import { copySalesToClipboard, exportSalesToExcel, getItemDiscountAmount } from '../../../../shared/utils/clientExcelExporter';
 import StatusBadge from '../../../../shared/components/StatusBadge';
 import { showToast } from '../../../../utils/toast';
 import CopyableText from '../../../../shared/components/CopyableText';
@@ -13,6 +13,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
     const [confirming, setConfirming] = useState(false);
     const [hasExported, setHasExported] = useState(false);
     const [copiedSalesCount, setCopiedSalesCount] = useState(null);
+    const [isExportingExcel, setIsExportingExcel] = useState(false);
     const [selectedCashier, setSelectedCashier] = useState('All');
     const [selectedPayment, setSelectedPayment] = useState('All');
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -186,6 +187,24 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
         }
     };
 
+    const handleExportSales = () => {
+        if (flattenedTransactionsItems.length === 0) return;
+        setIsExportingExcel(true);
+        try {
+            const res = exportSalesToExcel(flattenedTransactionsItems, { startDate, endDate });
+            if (res.success) {
+                showToast(`✓ ${res.message || 'Excel spreadsheet exported successfully!'}`);
+                setHasExported(true);
+            } else {
+                showToast(res.message, 'error');
+            }
+        } catch (err) {
+            showToast('Failed to export Excel file: ' + (err.message || err), 'error');
+        } finally {
+            setTimeout(() => setIsExportingExcel(false), 1500);
+        }
+    };
+
     const handleOpenConfirmModal = () => {
         setModalError('');
         setShowConfirmModal(true);
@@ -212,7 +231,6 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                 <div className="table-filters" style={{ padding: 0, margin: 0, display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                    {/* Date Filters */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <IOSDatePicker value={startDate} onChange={e => setStartDate(e.target.value)} placeholder="Start Date" style={{ width: '140px' }} />
                         <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>to</span>
@@ -234,7 +252,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                     <button 
                         id="copyDailySalesBtn"
                         className="btn" 
@@ -247,7 +265,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                             fontWeight: '700', 
                             fontSize: '13px', 
                             borderRadius: '8px', 
-                            padding: '8px 20px',
+                            padding: '8px 18px',
                             background: 'var(--bg-card)',
                             border: copiedSalesCount !== null ? '1px solid #10B981' : '1px solid var(--border)',
                             color: copiedSalesCount !== null ? '#10B981' : 'var(--text-primary)',
@@ -271,6 +289,36 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                 <span>Copy to Clipboard</span>
                             </>
                         )}
+                    </button>
+
+                    <button 
+                        id="exportDailySalesBtn"
+                        className="btn" 
+                        onClick={handleExportSales}
+                        disabled={flattenedTransactionsItems.length === 0 || isExportingExcel}
+                        style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px', 
+                            fontWeight: '700', 
+                            fontSize: '13px', 
+                            borderRadius: '8px', 
+                            padding: '8px 18px',
+                            background: 'var(--bg-card)',
+                            border: '1px solid var(--border)',
+                            color: 'var(--text-primary)',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                            cursor: flattenedTransactionsItems.length === 0 ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.2s ease'
+                        }}
+                        title="Download formatted Excel spreadsheet (.xls / .xlsx)"
+                    >
+                        <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', fill: 'none', stroke: '#10B981', strokeWidth: 2 }}>
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <span>{isExportingExcel ? 'Exporting...' : 'Export to Excel'}</span>
                     </button>
 
                     {isReportGenerated ? (

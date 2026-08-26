@@ -71,17 +71,16 @@ class LoginTest extends TestCase
     }
 
     /** @test */
-    public function test_user_can_login_with_email_or_phone(): void
+    public function test_user_cannot_login_with_email_or_phone(): void
     {
         $response = $this->postJson('/api/login', [
             'login_id' => 'cashier@ztg.com',
             'password' => 'cashier123',
         ]);
 
-        $response->assertStatus(200)
-            ->assertJsonStructure(['token', 'user'])
-            ->assertJsonPath('user.username', 'cashier1')
-            ->assertJsonPath('user.role', 'Cashier');
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['login_id'])
+            ->assertJsonPath('errors.login_id.0', 'Invalid username or password.');
     }
 
     /** @test */
@@ -94,7 +93,7 @@ class LoginTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['login_id'])
-            ->assertJsonPath('errors.login_id.0', 'Invalid username, email, or password.');
+            ->assertJsonPath('errors.login_id.0', 'Invalid username or password.');
     }
 
     /** @test */
@@ -107,7 +106,7 @@ class LoginTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['login_id'])
-            ->assertJsonPath('errors.login_id.0', 'Invalid username, email, or password.');
+            ->assertJsonPath('errors.login_id.0', 'Invalid username or password.');
     }
 
     /** @test */

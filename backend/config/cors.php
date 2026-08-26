@@ -34,7 +34,7 @@ return [
     ))),
 
     'allowed_origins_patterns' => [
-        '#^https?://.*\.pages\.dev$#',
+        '#^https://([a-zA-Z0-9-]+\.)?pos-hep\.pages\.dev$#',
     ],
 
     'allowed_headers' => ['*'],

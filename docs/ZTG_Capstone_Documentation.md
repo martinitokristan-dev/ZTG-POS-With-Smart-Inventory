@@ -7,7 +7,7 @@
 > **Repository:** [ZTG-POS-With-Smart-Inventory](https://github.com/martinitokristan-dev/ZTG-POS-With-Smart-Inventory)
 > **Live Frontend:** [ztg-pos-with-smart-inventory.pages.dev](https://ztg-pos-with-smart-inventory.pages.dev)
 > **Live Backend API:** [ztg-pos-with-smart-inventory.onrender.com](https://ztg-pos-with-smart-inventory.onrender.com)
-> **Document Version:** 1.0 | Date: July 2026
+> **Document Version:** 2.4 | Date: August 2026
 
 ---
 
@@ -342,12 +342,16 @@ The system uses a **Decoupled SPA + REST API** architecture (also called a **Hea
 
 ## 7. Database Design
 
-The system uses **15 database tables** with a MySQL-compatible schema, hosted on TiDB Cloud Serverless.
+The system uses **20 database tables** with a MySQL-compatible schema, hosted on TiDB Cloud Serverless.
 
 ### Entity-Relationship Diagram (ERD)
 
 ```mermaid
 erDiagram
+    users ||--|| user_profiles : "has profile (user_id)"
+    users ||--o{ personal_access_tokens : "issues (tokenable_id)"
+    users ||--o{ staff_verification_tokens : "receives (user_id)"
+    users ||--o{ activity_logs : "generates (user_id)"
     users ||--o{ transactions : "processes (cashier_id)"
     users ||--o{ transactions : "approves (approver_id)"
     users ||--o{ reservations : "books (reserved_by_id)"
@@ -394,6 +398,42 @@ erDiagram
         string profile_photo
     }
 
+    staff_verification_tokens {
+        bigint id PK
+        bigint user_id FK
+        string token UK
+        text encrypted_password
+        timestamp expires_at
+        timestamp viewed_at
+    }
+
+    activity_logs {
+        bigint id PK
+        bigint user_id FK
+        string action
+        string module
+        text description
+        string ip_address
+        string device
+        string status
+        string severity
+    }
+
+    personal_access_tokens {
+        bigint id PK
+        string tokenable_type
+        bigint tokenable_id
+        string name
+        string token UK
+        timestamp last_used_at
+    }
+
+    password_reset_tokens {
+        string email PK
+        string token
+        timestamp created_at
+    }
+
     products {
         bigint id PK
         bigint parent_product_id FK
@@ -422,6 +462,8 @@ erDiagram
         date date
         date date_get
         string doc_type
+        string deposit_cr_no
+        string balance_cr_no
         string si_no
         string status
     }
@@ -466,6 +508,10 @@ erDiagram
 |---|---|---|
 | `users` | `id`, `username`, `password`, `pin`, `role`, `status`, `remember_token` | Authentication credentials & access identity (Admin, Cashier, Supervisor) |
 | `user_profiles` | `id`, `user_id`, `full_name`, `phone_number`, `email`, `profile_photo` | 1-to-1 personal identity, contact details, and Cloudinary avatars |
+| `staff_verification_tokens` | `id`, `user_id`, `token`, `encrypted_password`, `expires_at`, `viewed_at`, `backup_sent_at` | Secure single-use credentials revelation for newly invited staff members |
+| `activity_logs` | `id`, `user_id`, `action`, `module`, `description`, `ip_address`, `device`, `status`, `severity`, `metadata` | Comprehensive security & POS audit trail across all system modules |
+| `personal_access_tokens` | `id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `last_used_at`, `expires_at` | Laravel Sanctum API authentication tokens |
+| `password_reset_tokens` | `email`, `token`, `created_at` | Password reset tokens with 60-minute cryptographic validity |
 | `checkers` | `id`, `name`, `status` | Supervisor and floor checker staff profiles |
 | `products` | `id`, `parent_product_id`, `name`, `chinese_name`, `part_no`, `category_id`, `address`, `stock`, `alert_limit`, `price1`, `price2`, `status`, `is_dead_stock`, `damaged`, `image`, `notes` | Master inventory items and variants (supports nullable name/part_no for unclassified goods) |
 | `categories` | `id`, `name`, `prefix`, `chinese_name`, `allow_variants` | Product categorization with variant toggles |
@@ -477,8 +523,8 @@ erDiagram
 | `reservations` | `id`, `order_no`, `customer_id`, `customer_name`, `customer_phone`, `engine_plate_number`, `payment_method`, `cheque_number`, `payment_type`, `deposit`, `total`, `date`, `pickup_date`, `date_get`, `doc_type`, `deposit_cr_no`, `balance_cr_no`, `si_no`, `status` | Pre-order holds with Dual Collection Receipt tracking (Deposit C.R. + Balance C.R.) |
 | `reservation_items` | `id`, `reservation_id`, `product_id`, `part_no`, `item_name`, `engine_plate_number`, `qty`, `price` | Line items per reservation order |
 | `customers` | `id`, `name`, `phone`, `email`, `tin`, `address` | Walk-in and registered customer registry |
-| `notifications` | `id`, `user_id`, `type`, `sub_type`, `title`, `message`, `link`, `is_read` | In-app real-time notification store |
-| `settings` | `id`, `key`, `value` | System-wide configuration store (business info, thresholds) |
+| `notifications` | `id`, `user_id`, `type`, `sub_type`, `title`, `message`, `link`, `is_read` | In-app real-time notification store (strictly isolated to Admin/Supervisor roles) |
+| `settings` | `id`, `key`, `value` | System-wide configuration store (business info, SI auto-numbering, void limits) |
 | `report_logs` | `id`, `user_id`, `report_type`, `timeframe`, `created_at` | Report generation and export audit trail |
 
 ---
@@ -1642,14 +1688,35 @@ Previously, logging into the **Admin** account in Tab 1 and the **Cashier** acco
 - **Abnormal Activity Detection & Rate Limiting:**
   - **5 Failed Passwords &rarr; 1-Minute Lockout:** Locks the account/IP for 60 seconds with countdown and logs an `Abnormal` security alert (`login_lockout`).
   - **Forgot Password Rate Limiter:** 5 attempts per hour; blocks the 6th attempt and logs `rate_limit_exceeded`.
-- **Consistent Shared Date Picker:** Reuses `<IOSDatePicker />` across all audit trail filter controls.
+### SPRINT 15 — Sales Reporting Dual-Export, Cumulative Amount Tracking, Notification RBAC Isolation & Smart Dropdown Auto-Flip
+**Date: August 2026**
+
+#### 1. Sales Report Dual-Export Architecture (Excel File + Clipboard TSV)
+- **Styled Excel Export (`exportSalesToExcel`):** Uses SheetJS (`xlsx`) to generate a complete `.xlsx` workbook featuring customized summary KPI cards (Total Revenue, Total Sold Units, Net Sales, Deducted Amounts), formatted transaction tables with colored status pills, net quantities, and discount rates.
+- **One-Click Clipboard Copy (`copySalesToClipboard`):** Generates clean, pre-formatted TSV (Tab-Separated Values) data with header rows for instant pasting (`Ctrl + V`) directly into Google Sheets, Microsoft Excel, or LibreOffice Calc without file download delays.
+
+#### 2. Full & Partial Return/Refund Itemized Math & Cumulative Amount Preservation
+- **Preserved Financial Audit Details:** Solved the `₱0` display bug on refunded/returned transactions by ensuring the transaction details modal preserves and displays **Original Total**, **Refunded / Deducted Amount**, and **Net Sales Remaining**.
+- **Itemized Math:** Items in partial returns/refunds accurately calculate and display net active quantities (`Math.max(0, qty - refunded_qty)`), line gross subtotals, and transaction-level discounts.
+- **Clear Separation:** Explicitly distinguishes between monetary **Refund** (Cash/GCash/Card) and exchange/store credit **Return**.
+
+#### 3. Role-Based Notification Isolation (Principle of Least Privilege)
+- **Aligned with POS Industry Standards:** Formally isolated the notification pipeline to mirror leading enterprise POS systems (Square, Lightspeed, Shopify POS).
+- **Cashier Terminals:** Completely removes the topbar notification bell, unread badge counter, pop-up toast bubbles, and background WebSocket polling from cashier sessions to maintain a clean, distraction-free checkout workspace.
+- **Admin Terminals:** Dedicated notification hub with real-time push alerts for stock depletion, manager overrides, transaction reversals, and system security events.
+- **Backend Security:** `/api/notifications` returns an empty array for non-administrative roles.
+
+#### 4. Smart Upward Auto-Flipping for Table Actions Dropdown Menus
+- **Dynamic Boundary Detection:** Data tables across **Product Management** (`ProductsTable.jsx`) and **Employee Settings** (`EmployeesTab.jsx`) dynamically calculate viewport boundaries (`idx >= length - 2`).
+- **Eliminated Overflow Scrolling:** Lower table rows automatically pop their three-dot action menus (`⋮`) **UPWARDS** (`bottom: calc(100% + 6px)`), eliminating page overflows and scrolling hassles.
+
+#### 5. Single-Use Staff Invitation & Credential Revelation Security (`staff_verification_tokens`)
+- **Single-Use Revelation:** Newly added staff receive a cryptographic 24-hour verification link via email.
+- **Encrypted Storage:** Password revealed only once upon access with instant invalidation (`viewed_at`), preventing credential exposure in plaintext databases.
+- **Transactional Backup Dispatch:** Supports optional backup credential dispatch via SMTP transactional email.
 
 ---
 
-*End of ZTG Heavy Parts Capstone Project Documentation v2.0*
+*End of ZTG Heavy Parts Capstone Project Documentation v2.4*
 
 *Document updated: August 2026*
-
-
-
-

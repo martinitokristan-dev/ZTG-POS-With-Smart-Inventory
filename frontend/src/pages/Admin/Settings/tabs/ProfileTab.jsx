@@ -224,12 +224,23 @@ export default function ProfileTab({
                                         Phone / Contact Number
                                     </label>
                                     <input
-                                        type="text"
+                                        type="tel"
                                         id="profilePhone"
                                         className="form-control profile-input"
-                                        placeholder="0912 345 6789"
+                                        placeholder="09XXXXXXXXX"
                                         value={profileData.phone_number || ''}
-                                        onChange={(e) => setProfileData({...profileData, phone_number: e.target.value})}
+                                        maxLength={11}
+                                        inputMode="numeric"
+                                        onChange={(e) => setProfileData({...profileData, phone_number: e.target.value.replace(/\D/g, '').slice(0, 11)})}
+                                        onKeyDown={(e) => {
+                                            if (
+                                                !/^[0-9]$/.test(e.key) && 
+                                                !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) &&
+                                                !e.ctrlKey && !e.metaKey
+                                            ) {
+                                                e.preventDefault();
+                                            }
+                                        }}
                                         disabled={!isEditing}
                                     />
                                 </div>

@@ -38,8 +38,9 @@ export default function EmployeesTab({
                             </tr>
                         </thead>
                         <tbody style={{ fontSize: '15px' }}>
-                            {employees.map(emp => {
+                            {employees.map((emp, idx) => {
                                 const isDefaultAdmin = emp.id === 1 || emp.username === 'admin' || emp.employee_id === 'EMP-000';
+                                const isBottomRow = idx >= employees.length - 2 && employees.length > 2;
                                 return (
                                     <tr key={emp.id} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '48px' }}>
                                         <td style={{ padding: '12px 16px', fontSize: '15px', fontWeight: '600', color: 'var(--table-text-primary)' }}>
@@ -93,7 +94,18 @@ export default function EmployeesTab({
                                                 <div 
                                                     className={`actions-dropdown-menu ${openDropdownId === emp.id ? 'show' : ''}`} 
                                                     role="menu"
-                                                    style={{ minWidth: '150px' }}
+                                                    style={{ 
+                                                        minWidth: '150px',
+                                                        position: 'absolute',
+                                                        right: 0,
+                                                        ...(isBottomRow ? { bottom: 'calc(100% + 6px)', top: 'auto' } : { top: 'calc(100% + 6px)', bottom: 'auto' }),
+                                                        zIndex: 9999,
+                                                        background: 'var(--bg-card)',
+                                                        border: '1px solid var(--border)',
+                                                        borderRadius: '8px',
+                                                        boxShadow: 'var(--shadow-lg)',
+                                                        padding: '6px',
+                                                    }}
                                                 >
                                                     {/* 1. Edit */}
                                                     <button 

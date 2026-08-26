@@ -198,6 +198,9 @@ class ForgotPasswordController extends Controller
         $user->pin = $request->password;
         $user->save();
 
+        // Invalidate all existing session tokens on password reset
+        $user->tokens()->delete();
+
         // Clean up reset token
         DB::table('password_reset_tokens')->where('email', $request->email)->delete();
 

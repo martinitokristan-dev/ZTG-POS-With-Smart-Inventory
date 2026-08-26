@@ -41,13 +41,8 @@ class AuthController extends Controller
             ]);
         }
 
-        // Find user by username on users table, or email/phone_number on linked user_profiles table
-        $user = User::where('username', $request->login_id)
-            ->orWhereHas('profile', function ($query) use ($request) {
-                $query->where('email', $request->login_id)
-                      ->orWhere('phone_number', $request->login_id);
-            })
-            ->first();
+        // Find user strictly by username on users table
+        $user = User::where('username', $request->login_id)->first();
 
         // 2. Validate user existence and password
         if (! $user || ! Hash::check($request->password, $user->password)) {
@@ -92,7 +87,7 @@ class AuthController extends Controller
             );
 
             throw ValidationException::withMessages([
-                'login_id' => ['Invalid username, email, or password.'],
+                'login_id' => ['Invalid username or password.'],
             ]);
         }
 

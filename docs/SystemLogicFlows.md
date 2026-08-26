@@ -1467,29 +1467,29 @@ flowchart TD
 
 ```mermaid
 erDiagram
+    users ||--|| user_profiles : "has profile"
+    users ||--o{ staff_verification_tokens : "receives"
+    users ||--o{ activity_logs : "generates"
+    users ||--o{ personal_access_tokens : "issues"
     users ||--o{ transactions : "cashier"
     users ||--o{ transactions : "approver"
     users ||--o{ reservations : "reserved_by"
     users ||--o{ reservations : "fulfilled_by"
-    users ||--o{ pending_purchase_orders : "cashier"
 
     categories ||--o{ products : "belongs_to"
 
     products ||--o{ products : "parent_variant"
     products ||--o{ transaction_items : "sold_in"
     products ||--o{ reservation_items : "reserved_in"
-    products ||--o{ pending_po_items : "ordered_in"
     products }o--o{ variant_options : "has_values"
 
     variant_types ||--o{ variant_options : "contains"
 
     customers ||--o{ transactions : "bought_by"
     customers ||--o{ reservations : "ordered_by"
-    customers ||--o{ pending_purchase_orders : "requested_by"
 
     transactions ||--o{ transaction_items : "contains"
     reservations ||--o{ reservation_items : "contains"
-    pending_purchase_orders ||--o{ pending_po_items : "contains"
 ```
 
 ---
@@ -1501,33 +1501,52 @@ flowchart TD
     subgraph "Trigger Events"
         E1[Product stock changed]
         E2[Sale completed]
-        E3[Refund processed]
+        E3[Refund / Return processed]
         E4[Void processed]
         E5[Restock committed]
         E6[Damaged stock logged]
         E7[Reservation deposit]
+        E8[Security / Auth anomaly]
     end
 
     subgraph "Notification Types"
         N1["🔴 Low Stock Alert"]
         N2["💰 Sale Completed"]
-        N3["↩️ Refund Processed"]
+        N3["↩️ Refund / Return Processed"]
         N4["❌ Transaction Voided"]
         N5["📦 Inventory Restocked"]
         N6["⚠️ Damaged Stock Logged"]
         N7["📋 Reservation Deposit"]
+        N8["🛡️ Security & Anomaly Alert"]
     end
 
-    subgraph "Delivery"
-        D1[Bell badge count]
-        D2[Toast popup]
-        D3[Chime audio]
+    subgraph "Role-Based Delivery (Admin & Supervisor Only)"
+        D1[Admin Topbar Bell Badge]
+        D2[Admin Toast Bubble Popup]
+        D3[Admin Chime Audio Alert]
+        D4["🚫 Cashier Interface Excluded (Principle of Least Privilege)"]
     end
 
     E1 --> N1
     E2 --> N2
     E3 --> N3
     E4 --> N4
+    E5 --> N5
+    E6 --> N6
+    E7 --> N7
+    E8 --> N8
+
+    N1 --> D1
+    N2 --> D1
+    N3 --> D1
+    N4 --> D1
+    N5 --> D1
+    N6 --> D1
+    N7 --> D1
+    N8 --> D1
+
+    D1 --> D2
+    D1 --> D3
     E5 --> N5
     E6 --> N6
     E7 --> N7

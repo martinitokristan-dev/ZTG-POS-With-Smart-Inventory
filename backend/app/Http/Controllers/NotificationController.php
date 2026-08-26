@@ -20,6 +20,11 @@ class NotificationController extends Controller
      */
     public function index(): JsonResponse
     {
+        $user = auth()->user();
+        if ($user && $user->role === 'Cashier') {
+            return response()->json([]);
+        }
+
         $notifications = $this->notificationService->getAll();
         return response()->json($notifications);
     }

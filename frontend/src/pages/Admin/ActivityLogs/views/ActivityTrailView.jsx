@@ -191,7 +191,9 @@ export default function ActivityTrailView({
                                             {/* Device & IP */}
                                             <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
                                                 <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)' }}>{log.device || 'Unknown'}</div>
-                                                <div style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>{log.ip_address || '—'}</div>
+                                                <div style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                                                    {log.ip_address === '::1' || log.ip_address === '127.0.0.1' ? '127.0.0.1 (Localhost)' : (log.ip_address || '—')}
+                                                </div>
                                             </td>
 
                                             {/* Status Badge */}

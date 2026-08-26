@@ -48,11 +48,22 @@ export default function EmployeeModal({
                         <div className="form-group" style={{ marginBottom: 0 }}>
                             <label className="form-label">Contact / Phone Number</label>
                             <input 
-                                type="text" 
+                                type="tel" 
                                 className="form-control" 
-                                placeholder="e.g. 0912 345 6789"
+                                placeholder="09XXXXXXXXX"
                                 value={employeeForm.phone_number || ''}
-                                onChange={(e) => setEmployeeForm({...employeeForm, phone_number: e.target.value})}
+                                maxLength={11}
+                                inputMode="numeric"
+                                onChange={(e) => setEmployeeForm({...employeeForm, phone_number: e.target.value.replace(/\D/g, '').slice(0, 11)})}
+                                onKeyDown={(e) => {
+                                    if (
+                                        !/^[0-9]$/.test(e.key) && 
+                                        !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) &&
+                                        !e.ctrlKey && !e.metaKey
+                                    ) {
+                                        e.preventDefault();
+                                    }
+                                }}
                             />
                         </div>
 

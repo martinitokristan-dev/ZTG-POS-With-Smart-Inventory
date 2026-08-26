@@ -267,12 +267,14 @@ export default function GeneralTab({
                                 type="tel"
                                 id="contactNumber"
                                 className="form-control"
-                                placeholder="e.g. 0917-000-1111"
+                                placeholder="09XXXXXXXXX"
                                 value={settings.contact_number || ''}
-                                onChange={(e) => handleSettingInputChange('contact_number', e.target.value.replace(/[^\d+ -]/g, ''))}
+                                maxLength={11}
+                                inputMode="numeric"
+                                onChange={(e) => handleSettingInputChange('contact_number', e.target.value.replace(/\D/g, '').slice(0, 11))}
                                 onKeyDown={(e) => {
                                     if (
-                                        !/^[0-9+ -]$/.test(e.key) && 
+                                        !/^[0-9]$/.test(e.key) && 
                                         !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) &&
                                         !e.ctrlKey && !e.metaKey
                                     ) {

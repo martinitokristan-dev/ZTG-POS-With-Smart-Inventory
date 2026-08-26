@@ -8,13 +8,8 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
 
     const tx = transaction;
     const status = tx.status || 'Unknown';
-    const reason = tx.reason || tx.refund_reason || tx.void_reason || '—';
+    const reason = tx.reason || tx.refund_reason || tx.void_reason || tx.internal_notes || '—';
     const chequeNo = tx.cheque_number || (tx.payment_method && tx.payment_method.includes('(#') ? tx.payment_method.match(/\(#([^)]+)\)/)?.[1] : null);
-
-    let title = 'Transaction Details';
-    let subtitle = tx.si_no || '—';
-    let statusColor = '#334155';
-    let itemsBlock = null;
 
     // Parse restock line items from internal_notes JSON
     let restockEntries = [];
@@ -28,23 +23,30 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
             restockEntries = [];
         }
     }
+
     const isPartialRefund = tx.is_partial_refund === true || (Number(tx.refunded_amount || 0) > 0 && Number(tx.amount || 0) > 0);
     const isFullRefund = (status === 'Refund' || status === 'Return') && !isPartialRefund;
+    const isVoid = status === 'Void';
+
+    let title = 'Transaction Details';
+    let subtitle = tx.si_no || '—';
+    let statusColor = '#334155';
+    let itemsBlock = null;
 
     if (status === 'Restocked') {
         title = 'Restock Details';
         subtitle = 'Inventory restock record';
         statusColor = '#059669';
-    } else if (status === 'Void') {
+    } else if (isVoid) {
         title = 'Void Transaction Details';
         subtitle = 'Cancelled sale record';
         statusColor = '#DC2626';
     } else if (isPartialRefund) {
-        title = 'Partial Refund Details';
+        title = status === 'Return' ? 'Partial Return Details' : 'Partial Refund Details';
         subtitle = tx.si_no || '—';
         statusColor = '#D97706';
     } else if (isFullRefund) {
-        title = 'Full Refund Details';
+        title = status === 'Return' ? 'Full Return Details' : 'Full Refund Details';
         subtitle = tx.si_no || '—';
         statusColor = '#DC2626';
     } else {
@@ -54,10 +56,9 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
     }
 
     const txItems = Array.isArray(tx.items) ? tx.items : [];
-
-    const hasRefundOrReturn = isPartialRefund || isFullRefund || status === 'Refund' || status === 'Return' || Number(tx.refunded_amount || 0) > 0 || txItems.some(i => Number(i.refunded_qty || 0) > 0);
-    const isReturnAction = status === 'Return' || (tx.type && tx.type.toLowerCase().includes('return'));
-    const refundReturnColumnHeader = 'Returned / Refund';
+    const hasRefundOrReturn = isPartialRefund || isFullRefund || isVoid || status === 'Refund' || status === 'Return' || Number(tx.refunded_amount || 0) > 0 || txItems.some(i => Number(i.refunded_qty || 0) > 0);
+    const isReturnAction = status === 'Return' || (tx.type && String(tx.type).toLowerCase().includes('return'));
+    const refundReturnColumnHeader = isVoid ? 'Voided Qty' : (isReturnAction ? 'Returned Qty' : 'Returned / Refund');
 
     // Calculate overall financial totals across transaction items
     let grossSubtotal = 0;
@@ -65,8 +66,8 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
 
     const processedItems = txItems.map(item => {
         const rawQty = Number(item.qty || 1);
-        const refundedQty = Number(item.refunded_qty || 0);
-        const displayQty = (isPartialRefund || refundedQty > 0)
+        const refundedQty = Number(item.refunded_qty || (isFullRefund || isVoid ? rawQty : 0));
+        const displayRemainingQty = isPartialRefund
             ? Number(item.net_qty ?? Math.max(0, rawQty - refundedQty))
             : rawQty;
 
@@ -79,9 +80,12 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
             itemDisc = origPrice - Number(item.price);
         }
 
-        const lineGross = displayQty * origPrice;
+        const lineGross = rawQty * origPrice;
         const lineDisc = itemDisc;
-        const lineNet = Math.max(0, lineGross - lineDisc);
+        const itemOriginalTotal = Math.max(0, lineGross - lineDisc);
+        const lineNet = isPartialRefund 
+            ? Math.max(0, (displayRemainingQty * origPrice) - lineDisc)
+            : itemOriginalTotal;
 
         grossSubtotal += lineGross;
         itemDiscountsTotal += lineDisc;
@@ -89,10 +93,12 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
         return {
             ...item,
             qty: rawQty,
-            displayQty,
+            displayQty: rawQty,
+            netRemainingQty: displayRemainingQty,
             refundedQty,
             unitPrice: origPrice,
             itemDisc,
+            itemOriginalTotal,
             lineNet
         };
     });
@@ -100,6 +106,16 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
     const orderDiscountAmt = Number(tx.discount_amount || 0);
     const totalDiscounts = itemDiscountsTotal + orderDiscountAmt;
     const discountTypeLabel = tx.discount_type ? ` (${tx.discount_type})` : '';
+
+    const totalOriginalAmount = (tx.original_amount != null && Number(tx.original_amount) > 0) 
+        ? Number(tx.original_amount) 
+        : (grossSubtotal > 0 ? Math.max(0, grossSubtotal - totalDiscounts) : Number(tx.amount || tx.total || 0));
+
+    const totalRefundedAmount = (tx.refunded_amount != null && Number(tx.refunded_amount) > 0)
+        ? Number(tx.refunded_amount)
+        : (isFullRefund || isVoid ? totalOriginalAmount : 0);
+
+    const netSalesRemaining = Number(tx.amount || 0);
 
     if (status !== 'Restocked' && status !== 'Damaged' && processedItems.length > 0) {
         itemsBlock = (
@@ -136,7 +152,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                             <div style={{ fontSize: '14px', overflow: 'hidden' }}><FormattedProductName name={name} /></div>
                                         </td>
                                         <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
-                                            {item.displayQty}
+                                            {item.qty}
                                         </td>
                                         <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--table-text-secondary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
                                             {fmt(item.unitPrice)}
@@ -146,8 +162,8 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                         </td>
                                         {hasRefundOrReturn && (
                                             <td style={{ padding: '10px 12px', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
-                                                {refundedQty > 0 || isFullRefund ? (
-                                                    <span className={`status-badge ${isReturnAction ? 'status-return' : 'status-refund'}`} style={{ textTransform: 'none' }}>
+                                                {refundedQty > 0 || isFullRefund || isVoid ? (
+                                                    <span className={`status-badge ${isVoid ? 'status-void' : (isReturnAction ? 'status-return' : 'status-refund')}`} style={{ textTransform: 'none' }}>
                                                         {refundedQty > 0 ? `${refundedQty} pcs` : `${item.qty || 1} pcs`}
                                                     </span>
                                                 ) : (
@@ -180,7 +196,10 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
         );
     };
 
-    const statusDisplayLabel = isPartialRefund ? 'Partial Refund' : (isFullRefund ? 'Full Refund' : status);
+    const statusDisplayLabel = isPartialRefund 
+        ? (status === 'Return' ? 'Partial Return' : 'Partial Refund') 
+        : (isFullRefund ? (status === 'Return' ? 'Full Return' : 'Full Refund') : status);
+    
     const resolvedCustomer = tx.customer_name || tx.customer?.name || (tx.customer_id ? `Customer #${tx.customer_id}` : null);
 
     return (
@@ -205,7 +224,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 {auditDetailRow('Date & Time', fmtDate(tx.date || tx.created_at))}
                                 {auditDetailRow('Restocked By', tx.cashier?.full_name || tx.cashier?.name || '—')}
                                 {auditDetailRow('Total Qty Added', `+${tx.total_qty || 0}`, { color: '#059669', fontWeight: '700' })}
-                                {auditDetailRow('Reason', tx.void_reason || 'Batch restock / Inventory update')}
+                                {auditDetailRow('Reason', reason)}
                             </>
                         )}
                         
@@ -215,11 +234,11 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 {auditDetailRow('Date & Time', fmtDate(tx.date || tx.created_at))}
                                 {auditDetailRow('Customer', tx.customer_name || tx.customer?.name || 'Walk-in')}
                                 {auditDetailRow('Served By', tx.checker?.name || tx.cashier?.full_name || tx.cashier?.name || '—')}
-                                {auditDetailRow('Subtotal (Gross)', fmt(grossSubtotal > 0 ? grossSubtotal : (tx.amount || tx.total)))}
-                                {totalDiscounts > 0 && auditDetailRow(`Total Discounts${discountTypeLabel}`, `-${fmt(totalDiscounts)}`, { color: '#2563EB', fontWeight: '700' })}
-                                {auditDetailRow('Amount', fmt(tx.amount || tx.total))}
+                                {auditDetailRow('Original Total', fmt(totalOriginalAmount))}
+                                {auditDetailRow('Voided Amount', `-${fmt(totalRefundedAmount)}`, { color: '#DC2626', fontWeight: '700' })}
+                                {auditDetailRow('Net Amount', fmt(0), { color: 'var(--text-primary)', fontWeight: '700' })}
                                 {auditDetailRow('Processed By', tx.approver?.full_name || tx.approver?.name || '—')}
-                                {auditDetailRow('Reason', tx.void_reason || '—')}
+                                {auditDetailRow('Reason', reason)}
                                 {auditDetailRow('OR Number', tx.or_no || 'N/A')}
                             </>
                         )}
@@ -231,7 +250,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 {auditDetailRow('Customer', tx.customer_name || tx.customer?.name || 'Walk-in')}
                                 {auditDetailRow('Payment Method', (tx.payment_method || '—').replace(/\s*\([^)]*\)/g, '').trim())}
                                 {chequeNo && auditDetailRow('Cheque Number', chequeNo)}
-                                {auditDetailRow('Product Value (Full)', fmt(grossSubtotal > 0 ? grossSubtotal : (tx.amount || tx.total)))}
+                                {auditDetailRow('Product Value (Full)', fmt(totalOriginalAmount))}
                                 {totalDiscounts > 0 && auditDetailRow(`Total Discounts${discountTypeLabel}`, `-${fmt(totalDiscounts)}`, { color: '#2563EB', fontWeight: '700' })}
                                 {auditDetailRow(status === 'Deposit' ? 'Deposit Amount Collected' : 'Payment Collected', fmt(tx.amount || tx.total), { color: 'var(--text-primary)', fontWeight: '700' })}
                                 {auditDetailRow('Served By', tx.checker?.name || tx.cashier?.full_name || tx.cashier?.name || '—')}
@@ -247,25 +266,37 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 {(tx.customer?.phone || tx.customer_phone) && auditDetailRow('Contact Phone', tx.customer?.phone || tx.customer_phone)}
                                 {auditDetailRow('Payment Method', (tx.payment_method || 'Cash').replace(/\s*\([^)]*\)/g, '').trim())}
                                 {chequeNo && auditDetailRow('Cheque Number', chequeNo)}
-                                {!isPartialRefund && grossSubtotal > 0 && auditDetailRow('Subtotal (Gross)', fmt(grossSubtotal))}
-                                {totalDiscounts > 0 && (
-                                    (itemDiscountsTotal > 0 && orderDiscountAmt > 0 && itemDiscountsTotal !== orderDiscountAmt) ? (
-                                        <>
-                                            {auditDetailRow('Item Discounts', `-${fmt(itemDiscountsTotal)}`, { color: '#2563EB', fontWeight: '700' })}
-                                            {auditDetailRow(`Order Discount${discountTypeLabel}`, `-${fmt(orderDiscountAmt)}`, { color: '#2563EB', fontWeight: '700' })}
-                                            {auditDetailRow('Total Discounts', `-${fmt(itemDiscountsTotal + orderDiscountAmt)}`, { color: '#2563EB', fontWeight: '700' })}
-                                        </>
-                                    ) : (
-                                        auditDetailRow(`Discount${discountTypeLabel}`, `-${fmt(Math.max(itemDiscountsTotal, orderDiscountAmt))}`, { color: '#2563EB', fontWeight: '700' })
-                                    )
-                                )}
-                                {isPartialRefund && (
+                                
+                                {isPartialRefund ? (
                                     <>
-                                        {auditDetailRow('Original Total', fmt(tx.original_amount != null ? Number(tx.original_amount) : (Number(tx.amount || tx.total || 0) + Number(tx.refunded_amount || 0))))}
-                                        {auditDetailRow('Refunded Amount', `-${fmt(tx.refunded_amount)}`, { color: '#DC2626', fontWeight: '700' })}
+                                        {auditDetailRow('Original Total', fmt(totalOriginalAmount))}
+                                        {auditDetailRow(isReturnAction ? 'Returned Amount' : 'Refunded Amount', `-${fmt(totalRefundedAmount)}`, { color: '#DC2626', fontWeight: '700' })}
+                                        {auditDetailRow('Net Sales Remaining', fmt(netSalesRemaining), { color: 'var(--text-primary)', fontWeight: '700', fontSize: '14px' })}
+                                    </>
+                                ) : isFullRefund ? (
+                                    <>
+                                        {auditDetailRow('Original Total', fmt(totalOriginalAmount))}
+                                        {auditDetailRow(isReturnAction ? 'Returned Amount' : 'Refunded Amount', `-${fmt(totalRefundedAmount)}`, { color: '#DC2626', fontWeight: '700' })}
+                                        {auditDetailRow('Net Sales Remaining', fmt(0), { color: 'var(--text-primary)', fontWeight: '700', fontSize: '14px' })}
+                                    </>
+                                ) : (
+                                    <>
+                                        {grossSubtotal > 0 && auditDetailRow('Subtotal (Gross)', fmt(grossSubtotal))}
+                                        {totalDiscounts > 0 && (
+                                            (itemDiscountsTotal > 0 && orderDiscountAmt > 0 && itemDiscountsTotal !== orderDiscountAmt) ? (
+                                                <>
+                                                    {auditDetailRow('Item Discounts', `-${fmt(itemDiscountsTotal)}`, { color: '#2563EB', fontWeight: '700' })}
+                                                    {auditDetailRow(`Order Discount${discountTypeLabel}`, `-${fmt(orderDiscountAmt)}`, { color: '#2563EB', fontWeight: '700' })}
+                                                    {auditDetailRow('Total Discounts', `-${fmt(itemDiscountsTotal + orderDiscountAmt)}`, { color: '#2563EB', fontWeight: '700' })}
+                                                </>
+                                            ) : (
+                                                auditDetailRow(`Discount${discountTypeLabel}`, `-${fmt(Math.max(itemDiscountsTotal, orderDiscountAmt))}`, { color: '#2563EB', fontWeight: '700' })
+                                            )
+                                        )}
+                                        {auditDetailRow('Net Amount Paid', fmt(tx.amount || tx.total), { color: 'var(--text-primary)', fontWeight: '700', fontSize: '14px' })}
                                     </>
                                 )}
-                                {auditDetailRow(isPartialRefund ? 'Net Sales Remaining' : 'Net Amount Paid', fmt(tx.amount || tx.total), { color: 'var(--text-primary)', fontWeight: '700', fontSize: '14px' })}
+
                                 {auditDetailRow('Served By', tx.checker?.name || tx.cashier?.full_name || tx.cashier?.name || '—')}
                                 {auditDetailRow('Status', statusDisplayLabel, { color: statusColor, fontWeight: '700' })}
                                 {(status === 'Refund' || status === 'Return' || isPartialRefund || reason !== '—') && auditDetailRow('Reason', reason)}

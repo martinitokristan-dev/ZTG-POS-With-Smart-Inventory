@@ -57,6 +57,12 @@ class ProfileController extends Controller
         $user->pin = $request->password;
         $user->save();
 
+        // Revoke all other active session tokens except the current active one
+        $currentToken = $user->currentAccessToken();
+        if ($currentToken && isset($currentToken->id)) {
+            $user->tokens()->where('id', '!=', $currentToken->id)->delete();
+        }
+
         return response()->json([
             'message' => 'Password updated successfully.',
         ]);

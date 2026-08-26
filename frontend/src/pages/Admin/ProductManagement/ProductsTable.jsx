@@ -37,7 +37,7 @@ export default function ProductsTable({
         }
     }, [successMessage, setSuccessMessage]);
 
-    const renderRow = (product, isVariantSubRow, isFirstInGroup, parentProduct = null) => {
+    const renderRow = (product, isVariantSubRow, isFirstInGroup, parentProduct = null, isBottomRow = false) => {
         // Stock level colors
         const alertLevel = product.alert_limit || 5;
         const isOutOfStock = product.stock === 0;
@@ -211,7 +211,22 @@ export default function ProductsTable({
                                     <circle cx="12" cy="19" r="2"></circle>
                                 </svg>
                             </button>
-                            <div className={`actions-dropdown-menu ${openDropdownId === product.id ? 'show' : ''}`} role="menu">
+                            <div 
+                                className={`actions-dropdown-menu ${openDropdownId === product.id ? 'show' : ''}`} 
+                                role="menu"
+                                style={{
+                                    position: 'absolute',
+                                    right: 0,
+                                    ...(isBottomRow ? { bottom: 'calc(100% + 6px)', top: 'auto' } : { top: 'calc(100% + 6px)', bottom: 'auto' }),
+                                    zIndex: 9999,
+                                    background: 'var(--bg-card)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '8px',
+                                    boxShadow: 'var(--shadow-lg)',
+                                    padding: '6px',
+                                    minWidth: '160px',
+                                }}
+                            >
                                 <button 
                                     onClick={() => {
                                         setOpenDropdownId(null);
@@ -351,26 +366,26 @@ export default function ProductsTable({
                                 <tr><td colSpan="9" style={{ padding: '32px' }}><LoadingSpinner text="Loading catalog items..." minHeight="100px" /></td></tr>
                             ) : products.length === 0 ? (
                                 <tr><td colSpan="9" className="py-8 text-center text-xs font-semibold text-slate-400">No products found matching criteria.</td></tr>
-                            ) : (
-                                products.map((p, parentIndex) => {
-                                    const rows = [];
-                                    // 1. Parent product row — only render if parent itself matches status filter
+                            ) : (() => {
+                                const visibleRows = [];
+                                products.forEach((p) => {
                                     if (matchesStatusFilter(p, statusFilter)) {
-                                        rows.push(renderRow(p, false, parentIndex > 0));
+                                        visibleRows.push({ product: p, isVariantSubRow: false, parentProduct: null });
                                     }
-
-                                    // 2. Child variant rows — only render variants that match status filter
                                     if (p.variants && p.variants.length > 0) {
                                         p.variants.forEach((v) => {
                                             if (matchesStatusFilter(v, statusFilter)) {
-                                                rows.push(renderRow(v, true, false, p));
+                                                visibleRows.push({ product: v, isVariantSubRow: true, parentProduct: p });
                                             }
                                         });
                                     }
+                                });
 
-                                    return rows;
-                                })
-                            )}
+                                return visibleRows.map(({ product, isVariantSubRow, parentProduct }, idx) => {
+                                    const isBottomRow = idx >= visibleRows.length - 2 && visibleRows.length > 2;
+                                    return renderRow(product, isVariantSubRow, idx > 0, parentProduct, isBottomRow);
+                                });
+                            })()}
                         </tbody>
                     </table>
                 </div>

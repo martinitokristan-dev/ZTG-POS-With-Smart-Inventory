@@ -24,7 +24,7 @@ class StoreReservationRequest extends FormRequest
 
             // Customer info
             'customer_name'       => 'required|string|max:100',
-            'customer_phone'      => 'nullable|string|max:20',
+            'customer_phone'      => ['required', 'string', 'regex:/^09\d{9}$/'],
             'customer_email'      => 'nullable|email|max:100',
             'engine_plate_number' => 'nullable|string|max:100',
 
@@ -39,6 +39,13 @@ class StoreReservationRequest extends FormRequest
             'payment_type'        => 'required|string|in:deposit50,full',
             'deposit_amount'      => 'required|numeric|min:0',
             'deposit_cr_no'       => 'nullable|string|max:50',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'customer_phone.regex' => 'Contact number must be a valid 11-digit Philippine mobile number starting with 09 (e.g. 09XXXXXXXXX).',
         ];
     }
 }

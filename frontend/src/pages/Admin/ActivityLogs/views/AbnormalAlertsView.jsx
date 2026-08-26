@@ -96,7 +96,7 @@ export default function AbnormalAlertsView({ logs, loading, onViewDetails, onRef
                                             {log.description}
                                         </div>
                                         <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                                            Origin: <strong>{log.ip_address || '—'}</strong> ({log.device || 'Unknown device'})
+                                            Origin: <strong>{log.ip_address === '::1' || log.ip_address === '127.0.0.1' ? '127.0.0.1 (Localhost)' : (log.ip_address || '—')}</strong> ({log.device || 'Unknown device'})
                                         </div>
                                     </div>
                                 </div>
