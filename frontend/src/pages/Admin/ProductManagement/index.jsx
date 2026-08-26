@@ -8,6 +8,7 @@ import DamageLogModal from './modals/DamageLogModal';
 import ReviewRestockModal from './modals/ReviewRestockModal';
 import LeaveRestockModal from './modals/LeaveRestockModal';
 import { flattenToSellableSKUs } from '../../../shared/utils/skuHelpers';
+import TablePagination from '../../../shared/components/TablePagination';
 
 function ProductManagement() {
     const pm = useProductManagement();

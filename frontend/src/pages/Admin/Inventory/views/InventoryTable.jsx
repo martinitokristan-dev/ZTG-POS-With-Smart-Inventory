@@ -4,6 +4,7 @@ import useDisplayChineseNames from '../../../../shared/hooks/useDisplayChineseNa
 import { matchesStatusFilter } from '../../../../shared/utils/skuHelpers';
 import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
+import TablePagination from '../../../../shared/components/TablePagination';
 
 export default function InventoryTable({ products, loading, handleViewProduct, pagination, statusFilter }) {
     const showChineseNames = useDisplayChineseNames();
