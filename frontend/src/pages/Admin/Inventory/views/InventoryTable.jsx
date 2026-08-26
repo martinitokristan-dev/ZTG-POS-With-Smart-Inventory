@@ -6,7 +6,7 @@ import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 import TablePagination from '../../../../shared/components/TablePagination';
 
-export default function InventoryTable({ products, loading, handleViewProduct, pagination, statusFilter }) {
+export default function InventoryTable({ products, loading, handleViewProduct, pagination, statusFilter, onPageChange, perPage, onPerPageChange }) {
     const showChineseNames = useDisplayChineseNames();
     const renderRow = (item, isVariant, baseIndex, parentProduct) => {
         const alertLevel = item.alert_limit || 5;
@@ -185,31 +185,42 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                         let totalDamaged = 0;
 
                         products.forEach(p => {
-                            if (p.has_variants && p.variants && p.variants.length > 0) {
+                            if (matchesStatusFilter(p, statusFilter)) {
+                                totalStock += Number(p.stock || 0);
+                                totalSold += Number(p.sales_count || 0);
+                                totalDamaged += Number(p.damaged || 0);
+                            }
+                            if (p.variants && p.variants.length > 0) {
                                 p.variants.forEach(v => {
                                     if (matchesStatusFilter(v, statusFilter)) {
                                         totalStock += Number(v.stock || 0);
-                                        totalSold += Number(v.total_sold || 0);
-                                        totalDamaged += Number(v.damaged_count || 0);
+                                        totalSold += Number(v.sales_count || 0);
+                                        totalDamaged += Number(v.damaged || 0);
                                     }
                                 });
-                            } else {
-                                totalStock += Number(p.stock || 0);
-                                totalSold += Number(p.total_sold || 0);
-                                totalDamaged += Number(p.damaged_count || 0);
                             }
                         });
 
                         return (
                             <tfoot>
-                                <tr style={{ background: '#F8FAFC', fontWeight: 'bold' }}>
-                                    <td colSpan="4" style={{ padding: '12px 16px' }}>Total</td>
-                                    <td style={{ padding: '12px 16px' }}>{totalStock}</td>
-                                    <td colSpan="3"></td>
-                                    <td style={{ padding: '12px 16px' }}>{totalSold}</td>
-                                    <td colSpan="2"></td>
-                                    <td style={{ padding: '12px 16px' }}>{totalDamaged}</td>
+                                <tr style={{ borderTop: '2.5px solid var(--border)', background: '#F8FAFC', fontWeight: 'bold' }}>
+                                    <td style={{ padding: '16px', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 800 }}>Total:</td>
                                     <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td style={{ padding: '16px', textAlign: 'right', color: 'var(--text-primary)' }}>
+                                        <span style={{ fontSize: '13px', fontWeight: 800 }}>{totalStock}</span>
+                                        <span style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', marginLeft: '4px' }}>Units</span>
+                                    </td>
+                                    <td style={{ padding: '16px' }}></td>
+                                    <td style={{ padding: '16px' }}></td>
+                                    <td style={{ padding: '16px', textAlign: 'right', color: 'var(--primary)', fontSize: '13px', fontWeight: 800, whiteSpace: 'nowrap' }}>{totalSold} sold</td>
+                                    <td style={{ padding: '16px' }}></td>
+                                    <td style={{ padding: '16px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                        <span style={{ fontSize: '13px', fontWeight: 800, color: totalDamaged > 0 ? 'var(--danger)' : 'inherit' }}>{totalDamaged}</span>
+                                        <span style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', marginLeft: '4px', color: totalDamaged > 0 ? 'var(--danger)' : 'inherit' }}>Damaged</span>
+                                    </td>
+                                    <td style={{ padding: '16px' }}></td>
                                 </tr>
                             </tfoot>
                         );
@@ -221,8 +232,9 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                 <TablePagination
                     currentPage={pagination.current_page}
                     totalItems={pagination.total}
-                    perPage={pagination.per_page || 20}
-                    onPageChange={(newPage) => pagination.onPageChange(newPage)}
+                    perPage={perPage || pagination.per_page || 20}
+                    onPageChange={(newPage) => onPageChange && onPageChange(newPage)}
+                    onPerPageChange={(newLimit) => onPerPageChange && onPerPageChange(newLimit)}
                     label="inventory items"
                 />
             )}

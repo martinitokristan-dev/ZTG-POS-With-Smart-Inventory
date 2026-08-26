@@ -215,7 +215,7 @@ class TransactionService
     }
 
     /**
-     * Check the daily void/refund limit from settings.
+     * Check the daily void limit from settings (applies to Void operations only).
      */
     private function checkDailyVoidLimit(int $cashierId): void
     {
@@ -223,17 +223,13 @@ class TransactionService
         $limit = $limitSetting ? (int) $limitSetting->value : 5;
 
         $todayVoids = Transaction::where('cashier_id', $cashierId)
-            ->whereIn('status', [
-                TransactionStatus::VOID->value,
-                TransactionStatus::REFUND->value,
-                TransactionStatus::RETURN->value,
-            ])
+            ->where('status', TransactionStatus::VOID->value)
             ->whereBetween('date', [Carbon::today()->startOfDay(), Carbon::today()->endOfDay()])
             ->count();
 
         if ($todayVoids >= $limit) {
             throw ValidationException::withMessages([
-                'limit' => ["Daily void/refund limit of {$limit} has been reached for today."],
+                'limit' => ["Daily void limit of {$limit} has been reached for today."],
             ]);
         }
     }
@@ -279,9 +275,6 @@ class TransactionService
                 'approval_pin' => ['Invalid approver PIN. The failed attempt has been logged.'],
             ]);
         }
-
-        // 3. Check daily void limit
-        $this->checkDailyVoidLimit($cashierId);
 
         $updated = DB::transaction(function () use ($transaction, $data, $cashierId, $refundType, $restoreStock, $markDamaged, $reason, $approverId, $pin) {
             $refundedItems = $data['items'];
@@ -397,14 +390,18 @@ class TransactionService
         });
 
         // Dispatch real-time events outside the DB transaction block
-        if ($restoreStock) {
-            foreach ($updated->items as $item) {
-                if ($item->product) {
-                    event(new InventoryUpdated($item->product_id, (int) $item->product->stock));
+        try {
+            if ($restoreStock) {
+                foreach ($updated->items as $item) {
+                    if ($item->product) {
+                        event(new InventoryUpdated($item->product_id, (int) $item->product->stock));
+                    }
                 }
             }
+            event(new TransactionUpdated($updated));
+        } catch (\Throwable $eventErr) {
+            \Illuminate\Support\Facades\Log::warning('[TransactionService] Broadcast event failed: ' . $eventErr->getMessage());
         }
-        event(new TransactionUpdated($updated));
 
         try {
             $isPartial = (float) $updated->amount > 0 && (float) $updated->refunded_amount > 0;
@@ -527,14 +524,18 @@ class TransactionService
         });
 
         // Dispatch real-time events outside the DB transaction block
-        if ($restoreStock) {
-            foreach ($updated->items as $item) {
-                if ($item->product) {
-                    event(new InventoryUpdated($item->product_id, (int) $item->product->stock));
+        try {
+            if ($restoreStock) {
+                foreach ($updated->items as $item) {
+                    if ($item->product) {
+                        event(new InventoryUpdated($item->product_id, (int) $item->product->stock));
+                    }
                 }
             }
+            event(new TransactionUpdated($updated));
+        } catch (\Throwable $eventErr) {
+            \Illuminate\Support\Facades\Log::warning('[TransactionService] Void broadcast event failed: ' . $eventErr->getMessage());
         }
-        event(new TransactionUpdated($updated));
 
         try {
             $voidAmountFormatted = number_format((float) ($updated->original_amount ?? $updated->amount), 2);

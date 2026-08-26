@@ -19,13 +19,14 @@ export function useInventory() {
     // Only show spinner on very first load (cache empty)
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(20);
     const [pagination, setPagination] = useState(null);
 
     // Filters state
     const [search, setSearch] = useState('');
     const [categoryId, setCategoryId] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
-    const [dateFilter, setDateFilter] = useState('today'); // 'today', 'this_week', 'this_month', 'this_year'
+    const [dateFilter, setDateFilter] = useState('today'); // 'today', 'this_week', 'this_month', 'this_year', 'all'
 
     // Modal state
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -38,6 +39,11 @@ export function useInventory() {
                 // Only show spinner on very first load (module cache is empty)
                 if (_cachedInventoryProducts.length === 0) setLoading(true);
                 const queryParams = [`paginate=1`, `page=${page}`];
+                if (perPage === 'All' || perPage === 'all' || perPage >= 999999) {
+                    queryParams.push(`per_page=999999`);
+                } else {
+                    queryParams.push(`per_page=${perPage}`);
+                }
                 if (search) queryParams.push(`search=${encodeURIComponent(search)}`);
                 if (categoryId) queryParams.push(`category_id=${categoryId}`);
                 if (statusFilter && statusFilter !== 'All') queryParams.push(`status=${statusFilter}`);
@@ -45,10 +51,10 @@ export function useInventory() {
                 const res = await api.get(`/inventory?${queryParams.join('&')}`);
                 const freshProducts = res.data.products?.data || [];
                 const freshPagination = {
-                    current_page: res.data.products?.current_page,
-                    last_page: res.data.products?.last_page,
-                    total: res.data.products?.total,
-                    per_page: res.data.products?.per_page
+                    current_page: res.data.products?.current_page || page,
+                    last_page: res.data.products?.last_page || 1,
+                    total: res.data.products?.total || freshProducts.length,
+                    per_page: res.data.products?.per_page || perPage
                 };
                 // Update module cache for next visit
                 _cachedInventoryProducts = freshProducts;
@@ -68,12 +74,12 @@ export function useInventory() {
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [search, categoryId, statusFilter, dateFilter, page]);
+    }, [search, categoryId, statusFilter, dateFilter, page, perPage]);
 
     // Reset page when filters change
     useEffect(() => {
         setPage(1);
-    }, [search, categoryId, statusFilter, dateFilter]);
+    }, [search, categoryId, statusFilter, dateFilter, perPage]);
 
     // Listen for real-time inventory updates on active page dataset
     useEffect(() => {
@@ -200,6 +206,7 @@ export function useInventory() {
         categoriesCount,
         outOfStockCount,
         lowStockCount,
-        dateFilter, setDateFilter
+        dateFilter, setDateFilter,
+        perPage, setPerPage
     };
 }

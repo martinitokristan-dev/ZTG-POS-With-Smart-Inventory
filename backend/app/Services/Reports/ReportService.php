@@ -590,20 +590,32 @@ class ReportService
         })->count();
         $outOfStockCount = (clone $sellableQuery)->where('stock', 0)->count();
 
-        $salesSubquery = TransactionItem::selectRaw('COALESCE(SUM(qty), 0)')
+        $salesSubquery = TransactionItem::selectRaw('COALESCE(SUM(transaction_items.qty - COALESCE(transaction_items.refunded_qty, 0)), 0)')
             ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-            ->whereColumn('transaction_items.product_id', 'products.id')
-            ->where('transactions.status', 'Completed');
+            ->where(function ($w) {
+                $w->whereColumn('transaction_items.product_id', 'products.id')
+                  ->orWhereRaw('transaction_items.product_id IN (SELECT p_sub.id FROM products p_sub WHERE p_sub.parent_product_id = products.id)');
+            })
+            ->whereIn('transactions.status', ['Completed', 'Paid', 'Deposit', 'Refund', 'Return'])
+            ->where(function ($w) {
+                // Exclude full refund/void cancellations
+                $w->whereIn('transactions.status', ['Completed', 'Paid', 'Deposit'])
+                  ->orWhere(function ($q) {
+                      $q->whereIn('transactions.status', ['Refund', 'Return'])
+                        ->where('transactions.amount', '>', 0);
+                  });
+            });
 
-        if (!empty($filters['date_filter'])) {
+        if (!empty($filters['date_filter']) && $filters['date_filter'] !== 'all') {
+            $now = Carbon::now(config('app.timezone', 'Asia/Manila'));
             if ($filters['date_filter'] === 'today') {
-                $salesSubquery->where('transactions.date', '>=', Carbon::now()->startOfDay());
+                $salesSubquery->where('transactions.date', '>=', $now->copy()->startOfDay());
             } elseif ($filters['date_filter'] === 'this_week') {
-                $salesSubquery->where('transactions.date', '>=', Carbon::now()->startOfWeek());
+                $salesSubquery->where('transactions.date', '>=', $now->copy()->startOfWeek(0));
             } elseif ($filters['date_filter'] === 'this_month') {
-                $salesSubquery->where('transactions.date', '>=', Carbon::now()->startOfMonth());
+                $salesSubquery->where('transactions.date', '>=', $now->copy()->startOfMonth());
             } elseif ($filters['date_filter'] === 'this_year') {
-                $salesSubquery->where('transactions.date', '>=', Carbon::now()->startOfYear());
+                $salesSubquery->where('transactions.date', '>=', $now->copy()->startOfYear());
             }
         }
 

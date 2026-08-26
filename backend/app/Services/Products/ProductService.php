@@ -22,18 +22,21 @@ class ProductService
      * Calculate product status based on stock level.
      * Never overrides a manually 'Disabled' status.
      */
-    public function calculateStatus(int $stock, int $alertLimit, ?string $currentStatus = null): string
+    public function calculateStatus(?int $stock = 0, ?int $alertLimit = 5, ?string $currentStatus = null): string
     {
+        $stockVal = (int) ($stock ?? 0);
+        $limitVal = (int) ($alertLimit ?? 5);
+
         // Preserve Disabled status if explicitly set
         if ($currentStatus === ProductStatus::DISABLED->value || $currentStatus === 'Disabled') {
             return 'Disabled';
         }
 
-        if ($stock === 0) {
+        if ($stockVal === 0) {
             return ProductStatus::NO_STOCK->value;
         }
 
-        if ($stock <= $alertLimit) {
+        if ($stockVal <= $limitVal) {
             return ProductStatus::LOW_STOCK->value;
         }
 

@@ -19,7 +19,10 @@ export default function Inventory() {
         categoriesCount,
         outOfStockCount,
         lowStockCount,
-        dateFilter, setDateFilter
+        dateFilter, setDateFilter,
+        page, setPage,
+        perPage, setPerPage,
+        pagination
     } = useInventory();
 
     return (
@@ -92,6 +95,10 @@ export default function Inventory() {
                         loading={loading}
                         handleViewProduct={handleViewProduct}
                         statusFilter={statusFilter}
+                        pagination={pagination}
+                        onPageChange={setPage}
+                        perPage={perPage}
+                        onPerPageChange={setPerPage}
                     />
 
                 </div>

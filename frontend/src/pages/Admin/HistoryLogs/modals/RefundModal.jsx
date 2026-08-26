@@ -227,7 +227,7 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
             <div ref={sheetRef} className="modal-card modal-card-lg" style={{ maxWidth: '1000px', width: '95%', backgroundColor: 'var(--bg-card)', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3), 0 10px 10px -5px rgba(0,0,0,0.15)', border: '1px solid var(--border)' }}>
                 <form onSubmit={handleSubmit}>
                     <div {...dragHandleProps} className="modal-header" style={{ backgroundColor: 'var(--danger-light)', borderBottom: '1px solid rgba(239,68,68,0.2)', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', touchAction: 'none' }}>
-                        <h3 className="modal-title" style={{ color: 'var(--danger)', fontSize: '16px', fontWeight: '700', margin: 0 }}>Process Refund / Return</h3>
+                        <h3 className="modal-title" style={{ color: 'var(--danger)', fontSize: '16px', fontWeight: '700', margin: 0 }}>Process {actionType}</h3>
                         <button type="button" onClick={onClose} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
                             <svg viewBox="0 0 24 24" style={{ width: '20px', height: '20px', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' }}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
@@ -523,10 +523,10 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                             {isSubmitting ? (
                                 <>
                                     <span style={{ width: '14px', height: '14px', border: '2px solid #FFF', borderRightColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.75s linear infinite' }}></span>
-                                    Processing Refund...
+                                    {`Processing ${actionType}...`}
                                 </>
                             ) : (
-                                'Process Refund'
+                                `Process ${actionType}`
                             )}
                         </button>
                     </div>

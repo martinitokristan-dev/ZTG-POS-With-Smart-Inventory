@@ -93,7 +93,8 @@ export default function useHistoryLogs() {
 
     const handleSubmitRefund = async (payload) => {
         try {
-            await api.post(`/transactions/${selectedTxForRefund.id}/${payload.type.toLowerCase()}`, payload);
+            const targetTxId = payload.transaction_id || selectedTxForRefund?.id;
+            await api.post(`/transactions/${targetTxId}/${payload.type.toLowerCase()}`, payload);
             resetDashboardCache();
             resetReportsCache();
             handleCloseRefund();
