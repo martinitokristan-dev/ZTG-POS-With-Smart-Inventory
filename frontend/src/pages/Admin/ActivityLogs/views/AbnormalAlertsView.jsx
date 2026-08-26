@@ -10,9 +10,9 @@ export default function AbnormalAlertsView({ logs, loading, onViewDetails, onRef
     return (
         <div>
             {/* Header Banner */}
-            <div style={{ padding: '16px 20px', borderRadius: '12px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ padding: '16px 20px', borderRadius: '12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(239, 68, 68, 0.18)', color: '#EF4444', border: '1px solid rgba(239, 68, 68, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                             <line x1="12" y1="9" x2="12" y2="13"></line>
@@ -20,10 +20,10 @@ export default function AbnormalAlertsView({ logs, loading, onViewDetails, onRef
                         </svg>
                     </div>
                     <div>
-                        <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#991B1B', margin: 0 }}>
+                        <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
                             Security Incidents & Abnormal Activities
                         </h3>
-                        <p style={{ fontSize: '12px', color: '#B91C1C', margin: '2px 0 0' }}>
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0' }}>
                             Automated tracking for rate limit breaches, 1-minute login lockouts, and forced session terminations
                         </p>
                     </div>
@@ -44,7 +44,7 @@ export default function AbnormalAlertsView({ logs, loading, onViewDetails, onRef
                 <LoadingSpinner text="Scanning security logs..." minHeight="300px" />
             ) : abnormalLogs.length === 0 ? (
                 <div style={{ padding: '60px 20px', textAlign: 'center', backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#ECFDF5', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10B981', border: '1px solid rgba(16, 185, 129, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
@@ -62,18 +62,18 @@ export default function AbnormalAlertsView({ logs, loading, onViewDetails, onRef
                                 style={{
                                     backgroundColor: 'var(--bg-card)',
                                     borderRadius: '12px',
-                                    border: isCritical ? '1.5px solid #FCA5A5' : '1px solid var(--border)',
+                                    border: isCritical ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid rgba(245, 158, 11, 0.3)',
                                     padding: '16px 20px',
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
                                     flexWrap: 'wrap',
                                     gap: '14px',
-                                    boxShadow: isCritical ? '0 2px 8px rgba(239, 68, 68, 0.08)' : 'none',
+                                    boxShadow: isCritical ? '0 2px 8px rgba(239, 68, 68, 0.12)' : 'none',
                                 }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', flex: 1, minWidth: '280px' }}>
-                                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: isCritical ? '#FEE2E2' : '#FEF3C7', color: isCritical ? '#DC2626' : '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
+                                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: isCritical ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)', color: isCritical ? '#EF4444' : '#F59E0B', border: isCritical ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid rgba(245, 158, 11, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                             <circle cx="12" cy="12" r="10"></circle>
                                             <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -85,7 +85,7 @@ export default function AbnormalAlertsView({ logs, loading, onViewDetails, onRef
                                             <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
                                                 {log.action.replace(/_/g, ' ').toUpperCase()}
                                             </span>
-                                            <span style={{ fontSize: '10.5px', fontWeight: '700', padding: '2px 8px', borderRadius: '10px', backgroundColor: isCritical ? '#FEE2E2' : '#FEF3C7', color: isCritical ? '#DC2626' : '#D97706' }}>
+                                            <span style={{ fontSize: '10.5px', fontWeight: '700', padding: '2px 8px', borderRadius: '10px', backgroundColor: isCritical ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)', color: isCritical ? '#EF4444' : '#F59E0B', border: isCritical ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid rgba(245, 158, 11, 0.25)' }}>
                                                 {log.severity.toUpperCase()}
                                             </span>
                                             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -96,7 +96,7 @@ export default function AbnormalAlertsView({ logs, loading, onViewDetails, onRef
                                             {log.description}
                                         </div>
                                         <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                                            Origin: <strong>{log.ip_address === '::1' || log.ip_address === '127.0.0.1' ? '127.0.0.1 (Localhost)' : (log.ip_address || '—')}</strong> ({log.device || 'Unknown device'})
+                                            Origin: <strong style={{ color: 'var(--text-primary)' }}>{log.ip_address === '::1' || log.ip_address === '127.0.0.1' ? '127.0.0.1 (Localhost)' : (log.ip_address || '—')}</strong> ({log.device || 'Unknown device'})
                                         </div>
                                     </div>
                                 </div>

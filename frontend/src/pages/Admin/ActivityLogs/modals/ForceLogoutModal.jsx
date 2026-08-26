@@ -58,14 +58,14 @@ export default function ForceLogoutModal({ isOpen, onClose, session, onConfirm, 
                     </div>
 
                     {/* Warning Box */}
-                    <div style={{ padding: '12px 14px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '10px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
+                    <div style={{ padding: '12px 14px', backgroundColor: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '10px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
                             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                             <line x1="12" y1="9" x2="12" y2="13"></line>
                             <line x1="12" y1="17" x2="12.01" y2="17"></line>
                         </svg>
-                        <div style={{ fontSize: '12px', color: '#991B1B', lineHeight: '1.45' }}>
-                            <strong>Immediate Revocation:</strong> This will instantly terminate their access token. Any unsaved cart on their screen will be preserved in recovery, but they will be kicked back to the login page immediately.
+                        <div style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: '1.45' }}>
+                            <strong style={{ color: '#F87171' }}>Immediate Revocation:</strong> This will instantly terminate their access token. Any unsaved cart on their screen will be preserved in recovery, but they will be kicked back to the login page immediately.
                         </div>
                     </div>
                 </div>

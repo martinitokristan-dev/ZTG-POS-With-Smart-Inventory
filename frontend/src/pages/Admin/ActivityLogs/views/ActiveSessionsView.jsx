@@ -47,9 +47,9 @@ export default function ActiveSessionsView({ sessions, loading, onForceLogout, o
             ) : (
                 <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
                     <div style={{ overflowX: 'auto' }}>
-                        <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', margin: 0 }}>
+                        <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', margin: 0 }}>
                             <thead>
-                                <tr style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                                <tr style={{ backgroundColor: 'var(--table-header-bg)', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
                                     <th style={{ padding: '12px 16px', fontWeight: '700', color: 'var(--text-secondary)', fontSize: '11px', textTransform: 'uppercase' }}>User / Account</th>
                                     <th style={{ padding: '12px 16px', fontWeight: '700', color: 'var(--text-secondary)', fontSize: '11px', textTransform: 'uppercase' }}>Role</th>
                                     <th style={{ padding: '12px 16px', fontWeight: '700', color: 'var(--text-secondary)', fontSize: '11px', textTransform: 'uppercase' }}>Session Started</th>
@@ -64,7 +64,7 @@ export default function ActiveSessionsView({ sessions, loading, onForceLogout, o
                                         {/* User Info */}
                                         <td style={{ padding: '12px 16px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: sess.role === 'Admin' ? '#EEF2FF' : '#F0FDF4', color: sess.role === 'Admin' ? '#4F46E5' : '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', overflow: 'hidden', flexShrink: 0 }}>
+                                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: sess.role === 'Admin' ? 'rgba(79, 70, 229, 0.2)' : 'rgba(22, 163, 74, 0.2)', color: sess.role === 'Admin' ? '#A5B4FC' : '#86EFAC', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', overflow: 'hidden', flexShrink: 0 }}>
                                                     {sess.profile_photo ? (
                                                         <img src={sess.profile_photo} alt={sess.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     ) : (
@@ -80,7 +80,7 @@ export default function ActiveSessionsView({ sessions, loading, onForceLogout, o
 
                                         {/* Role Badge */}
                                         <td style={{ padding: '12px 16px' }}>
-                                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '12px', backgroundColor: sess.role === 'Admin' ? 'rgba(79, 70, 229, 0.1)' : 'rgba(22, 163, 74, 0.1)', color: sess.role === 'Admin' ? '#4F46E5' : '#16A34A' }}>
+                                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '12px', backgroundColor: sess.role === 'Admin' ? 'rgba(79, 70, 229, 0.15)' : 'rgba(22, 163, 74, 0.15)', color: sess.role === 'Admin' ? '#818CF8' : '#4ADE80' }}>
                                                 {sess.role}
                                             </span>
                                         </td>
@@ -100,12 +100,12 @@ export default function ActiveSessionsView({ sessions, loading, onForceLogout, o
                                         {/* Status */}
                                         <td style={{ padding: '12px 16px' }}>
                                             {sess.is_current_session ? (
-                                                <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '12px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#2563EB' }}></span>
+                                                <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '12px', backgroundColor: 'rgba(37, 99, 235, 0.15)', color: '#60A5FA', border: '1px solid rgba(37, 99, 235, 0.25)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#60A5FA' }}></span>
                                                     Your Current Device
                                                 </span>
                                             ) : (
-                                                <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '12px', backgroundColor: '#ECFDF5', color: '#059669', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#34D399', border: '1px solid rgba(16, 185, 129, 0.25)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                                     <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981' }}></span>
                                                     Active Session
                                                 </span>
@@ -121,7 +121,7 @@ export default function ActiveSessionsView({ sessions, loading, onForceLogout, o
                                                     type="button"
                                                     onClick={() => onForceLogout(sess)}
                                                     className="btn btn-sm"
-                                                    style={{ fontSize: '11px', fontWeight: '700', padding: '4px 10px', backgroundColor: '#FEF2F2', borderColor: '#FCA5A5', color: '#DC2626', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                                                    style={{ fontSize: '11px', fontWeight: '700', padding: '4px 10px', backgroundColor: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#EF4444', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
                                                 >
                                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                                         <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>

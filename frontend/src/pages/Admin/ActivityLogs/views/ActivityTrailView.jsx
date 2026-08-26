@@ -2,6 +2,7 @@ import React from 'react';
 import LoadingSpinner from '../../../../shared/components/LoadingSpinner';
 import IOSSelect from '../../../../shared/components/IOSSelect';
 import IOSDatePicker from '../../../../shared/components/IOSDatePicker';
+import TablePagination from '../../../../shared/components/TablePagination';
 
 export default function ActivityTrailView({
     logs,
@@ -143,9 +144,9 @@ export default function ActivityTrailView({
             ) : (
                 <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
                     <div style={{ overflowX: 'auto' }}>
-                        <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', margin: 0 }}>
+                        <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', margin: 0 }}>
                             <thead>
-                                <tr style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                                <tr style={{ backgroundColor: 'var(--table-header-bg)', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
                                     <th style={{ padding: '12px 16px', fontWeight: '700', color: 'var(--text-secondary)', fontSize: '11px', textTransform: 'uppercase' }}>Timestamp</th>
                                     <th style={{ padding: '12px 16px', fontWeight: '700', color: 'var(--text-secondary)', fontSize: '11px', textTransform: 'uppercase' }}>User</th>
                                     <th style={{ padding: '12px 16px', fontWeight: '700', color: 'var(--text-secondary)', fontSize: '11px', textTransform: 'uppercase' }}>Action / Module</th>
@@ -162,10 +163,10 @@ export default function ActivityTrailView({
                                     const isAbnormal = log.status === 'Abnormal' || log.severity === 'critical';
 
                                     return (
-                                        <tr key={log.id} style={{ borderBottom: '1px solid var(--border)', backgroundColor: isAbnormal ? 'rgba(239, 68, 68, 0.03)' : 'transparent' }}>
+                                        <tr key={log.id} style={{ borderBottom: '1px solid var(--border)', backgroundColor: isAbnormal ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
                                             {/* Timestamp */}
                                             <td style={{ padding: '12px 16px', whiteSpace: 'nowrap', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                                <div>{new Date(log.created_at).toLocaleDateString()}</div>
+                                                <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{new Date(log.created_at).toLocaleDateString()}</div>
                                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
                                             </td>
 
@@ -198,8 +199,31 @@ export default function ActivityTrailView({
 
                                             {/* Status Badge */}
                                             <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
-                                                <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '12px', backgroundColor: log.status === 'Success' ? '#ECFDF5' : isAbnormal ? '#FEF2F2' : '#FFFBEB', color: log.status === 'Success' ? '#059669' : isAbnormal ? '#DC2626' : '#D97706', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                                    {isAbnormal && <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#DC2626' }}></span>}
+                                                <span style={{ 
+                                                    fontSize: '11px', 
+                                                    fontWeight: '700', 
+                                                    padding: '3px 8px', 
+                                                    borderRadius: '12px', 
+                                                    backgroundColor: log.status === 'Success' 
+                                                        ? 'rgba(16, 185, 129, 0.15)' 
+                                                        : isAbnormal 
+                                                            ? 'rgba(239, 68, 68, 0.15)' 
+                                                            : 'rgba(245, 158, 11, 0.15)', 
+                                                    color: log.status === 'Success' 
+                                                        ? '#34D399' 
+                                                        : isAbnormal 
+                                                            ? '#F87171' 
+                                                            : '#FBBF24', 
+                                                    border: log.status === 'Success'
+                                                        ? '1px solid rgba(16, 185, 129, 0.25)'
+                                                        : isAbnormal
+                                                            ? '1px solid rgba(239, 68, 68, 0.25)'
+                                                            : '1px solid rgba(245, 158, 11, 0.25)',
+                                                    display: 'inline-flex', 
+                                                    alignItems: 'center', 
+                                                    gap: '4px' 
+                                                }}>
+                                                    {isAbnormal && <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#EF4444' }}></span>}
                                                     {log.status}
                                                 </span>
                                             </td>
@@ -222,32 +246,16 @@ export default function ActivityTrailView({
                         </table>
                     </div>
 
-                    {/* Pagination Bar */}
-                    {pagination.last_page > 1 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
-                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                                Page {pagination.current_page} of {pagination.last_page} ({pagination.total} total events)
-                            </span>
-                            <div style={{ display: 'flex', gap: '6px' }}>
-                                <button
-                                    type="button"
-                                    className="btn btn-secondary btn-sm"
-                                    disabled={pagination.current_page <= 1}
-                                    onClick={() => onPageChange(pagination.current_page - 1)}
-                                    style={{ fontSize: '11.5px', padding: '4px 10px' }}
-                                >
-                                    Previous
-                                </button>
-                                <button
-                                    type="button"
-                                    className="btn btn-secondary btn-sm"
-                                    disabled={pagination.current_page >= pagination.last_page}
-                                    onClick={() => onPageChange(pagination.current_page + 1)}
-                                    style={{ fontSize: '11.5px', padding: '4px 10px' }}
-                                >
-                                    Next
-                                </button>
-                            </div>
+                    {/* Standardized Roller Pagination */}
+                    {pagination && pagination.total > 0 && (
+                        <div style={{ padding: '0 16px 16px' }}>
+                            <TablePagination
+                                currentPage={pagination.current_page}
+                                totalItems={pagination.total}
+                                perPage={pagination.per_page || 15}
+                                onPageChange={onPageChange}
+                                label="audit logs"
+                            />
                         </div>
                     )}
                 </div>
