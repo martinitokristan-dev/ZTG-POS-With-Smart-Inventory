@@ -120,6 +120,9 @@ export default function ReservationsTable({
                                 return displayList.map(r => {
                                     const rawStatus = (r.status?.value || r.status || '').toLowerCase();
                                     const isPending = rawStatus === 'pending';
+                                    const isCancelled = rawStatus === 'cancelled';
+                                    const isCompleted = rawStatus === 'completed';
+                                    const isDepositOnly = activeTab === 'deposit' && isPending;
                                     const itemsList = Array.isArray(r.items) && r.items.length > 0 ? r.items : [{
                                         product: { part_no: '—', name: r.product_name || '—' },
                                         part_no: '—',
@@ -321,6 +324,22 @@ export default function ReservationsTable({
                                                             <circle cx="12" cy="12" r="3"></circle>
                                                         </svg>
                                                     </button>
+                                                    {(activeTab === 'completed' || !isPending) && (
+                                                        <button 
+                                                            type="button"
+                                                            className="action-trigger-btn" 
+                                                            aria-label="Reprint Collection Receipt" 
+                                                            data-tooltip="Reprint C.R." 
+                                                            onClick={() => onReprintBalanceCR ? onReprintBalanceCR(r) : (onReprintCR && onReprintCR(r))}
+                                                            style={{ color: '#059669' }}
+                                                        >
+                                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                                                <rect x="6" y="14" width="12" height="8"></rect>
+                                                            </svg>
+                                                        </button>
+                                                    )}
                                                     {isDepositOnly && (
                                                         <button
                                                             type="button"
