@@ -78,6 +78,8 @@ function Login() {
                     }
                     if (newName) {
                         localStorage.setItem('cached_business_name', newName);
+                    } else {
+                        localStorage.removeItem('cached_business_name');
                     }
                 }
             } catch (e) {
@@ -137,22 +139,31 @@ function Login() {
             <div className="login-bg-glow-2"></div>
 
             <div className="login-card">
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '-15px', marginBottom: '0px' }}>
-                    <img 
-                        src={fixImageUrl(logoUrl) || "/ztg-logo.png"} 
-                        alt={businessName || "ZTG Heavy Equipment Parts"} 
-                        onError={(e) => {
-                            if (!e.currentTarget.dataset.failed) {
-                                e.currentTarget.dataset.failed = "true";
-                                e.currentTarget.src = "/ztg-logo.png";
-                            }
-                        }}
-                        style={{ 
-                            height: '175px', 
-                            maxWidth: '100%',
-                            objectFit: 'contain'
-                        }} 
-                    />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '-10px', marginBottom: '12px' }}>
+                    {logoUrl ? (
+                        <img 
+                            src={fixImageUrl(logoUrl)} 
+                            alt={businessName || "Store Logo"} 
+                            onError={(e) => { e.currentTarget.style.display = "none"; }}
+                            style={{ 
+                                height: '140px', 
+                                maxWidth: '100%',
+                                objectFit: 'contain'
+                            }} 
+                        />
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px 0 8px 0' }}>
+                            <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)' }}>
+                                <svg style={{ width: '28px', height: '28px', fill: 'none', stroke: '#FFFFFF', strokeWidth: 2 }} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                    <polyline strokeLinecap="round" strokeLinejoin="round" points="9 22 9 12 15 12 15 22"></polyline>
+                                </svg>
+                            </div>
+                            <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                                {businessName || "POS & Inventory System"}
+                            </h2>
+                        </div>
+                    )}
                 </div>
                 <p className="login-subtitle" style={{ marginTop: '4px', marginBottom: '24px' }}>
                     Sign in to access your account

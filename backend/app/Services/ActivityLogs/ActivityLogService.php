@@ -47,6 +47,38 @@ class ActivityLogService
     }
 
     /**
+     * Accurately resolve client IP address across cloud reverse proxies (Cloudflare, Render, Nginx).
+     */
+    public function resolveIp(?Request $request): ?string
+    {
+        $req = $request ?: request();
+        if (!$req) {
+            return null;
+        }
+
+        // 1. Cloudflare connecting IP
+        if ($cfIp = $req->header('CF-Connecting-IP')) {
+            return trim(explode(',', $cfIp)[0]);
+        }
+
+        // 2. Standard X-Forwarded-For (first client IP in comma list)
+        if ($forwarded = $req->header('X-Forwarded-For')) {
+            $clientIp = trim(explode(',', $forwarded)[0]);
+            if (!empty($clientIp)) {
+                return $clientIp;
+            }
+        }
+
+        // 3. Real IP header
+        if ($realIp = $req->header('X-Real-IP')) {
+            return trim(explode(',', $realIp)[0]);
+        }
+
+        // 4. Fallback to Laravel's request ip()
+        return $req->ip();
+    }
+
+    /**
      * Record an activity log entry.
      */
     public function log(
@@ -61,7 +93,7 @@ class ActivityLogService
     ): ActivityLog {
         $req = $request ?: request();
 
-        $ipAddress = $req ? $req->ip() : null;
+        $ipAddress = $this->resolveIp($req);
         $userAgent = $req ? $req->userAgent() : null;
         $device    = $this->parseDevice($userAgent);
 

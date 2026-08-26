@@ -168,6 +168,8 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
                     }
                     if (newName) {
                         localStorage.setItem('cached_business_name', newName);
+                    } else {
+                        localStorage.removeItem('cached_business_name');
                     }
                 }
             } catch (e) {
@@ -380,7 +382,7 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
                             width: 44,
                             height: 44,
                             borderRadius: '50%',
-                            backgroundColor: '#FFFFFF',
+                            backgroundColor: 'var(--bg-card, #FFFFFF)',
                             border: '1px solid var(--border)',
                             display: 'flex',
                             alignItems: 'center',
@@ -390,15 +392,28 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
                             boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                             cursor: effectiveCollapsed ? 'pointer' : 'default'
                         }}
-                        onMouseEnter={(e) => showTooltip(e, businessName || "ZTG Heavy Parts")}
+                        onMouseEnter={(e) => showTooltip(e, businessName || "POS & Inventory")}
                         onMouseLeave={hideTooltip}
                     >
-                        <img 
-                            src={fixImageUrl(sidebarLogoUrl) || fixImageUrl(logoUrl) || "/web-browser-logo.png"} 
-                            alt="Logo" 
-                            style={{ width: '100%', height: '100%', objectFit: (sidebarLogoUrl || logoUrl) ? 'cover' : 'contain', transform: (sidebarLogoUrl || logoUrl) ? 'none' : 'scale(1.45)' }} 
-                            onError={(e) => { e.currentTarget.src = "/web-browser-logo.png"; }}
-                        />
+                        {(sidebarLogoUrl || logoUrl) ? (
+                            <img 
+                                src={fixImageUrl(sidebarLogoUrl) || fixImageUrl(logoUrl)} 
+                                alt={businessName || "Store Logo"} 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                        ) : (
+                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', color: '#FFFFFF' }}>
+                                {businessName ? (
+                                    <span style={{ fontSize: 16, fontWeight: 800 }}>{businessName.charAt(0).toUpperCase()}</span>
+                                ) : (
+                                    <svg style={{ width: 22, height: 22, fill: 'none', stroke: '#FFFFFF', strokeWidth: 2 }} viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                        <polyline strokeLinecap="round" strokeLinejoin="round" points="9 22 9 12 15 12 15 22"></polyline>
+                                    </svg>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div style={{
@@ -410,14 +425,25 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
                         maxWidth: effectiveCollapsed ? 0 : 200,
                         transition: 'opacity 0.2s ease, max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
                     }}>
-                        <span style={{ color: 'var(--text-primary, #0F172A)', fontSize: isMobile ? 16 : 17, fontWeight: 700, letterSpacing: '0.3px', lineHeight: '1.2' }}>
-                            {businessName ? businessName.split(' ')[0] : 'ZTG'}
-                        </span>
-                        <span style={{ color: 'var(--text-secondary, #64748B)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                            {businessName && !businessName.toLowerCase().includes('heavy parts')
-                                ? businessName.split(' ').slice(1).join(' ')
-                                : 'Heavy Equipment Parts'}
-                        </span>
+                        {businessName ? (
+                            <>
+                                <span style={{ color: 'var(--text-primary, #0F172A)', fontSize: isMobile ? 16 : 17, fontWeight: 700, letterSpacing: '0.3px', lineHeight: '1.2' }}>
+                                    {businessName.split(' ')[0]}
+                                </span>
+                                <span style={{ color: 'var(--text-secondary, #64748B)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    {businessName.split(' ').slice(1).join(' ') || 'STORE'}
+                                </span>
+                            </>
+                        ) : (
+                            <>
+                                <span style={{ color: 'var(--text-primary, #0F172A)', fontSize: isMobile ? 16 : 17, fontWeight: 700, letterSpacing: '0.3px', lineHeight: '1.2' }}>
+                                    POS System
+                                </span>
+                                <span style={{ color: 'var(--text-secondary, #64748B)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Smart Inventory
+                                </span>
+                            </>
+                        )}
                     </div>
 
                     {/* Mobile Close Button */}

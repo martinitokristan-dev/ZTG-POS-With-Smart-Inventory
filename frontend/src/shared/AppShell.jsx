@@ -53,8 +53,8 @@ export default function AppShell() {
     }, []);
 
     const rawLogo = localStorage.getItem('cached_sidebar_logo') || localStorage.getItem('cached_business_logo');
-    const cachedLogo = fixImageUrl(rawLogo) || "/ztg-icon.png";
-    const cachedName = localStorage.getItem('cached_business_name') || "ZTG Heavy Parts";
+    const cachedLogo = fixImageUrl(rawLogo) || null;
+    const cachedName = localStorage.getItem('cached_business_name') || "";
     const currentUser = (() => {
         try {
             return JSON.parse(sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
@@ -108,14 +108,20 @@ export default function AppShell() {
                             </svg>
                         </button>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                            <img 
-                                src={cachedLogo} 
-                                alt="Store Logo" 
-                                style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', backgroundColor: '#FFF', flexShrink: 0 }} 
-                                onError={(e) => { e.currentTarget.src = "/ztg-icon.png"; }}
-                            />
+                            {cachedLogo ? (
+                                <img 
+                                    src={cachedLogo} 
+                                    alt="Store Logo" 
+                                    style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', backgroundColor: '#FFF', flexShrink: 0 }} 
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                            ) : (
+                                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', flexShrink: 0, fontSize: 13, fontWeight: 800 }}>
+                                    {cachedName ? cachedName.charAt(0).toUpperCase() : 'P'}
+                                </div>
+                            )}
                             <span style={{ color: '#FFFFFF', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {cachedName.length > 18 ? 'ZTG Heavy Parts' : cachedName}
+                                {cachedName || 'POS System'}
                             </span>
                         </div>
                     </div>

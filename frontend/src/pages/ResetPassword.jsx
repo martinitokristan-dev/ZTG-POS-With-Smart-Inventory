@@ -120,22 +120,31 @@ export default function ResetPassword() {
 
             <div className="login-card" style={{ maxWidth: '440px' }}>
                 {/* Logo Header */}
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '-15px', marginBottom: '4px' }}>
-                    <img 
-                        src={fixImageUrl(logoUrl) || "/ztg-logo.png"} 
-                        alt={businessName || "ZTG Heavy Equipment Parts"} 
-                        onError={(e) => {
-                            if (!e.currentTarget.dataset.failed) {
-                                e.currentTarget.dataset.failed = "true";
-                                e.currentTarget.src = "/ztg-logo.png";
-                            }
-                        }}
-                        style={{ 
-                            height: '145px', 
-                            maxWidth: '100%',
-                            objectFit: 'contain'
-                        }} 
-                    />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '-10px', marginBottom: '12px' }}>
+                    {logoUrl ? (
+                        <img 
+                            src={fixImageUrl(logoUrl)} 
+                            alt={businessName || "Store Logo"} 
+                            onError={(e) => { e.currentTarget.style.display = "none"; }}
+                            style={{ 
+                                height: '130px', 
+                                maxWidth: '100%',
+                                objectFit: 'contain'
+                            }} 
+                        />
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '12px 0 6px 0' }}>
+                            <div style={{ width: '50px', height: '50px', borderRadius: '14px', background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', boxShadow: '0 6px 16px rgba(59, 130, 246, 0.25)' }}>
+                                <svg style={{ width: '24px', height: '24px', fill: 'none', stroke: '#FFFFFF', strokeWidth: 2 }} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                    <polyline strokeLinecap="round" strokeLinejoin="round" points="9 22 9 12 15 12 15 22"></polyline>
+                                </svg>
+                            </div>
+                            <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                                {businessName || "POS & Inventory System"}
+                            </h2>
+                        </div>
+                    )}
                 </div>
 
                 {!success ? (

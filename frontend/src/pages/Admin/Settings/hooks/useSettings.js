@@ -630,6 +630,18 @@ export default function useSettings() {
             localStorage.setItem('cached_business_info', JSON.stringify(payload));
             if (payload.business_name) {
                 localStorage.setItem('cached_business_name', payload.business_name);
+            } else {
+                localStorage.removeItem('cached_business_name');
+            }
+            if (payload.business_logo) {
+                localStorage.setItem('cached_business_logo', payload.business_logo);
+            } else {
+                localStorage.removeItem('cached_business_logo');
+            }
+            if (payload.sidebar_logo) {
+                localStorage.setItem('cached_sidebar_logo', payload.sidebar_logo);
+            } else {
+                localStorage.removeItem('cached_sidebar_logo');
             }
             window.dispatchEvent(new Event('settings_updated'));
 
