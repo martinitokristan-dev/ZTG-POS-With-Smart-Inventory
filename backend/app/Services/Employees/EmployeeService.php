@@ -136,6 +136,17 @@ class EmployeeService
             ]);
         }
 
+        // Check if cashier has sales/approval records attached to preserve financial auditing
+        $hasTransactions = \App\Models\Transaction::where('cashier_id', $employee->id)
+            ->orWhere('approver_id', $employee->id)
+            ->exists();
+
+        if ($hasTransactions) {
+            throw ValidationException::withMessages([
+                'employee' => ['Cannot delete this staff member because they have existing sales transaction records in the system. Please set their status to Inactive instead to disable their account access while preserving financial history.'],
+            ]);
+        }
+
         // Revoke all active tokens prior to deletion
         $employee->tokens()->delete();
 

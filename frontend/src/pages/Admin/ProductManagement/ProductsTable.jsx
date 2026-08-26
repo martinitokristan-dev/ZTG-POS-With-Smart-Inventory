@@ -336,8 +336,7 @@ export default function ProductsTable({
                             options={[
                                 { value: 'Default', label: 'Sort: Default' },
                                 { value: 'Name: A-Z', label: 'Name (A-Z)' },
-                                { value: 'Sales', label: 'Top Sales' },
-                                { value: 'Damaged', label: 'Most Damaged' }
+                                { value: 'Name: Z-A', label: 'Name (Z-A)' }
                             ]}
                         />
                     </div>

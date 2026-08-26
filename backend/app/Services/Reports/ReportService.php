@@ -607,15 +607,27 @@ class ReportService
             });
 
         if (!empty($filters['date_filter']) && $filters['date_filter'] !== 'all') {
-            $now = Carbon::now(config('app.timezone', 'Asia/Manila'));
+            $now = Carbon::now('Asia/Manila');
             if ($filters['date_filter'] === 'today') {
-                $salesSubquery->where('transactions.date', '>=', $now->copy()->startOfDay());
+                $salesSubquery->whereBetween('transactions.date', [
+                    $now->copy()->startOfDay()->format('Y-m-d H:i:s'),
+                    $now->copy()->endOfDay()->format('Y-m-d H:i:s')
+                ]);
             } elseif ($filters['date_filter'] === 'this_week') {
-                $salesSubquery->where('transactions.date', '>=', $now->copy()->startOfWeek(0));
+                $salesSubquery->whereBetween('transactions.date', [
+                    $now->copy()->startOfWeek(0)->startOfDay()->format('Y-m-d H:i:s'),
+                    $now->copy()->endOfWeek(6)->endOfDay()->format('Y-m-d H:i:s')
+                ]);
             } elseif ($filters['date_filter'] === 'this_month') {
-                $salesSubquery->where('transactions.date', '>=', $now->copy()->startOfMonth());
+                $salesSubquery->whereBetween('transactions.date', [
+                    $now->copy()->startOfMonth()->startOfDay()->format('Y-m-d H:i:s'),
+                    $now->copy()->endOfMonth()->endOfDay()->format('Y-m-d H:i:s')
+                ]);
             } elseif ($filters['date_filter'] === 'this_year') {
-                $salesSubquery->where('transactions.date', '>=', $now->copy()->startOfYear());
+                $salesSubquery->whereBetween('transactions.date', [
+                    $now->copy()->startOfYear()->startOfDay()->format('Y-m-d H:i:s'),
+                    $now->copy()->endOfYear()->endOfDay()->format('Y-m-d H:i:s')
+                ]);
             }
         }
 

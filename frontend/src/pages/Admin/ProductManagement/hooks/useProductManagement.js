@@ -55,7 +55,7 @@ export default function useProductManagement() {
     const [search, setSearch] = useState('');
     const [categoryId, setCategoryId] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
-    const [sortOption, setSortOption] = useState('name_asc');
+    const [sortOption, setSortOption] = useState('Default');
 
     // ── Pagination state ─────────────────────────────────────────
     const [page, setPage] = useState(1);

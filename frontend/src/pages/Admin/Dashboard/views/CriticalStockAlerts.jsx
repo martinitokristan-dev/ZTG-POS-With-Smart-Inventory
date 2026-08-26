@@ -41,11 +41,11 @@ export default function CriticalStockAlerts() {
 
     return (
         <div style={{
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E2E8F0',
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border)',
             borderRadius: 12,
             padding: 20,
-            boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)',
+            boxShadow: 'var(--shadow-sm)',
             display: 'flex',
             flexDirection: 'column',
             height: 320,
@@ -57,23 +57,23 @@ export default function CriticalStockAlerts() {
                     width: 5px;
                 }
                 .critical-alerts-scroll::-webkit-scrollbar-track {
-                    background: #F1F5F9;
+                    background: var(--bg-secondary);
                     border-radius: 4px;
                 }
                 .critical-alerts-scroll::-webkit-scrollbar-thumb {
-                    background: #CBD5E1;
+                    background: var(--border);
                     border-radius: 4px;
                 }
                 .critical-alerts-scroll::-webkit-scrollbar-thumb:hover {
-                    background: #94A3B8;
+                    background: var(--text-muted);
                 }
                 `}
             </style>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexShrink: 0 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', margin: 0 }}>Critical Stock Alerts</h3>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Critical Stock Alerts</h3>
                 {criticalItems.length > 0 && (
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#EF4444', backgroundColor: '#FEF2F2', padding: '2px 8px', borderRadius: 9999, border: '1px solid #FECACA' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#F87171', backgroundColor: 'rgba(239, 68, 68, 0.15)', padding: '2px 8px', borderRadius: 9999, border: '1px solid rgba(239, 68, 68, 0.3)' }}>
                         {criticalItems.length} {criticalItems.length === 1 ? 'item' : 'items'}
                     </span>
                 )}
@@ -81,7 +81,7 @@ export default function CriticalStockAlerts() {
 
             <div className="critical-alerts-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 0, overflowY: 'auto', flex: 1, minHeight: 0, paddingRight: 6 }}>
                 {criticalItems.length === 0 ? (
-                    <div style={{ padding: '40px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13, fontWeight: 500 }}>
+                    <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, fontWeight: 500 }}>
                         ✓ All stock levels healthy
                     </div>
                 ) : (
@@ -89,19 +89,19 @@ export default function CriticalStockAlerts() {
                         <div key={item.id} style={{
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                             padding: '10px 0',
-                            borderBottom: idx < arr.length - 1 ? '1px solid #F1F5F9' : 'none',
+                            borderBottom: idx < arr.length - 1 ? '1px solid var(--border)' : 'none',
                         }}>
                             <div style={{ minWidth: 0, flex: 1, paddingRight: 10 }}>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.name}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.name}>
                                     {item.name}
                                 </div>
-                                <div style={{ fontSize: 11, color: '#94A3B8', fontWeight: 500, marginTop: 1 }}>{item.sku}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, marginTop: 1 }}>{item.sku}</div>
                             </div>
                             <span style={{
                                 fontSize: 10, fontWeight: 700,
-                                color: item.isOut ? '#EF4444' : '#D97706',
-                                backgroundColor: item.isOut ? '#FEF2F2' : '#FFFBEB',
-                                border: item.isOut ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(217,119,6,0.2)',
+                                color: item.isOut ? '#F87171' : '#FBBF24',
+                                backgroundColor: item.isOut ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                                border: item.isOut ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid rgba(245, 158, 11, 0.25)',
                                 borderRadius: 4, padding: '3px 8px', letterSpacing: '0.3px',
                                 flexShrink: 0
                             }}>
@@ -113,16 +113,15 @@ export default function CriticalStockAlerts() {
             </div>
 
             <button
+                type="button"
                 onClick={() => navigate('/inventory')}
+                className="btn btn-secondary btn-sm"
                 style={{
                     marginTop: 12, width: '100%', padding: '9px 0',
-                    backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0',
-                    borderRadius: 8, fontSize: 13, fontWeight: 600,
-                    color: '#64748B', cursor: 'pointer', transition: 'all 0.15s ease',
+                    fontSize: 13, fontWeight: 600,
+                    cursor: 'pointer', transition: 'all 0.15s ease',
                     flexShrink: 0
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
             >
                 Manage Stock
             </button>

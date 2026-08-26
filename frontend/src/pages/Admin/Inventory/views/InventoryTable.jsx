@@ -185,12 +185,8 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                         let totalDamaged = 0;
 
                         products.forEach(p => {
-                            if (matchesStatusFilter(p, statusFilter)) {
-                                totalStock += Number(p.stock || 0);
-                                totalSold += Number(p.sales_count || 0);
-                                totalDamaged += Number(p.damaged || 0);
-                            }
-                            if (p.variants && p.variants.length > 0) {
+                            const hasVariants = p.variants && p.variants.length > 0;
+                            if (hasVariants) {
                                 p.variants.forEach(v => {
                                     if (matchesStatusFilter(v, statusFilter)) {
                                         totalStock += Number(v.stock || 0);
@@ -198,12 +194,23 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                                         totalDamaged += Number(v.damaged || 0);
                                     }
                                 });
+                                // If base parent itself has independent stock/damaged
+                                if (matchesStatusFilter(p, statusFilter) && Number(p.stock || 0) > 0) {
+                                    totalStock += Number(p.stock || 0);
+                                    totalDamaged += Number(p.damaged || 0);
+                                }
+                            } else {
+                                if (matchesStatusFilter(p, statusFilter)) {
+                                    totalStock += Number(p.stock || 0);
+                                    totalSold += Number(p.sales_count || 0);
+                                    totalDamaged += Number(p.damaged || 0);
+                                }
                             }
                         });
 
                         return (
                             <tfoot>
-                                <tr style={{ borderTop: '2.5px solid var(--border)', background: '#F8FAFC', fontWeight: 'bold' }}>
+                                <tr style={{ borderTop: '2.5px solid var(--border)', background: 'var(--bg-secondary)', fontWeight: 'bold' }}>
                                     <td style={{ padding: '16px', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 800 }}>Total:</td>
                                     <td></td>
                                     <td></td>
