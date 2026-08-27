@@ -46,12 +46,7 @@ class SettingsToggleTest extends TestCase
         'enable_product_variants',
         'enable_dual_pricing',
         'track_warehouse_locations',
-        'auto_deduct_stock',
-        'track_damaged_separately',
-        'auto_calc_price2',
-        'always_display_part_numbers',
         'show_stock_levels_pos',
-        'hide_oos_pos',
         'send_low_stock_alerts',
         'send_oos_alerts',
         'send_dead_stock_alerts',
@@ -178,19 +173,7 @@ class SettingsToggleTest extends TestCase
         $this->assertDatabaseHas('settings', ['key' => 'enable_variants', 'value' => 'false']);
     }
 
-    public function test_track_damaged_aliases_both_persist()
-    {
-        $response = $this->actingAs($this->admin)->putJson('/api/settings', [
-            'settings' => [
-                'track_damaged_separately' => 'false',
-                'track_damaged'            => 'false',
-            ],
-        ]);
 
-        $response->assertStatus(200);
-        $this->assertDatabaseHas('settings', ['key' => 'track_damaged_separately', 'value' => 'false']);
-        $this->assertDatabaseHas('settings', ['key' => 'track_damaged', 'value' => 'false']);
-    }
 
     public function test_track_warehouse_locations_alias_track_locations_both_persist()
     {
@@ -264,7 +247,7 @@ class SettingsToggleTest extends TestCase
 
     public function test_cashier_cannot_toggle_any_setting()
     {
-        foreach (['display_chinese_names', 'send_low_stock_alerts', 'auto_deduct_stock'] as $key) {
+        foreach (['display_chinese_names', 'send_low_stock_alerts', 'enable_dual_pricing'] as $key) {
             $response = $this->actingAs($this->cashier)->putJson('/api/settings', [
                 'settings' => [$key => 'false'],
             ]);
@@ -340,13 +323,13 @@ class SettingsToggleTest extends TestCase
         $response->assertStatus(200)->assertJsonFragment(['display_chinese_names' => 'false']);
     }
 
-    public function test_get_settings_reflects_updated_hide_oos_pos_after_put()
+    public function test_get_settings_reflects_updated_enable_dual_pricing_after_put()
     {
         $this->actingAs($this->admin)->putJson('/api/settings', [
-            'settings' => ['hide_oos_pos' => 'true'],
+            'settings' => ['enable_dual_pricing' => 'false'],
         ]);
 
         $response = $this->actingAs($this->admin)->getJson('/api/settings');
-        $response->assertStatus(200)->assertJsonFragment(['hide_oos_pos' => 'true']);
+        $response->assertStatus(200)->assertJsonFragment(['enable_dual_pricing' => 'false']);
     }
 }

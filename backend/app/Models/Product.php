@@ -19,6 +19,7 @@ class Product extends Model
         'chinese_name',
         'part_no',
         'category_id',
+        'uom',
         'address',
         'stock',
         'alert_limit',

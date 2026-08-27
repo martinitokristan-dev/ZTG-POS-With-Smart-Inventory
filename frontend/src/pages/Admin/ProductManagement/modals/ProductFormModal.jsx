@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import IOSSelect from '../../../../shared/components/IOSSelect';
 import ImageUploadOverlay from '../../../../shared/components/ImageUploadOverlay';
 import api from '../../../../shared/api';
+import useSystemSettings from '../../../../shared/hooks/useSystemSettings';
 
 const VariantImageUpload = ({ variant, idx, onUpdateVariantImage, baseImage }) => {
     const [uploading, setUploading] = useState(false);
@@ -167,6 +168,15 @@ export default function ProductFormModal({
             if (timer) clearTimeout(timer);
         };
     }, [formData.name, isOpen]);
+
+    const { 
+        enable_product_variants, 
+        enable_dual_pricing, 
+        track_warehouse_locations, 
+        price1_label, 
+        price2_label,
+        units_of_measure
+    } = useSystemSettings();
 
     if (!isOpen) return null;
 
@@ -359,28 +369,37 @@ export default function ProductFormModal({
                             </div>
                         </div>
 
-                        {/* Warehouse Address Section */}
-                        <div className="section-header">Warehouse Address / Location</div>
-                        <div className="grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                            <div className="form-group">
-                                <label className="form-label">Aisle</label>
-                                <input type="text" className="form-control" placeholder="e.g. A" value={formData.aisle} onChange={(e) => handleAddressChange('aisle', e.target.value)} />
+                        {/* Unit of Measure & Warehouse Address Section */}
+                        <div className="section-header">Unit of Measure & Warehouse Location</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: track_warehouse_locations ? '1fr 2fr' : '1fr', gap: '16px', marginBottom: '16px' }}>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Unit of Measure (UOM)</label>
+                                <IOSSelect
+                                    value={formData.uom || 'Piece / PCS'}
+                                    onChange={(e) => setFormData({ ...formData, uom: e.target.value })}
+                                    options={(units_of_measure || ['Piece / PCS', 'Unit', 'Roll', 'Meter / m', 'Set', 'Box', 'Pack', 'Pair', 'Kilogram / kg', 'Liter / L']).map(u => ({ value: u, label: u }))}
+                                    placeholder="Select UOM..."
+                                />
                             </div>
-                            <div className="form-group">
-                                <label className="form-label">Carrier</label>
-                                <input type="text" className="form-control" placeholder="e.g. 12" value={formData.carrier} onChange={(e) => handleAddressChange('carrier', e.target.value)} />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Hang</label>
-                                <input type="text" className="form-control" placeholder="e.g. 3" value={formData.hang} onChange={(e) => handleAddressChange('hang', e.target.value)} />
-                            </div>
+                            {track_warehouse_locations && (
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label className="form-label">Warehouse Address</label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="e.g. Aisle 1, Hang 3, Shelf A-2, etc."
+                                        value={formData.address || ''}
+                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {/* Pricing & Stock Alert levels */}
                         <div className="section-header">Pricing & Stock Alerts</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: enable_dual_pricing ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px' }}>
                             <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Original Price <span style={{ color: 'red' }}>*</span></label>
+                                <label className="form-label">{price1_label || 'Original Price'} <span style={{ color: 'red' }}>*</span></label>
                                 <input 
                                     type="number" 
                                     className="form-control" 
@@ -389,7 +408,14 @@ export default function ProductFormModal({
                                     step="any" 
                                     placeholder="₱0.00" 
                                     value={formData.price1 === 0 ? '' : formData.price1} 
-                                    onChange={(e) => setFormData({ ...formData, price1: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+                                    onChange={(e) => {
+                                        const newPrice1 = e.target.value === '' ? '' : parseFloat(e.target.value);
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            price1: newPrice1,
+                                            price2: !enable_dual_pricing ? newPrice1 : prev.price2
+                                        }));
+                                    }}
                                     onKeyDown={(e) => {
                                         if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
                                             e.preventDefault();
@@ -397,23 +423,25 @@ export default function ProductFormModal({
                                     }}
                                 />
                             </div>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Retail Price</label>
-                                <input 
-                                    type="number" 
-                                    className="form-control" 
-                                    min="0" 
-                                    step="any" 
-                                    placeholder="₱0.00" 
-                                    value={formData.price2 === 0 ? '' : formData.price2} 
-                                    onChange={(e) => setFormData({ ...formData, price2: e.target.value === '' ? '' : parseFloat(e.target.value) })}
-                                    onKeyDown={(e) => {
-                                        if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
-                                            e.preventDefault();
-                                        }
-                                    }}
-                                />
-                            </div>
+                            {enable_dual_pricing && (
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label className="form-label">{price2_label || 'Retail Price'}</label>
+                                    <input 
+                                        type="number" 
+                                        className="form-control" 
+                                        min="0" 
+                                        step="any" 
+                                        placeholder="₱0.00" 
+                                        value={formData.price2 === 0 ? '' : formData.price2} 
+                                        onChange={(e) => setFormData({ ...formData, price2: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+                                        onKeyDown={(e) => {
+                                            if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            )}
                             <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label">{mode === 'edit' ? 'Current Stock' : 'Initial Stock'} {mode !== 'edit' && <span style={{ color: 'red' }}>*</span>}</label>
                                 <input
@@ -470,39 +498,40 @@ export default function ProductFormModal({
                             </div>
                         </div>
 
-                        <div style={{ marginTop: '12px', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', backgroundColor: 'var(--bg-secondary)', marginBottom: '16px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Product Variants</span>
-                                <button type="button" className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px' }}
-                                    onClick={() => {
-                                        const newVariants = [...(formData.variants || []), {
-                                            name: formData.name || '',
-                                            chinese_name: formData.chinese_name || '',
-                                            part_no: generateNextVariantPartNo(formData.part_no, formData.variants?.length || 0),
-                                            price1: formData.price1 || 0, price2: formData.price2 || 0,
-                                            stock: 0, alert_limit: formData.alert_limit || 5, option_ids: []
-                                        }];
-                                        setFormData({ ...formData, variants: newVariants });
-                                    }}>
-                                    <svg viewBox="0 0 24 24" style={{ width: '12px', height: '12px', fill: 'none', stroke: 'currentColor', strokeWidth: 2.5 }}><path d="M12 5v14M5 12h14" /></svg>
-                                    Add Variant
-                                </button>
-                            </div>
-
-                            {(!formData.variants || formData.variants.length === 0) ? (
-                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center', padding: '10px 0' }}>
-                                    No variants added yet. Click "Add Variant" to configure options.
+                        {enable_product_variants && (
+                            <div style={{ marginTop: '12px', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', backgroundColor: 'var(--bg-secondary)', marginBottom: '16px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Product Variants</span>
+                                    <button type="button" className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px' }}
+                                        onClick={() => {
+                                            const newVariants = [...(formData.variants || []), {
+                                                name: formData.name || '',
+                                                chinese_name: formData.chinese_name || '',
+                                                part_no: generateNextVariantPartNo(formData.part_no, formData.variants?.length || 0),
+                                                price1: formData.price1 || 0, price2: formData.price2 || 0,
+                                                stock: 0, alert_limit: formData.alert_limit || 5, option_ids: []
+                                            }];
+                                            setFormData({ ...formData, variants: newVariants });
+                                        }}>
+                                        <svg viewBox="0 0 24 24" style={{ width: '12px', height: '12px', fill: 'none', stroke: 'currentColor', strokeWidth: 2.5 }}><path d="M12 5v14M5 12h14" /></svg>
+                                        Add Variant
+                                    </button>
                                 </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {formData.variants.map((variant, idx) => {
-                                        const selectedOptionLabels = (variant.option_ids || []).map(id => {
-                                            for (const vt of variantOptions || []) {
-                                                const found = vt.options?.find(o => o.id === id);
-                                                if (found) return found.value;
-                                            }
-                                            return null;
-                                        }).filter(Boolean);
+
+                                {(!formData.variants || formData.variants.length === 0) ? (
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center', padding: '10px 0' }}>
+                                        No variants added yet. Click "Add Variant" to configure options.
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        {formData.variants.map((variant, idx) => {
+                                            const selectedOptionLabels = (variant.option_ids || []).map(id => {
+                                                for (const vt of variantOptions || []) {
+                                                    const found = vt.options?.find(o => o.id === id);
+                                                    if (found) return found.value;
+                                                }
+                                                return null;
+                                            }).filter(Boolean);
 
                                         const variantDisplayName = variant.name || formData.name || 'Variant';
 
@@ -609,6 +638,7 @@ export default function ProductFormModal({
                                 </div>
                             )}
                         </div>
+                        )}
 
                         <div className="form-group">
                             <label className="form-label">Initial Damaged / Scrap Count</label>

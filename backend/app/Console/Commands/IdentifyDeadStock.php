@@ -38,9 +38,10 @@ class IdentifyDeadStock extends Command
     {
         $this->info('Starting dead stock identification scan...');
 
-        // 1. Get setting threshold
+        // 1. Get setting threshold and alert toggle
         $days = (int) Setting::where('key', 'dead_stock_period')->value('value') ?: 30;
-        $this->info("   Threshold config: {$days} days with no sales.");
+        $sendAlerts = Setting::where('key', 'send_dead_stock_alerts')->value('value') !== 'false';
+        $this->info("   Threshold config: {$days} days with no sales. (Send Alerts: " . ($sendAlerts ? 'Enabled' : 'Disabled') . ")");
 
         $cutoffDate = Carbon::now()->subDays($days);
 
@@ -71,21 +72,23 @@ class IdentifyDeadStock extends Command
 
             if (!$hasSales) {
                 // Mark as dead stock
-                DB::transaction(function () use ($product, $days) {
+                DB::transaction(function () use ($product, $days, $sendAlerts) {
                     $product->update([
                         'is_dead_stock' => true,
                     ]);
 
-                    // Fire notification
-                    $notification = Notification::create([
-                        'type'     => NotificationType::LOW_STOCK->value, // low stock/dead stock category
-                        'sub_type' => 'Dead Stock',
-                        'title'    => 'Dead Stock Classified',
-                        'message'  => "Product '{$product->name}' ({$product->part_no}) classified as Dead Stock — no sales in {$days} days.",
-                        'link'     => '/product-management',
-                    ]);
+                    if ($sendAlerts) {
+                        // Fire notification
+                        $notification = Notification::create([
+                            'type'     => NotificationType::LOW_STOCK->value, // low stock/dead stock category
+                            'sub_type' => 'Dead Stock',
+                            'title'    => 'Dead Stock Classified',
+                            'message'  => "Product '{$product->name}' ({$product->part_no}) classified as Dead Stock — no sales in {$days} days.",
+                            'link'     => '/product-management',
+                        ]);
 
-                    event(new NotificationSent($notification));
+                        event(new NotificationSent($notification));
+                    }
                     event(new ProductUpdated($product->id, ['is_dead_stock' => true]));
                 });
 

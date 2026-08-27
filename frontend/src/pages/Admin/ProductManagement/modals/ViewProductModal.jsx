@@ -59,7 +59,7 @@ export default function ViewProductModal({ isOpen, onClose, product, categories 
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Stock Level</span>
-                            <span style={{ fontWeight: '700', color: product.stock === 0 ? '#EF4444' : product.stock <= (product.alert_limit||5) ? '#F59E0B' : '#1E293B', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>{product.stock} units</span>
+                            <span style={{ fontWeight: '700', color: product.stock === 0 ? '#EF4444' : product.stock <= (product.alert_limit||5) ? '#F59E0B' : '#1E293B', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>{product.stock} {product.uom ? product.uom.replace(/^.*\/\s*/, '') : 'units'}</span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Damaged Count</span>

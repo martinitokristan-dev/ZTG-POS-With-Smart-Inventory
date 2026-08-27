@@ -25,7 +25,7 @@ export default function ViewProductModal({
                                 { label: 'Category', value: selectedProduct.category?.name || 'Unassigned' },
                                 { label: 'Warehouse Location', value: selectedProduct.address || 'N/A' },
                                 { label: 'Status', value: selectedProduct.status || 'Active' },
-                                { label: 'Stock Level', value: `${selectedProduct.stock} units (Alert ≤ ${selectedProduct.alert_limit || 5})` },
+                                { label: 'Stock Level', value: `${selectedProduct.stock} ${selectedProduct.uom ? selectedProduct.uom.replace(/^.*\/\s*/, '') : 'units'} (Alert ≤ ${selectedProduct.alert_limit || 5})` },
                                 { label: 'Sales Counter', value: `${selectedProduct.sales_count || 0} units sold` },
                                 { label: 'Original Price', value: `₱${(selectedProduct.price1 || 0).toLocaleString()}` },
                                 { label: 'Retail Price', value: `₱${(selectedProduct.price2 || 0).toLocaleString()}` },

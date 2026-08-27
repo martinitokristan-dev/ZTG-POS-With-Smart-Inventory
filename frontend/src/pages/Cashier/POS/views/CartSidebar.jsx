@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 import IOSSelect from '../../../../shared/components/IOSSelect';
+import useSystemSettings from '../../../../shared/hooks/useSystemSettings';
 
 export default function CartSidebar({ 
     cart, 
@@ -29,6 +30,7 @@ export default function CartSidebar({
     setShowCheckoutModal,
     fmt
 }) {
+    const { enable_dual_pricing, price1_label, price2_label } = useSystemSettings();
     const [error, setError] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -335,19 +337,23 @@ export default function CartSidebar({
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                                         <span style={{ fontSize: '10px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Price:</span>
-                                        <div className="cart-price-select" style={{ display: 'inline-block', width: '135px' }}>
-                                            <IOSSelect
-                                                 value={item.priceTier || 'price1'}
-                                                 onChange={(e) => {
-                                                     const selectedTier = typeof e === 'object' && e?.target ? e.target.value : e;
-                                                     updateCartItemPriceTier(item.id, item.priceTier || 'price1', selectedTier);
-                                                 }}
-                                                 options={[
-                                                     { value: 'price1', label: `Original (${fmt(item.price1)})` },
-                                                     { value: 'price2', label: `Retail (${fmt(item.price2)})` }
-                                                 ]}
-                                             />
-                                        </div>
+                                        {enable_dual_pricing ? (
+                                            <div className="cart-price-select" style={{ display: 'inline-block', width: '135px' }}>
+                                                <IOSSelect
+                                                     value={item.priceTier || 'price1'}
+                                                     onChange={(e) => {
+                                                         const selectedTier = typeof e === 'object' && e?.target ? e.target.value : e;
+                                                         updateCartItemPriceTier(item.id, item.priceTier || 'price1', selectedTier);
+                                                     }}
+                                                     options={[
+                                                         { value: 'price1', label: `${price1_label || 'Original'} (${fmt(item.price1)})` },
+                                                         { value: 'price2', label: `${price2_label || 'Retail'} (${fmt(item.price2)})` }
+                                                     ]}
+                                                 />
+                                            </div>
+                                        ) : (
+                                            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>{fmt(item.price1)}</span>
+                                        )}
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>

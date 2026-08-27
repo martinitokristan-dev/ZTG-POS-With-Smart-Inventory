@@ -29,6 +29,8 @@ export default function SettingsView() {
         categories, showCategoryModal, setShowCategoryModal, selectedCategory, setSelectedCategory, categoryName, setCategoryName,
         categoryVariants, setCategoryVariants, categorySubmitting,
         newOptionValue, setNewOptionValue,
+        uomList, newUomValue, setNewUomValue, editingUomIndex, setEditingUomIndex, editUomValue, setEditUomValue,
+        handleAddUom, handleUpdateUom, handleDeleteUom,
         alertRules, showRuleModal, setShowRuleModal, ruleForm, setRuleForm,
         employees, showEmployeeModal, setShowEmployeeModal, employeeForm, setEmployeeForm, selectedEmployee, setSelectedEmployee,
         showDeleteEmployeeModal, setShowDeleteEmployeeModal, employeeToDelete, setEmployeeToDelete,
@@ -167,7 +169,7 @@ export default function SettingsView() {
                                                                 <polyline points="10 9 9 9 8 9"/>
                                                             </svg>
                                                         ),
-                                                        label: 'Reports & Logs'
+                                                        label: 'Reports Alert'
                                                     },
                                                     {
                                                         id: 'activity',
@@ -315,7 +317,7 @@ export default function SettingsView() {
                                                                     <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" style={{ width: '18px', height: '18px' }}><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
                                                                 </div>
                                                                 <div>
-                                                                    <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 2px' }}>Reports</h4>
+                                                                    <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 2px' }}>Reports Alert</h4>
                                                                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>Configure automated report reminders.</p>
                                                                 </div>
                                                             </div>
@@ -397,6 +399,12 @@ export default function SettingsView() {
                                             getOptionsForType={getOptionsForType}
                                             newOptionValue={newOptionValue}
                                             setNewOptionValue={setNewOptionValue}
+                                            uomList={uomList}
+                                            newUomValue={newUomValue}
+                                            setNewUomValue={setNewUomValue}
+                                            handleAddUom={handleAddUom}
+                                            handleUpdateUom={handleUpdateUom}
+                                            handleDeleteUom={handleDeleteUom}
                                             alertRules={alertRules}
                                             showRuleModal={showRuleModal}
                                             setShowRuleModal={setShowRuleModal}

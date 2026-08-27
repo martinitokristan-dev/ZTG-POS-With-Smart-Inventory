@@ -49,7 +49,9 @@ export default function CategoryModal({
     const variantsList = [
         { key: 'size', title: 'Size', typeName: 'Size' },
         { key: 'quality', title: 'Quality', typeName: 'Quality' },
-        { key: 'color', title: 'Color', typeName: 'Color' }
+        { key: 'color', title: 'Color', typeName: 'Color' },
+        { key: 'specification', title: 'Specification', typeName: 'Specification' },
+        { key: 'material', title: 'Material', typeName: 'Material' }
     ];
 
     return (

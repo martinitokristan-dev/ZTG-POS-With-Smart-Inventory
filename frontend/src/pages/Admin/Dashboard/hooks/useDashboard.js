@@ -85,6 +85,7 @@ export function useDashboard() {
                             partNo: p.part_no,
                             category: p.category || 'Heavy Parts',
                             unitsSold: p.sales_count,
+                            uom: p.uom || 'pcs',
                             revenue: p.revenue || 0,
                             percentage: calculatedPercentage,
                             image: p.image || ''

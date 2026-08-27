@@ -22,6 +22,7 @@ class UpdateProductRequest extends FormRequest
             'chinese_name'=> 'nullable|string|max:255',
             'part_no'     => 'nullable|string|max:50|unique:products,part_no,' . $productId,
             'category_id' => 'required|exists:categories,id',
+            'uom'         => 'nullable|string|max:50',
             'address'     => 'nullable|string|max:50',
             'stock'       => 'required|integer|min:0',
             'alert_limit' => 'nullable|integer|min:0',

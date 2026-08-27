@@ -339,6 +339,7 @@ class ReportService
                     'category' => $prod && $prod->category ? $prod->category->name : 'Uncategorized',
                     'sales_count' => (int) $row->sales_count,
                     'revenue' => (float) $row->revenue,
+                    'uom' => $prod ? ($prod->uom ?: 'pcs') : 'pcs',
                     'stock' => $prod ? $prod->stock : 0,
                     'returns_count' => (int) $returns,
                     'refunds_count' => (int) $refunds,

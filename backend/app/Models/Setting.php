@@ -37,13 +37,13 @@ class Setting extends Model
         $rows = self::whereIn('key', $keys)->pluck('value', 'key');
 
         return [
-            'business_name'   => $rows->get('business_name', ''),
-            'branch_location' => $rows->get('branch_location', ''),
-            'address'         => $rows->get('address', ''),
-            'contact_number'  => $rows->get('contact_number', ''),
-            'email_address'   => $rows->get('email_address', ''),
-            'tax_rate'        => $rows->get('tax_rate', '12'),
-            'tin'             => $rows->get('tin', ''),
+            'business_name'   => $rows['business_name'] ?? '',
+            'branch_location' => $rows['branch_location'] ?? '',
+            'address'         => $rows['address'] ?? '',
+            'contact_number'  => $rows['contact_number'] ?? '',
+            'email_address'   => $rows['email_address'] ?? '',
+            'tax_rate'        => $rows['tax_rate'] ?? '12',
+            'tin'             => $rows['tin'] ?? '',
         ];
     }
 }

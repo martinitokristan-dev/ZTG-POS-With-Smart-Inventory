@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import IOSDatePicker from '../../../../shared/components/IOSDatePicker';
 import IOSSelect from '../../../../shared/components/IOSSelect';
+import PaymentMethodsCharts from './PaymentMethodsCharts';
 
 export default function PaymentMethodsTab({ salesSummary, employees = [], fmt, startDate, setStartDate, endDate, setEndDate }) {
     const [selectedCashier, setSelectedCashier] = useState('All');
+    const [viewMode, setViewMode] = useState('table'); // 'table' | 'graph'
 
     // Extract unique Cashiers (users with Cashier role, excluding Admin role)
     const cashierOptions = useMemo(() => {
@@ -110,68 +112,149 @@ export default function PaymentMethodsTab({ salesSummary, employees = [], fmt, s
                         />
                     </div>
                 </div>
-                <button 
-                    className="btn btn-success" 
-                    onClick={handleExportCSV}
-                    disabled={methods.length === 0}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}
-                >
-                    <svg viewBox="0 0 24 24" style={{ width: '15px', height: '15px', fill: 'none', stroke: '#fff', strokeWidth: '2.5' }}><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                    Export CSV
-                </button>
-            </div>
 
-            <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                {methods.map((m, i) => (
-                    <div key={i} className="kpi-card">
-                        <div className="kpi-label">{m.name}</div>
-                        <div className="kpi-value">{fmt(m.amount)}</div>
-                        <div className="kpi-trend neutral">{m.count} {m.count === 1 ? 'transaction' : 'transactions'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    {/* View Switcher Icon Toggle */}
+                    <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        backgroundColor: '#F1F5F9',
+                        borderRadius: '8px',
+                        padding: '3px',
+                        border: '1px solid #E2E8F0',
+                        gap: '2px'
+                    }}>
+                        <button
+                            type="button"
+                            title="Table View"
+                            aria-label="Table View"
+                            onClick={() => setViewMode('table')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '34px',
+                                height: '32px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                backgroundColor: viewMode === 'table' ? '#FFFFFF' : 'transparent',
+                                color: viewMode === 'table' ? '#2563EB' : '#64748B',
+                                boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                            }}
+                        >
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="8" y1="6" x2="21" y2="6"></line>
+                                <line x1="8" y1="12" x2="21" y2="12"></line>
+                                <line x1="8" y1="18" x2="21" y2="18"></line>
+                                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            title="Graph View"
+                            aria-label="Graph View"
+                            onClick={() => setViewMode('graph')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '34px',
+                                height: '32px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                backgroundColor: viewMode === 'graph' ? '#FFFFFF' : 'transparent',
+                                color: viewMode === 'graph' ? '#2563EB' : '#64748B',
+                                boxShadow: viewMode === 'graph' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                            }}
+                        >
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="20" x2="18" y2="10"></line>
+                                <line x1="12" y1="20" x2="12" y2="4"></line>
+                                <line x1="6" y1="20" x2="6" y2="14"></line>
+                            </svg>
+                        </button>
                     </div>
-                ))}
-            </div>
 
-            <div className="section-card">
-                <div className="section-card-header">Payment Methods Breakdown</div>
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="reports-table data-table">
-                        <thead style={{ fontSize: '13px', color: 'var(--table-text-secondary)', background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)' }}>
-                            <tr>
-                                <th style={{ fontWeight: '600', letterSpacing: '0.02em' }}>Payment Method</th>
-                                <th style={{ textAlign: 'right', fontWeight: '600', letterSpacing: '0.02em' }}>Transactions</th>
-                                <th style={{ textAlign: 'right', fontWeight: '600', letterSpacing: '0.02em' }}>Total Amount</th>
-                                <th style={{ textAlign: 'right', fontWeight: '600', letterSpacing: '0.02em' }}>% of Total Sales</th>
-                            </tr>
-                        </thead>
-                        <tbody style={{ fontSize: '15px' }}>
-                            {methods.length === 0 ? (
-                                <tr><td colSpan="4" style={{ textAlign: 'center', color: 'var(--table-text-muted)', fontSize: '15px' }}>No payment methods found for the selected date range.</td></tr>
-                            ) : methods.map((m, i) => {
-                                const percentage = totalRev > 0 ? ((m.amount / totalRev) * 100).toFixed(1) : 0;
-                                return (
-                                    <tr key={i} style={{ minHeight: '48px' }}>
-                                        <td style={{ fontSize: '15px', fontWeight: '600', color: 'var(--table-text-primary)' }}>
-                                            <strong>{m.name}</strong>
-                                            {i === 0 && m.amount > 0 && <span className="badge badge-success" style={{ marginLeft: '8px' }}>Top</span>}
-                                        </td>
-                                        <td style={{ textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{m.count}</td>
-                                        <td style={{ fontWeight: '600', textAlign: 'right', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{fmt(m.amount)}</td>
-                                        <td style={{ textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{percentage}%</td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                        <tfoot>
-                            <tr style={{ background: 'var(--table-header-bg)', fontWeight: '600', borderTop: '2px solid var(--table-border)', fontSize: '15px' }}>
-                                <td style={{ padding: '14px 16px', fontWeight: '600', color: 'var(--table-text-primary)' }}>Total</td>
-                                <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{methods.reduce((sum, m) => sum + m.count, 0)}</td>
-                                <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{fmt(methods.reduce((sum, m) => sum + m.amount, 0))}</td>
-                                <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{totalRev > 0 ? '100%' : '—'}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                    <button 
+                        className="btn btn-success" 
+                        onClick={handleExportCSV}
+                        disabled={methods.length === 0}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}
+                    >
+                        <svg viewBox="0 0 24 24" style={{ width: '15px', height: '15px', fill: 'none', stroke: '#fff', strokeWidth: '2.5' }}><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Export CSV
+                    </button>
                 </div>
             </div>
+
+            {/* Conditionally Render Graph View or Table View */}
+            {viewMode === 'graph' ? (
+                <PaymentMethodsCharts 
+                    methods={methods} 
+                    totalRev={totalRev} 
+                    fmt={fmt} 
+                />
+            ) : (
+                <>
+                    <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                        {methods.map((m, i) => (
+                            <div key={i} className="kpi-card">
+                                <div className="kpi-label">{m.name}</div>
+                                <div className="kpi-value">{fmt(m.amount)}</div>
+                                <div className="kpi-trend neutral">{m.count} {m.count === 1 ? 'transaction' : 'transactions'}</div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="section-card">
+                        <div className="section-card-header">Payment Methods Breakdown</div>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="reports-table data-table">
+                                <thead style={{ fontSize: '13px', color: 'var(--table-text-secondary)', background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)' }}>
+                                    <tr>
+                                        <th style={{ fontWeight: '600', letterSpacing: '0.02em' }}>Payment Method</th>
+                                        <th style={{ textAlign: 'right', fontWeight: '600', letterSpacing: '0.02em' }}>Transactions</th>
+                                        <th style={{ textAlign: 'right', fontWeight: '600', letterSpacing: '0.02em' }}>Total Amount</th>
+                                        <th style={{ textAlign: 'right', fontWeight: '600', letterSpacing: '0.02em' }}>% of Total Sales</th>
+                                    </tr>
+                                </thead>
+                                <tbody style={{ fontSize: '15px' }}>
+                                    {methods.length === 0 ? (
+                                        <tr><td colSpan="4" style={{ textAlign: 'center', color: 'var(--table-text-muted)', fontSize: '15px' }}>No payment methods found for the selected date range.</td></tr>
+                                    ) : methods.map((m, i) => {
+                                        const percentage = totalRev > 0 ? ((m.amount / totalRev) * 100).toFixed(1) : 0;
+                                        return (
+                                            <tr key={i} style={{ minHeight: '48px' }}>
+                                                <td style={{ fontSize: '15px', fontWeight: '600', color: 'var(--table-text-primary)' }}>
+                                                    <strong>{m.name}</strong>
+                                                    {i === 0 && m.amount > 0 && <span className="badge badge-success" style={{ marginLeft: '8px' }}>Top</span>}
+                                                </td>
+                                                <td style={{ textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{m.count}</td>
+                                                <td style={{ fontWeight: '600', textAlign: 'right', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{fmt(m.amount)}</td>
+                                                <td style={{ textAlign: 'right', fontWeight: '600', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{percentage}%</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                                <tfoot>
+                                    <tr style={{ background: 'var(--table-header-bg)', fontWeight: '600', borderTop: '2px solid var(--table-border)', fontSize: '15px' }}>
+                                        <td style={{ padding: '14px 16px', fontWeight: '600', color: 'var(--table-text-primary)' }}>Total</td>
+                                        <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{methods.reduce((sum, m) => sum + m.count, 0)}</td>
+                                        <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{fmt(methods.reduce((sum, m) => sum + m.amount, 0))}</td>
+                                        <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{totalRev > 0 ? '100%' : '—'}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }

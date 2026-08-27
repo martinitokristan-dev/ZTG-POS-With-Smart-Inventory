@@ -42,8 +42,9 @@ class ReleaseExpiredReservations extends Command
         // 1. Get Settings
         $gracePeriod = (int) Setting::where('key', 'reservation_grace_period')->value('value') ?: 3;
         $depositPolicy = Setting::where('key', 'reservation_deposit_policy')->value('value') ?: 'forfeit';
+        $sendExpiredAlerts = Setting::where('key', 'send_reservation_expired_alerts')->value('value') !== 'false';
 
-        $this->info("   Configuration: Grace Period = {$gracePeriod} days, Deposit Policy = {$depositPolicy}");
+        $this->info("   Configuration: Grace Period = {$gracePeriod} days, Deposit Policy = {$depositPolicy}, Send Alerts = " . ($sendExpiredAlerts ? 'Enabled' : 'Disabled'));
 
         // 2. Identify expired reservations
         // In SQL: pickup_date < today - grace_period_days
@@ -62,7 +63,7 @@ class ReleaseExpiredReservations extends Command
         $this->info('   Found ' . $expiredReservations->count() . ' expired reservations.');
 
         foreach ($expiredReservations as $reservation) {
-            DB::transaction(function () use ($reservation, $depositPolicy) {
+            DB::transaction(function () use ($reservation, $depositPolicy, $sendExpiredAlerts) {
                 // a) Update reservation status
                 $reservation->update([
                     'status' => ReservationStatus::EXPIRED->value,
@@ -89,24 +90,28 @@ class ReleaseExpiredReservations extends Command
                         event(new TransactionUpdated($tx));
 
                         // Generate system notification for the void (resolving the observer bypass gap)
-                        $this->createVoidNotification($tx);
+                        if ($sendExpiredAlerts) {
+                            $this->createVoidNotification($tx);
+                        }
                     }
                 }
 
                 // c) Create Notification for Expiry
-                $customerName = $reservation->customer ? $reservation->customer->name : 'Walk-in';
-                $depositText = $reservation->deposit > 0 ? " (Deposit: ₱" . number_format($reservation->deposit, 2) . ")" : "";
-                
-                $notification = Notification::create([
-                    'type'     => NotificationType::TRANSACTION->value,
-                    'sub_type' => 'Void',
-                    'title'    => 'Reservation Expired',
-                    'message'  => "Reservation {$reservation->order_no} for {$customerName} has expired and was released{$depositText}.",
-                    'link'     => "/reservations/{$reservation->id}",
-                ]);
+                if ($sendExpiredAlerts) {
+                    $customerName = $reservation->customer ? $reservation->customer->name : 'Walk-in';
+                    $depositText = $reservation->deposit > 0 ? " (Deposit: ₱" . number_format($reservation->deposit, 2) . ")" : "";
+                    
+                    $notification = Notification::create([
+                        'type'     => NotificationType::TRANSACTION->value,
+                        'sub_type' => 'Void',
+                        'title'    => 'Reservation Expired',
+                        'message'  => "Reservation {$reservation->order_no} for {$customerName} has expired and was released{$depositText}.",
+                        'link'     => "/reservations/{$reservation->id}",
+                    ]);
 
-                // Dispatch NotificationSent event
-                event(new NotificationSent($notification));
+                    // Dispatch NotificationSent event
+                    event(new NotificationSent($notification));
+                }
             });
 
             // Dispatch ReservationUpdated event outside the transaction

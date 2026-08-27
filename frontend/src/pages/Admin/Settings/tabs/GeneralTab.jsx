@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import LogoCropModal from '../modals/LogoCropModal';
 import ImageUploadOverlay from '../../../../shared/components/ImageUploadOverlay';
 import useTheme from '../../../../shared/hooks/useTheme';
+import { showCenterToast } from '../../../../utils/toast';
 
 // Helper function to replace legacy localhost or blocked r2.dev image URLs with backend proxy paths
 const fixImageUrl = (url) => {
@@ -364,7 +365,7 @@ export default function GeneralTab({
                 <h3 style={{ fontSize: '14px', fontWeight: '700', borderBottom: '1px solid var(--border)', paddingBottom: '8px', marginBottom: '16px', color: 'var(--text-primary)' }}>
                     Inventory Configuration
                 </h3>
-                <div className="grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: 0 }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="form-label" htmlFor="deadStockPeriod">Dead Stock Threshold (days with no sales)</label>
                         <select
@@ -393,31 +394,6 @@ export default function GeneralTab({
                         />
                     </div>
                 </div>
-                
-                <div className="checkbox-group" style={{ display: 'flex', flexDirection: 'column', gap: 0, marginTop: '16px' }}>
-                    <label className="toggle-row" style={{ display: 'flex', alignItems: 'center', cursor: isEditing ? 'pointer' : 'default', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
-                        <span className="toggle-label" style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                            Automatically deduct stock after completed sales
-                        </span>
-                        <input
-                            type="checkbox"
-                            checked={settings.auto_deduct_stock === 'true'}
-                            onChange={() => isEditing && handleToggleSetting('auto_deduct_stock')}
-                            disabled={!isEditing}
-                        />
-                    </label>
-                    <label className="toggle-row" style={{ display: 'flex', alignItems: 'center', cursor: isEditing ? 'pointer' : 'default', padding: '8px 0' }}>
-                        <span className="toggle-label" style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                            Track damaged products counts separately
-                        </span>
-                        <input
-                            type="checkbox"
-                            checked={settings.track_damaged_separately === 'true'}
-                            onChange={() => isEditing && handleToggleSetting('track_damaged_separately')}
-                            disabled={!isEditing}
-                        />
-                    </label>
-                </div>
             </div>
 
             {/* ── Invoice & Receipt Numbering Configuration (BIR Sequential Standards) ── */}
@@ -432,17 +408,17 @@ export default function GeneralTab({
                                 <line x1="16" y1="17" x2="8" y2="17"></line>
                                 <polyline points="10 9 9 9 8 9"></polyline>
                             </svg>
-                            Invoice & Receipt Numbering (BIR Compliance)
+                            Invoice & Receipt Numbering
                         </h3>
                         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0' }}>
-                            Select the invoicing method: manual ATP pre-printed booklet or system-generated electronic series
+                            Select how invoice numbers are issued: manual pre-printed booklet entry or automatic sequential numbers.
                         </p>
                     </div>
 
                     {/* Mode Status Pill */}
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', backgroundColor: settings.si_numbering_mode === 'auto' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(59, 130, 246, 0.12)', color: settings.si_numbering_mode === 'auto' ? '#059669' : '#2563EB', fontSize: '11px', fontWeight: '700' }}>
                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'currentColor' }}></span>
-                        {settings.si_numbering_mode === 'auto' ? 'System-Generated Active (POS/CAS)' : 'Manual ATP Booklet Active'}
+                        {settings.si_numbering_mode === 'auto' ? 'System-Generated (Auto) Active' : 'Manual Booklet Active'}
                     </div>
                 </div>
 
@@ -451,7 +427,10 @@ export default function GeneralTab({
                     {/* Manual Mode Option */}
                     <div
                         onClick={() => {
-                            if (!isEditing && onStartEdit) onStartEdit();
+                            if (!isEditing) {
+                                showCenterToast("Please click 'Edit Settings' at the top right to change the numbering method.");
+                                return;
+                            }
                             if (handleSettingInputChange) {
                                 handleSettingInputChange('si_numbering_mode', 'manual');
                             }
@@ -463,7 +442,8 @@ export default function GeneralTab({
                             backgroundColor: (settings.si_numbering_mode || 'manual') === 'manual' ? 'rgba(59, 130, 246, 0.04)' : 'var(--bg-card)',
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
-                            boxShadow: (settings.si_numbering_mode || 'manual') === 'manual' ? '0 2px 8px rgba(59, 130, 246, 0.1)' : 'none'
+                            boxShadow: (settings.si_numbering_mode || 'manual') === 'manual' ? '0 2px 8px rgba(59, 130, 246, 0.1)' : 'none',
+                            opacity: !isEditing && (settings.si_numbering_mode || 'manual') !== 'manual' ? 0.75 : 1
                         }}
                     >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -474,28 +454,36 @@ export default function GeneralTab({
                                         <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
                                     </svg>
                                 </div>
-                                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>Manual ATP Booklet</span>
+                                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>Manual Pre-Printed Booklet</span>
                             </div>
                             <input
                                 type="radio"
                                 name="si_numbering_mode_choice"
                                 checked={(settings.si_numbering_mode || 'manual') === 'manual'}
                                 onChange={() => {
-                                    if (!isEditing && onStartEdit) onStartEdit();
-                                    handleSettingInputChange('si_numbering_mode', 'manual');
+                                    if (!isEditing) {
+                                        showCenterToast("Please click 'Edit Settings' at the top right to change the numbering method.");
+                                        return;
+                                    }
+                                    if (handleSettingInputChange) {
+                                        handleSettingInputChange('si_numbering_mode', 'manual');
+                                    }
                                 }}
                                 style={{ accentColor: '#2563EB', cursor: 'pointer' }}
                             />
                         </div>
                         <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', margin: '0 0 0 36px', lineHeight: 1.4 }}>
-                            Authority to Print (ATP) paper booklet. Cashier inputs the pre-printed serial number from the physical booklet.
+                            Cashier enters the invoice or receipt number directly from the physical pre-printed booklet for each sale.
                         </p>
                     </div>
 
                     {/* System-Generated POS Invoicing Option */}
                     <div
                         onClick={() => {
-                            if (!isEditing && onStartEdit) onStartEdit();
+                            if (!isEditing) {
+                                showCenterToast("Please click 'Edit Settings' at the top right to change the numbering method.");
+                                return;
+                            }
                             if (handleSettingInputChange) {
                                 handleSettingInputChange('si_numbering_mode', 'auto');
                             }
@@ -507,7 +495,8 @@ export default function GeneralTab({
                             backgroundColor: settings.si_numbering_mode === 'auto' ? 'rgba(16, 185, 129, 0.04)' : 'var(--bg-card)',
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
-                            boxShadow: settings.si_numbering_mode === 'auto' ? '0 2px 8px rgba(16, 185, 129, 0.1)' : 'none'
+                            boxShadow: settings.si_numbering_mode === 'auto' ? '0 2px 8px rgba(16, 185, 129, 0.1)' : 'none',
+                            opacity: !isEditing && settings.si_numbering_mode !== 'auto' ? 0.75 : 1
                         }}
                     >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -517,21 +506,26 @@ export default function GeneralTab({
                                         <polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polyline>
                                     </svg>
                                 </div>
-                                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>System-Generated (POS / CAS)</span>
+                                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>System-Generated (Automatic)</span>
                             </div>
                             <input
                                 type="radio"
                                 name="si_numbering_mode_choice"
                                 checked={settings.si_numbering_mode === 'auto'}
                                 onChange={() => {
-                                    if (!isEditing && onStartEdit) onStartEdit();
-                                    handleSettingInputChange('si_numbering_mode', 'auto');
+                                    if (!isEditing) {
+                                        showCenterToast("Please click 'Edit Settings' at the top right to change the numbering method.");
+                                        return;
+                                    }
+                                    if (handleSettingInputChange) {
+                                        handleSettingInputChange('si_numbering_mode', 'auto');
+                                    }
                                 }}
                                 style={{ accentColor: '#059669', cursor: 'pointer' }}
                             />
                         </div>
                         <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', margin: '0 0 0 36px', lineHeight: 1.4 }}>
-                            Compliant Computerized Accounting / POS system. The system automatically records and advances sequential serial numbers.
+                            The system automatically generates and advances sequential invoice numbers on each transaction.
                         </p>
                     </div>
                 </div>
@@ -545,7 +539,7 @@ export default function GeneralTab({
                                 <line x1="12" y1="16" x2="12" y2="12"></line>
                                 <line x1="12" y1="8" x2="12.01" y2="8"></line>
                             </svg>
-                            <span>Set the starting sequence for each independent document series (BIR RR 18-2012 / RR 7-2024 compliance).</span>
+                            <span>Set the starting sequence number for each document series:</span>
                         </div>
 
                         <div className="grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '14px' }}>
@@ -607,7 +601,7 @@ export default function GeneralTab({
                         {/* Digits Pad Length Control */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px dashed var(--border)', flexWrap: 'wrap', gap: '10px' }}>
                             <label className="form-label" htmlFor="siAutoDigits" style={{ fontSize: '11.5px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: 0 }}>
-                                Zero-Padding Digit Length (4 to 10 digits):
+                                Digit Length (4 to 10 digits):
                             </label>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <input

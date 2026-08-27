@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import LoadingSpinner from '../../../../shared/components/LoadingSpinner';
 import useDisplayChineseNames from '../../../../shared/hooks/useDisplayChineseNames';
+import useSystemSettings from '../../../../shared/hooks/useSystemSettings';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 
 const DEFAULT_PLACEHOLDER_IMAGE = "/ztg-icon.png";
@@ -17,6 +18,13 @@ export default function ProductGrid({
 }) {
     const [previewImage, setPreviewImage] = useState(null);
     const showChineseNames = useDisplayChineseNames();
+    const { 
+        enable_dual_pricing, 
+        track_warehouse_locations, 
+        show_stock_levels_pos, 
+        price1_label, 
+        price2_label 
+    } = useSystemSettings();
 
     // Build a map of parent product names so variant rows can display "ParentName (VariantOption)"
     const parentMap = React.useMemo(() => {
@@ -105,19 +113,23 @@ export default function ProductGrid({
                                 <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)', maxWidth: '200px' }}>Product</th>
                                 <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Part No.</th>
                                 <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Category</th>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Address</th>
+                                {track_warehouse_locations && (
+                                    <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Address</th>
+                                )}
                                 <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Stock</th>
-                                <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Original Price</th>
-                                <th style={{ textAlign: 'right', padding: '12px 20px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Retail Price</th>
+                                <th style={{ textAlign: 'right', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>{price1_label || 'Original Price'}</th>
+                                {enable_dual_pricing && (
+                                    <th style={{ textAlign: 'right', padding: '12px 20px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>{price2_label || 'Retail Price'}</th>
+                                )}
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan="7" style={{ padding: '20px' }}><LoadingSpinner text="Loading products..." minHeight="100px" /></td></tr>
+                                <tr><td colSpan={5 + (track_warehouse_locations ? 1 : 0) + (enable_dual_pricing ? 1 : 0)} style={{ padding: '20px' }}><LoadingSpinner text="Loading products..." minHeight="100px" /></td></tr>
                             ) : searchLoading ? (
-                                <tr><td colSpan="7" style={{ padding: '20px' }}><LoadingSpinner text="Searching..." minHeight="60px" /></td></tr>
+                                <tr><td colSpan={5 + (track_warehouse_locations ? 1 : 0) + (enable_dual_pricing ? 1 : 0)} style={{ padding: '20px' }}><LoadingSpinner text="Searching..." minHeight="60px" /></td></tr>
                             ) : products.length === 0 ? (
-                                <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--table-text-muted)', fontSize: '15px' }}>No products found.</td></tr>
+                                <tr><td colSpan={5 + (track_warehouse_locations ? 1 : 0) + (enable_dual_pricing ? 1 : 0)} style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--table-text-muted)', fontSize: '15px' }}>No products found.</td></tr>
                             ) : products.map(p => {
                                 const isLow = p.stock > 0 && p.stock <= 5;
                                 const isOut = p.stock <= 0;
@@ -152,10 +164,12 @@ export default function ProductGrid({
                                         </td>
                                         <td style={{ padding: '12px 14px', fontSize: '15px', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{p.part_no || p.partNo || 'N/A'}</td>
                                         <td style={{ padding: '12px 14px', fontSize: '15px', color: 'var(--table-text-secondary)', fontWeight: '500' }}>{p.category?.name || p.category || 'Uncategorized'}</td>
-                                        <td style={{ padding: '12px 14px', fontSize: '15px', color: 'var(--table-text-secondary)', fontWeight: '500' }}>{p.address || '—'}</td>
+                                        {track_warehouse_locations && (
+                                            <td style={{ padding: '12px 14px', fontSize: '15px', color: 'var(--table-text-secondary)', fontWeight: '500' }}>{p.address || '—'}</td>
+                                        )}
                                         <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                                             <span className={stockBadgeClass}>
-                                                {p.stock}
+                                                {show_stock_levels_pos ? `${p.stock} ${p.uom ? p.uom.replace(/^.*\/\s*/, '') : ''}`.trim() : (isOut ? 'OOS' : 'In Stock')}
                                             </span>
                                         </td>
                                         <td style={{ padding: '12px 14px', fontSize: '15px', fontWeight: '600', textAlign: 'right', color: 'var(--table-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
@@ -172,20 +186,22 @@ export default function ProductGrid({
                                                 <span>{fmt(p.price1)}</span>
                                             )}
                                         </td>
-                                        <td style={{ padding: '12px 20px', fontSize: '15px', fontWeight: '600', textAlign: 'right', color: 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                            {!isOut ? (
-                                                <span 
-                                                    onClick={(e) => { e.stopPropagation(); addToCart(p, 'price2'); }} 
-                                                    style={{ cursor: 'pointer' }}
-                                                    onMouseOver={(ev) => ev.currentTarget.style.textDecoration='underline'}
-                                                    onMouseOut={(ev) => ev.currentTarget.style.textDecoration='none'}
-                                                >
-                                                    {fmt(p.price2)}
-                                                </span>
-                                            ) : (
-                                                <span>{fmt(p.price2)}</span>
-                                            )}
-                                        </td>
+                                        {enable_dual_pricing && (
+                                            <td style={{ padding: '12px 20px', fontSize: '15px', fontWeight: '600', textAlign: 'right', color: 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                {!isOut ? (
+                                                    <span 
+                                                        onClick={(e) => { e.stopPropagation(); addToCart(p, 'price2'); }} 
+                                                        style={{ cursor: 'pointer' }}
+                                                        onMouseOver={(ev) => ev.currentTarget.style.textDecoration='underline'}
+                                                        onMouseOut={(ev) => ev.currentTarget.style.textDecoration='none'}
+                                                    >
+                                                        {fmt(p.price2)}
+                                                    </span>
+                                                ) : (
+                                                    <span>{fmt(p.price2)}</span>
+                                                )}
+                                            </td>
+                                        )}
                                     </tr>
                                 );
                             })}

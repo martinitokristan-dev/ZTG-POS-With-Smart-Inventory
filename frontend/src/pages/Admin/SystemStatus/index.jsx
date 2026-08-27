@@ -91,6 +91,7 @@ export default function SystemStatus() {
     const database = diagnostics?.database || {};
     const storage = diagnostics?.storage || {};
     const renderQuota = diagnostics?.render_quota || {};
+    const cloudinary = diagnostics?.cloudinary || {};
     const downtime = diagnostics?.downtime || {};
     const incidents = diagnostics?.incidents || [];
     const recentErrors = diagnostics?.recent_errors || [];
@@ -789,6 +790,23 @@ export default function SystemStatus() {
                             </button>
                             <button
                                 type="button"
+                                onClick={() => setSelectedTab('cloudinary')}
+                                style={{
+                                    padding: '7px 14px',
+                                    fontSize: '13px',
+                                    fontWeight: 600,
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    backgroundColor: selectedTab === 'cloudinary' ? '#2563EB' : 'transparent',
+                                    color: selectedTab === 'cloudinary' ? '#FFFFFF' : '#64748B',
+                                    transition: 'all 0.15s ease'
+                                }}
+                            >
+                                Cloudinary Media Storage
+                            </button>
+                            <button
+                                type="button"
                                 onClick={() => setSelectedTab('resources')}
                                 style={{
                                     padding: '7px 14px',
@@ -945,7 +963,221 @@ export default function SystemStatus() {
                         </div>
                     )}
 
-                    {/* Tab 3: Server Resources & Telemetry */}
+                    {/* Tab 3: Cloudinary Media Storage Center */}
+                    {selectedTab === 'cloudinary' && (
+                        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            <div style={{
+                                padding: '22px',
+                                borderRadius: '14px',
+                                backgroundColor: (cloudinary.usage_percent || 0) >= 90 ? '#FEF2F2' : '#F8FAFC',
+                                border: `1px solid ${(cloudinary.usage_percent || 0) >= 90 ? '#FECACA' : '#E2E8F0'}`,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '16px',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{
+                                            width: '42px',
+                                            height: '42px',
+                                            borderRadius: '10px',
+                                            backgroundColor: '#EFF6FF',
+                                            border: '1px solid #DBEAFE',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#2563EB',
+                                            flexShrink: 0
+                                        }}>
+                                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.01em' }}>
+                                                Cloudinary Account Storage ({cloudinary.storage_limit_gb || 25} GB Free Tier)
+                                            </div>
+                                            <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: cloudinary.connected ? '#10B981' : '#94A3B8' }} />
+                                                {cloudinary.connected ? `Live synced with Cloudinary Admin API (${cloudinary.cloud_name})` : `Full Cloudinary Account Quota Tracker`}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <span style={{
+                                        fontSize: '12px',
+                                        fontWeight: 700,
+                                        padding: '5px 14px',
+                                        borderRadius: '9999px',
+                                        backgroundColor: (cloudinary.usage_percent || 0) >= 90 ? '#DC2626' : '#ECFDF5',
+                                        color: (cloudinary.usage_percent || 0) >= 90 ? '#FFFFFF' : '#059669',
+                                        border: `1px solid ${(cloudinary.usage_percent || 0) >= 90 ? '#DC2626' : '#A7F3D0'}`
+                                    }}>
+                                        {(cloudinary.usage_percent || 0) >= 90 ? '⚠️ High Usage Warning' : '✓ Healthy Allocation'}
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>
+                                        <span style={{ color: '#059669', fontSize: '14px', fontWeight: 800 }}>
+                                            {cloudinary.storage_formatted || '0 MB'} Used of {cloudinary.storage_limit_gb || 25} GB Total Limit
+                                        </span>
+                                        <span style={{ color: '#64748B' }}>
+                                            {cloudinary.credits_used || 0} / {cloudinary.credits_limit || 25} Credits ({cloudinary.usage_percent || 0}%)
+                                        </span>
+                                    </div>
+                                    <div style={{ width: '100%', height: '10px', backgroundColor: '#E2E8F0', borderRadius: '9999px', overflow: 'hidden' }}>
+                                        <div style={{
+                                            width: `${Math.min(100, Math.max(1, cloudinary.usage_percent || 0))}%`,
+                                            height: '100%',
+                                            backgroundColor: (cloudinary.usage_percent || 0) >= 90 ? '#DC2626' : ((cloudinary.usage_percent || 0) >= 75 ? '#D97706' : '#10B981'),
+                                            borderRadius: '9999px',
+                                            transition: 'width 0.4s ease'
+                                        }} />
+                                    </div>
+                                </div>
+
+                                <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingTop: '4px', borderTop: '1px solid #EEF2F6' }}>
+                                    <span>Plan Type: <strong style={{ color: '#0F172A' }}>{cloudinary.plan || 'Free Tier (25 GB)'}</strong></span>
+                                    <span>Total Account Assets: <strong style={{ color: '#2563EB' }}>{cloudinary.objects_count || 0} all files</strong></span>
+                                </div>
+                            </div>
+
+                            {/* Scoped Folder Breakdown Cards with Professional SVG Icons */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                                {/* 1. Products Folder */}
+                                <div className="status-block-gray" style={{ borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.2s ease' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB', flexShrink: 0 }}>
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                                                </svg>
+                                            </div>
+                                            <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: '#64748B', letterSpacing: '0.04em' }}>
+                                                Product Images
+                                            </span>
+                                        </div>
+                                        <span style={{ fontSize: '10px', fontFamily: 'monospace', background: '#EFF6FF', color: '#2563EB', padding: '2px 7px', borderRadius: '5px', fontWeight: 700, border: '1px solid #DBEAFE' }}>
+                                            {cloudinary.folders?.products?.folder || 'product_images'}/
+                                        </span>
+                                    </div>
+                                    <div className="status-text-dark" style={{ fontSize: '19px', fontWeight: 800, marginTop: '2px', color: '#0F172A' }}>
+                                        {cloudinary.folders?.products?.count ?? 0} <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>photos</span>
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        Folder Storage: <strong style={{ color: '#2563EB' }}>{cloudinary.folders?.products?.formatted || '0 MB'}</strong>
+                                    </div>
+                                </div>
+
+                                {/* 2. Avatars Folder */}
+                                <div className="status-block-gray" style={{ borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.2s ease' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#059669', flexShrink: 0 }}>
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                                    <circle cx="12" cy="7" r="4"></circle>
+                                                </svg>
+                                            </div>
+                                            <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: '#64748B', letterSpacing: '0.04em' }}>
+                                                User Avatars
+                                            </span>
+                                        </div>
+                                        <span style={{ fontSize: '10px', fontFamily: 'monospace', background: '#ECFDF5', color: '#059669', padding: '2px 7px', borderRadius: '5px', fontWeight: 700, border: '1px solid #A7F3D0' }}>
+                                            avatars/
+                                        </span>
+                                    </div>
+                                    <div className="status-text-dark" style={{ fontSize: '19px', fontWeight: 800, marginTop: '2px', color: '#0F172A' }}>
+                                        {cloudinary.folders?.avatars?.count ?? 0} <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>photos</span>
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        Folder Storage: <strong style={{ color: '#059669' }}>{cloudinary.folders?.avatars?.formatted || '0 MB'}</strong>
+                                    </div>
+                                </div>
+
+                                {/* 3. Logos Folder */}
+                                <div className="status-block-gray" style={{ borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.2s ease' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#FAF5FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7C3AED', flexShrink: 0 }}>
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                                    <polyline points="21 15 16 10 5 21"></polyline>
+                                                </svg>
+                                            </div>
+                                            <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: '#64748B', letterSpacing: '0.04em' }}>
+                                                Business Logos
+                                            </span>
+                                        </div>
+                                        <span style={{ fontSize: '10px', fontFamily: 'monospace', background: '#FAF5FF', color: '#7C3AED', padding: '2px 7px', borderRadius: '5px', fontWeight: 700, border: '1px solid #E9D5FF' }}>
+                                            logos/
+                                        </span>
+                                    </div>
+                                    <div className="status-text-dark" style={{ fontSize: '19px', fontWeight: 800, marginTop: '2px', color: '#0F172A' }}>
+                                        {cloudinary.folders?.logos?.count ?? 0} <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>files</span>
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        Folder Storage: <strong style={{ color: '#7C3AED' }}>{cloudinary.folders?.logos?.formatted || '0 MB'}</strong>
+                                    </div>
+                                </div>
+
+                                {/* 4. Total Combined Across Account */}
+                                <div className="status-block-gray" style={{ borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all 0.2s ease' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0D9488', flexShrink: 0 }}>
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
+                                                </svg>
+                                            </div>
+                                            <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: '#64748B', letterSpacing: '0.04em' }}>
+                                                Total Account Storage
+                                            </span>
+                                        </div>
+                                        <span style={{ fontSize: '10px', fontFamily: 'monospace', background: '#F1F5F9', color: '#475569', padding: '2px 7px', borderRadius: '5px', fontWeight: 700, border: '1px solid #E2E8F0' }}>
+                                            All Folders
+                                        </span>
+                                    </div>
+                                    <div className="status-text-dark" style={{ fontSize: '19px', fontWeight: 800, marginTop: '2px', color: '#0F172A' }}>
+                                        {cloudinary.storage_formatted || '0 MB'}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        ✓ {cloudinary.objects_count || 0} Total Assets in Account
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Informational Note explaining transformations & sync */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: '10px',
+                                padding: '12px 16px',
+                                backgroundColor: '#F8FAFC',
+                                borderRadius: '10px',
+                                border: '1px solid #E2E8F0',
+                                fontSize: '12px',
+                                color: '#64748B',
+                                lineHeight: 1.5
+                            }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                                <span>
+                                    <strong>Storage Breakdown Note:</strong> Individual folder stats reflect active uploaded original images. Total Account Storage includes auto-generated CDN transformation thumbnails and cached image formats. Official Cloudinary usage counters update periodically during batch sync.
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tab 4: Server Resources & Telemetry */}
                     {selectedTab === 'resources' && (
                         <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
                             <div className="status-block-gray" style={{ borderRadius: '12px', padding: '16px' }}>
@@ -962,6 +1194,16 @@ export default function SystemStatus() {
                                     {server.memory_usage_mb || '14.5'} MB
                                 </div>
                                 <div className="status-text-muted" style={{ fontSize: '12px', marginTop: '2px' }}>Peak: {server.peak_memory_mb || '18.2'} MB</div>
+                            </div>
+
+                            <div className="status-block-gray" style={{ borderRadius: '12px', padding: '16px' }}>
+                                <div className="status-text-muted" style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700 }}>Cloudinary Storage</div>
+                                <div className="status-text-dark" style={{ fontSize: '18px', fontWeight: 800, marginTop: '4px', color: '#2563EB' }}>
+                                    {cloudinary.storage_formatted || '0 MB'}
+                                </div>
+                                <div className="status-text-muted" style={{ fontSize: '12px', marginTop: '2px' }}>
+                                    {cloudinary.objects_count || 0} images / {cloudinary.storage_limit_gb || 25} GB
+                                </div>
                             </div>
 
                             <div className="status-block-gray" style={{ borderRadius: '12px', padding: '16px' }}>
@@ -995,29 +1237,54 @@ export default function SystemStatus() {
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    {recentErrors.map((err, idx) => (
-                                        <div key={idx} style={{
-                                            padding: '12px 16px',
-                                            borderRadius: '8px',
-                                            backgroundColor: '#FEF2F2',
-                                            border: '1px solid #FECACA',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '4px'
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                <span style={{ fontSize: '11px', fontWeight: 700, color: '#DC2626', textTransform: 'uppercase' }}>
-                                                    {err.level}
-                                                </span>
-                                                <span style={{ fontSize: '11px', color: '#64748B', fontFamily: 'monospace' }}>
-                                                    {err.timestamp}
-                                                </span>
+                                    {recentErrors.map((err, idx) => {
+                                        const lvl = String(err.level || '').toUpperCase();
+                                        let bg = '#FEF2F2';
+                                        let border = '#FECACA';
+                                        let levelColor = '#DC2626';
+                                        let textColor = '#7F1D1D';
+
+                                        if (['INFO', 'SUCCESS'].includes(lvl) || err.message?.toLowerCase().includes('successfully')) {
+                                            bg = '#ECFDF5';
+                                            border = '#A7F3D0';
+                                            levelColor = '#059669';
+                                            textColor = '#065F46';
+                                        } else if (['WARNING', 'WARN', 'NOTICE'].includes(lvl)) {
+                                            bg = '#FFFBEB';
+                                            border = '#FDE68A';
+                                            levelColor = '#D97706';
+                                            textColor = '#92400E';
+                                        } else if (['DEBUG'].includes(lvl)) {
+                                            bg = '#EFF6FF';
+                                            border = '#BFDBFE';
+                                            levelColor = '#2563EB';
+                                            textColor = '#1E40AF';
+                                        }
+
+                                        return (
+                                            <div key={idx} style={{
+                                                padding: '12px 16px',
+                                                borderRadius: '8px',
+                                                backgroundColor: bg,
+                                                border: `1px solid ${border}`,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '4px'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                    <span style={{ fontSize: '11px', fontWeight: 700, color: levelColor, textTransform: 'uppercase' }}>
+                                                        {err.level}
+                                                    </span>
+                                                    <span style={{ fontSize: '11px', color: '#64748B', fontFamily: 'monospace' }}>
+                                                        {err.timestamp}
+                                                    </span>
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: textColor, fontFamily: 'monospace', wordBreak: 'break-word' }}>
+                                                    {err.message}
+                                                </div>
                                             </div>
-                                            <div style={{ fontSize: '12px', color: '#7F1D1D', fontFamily: 'monospace', wordBreak: 'break-word' }}>
-                                                {err.message}
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

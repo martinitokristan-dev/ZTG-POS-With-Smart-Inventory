@@ -106,6 +106,159 @@ class SystemHealthController extends Controller
         $downtimePercentage = round(($totalDowntimeSeconds / max(1, $totalElapsedSecondsThisMonth)) * 100, 3);
         $uptimePercentage = max(0.0, round(100.0 - $downtimePercentage, 2));
 
+        // 8. Cloudinary Cloud Media Storage Telemetry (Scoped to Application Folders)
+        $cloudName = env('CLOUDINARY_CLOUD_NAME');
+        $cloudKey = env('CLOUDINARY_API_KEY');
+        $cloudSecret = env('CLOUDINARY_API_SECRET');
+
+        $cloudinaryUrl = env('CLOUDINARY_URL');
+        if (!empty($cloudinaryUrl)) {
+            $parsed = parse_url($cloudinaryUrl);
+            if (!empty($parsed['user'])) $cloudKey = $parsed['user'];
+            if (!empty($parsed['pass'])) $cloudSecret = $parsed['pass'];
+            if (!empty($parsed['host'])) $cloudName = $parsed['host'];
+        }
+
+        $productFolder = env('CLOUDINARY_FOLDER', 'products');
+        $avatarFolder = 'avatars';
+        $logoFolder = 'logos';
+
+        $dbProductPhotos = 0;
+        $dbAvatarPhotos = 0;
+        $dbLogoPhotos = 0;
+        try {
+            $dbProductPhotos = DB::table('products')->whereNotNull('image')->where('image', '!=', '')->count();
+            $dbAvatarPhotos = DB::table('user_profiles')->whereNotNull('profile_photo')->where('profile_photo', '!=', '')->count();
+            $dbLogoPhotos = DB::table('settings')->where('key', 'business_logo')->whereNotNull('value')->where('value', '!=', '')->count();
+        } catch (\Throwable $e) {
+            // DB not ready during migration
+        }
+        $totalDbPhotos = $dbProductPhotos + $dbAvatarPhotos + $dbLogoPhotos;
+
+        $folderBreakdown = [
+            'products' => [
+                'name'      => 'Product Images',
+                'folder'    => $productFolder,
+                'count'     => $dbProductPhotos,
+                'bytes'     => 0,
+                'formatted' => '0 MB',
+            ],
+            'avatars' => [
+                'name'      => 'User Avatars',
+                'folder'    => $avatarFolder,
+                'count'     => $dbAvatarPhotos,
+                'bytes'     => 0,
+                'formatted' => '0 MB',
+            ],
+            'logos' => [
+                'name'      => 'Business Logos',
+                'folder'    => $logoFolder,
+                'count'     => $dbLogoPhotos,
+                'bytes'     => 0,
+                'formatted' => '0 MB',
+            ],
+        ];
+
+        $cloudinaryData = [
+            'connected'           => false,
+            'cloud_name'          => $cloudName ?: 'Not configured',
+            'plan'                => 'Free Tier (25 GB)',
+            'storage_bytes'       => 0,
+            'storage_formatted'   => '0 MB',
+            'storage_limit_gb'    => 25.0,
+            'objects_count'       => $totalDbPhotos,
+            'bandwidth_bytes'     => 0,
+            'bandwidth_formatted' => '0 MB',
+            'credits_used'        => 0.0,
+            'credits_limit'       => 25.0,
+            'usage_percent'       => 0.0,
+            'folders'             => $folderBreakdown,
+            'last_updated'        => null,
+        ];
+
+        if (!empty($cloudName) && !empty($cloudKey) && !empty($cloudSecret) && $cloudKey !== '000000000000000') {
+            try {
+                // 1. Fetch Official Account-Wide Usage (Counts ALL folders and files in Cloudinary)
+                $usageRes = Http::withBasicAuth($cloudKey, $cloudSecret)
+                    ->timeout(3)
+                    ->get("https://api.cloudinary.com/v1_1/{$cloudName}/usage");
+
+                if ($usageRes->successful()) {
+                    $uJson = $usageRes->json();
+                    $accountStorageBytes = $uJson['storage']['usage'] ?? 0;
+                    $accountBandwidthBytes = $uJson['bandwidth']['usage'] ?? 0;
+                    $accountObjectsCount = $uJson['objects']['usage'] ?? $totalDbPhotos;
+                    $accountCreditsUsed = $uJson['credits']['usage'] ?? round($accountStorageBytes / (1024 * 1024 * 1024), 2);
+                    $accountCreditsLimit = $uJson['credits']['limit'] ?? 25.0;
+                    $accountUsagePercent = $uJson['credits']['used_percent'] ?? ($accountCreditsLimit > 0 ? round(($accountCreditsUsed / $accountCreditsLimit) * 100, 1) : 0);
+
+                    $cloudinaryData = [
+                        'connected'           => true,
+                        'cloud_name'          => $cloudName,
+                        'plan'                => ($uJson['plan'] ?? 'Free') . ' (25 GB / Credits)',
+                        'storage_bytes'       => $accountStorageBytes,
+                        'storage_formatted'   => $this->formatBytes($accountStorageBytes),
+                        'storage_limit_gb'    => (float) $accountCreditsLimit,
+                        'objects_count'       => $accountObjectsCount,
+                        'bandwidth_bytes'     => $accountBandwidthBytes,
+                        'bandwidth_formatted' => $this->formatBytes($accountBandwidthBytes),
+                        'credits_used'        => (float) $accountCreditsUsed,
+                        'credits_limit'       => (float) $accountCreditsLimit,
+                        'usage_percent'       => (float) $accountUsagePercent,
+                        'folders'             => $folderBreakdown,
+                        'last_updated'        => $uJson['last_updated'] ?? Carbon::now('Asia/Manila')->format('Y-m-d H:i:s'),
+                    ];
+                }
+
+                // 2. Query App Folder Breakdowns (products, avatars, logos)
+                $productPrefixes = array_unique([$productFolder, 'product_images', 'products', 'product']);
+                $folderConfig = [
+                    'products' => $productPrefixes,
+                    'avatars'  => [$avatarFolder],
+                    'logos'    => [$logoFolder],
+                ];
+
+                foreach ($folderConfig as $key => $prefixes) {
+                    $seenPublicIds = [];
+                    $folderBytes = 0;
+                    $folderCount = 0;
+
+                    foreach ($prefixes as $pfx) {
+                        try {
+                            $folderRes = Http::withBasicAuth($cloudKey, $cloudSecret)
+                                ->timeout(2)
+                                ->get("https://api.cloudinary.com/v1_1/{$cloudName}/resources/image/upload", [
+                                    'prefix'      => $pfx . '/',
+                                    'max_results' => 500,
+                                ]);
+
+                            if ($folderRes->successful()) {
+                                $resources = $folderRes->json('resources') ?? [];
+                                foreach ($resources as $resItem) {
+                                    $pid = $resItem['public_id'] ?? null;
+                                    if ($pid && !isset($seenPublicIds[$pid])) {
+                                        $seenPublicIds[$pid] = true;
+                                        $folderBytes += ($resItem['bytes'] ?? 0);
+                                        $folderCount++;
+                                    }
+                                }
+                            }
+                        } catch (\Throwable $e) {
+                            // Skip folder query failure
+                        }
+                    }
+
+                    $folderBreakdown[$key]['count'] = max($folderCount, $folderBreakdown[$key]['count']);
+                    $folderBreakdown[$key]['bytes'] = $folderBytes;
+                    $folderBreakdown[$key]['formatted'] = $this->formatBytes($folderBytes);
+                }
+
+                $cloudinaryData['folders'] = $folderBreakdown;
+            } catch (\Throwable $e) {
+                // Graceful fallback
+            }
+        }
+
         return response()->json([
             'status' => ($dbHealthy && !$isQuotaExhausted) ? 'healthy' : 'degraded',
             'server' => [
@@ -131,6 +284,7 @@ class SystemHealthController extends Controller
                 'is_warning'        => $isQuotaWarning,
                 'resets_at'         => $startOfMonth->copy()->addMonth()->format('M j, Y \a\t g:i A'),
             ],
+            'cloudinary'    => $cloudinaryData,
             'downtime' => [
                 'total_seconds'     => $totalDowntimeSeconds,
                 'formatted'         => $this->formatSeconds($totalDowntimeSeconds),
@@ -155,6 +309,17 @@ class SystemHealthController extends Controller
             'incidents'     => $incidentHistory,
             'recent_errors' => $recentErrors,
         ]);
+    }
+
+    /**
+     * Format bytes into clean human-friendly size.
+     */
+    private function formatBytes(int|float $bytes): string
+    {
+        if ($bytes <= 0) return '0 MB';
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $i = floor(log($bytes, 1024));
+        return round($bytes / pow(1024, $i), 2) . ' ' . ($units[$i] ?? 'B');
     }
 
     /**

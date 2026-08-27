@@ -100,9 +100,6 @@ export default function useSettings() {
         currency: 'PHP',
         // Inventory Configuration
         dead_stock_period: '30',
-        auto_deduct_stock: 'true',
-        track_damaged_separately: 'true',
-        track_damaged: 'true',
         // Product Info toggles
         display_chinese_names: 'true',
         enable_product_variants: 'true',
@@ -113,15 +110,10 @@ export default function useSettings() {
         // Pricing Configuration
         price1_label: 'Original Price',
         price2_label: 'Retail Price',
-        auto_calc_price2: 'true',
-        price2_markup_percent: '10',
-        price2_markup: '10',
-        // Warehouse & Display
-        location_format: 'Aisle-Center-Hang (A-12-3)',
-        number_of_aisles: '15',
-        always_display_part_numbers: 'false',
+        // Units of Measure
+        units_of_measure: '["Piece / PCS", "Unit", "Roll", "Meter / m", "Set", "Box", "Pack", "Pair", "Kilogram / kg", "Liter / L"]',
+        // Display
         show_stock_levels_pos: 'true',
-        hide_oos_pos: 'false',
         // Authorization & Limit Settings
         daily_void_limit: '5',
         // Alerts Tab settings
@@ -700,8 +692,6 @@ export default function useSettings() {
             const nextVal = prev[key] === 'true' ? 'false' : 'true';
             const updates = { [key]: nextVal };
 
-            if (key === 'track_damaged_separately') updates.track_damaged = nextVal;
-            if (key === 'track_damaged') updates.track_damaged_separately = nextVal;
             if (key === 'enable_product_variants') updates.enable_variants = nextVal;
             if (key === 'enable_variants') updates.enable_product_variants = nextVal;
             if (key === 'track_warehouse_locations') updates.track_locations = nextVal;
@@ -709,11 +699,18 @@ export default function useSettings() {
 
             const next = { ...prev, ...updates };
 
+            try {
+                localStorage.setItem('cached_business_info', JSON.stringify(next));
+                window.dispatchEvent(new Event('settings_updated'));
+            } catch (_) {}
+
             setTimeout(async () => {
                 try {
                     await api.put('/settings', { settings: next });
                     resetSettingsCache('settings');
                     setInitialSettings(next);
+                    localStorage.setItem('cached_business_info', JSON.stringify(next));
+                    window.dispatchEvent(new Event('settings_updated'));
                 } catch (err) {
                     showToast('Failed to auto-save setting change.', 'error');
                 }
@@ -726,8 +723,6 @@ export default function useSettings() {
     const handleSettingInputChange = (key, val) => {
         setSettings(prev => {
             const updates = { [key]: val };
-            if (key === 'price2_markup_percent') updates.price2_markup = val;
-            if (key === 'price2_markup') updates.price2_markup_percent = val;
             return { ...prev, ...updates };
         });
     };
@@ -870,10 +865,81 @@ export default function useSettings() {
                 return vt;
             }));
             resetSettingsCache('variants');
-            showToast('Variant option removed.', 'success');
+            showToast('Variant option deleted.', 'success');
         } catch (err) {
             showToast(err.response?.data?.message || 'Failed to delete variant option.', 'error');
         }
+    };
+
+    // ------------------------------------------------------------------------
+    // TAB: UNITS OF MEASURE (UOM) CRUD
+    // ------------------------------------------------------------------------
+    const [newUomValue, setNewUomValue] = useState('');
+    const [editingUomIndex, setEditingUomIndex] = useState(null);
+    const [editUomValue, setEditUomValue] = useState('');
+
+    const uomList = useMemo(() => {
+        if (!settings.units_of_measure) {
+            return ['Piece / PCS', 'Unit', 'Roll', 'Meter / m', 'Set', 'Box', 'Pack', 'Pair', 'Kilogram / kg', 'Liter / L'];
+        }
+        try {
+            const parsed = typeof settings.units_of_measure === 'string'
+                ? JSON.parse(settings.units_of_measure)
+                : settings.units_of_measure;
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch (_) {}
+        return ['Piece / PCS', 'Unit', 'Roll', 'Meter / m', 'Set', 'Box', 'Pack', 'Pair', 'Kilogram / kg', 'Liter / L'];
+    }, [settings.units_of_measure]);
+
+    const handleSaveUomList = async (newList) => {
+        const jsonStr = JSON.stringify(newList);
+        setSettings(prev => {
+            const next = { ...prev, units_of_measure: jsonStr };
+            try {
+                localStorage.setItem('cached_business_info', JSON.stringify(next));
+                window.dispatchEvent(new Event('settings_updated'));
+            } catch (_) {}
+            return next;
+        });
+
+        try {
+            await api.put('/settings', { settings: { units_of_measure: jsonStr } });
+            resetSettingsCache('settings');
+            window.dispatchEvent(new Event('settings_updated'));
+        } catch (err) {
+            showToast('Failed to save Unit of Measure.', 'error');
+        }
+    };
+
+    const handleAddUom = async () => {
+        if (!newUomValue.trim()) return;
+        const val = newUomValue.trim();
+        if (uomList.includes(val)) {
+            showToast('This Unit of Measure already exists.', 'error');
+            return;
+        }
+        const updated = [...uomList, val];
+        await handleSaveUomList(updated);
+        setNewUomValue('');
+        showToast(`Unit of Measure "${val}" added successfully.`, 'success');
+    };
+
+    const handleUpdateUom = async (index, newVal) => {
+        if (!newVal.trim()) return;
+        const val = newVal.trim();
+        const updated = [...uomList];
+        updated[index] = val;
+        await handleSaveUomList(updated);
+        setEditingUomIndex(null);
+        showToast('Unit of Measure updated successfully.', 'success');
+    };
+
+    const handleDeleteUom = async (index) => {
+        const item = uomList[index];
+        if (!window.confirm(`Delete Unit of Measure "${item}"?`)) return;
+        const updated = uomList.filter((_, i) => i !== index);
+        await handleSaveUomList(updated);
+        showToast(`Unit of Measure "${item}" deleted.`, 'success');
     };
 
     // ------------------------------------------------------------------------
@@ -1181,6 +1247,8 @@ export default function useSettings() {
         categoryName, setCategoryName, categoryVariants, setCategoryVariants,
         newOptionValue, setNewOptionValue, categorySubmitting,
         handleCategorySubmit, handleDeleteCategory, handleAddVariantOption, handleUpdateVariantOption, handleDeleteVariantOption, getOptionsForType,
+        uomList, newUomValue, setNewUomValue, editingUomIndex, setEditingUomIndex, editUomValue, setEditUomValue,
+        handleAddUom, handleUpdateUom, handleDeleteUom,
 
         // Tab 4: Alert Rules
         alertRules, showRuleModal, setShowRuleModal, ruleForm, setRuleForm,

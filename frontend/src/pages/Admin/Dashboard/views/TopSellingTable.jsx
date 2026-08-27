@@ -26,7 +26,7 @@ export default function TopSellingTable({ topProducts }) {
                             <th style={{ fontSize: 13, letterSpacing: '0.02em', color: 'var(--table-text-secondary)', fontWeight: 600, padding: '12px 16px', textAlign: 'left' }}>Product</th>
                             <th style={{ fontSize: 13, letterSpacing: '0.02em', color: 'var(--table-text-secondary)', fontWeight: 600, padding: '12px 16px', textAlign: 'left' }}>Part Number</th>
                             <th style={{ fontSize: 13, letterSpacing: '0.02em', color: 'var(--table-text-secondary)', fontWeight: 600, padding: '12px 16px', textAlign: 'left' }}>Category</th>
-                            <th style={{ fontSize: 13, letterSpacing: '0.02em', color: 'var(--table-text-secondary)', fontWeight: 600, padding: '12px 16px', textAlign: 'right' }}>Units Sold</th>
+                            <th style={{ fontSize: 13, letterSpacing: '0.02em', color: 'var(--table-text-secondary)', fontWeight: 600, padding: '12px 16px', textAlign: 'right' }}>Qty Sold</th>
                             <th style={{ fontSize: 13, letterSpacing: '0.02em', color: 'var(--table-text-secondary)', fontWeight: 600, padding: '12px 16px', textAlign: 'right' }}>Revenue</th>
                             <th style={{ fontSize: 13, letterSpacing: '0.02em', color: 'var(--table-text-secondary)', fontWeight: 600, padding: '12px 16px', textAlign: 'right' }}>Sales Performance</th>
                         </tr>
@@ -40,7 +40,9 @@ export default function TopSellingTable({ topProducts }) {
                                 </td>
                                 <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-primary)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{p.partNo}</td>
                                 <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-secondary)', fontWeight: 500 }}>{p.category}</td>
-                                <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-primary)', fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{p.unitsSold}</td>
+                                <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-primary)', fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                                    {p.unitsSold} <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--table-text-secondary)' }}>{p.uom || 'pcs'}</span>
+                                </td>
                                 <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-primary)', fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{p.revenue.toLocaleString()}</td>
                                 <td style={{ padding: '12px 16px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, maxWidth: 200, marginLeft: 'auto' }}>

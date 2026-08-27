@@ -278,7 +278,7 @@ class PhaseSevenTest extends TestCase
             'status'         => TransactionStatus::COMPLETED->value,
         ]);
 
-        \App\Models\TransactionItem::create([
+        TransactionItem::create([
             'transaction_id' => $transaction->id,
             'product_id'     => $product->id,
             'qty'            => 10,

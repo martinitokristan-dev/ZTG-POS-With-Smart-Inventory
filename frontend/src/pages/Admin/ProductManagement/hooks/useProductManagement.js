@@ -17,10 +17,8 @@ const DEFAULT_FORM = {
     chinese_name: '',
     part_no: '',
     category_id: '',
+    uom: 'Piece / PCS',
     address: '',
-    aisle: '',
-    carrier: '',
-    hang: '',
     stock: 0,
     alert_limit: 5,
     price1: 0,
@@ -572,13 +570,11 @@ export default function useProductManagement() {
     };
 
     // ── Form helpers ─────────────────────────────────────────────
-    const handleAddressChange = (field, value) => {
-        setFormData(prev => {
-            const next = { ...prev, [field]: value };
-            const parts = [next.aisle?.trim(), next.carrier?.trim(), next.hang?.trim()].filter(Boolean);
-            next.address = parts.join('-');
-            return next;
-        });
+    const handleAddressChange = (value) => {
+        setFormData(prev => ({
+            ...prev,
+            address: value
+        }));
     };
 
     const [uploadingImage, setUploadingImage] = useState(false);
@@ -623,18 +619,23 @@ export default function useProductManagement() {
             }
         }
         setSelectedProduct(targetProduct);
-        const parts = (targetProduct.address || '').split('-');
         setFormData({
-            name: targetProduct.name, chinese_name: targetProduct.chinese_name || '',
-            part_no: targetProduct.part_no, category_id: targetProduct.category_id,
+            name: targetProduct.name, 
+            chinese_name: targetProduct.chinese_name || '',
+            part_no: targetProduct.part_no, 
+            category_id: targetProduct.category_id,
+            uom: targetProduct.uom || 'Piece / PCS',
             address: targetProduct.address || '',
-            aisle: parts[0] || '', carrier: parts[1] || '', hang: parts[2] || '',
-            stock: targetProduct.stock, alert_limit: targetProduct.alert_limit || 5,
-            price1: targetProduct.price1, price2: targetProduct.price2,
-            image: targetProduct.image || '', notes: targetProduct.notes || '',
+            stock: targetProduct.stock, 
+            alert_limit: targetProduct.alert_limit || 5,
+            price1: targetProduct.price1, 
+            price2: targetProduct.price2,
+            image: targetProduct.image || '', 
+            notes: targetProduct.notes || '',
             variants: targetProduct.variants ? targetProduct.variants.map(v => ({...v, option_ids: v.variant_options ? v.variant_options.map(o => o.id) : []})) : [],
             status: targetProduct.status || 'Active',
-            is_dead_stock: !!targetProduct.is_dead_stock, damaged: targetProduct.damaged || 0
+            is_dead_stock: !!targetProduct.is_dead_stock, 
+            damaged: targetProduct.damaged || 0
         });
         setShowEditModal(true);
     };

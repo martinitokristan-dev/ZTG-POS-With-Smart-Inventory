@@ -1,6 +1,7 @@
 import React from 'react';
 import LoadingSpinner from '../../../../shared/components/LoadingSpinner';
 import useDisplayChineseNames from '../../../../shared/hooks/useDisplayChineseNames';
+import useSystemSettings from '../../../../shared/hooks/useSystemSettings';
 import { matchesStatusFilter } from '../../../../shared/utils/skuHelpers';
 import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
@@ -8,6 +9,7 @@ import TablePagination from '../../../../shared/components/TablePagination';
 
 export default function InventoryTable({ products, loading, handleViewProduct, pagination, statusFilter, onPageChange, perPage, onPerPageChange }) {
     const showChineseNames = useDisplayChineseNames();
+    const { track_warehouse_locations, enable_dual_pricing, price1_label, price2_label } = useSystemSettings();
     const renderRow = (item, isVariant, baseIndex, parentProduct) => {
         const alertLevel = item.alert_limit || 5;
         const isOutOfStock = item.stock === 0;
@@ -75,15 +77,21 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                     <CopyableText text={item.part_no} label="Part No." />
                 </td>
                 <td style={{ fontSize: '15px', fontWeight: 500, color: 'var(--table-text-secondary)' }}>{item.category?.name || parentProduct?.category?.name || 'Unassigned'}</td>
-                <td><code style={{ background: 'var(--bg-secondary)', color: 'var(--primary)', padding: '3px 8px', borderRadius: '4px', fontSize: '13px', fontWeight: 500 }}>{item.address || '—'}</code></td>
+                {track_warehouse_locations && (
+                    <td><code style={{ background: 'var(--bg-secondary)', color: 'var(--primary)', padding: '3px 8px', borderRadius: '4px', fontSize: '13px', fontWeight: 500 }}>{item.address || '—'}</code></td>
+                )}
                 <td style={{ textAlign: 'right' }}>
                     <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: '1.2', padding: '4px 10px', borderRadius: '6px', backgroundColor: stockBadgeBg, color: stockColor, minWidth: '54px', fontVariantNumeric: 'tabular-nums' }}>
                         <span style={{ fontSize: '14px', fontWeight: '600' }}>{item.stock}</span>
-                        <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>Units</span>
+                        <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>
+                            {item.uom ? item.uom.replace(/^.*\/\s*/, '') : 'Units'}
+                        </span>
                     </div>
                 </td>
                 <td style={{ fontWeight: 600, fontSize: '15px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(item.price1 || 0).toLocaleString('en-US')}</td>
-                <td style={{ fontWeight: 600, fontSize: '15px', color: 'var(--primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(item.price2 || 0).toLocaleString('en-US')}</td>
+                {enable_dual_pricing && (
+                    <td style={{ fontWeight: 600, fontSize: '15px', color: 'var(--primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(item.price2 || 0).toLocaleString('en-US')}</td>
+                )}
                 <td style={{ whiteSpace: 'nowrap', textAlign: 'right', fontSize: '15px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{item.sales_count || 0} sold</td>
                 <td>
                     <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'nowrap', alignItems: 'center' }}>
@@ -140,10 +148,14 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                             <th style={{ textAlign: 'left' }}>Product</th>
                             <th style={{ textAlign: 'left' }}>Part No.</th>
                             <th style={{ textAlign: 'left' }}>Category</th>
-                            <th style={{ textAlign: 'left' }}>Address</th>
+                            {track_warehouse_locations && (
+                                <th style={{ textAlign: 'left' }}>Address</th>
+                            )}
                             <th style={{ textAlign: 'right' }}>Stock</th>
-                            <th style={{ textAlign: 'right' }}>Original Price</th>
-                            <th style={{ textAlign: 'right' }}>Retail Price</th>
+                            <th style={{ textAlign: 'right' }}>{price1_label || 'Original Price'}</th>
+                            {enable_dual_pricing && (
+                                <th style={{ textAlign: 'right' }}>{price2_label || 'Retail Price'}</th>
+                            )}
                             <th style={{ textAlign: 'right' }}>Sales</th>
                             <th style={{ textAlign: 'left' }}>Status</th>
                             <th style={{ textAlign: 'center' }}>Damaged</th>
@@ -153,13 +165,13 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan="11" style={{ padding: '32px' }}>
+                                <td colSpan={9 + (track_warehouse_locations ? 1 : 0) + (enable_dual_pricing ? 1 : 0)} style={{ padding: '32px' }}>
                                     <LoadingSpinner text="Loading product inventory dataset..." minHeight="100px" />
                                 </td>
                             </tr>
                         ) : products.length === 0 ? (
                             <tr>
-                                <td colSpan="11" style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>
+                                <td colSpan={9 + (track_warehouse_locations ? 1 : 0) + (enable_dual_pricing ? 1 : 0)} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>
                                     No inventory items found.
                                 </td>
                             </tr>
@@ -214,13 +226,13 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                                     <td style={{ padding: '16px', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 800 }}>Total:</td>
                                     <td></td>
                                     <td></td>
-                                    <td></td>
+                                    {track_warehouse_locations && <td></td>}
                                     <td style={{ padding: '16px', textAlign: 'right', color: 'var(--text-primary)' }}>
                                         <span style={{ fontSize: '13px', fontWeight: 800 }}>{totalStock}</span>
                                         <span style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', marginLeft: '4px' }}>Units</span>
                                     </td>
                                     <td style={{ padding: '16px' }}></td>
-                                    <td style={{ padding: '16px' }}></td>
+                                    {enable_dual_pricing && <td style={{ padding: '16px' }}></td>}
                                     <td style={{ padding: '16px', textAlign: 'right', color: 'var(--primary)', fontSize: '13px', fontWeight: 800, whiteSpace: 'nowrap' }}>{totalSold} sold</td>
                                     <td style={{ padding: '16px' }}></td>
                                     <td style={{ padding: '16px', textAlign: 'center', color: 'var(--text-secondary)' }}>

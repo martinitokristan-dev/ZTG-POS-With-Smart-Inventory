@@ -37,13 +37,16 @@ class RemindDailySales extends Command
         }
 
         // Check if there are any Completed or Paid transactions today
-        $hasSales = Transaction::whereDate('created_at', today())
+        $hasSales = Transaction::query()
+            ->whereDate('created_at', today()->toDateString())
             ->whereIn('status', ['Completed', 'Paid'])
             ->exists();
 
         if ($hasSales) {
             // Check if the admin has already confirmed/submitted the daily report today
-            $alreadyReported = \App\Models\ReportLog::whereDate('date', today())->exists();
+            $alreadyReported = \App\Models\ReportLog::query()
+                ->whereDate('date', today()->toDateString())
+                ->exists();
 
             if (!$alreadyReported) {
                 Notification::create([

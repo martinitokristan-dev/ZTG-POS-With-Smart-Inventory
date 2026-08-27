@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import IOSSelect from '../../../shared/components/IOSSelect';
 import LoadingSpinner from '../../../shared/components/LoadingSpinner';
 import useDisplayChineseNames from '../../../shared/hooks/useDisplayChineseNames';
+import useSystemSettings from '../../../shared/hooks/useSystemSettings';
 import { matchesStatusFilter } from '../../../shared/utils/skuHelpers';
 import CopyableText from '../../../shared/components/CopyableText';
 import FormattedProductName from '../../../shared/components/FormattedProductName';
@@ -21,6 +22,7 @@ export default function ProductsTable({
 }) {
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const showChineseNames = useDisplayChineseNames();
+    const { track_warehouse_locations, enable_dual_pricing, price1_label, price2_label } = useSystemSettings();
 
     // Close dropdowns on click outside
     useEffect(() => {
@@ -121,15 +123,21 @@ export default function ProductsTable({
                     <CopyableText text={product.part_no} label="Part No." />
                 </td>
                 <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '500' }}>{catName}</td>
-                <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)' }}><code style={{ background: 'var(--bg-secondary)', color: 'var(--primary)', padding: '3px 8px', borderRadius: '4px', fontSize: '13px', fontWeight: 500 }}>{product.address || '—'}</code></td>
+                {track_warehouse_locations && (
+                    <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)' }}><code style={{ background: 'var(--bg-secondary)', color: 'var(--primary)', padding: '3px 8px', borderRadius: '4px', fontSize: '13px', fontWeight: 500 }}>{product.address || '—'}</code></td>
+                )}
                 <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', textAlign: 'right' }}>
                     <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: '1.2', padding: '4px 10px', borderRadius: '6px', backgroundColor: stockBadgeBg, color: stockColor, minWidth: '54px', fontVariantNumeric: 'tabular-nums' }}>
                         <span style={{ fontSize: '14px', fontWeight: '600' }}>{product.stock}</span>
-                        <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>Units</span>
+                        <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>
+                            {product.uom ? product.uom.replace(/^.*\/\s*/, '') : 'Units'}
+                        </span>
                     </div>
                 </td>
                 <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', color: 'var(--text-primary)', fontWeight: '600', fontSize: '15px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(product.price1).toLocaleString('en-US')}</td>
-                <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', fontWeight: '600', fontSize: '15px', color: 'var(--primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(product.price2).toLocaleString('en-US')}</td>
+                {enable_dual_pricing && (
+                    <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', fontWeight: '600', fontSize: '15px', color: 'var(--primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(product.price2).toLocaleString('en-US')}</td>
+                )}
                 <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)' }}>
                     <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'nowrap', alignItems: 'center' }}>
                         <span 
@@ -352,19 +360,23 @@ export default function ProductsTable({
                                 <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'left' }}>Product</th>
                                 <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'left' }}>Part No.</th>
                                 <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'left' }}>Category</th>
-                                <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'left' }}>Address</th>
+                                {track_warehouse_locations && (
+                                    <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'left' }}>Address</th>
+                                )}
                                 <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right' }}>Stock</th>
-                                <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right' }}>Original Price</th>
-                                <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right' }}>Retail Price</th>
+                                <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right' }}>{price1_label || 'Original Price'}</th>
+                                {enable_dual_pricing && (
+                                    <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right' }}>{price2_label || 'Retail Price'}</th>
+                                )}
                                 <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'left' }}>Status</th>
                                 <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'center' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan="9" style={{ padding: '32px' }}><LoadingSpinner text="Loading catalog items..." minHeight="100px" /></td></tr>
+                                <tr><td colSpan={7 + (track_warehouse_locations ? 1 : 0) + (enable_dual_pricing ? 1 : 0)} style={{ padding: '32px' }}><LoadingSpinner text="Loading catalog items..." minHeight="100px" /></td></tr>
                             ) : products.length === 0 ? (
-                                <tr><td colSpan="9" className="py-8 text-center text-xs font-semibold text-slate-400">No products found matching criteria.</td></tr>
+                                <tr><td colSpan={7 + (track_warehouse_locations ? 1 : 0) + (enable_dual_pricing ? 1 : 0)} className="py-8 text-center text-xs font-semibold text-slate-400">No products found matching criteria.</td></tr>
                             ) : (() => {
                                 const visibleRows = [];
                                 products.forEach((p) => {

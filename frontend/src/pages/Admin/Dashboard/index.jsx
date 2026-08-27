@@ -1,6 +1,7 @@
 import React from 'react';
 import LoadingSpinner from '../../../shared/components/LoadingSpinner';
 import { useDashboard } from './hooks/useDashboard';
+import useSystemSettings from '../../../shared/hooks/useSystemSettings';
 
 import StatCards from './views/StatCards';
 import SalesTrendChart from './views/SalesTrendChart';
@@ -16,6 +17,7 @@ export default function Dashboard() {
         stats,
         topProducts
     } = useDashboard();
+    const { show_alerts_on_dashboard } = useSystemSettings();
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -95,12 +97,14 @@ export default function Dashboard() {
                             gap: 24,
                             alignItems: 'stretch'
                         }}>
-                            <div className="sales-trend-span" style={{ gridColumn: 'span 3', minWidth: 0 }}>
+                            <div className="sales-trend-span" style={{ gridColumn: show_alerts_on_dashboard ? 'span 3' : 'span 4', minWidth: 0 }}>
                                 <SalesTrendChart last7Days={stats.last7Days || []} timeRange={currentTimeRange} />
                             </div>
-                            <div className="alerts-span" style={{ gridColumn: 'span 1', minWidth: 0 }}>
-                                <CriticalStockAlerts />
-                            </div>
+                            {show_alerts_on_dashboard && (
+                                <div className="alerts-span" style={{ gridColumn: 'span 1', minWidth: 0 }}>
+                                    <CriticalStockAlerts />
+                                </div>
+                            )}
                         </div>
 
                         <TopSellingTable topProducts={topProducts} />
