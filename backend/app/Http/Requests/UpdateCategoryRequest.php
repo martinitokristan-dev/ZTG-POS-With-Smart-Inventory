@@ -19,8 +19,8 @@ class UpdateCategoryRequest extends FormRequest
 
         return [
             'name' => 'required|string|max:100|unique:categories,name,' . $categoryId,
-            'variants' => 'nullable|array|max:2',
-            'variants.*' => 'string|in:size,quality,color',
+            'variants' => 'nullable|array|max:3',
+            'variants.*' => 'string|in:size,quality,color,specification,material',
         ];
     }
 }

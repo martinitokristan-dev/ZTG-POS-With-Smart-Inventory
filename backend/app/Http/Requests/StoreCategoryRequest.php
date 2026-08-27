@@ -15,8 +15,8 @@ class StoreCategoryRequest extends FormRequest
     {
         return [
             'name' => 'required|string|unique:categories,name|max:100',
-            'variants' => 'nullable|array|max:2',
-            'variants.*' => 'string|in:size,quality,color',
+            'variants' => 'nullable|array|max:3',
+            'variants.*' => 'string|in:size,quality,color,specification,material',
         ];
     }
 }
