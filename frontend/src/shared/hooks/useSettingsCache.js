@@ -6,6 +6,7 @@ const EMPLOYEE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 let settingsCache = {
     user: { data: null, ts: 0 },
     settings: { data: null, ts: 0 },
+    categories: { data: null, ts: 0 },
     variants: { data: null, ts: 0 },
     alertRules: { data: null, ts: 0 },
     employees: { data: null, ts: 0 },
@@ -19,6 +20,7 @@ export const resetSettingsCache = (key = null) => {
         settingsCache = {
             user: { data: null, ts: 0 },
             settings: { data: null, ts: 0 },
+            categories: { data: null, ts: 0 },
             variants: { data: null, ts: 0 },
             alertRules: { data: null, ts: 0 },
             employees: { data: null, ts: 0 },

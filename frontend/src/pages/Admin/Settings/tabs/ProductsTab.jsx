@@ -73,7 +73,7 @@ export default function ProductsTab({
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
                                 <div style={{ flex: 1 }}>
                                     <h4 style={{ margin: '0 0 3px', fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>Product Categories</h4>
-                                    <p className="panel-desc" style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>Add categories and assign variant types — up to 2 per category.</p>
+                                    <p className="panel-desc" style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>Add categories and assign variant types — up to 3 per category.</p>
                                 </div>
                                 <button className="btn btn-primary btn-sm" style={{ flexShrink: 0 }} onClick={() => { setSelectedCategory(null); setCategoryName(''); setCategoryVariants([]); setShowCategoryModal(true); }}>
                                     <svg viewBox="0 0 24 24" style={{ width: '13px', height: '13px', fill: 'none', stroke: 'currentColor', strokeWidth: '2.5', verticalAlign: 'middle', marginRight: '4px' }}><path d="M12 5v14M5 12h14"/></svg>
@@ -81,7 +81,11 @@ export default function ProductsTab({
                                 </button>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {categories.map(c => (
+                                {(!categories || categories.length === 0) ? (
+                                    <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
+                                        No product categories found. Click "+ Add Category" to create one.
+                                    </div>
+                                ) : categories.map(c => (
                                     <div key={c.id} className="cat-card">
                                         <div className="cat-card-info">
                                             <div className="cat-card-name">{c.name}</div>

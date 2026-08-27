@@ -301,11 +301,22 @@ export default function useSettings() {
     };
 
     const loadCategories = async () => {
-        setCategories(contextCategories);
+        try {
+            const data = await fetchSettingData('categories', '/categories');
+            const list = Array.isArray(data) ? data : (data?.data || []);
+            setCategories(list);
+        } catch (e) {
+            console.error("Failed to load cached categories:", e);
+            if (contextCategories && contextCategories.length > 0) {
+                setCategories(contextCategories);
+            }
+        }
     };
 
     useEffect(() => {
-        setCategories(contextCategories);
+        if (contextCategories && contextCategories.length > 0) {
+            setCategories(contextCategories);
+        }
     }, [contextCategories]);
 
     const loadVariants = async () => {
@@ -753,11 +764,13 @@ export default function useSettings() {
                 await api.post('/categories', { name: categoryName, variants: categoryVariants });
                 showToast('New category added successfully!', 'success');
             }
+            resetSettingsCache('categories');
             commitFn();
             setShowCategoryModal(false);
             setCategoryName('');
             setSelectedCategory(null);
             refetchCategories();
+            loadCategories();
         } catch (err) {
             rollbackFn();
             showToast(err.response?.data?.message || 'Failed to save product category.', 'error');
@@ -771,9 +784,11 @@ export default function useSettings() {
         const { commit, rollback } = optimisticDeleteCategory(cat.id);
         try {
             await api.delete(`/categories/${cat.id}`);
+            resetSettingsCache('categories');
             commit();
             showToast('Category deleted successfully.', 'success');
             refetchCategories();
+            loadCategories();
         } catch (err) {
             rollback();
             showToast(err.response?.data?.message || 'Failed to delete category.', 'error');
