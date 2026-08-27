@@ -41,7 +41,7 @@ export default function CategoryModal({
         setCategoryVariants(prev => {
             const current = prev || [];
             if (current.includes(key)) return current.filter(k => k !== key);
-            if (current.length >= 2) return current; // Max 2 selections
+            if (current.length >= 3) return current; // Max 3 selections
             return [...current, key];
         });
     };
@@ -104,7 +104,7 @@ export default function CategoryModal({
                         {/* Assign Variant Types */}
                         <div className="form-group no-float" style={{ margin: 0 }}>
                             <label style={{ display: 'block', fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '10px' }}>
-                                Assign Variant Types <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 'normal' }}>(select up to 2)</span>
+                                Assign Variant Types <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 'normal' }}>(select up to 3)</span>
                             </label>
                             
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
