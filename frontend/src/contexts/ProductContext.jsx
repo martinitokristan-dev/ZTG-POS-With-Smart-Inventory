@@ -280,12 +280,14 @@ export const ProductProvider = ({ children }) => {
         
         setCategories(prev => {
             const exists = prev.find(c => c.id === id);
+            let next;
             if (exists) {
                 previousState = { ...exists };
-                return prev.map(c => c.id === id ? { ...c, ...newCategoryData } : c);
+                next = prev.map(c => c.id === id ? { ...c, ...newCategoryData } : c);
             } else {
-                return [{ id, ...newCategoryData }, ...prev];
+                next = [{ id, ...newCategoryData }, ...prev];
             }
+            return next.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         });
         
         return {

@@ -304,18 +304,21 @@ export default function useSettings() {
         try {
             const data = await fetchSettingData('categories', '/categories');
             const list = Array.isArray(data) ? data : (data?.data || []);
-            setCategories(list);
+            const sorted = [...list].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            setCategories(sorted);
         } catch (e) {
             console.error("Failed to load cached categories:", e);
             if (contextCategories && contextCategories.length > 0) {
-                setCategories(contextCategories);
+                const sorted = [...contextCategories].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                setCategories(sorted);
             }
         }
     };
 
     useEffect(() => {
         if (contextCategories && contextCategories.length > 0) {
-            setCategories(contextCategories);
+            const sorted = [...contextCategories].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            setCategories(sorted);
         }
     }, [contextCategories]);
 
