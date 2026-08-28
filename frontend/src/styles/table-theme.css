@@ -101,6 +101,7 @@ table:not(.receipt-table):not(#ztg-print-cr *):not(#ztg-print-receipt *) > tbody
   border-bottom: 1px solid var(--table-border) !important;
 }
 
+
 /* Hover States */
 table.data-table tbody tr:hover,
 table.pos-table tbody tr.hover-row:hover,

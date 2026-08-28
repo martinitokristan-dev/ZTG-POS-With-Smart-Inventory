@@ -15,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 use App\Events\InventoryUpdated;
 use App\Events\TransactionCreated;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
+use App\Services\Constants\StockConstants;
+use App\Services\Constants\InvoiceConstants;
 
 class ProductService
 {
@@ -22,10 +24,10 @@ class ProductService
      * Calculate product status based on stock level.
      * Never overrides a manually 'Disabled' status.
      */
-    public function calculateStatus(?int $stock = 0, ?int $alertLimit = 5, ?string $currentStatus = null): string
+    public function calculateStatus(?int $stock = 0, ?int $alertLimit = StockConstants::DEFAULT_ALERT_LIMIT, ?string $currentStatus = null): string
     {
         $stockVal = (int) ($stock ?? 0);
-        $limitVal = (int) ($alertLimit ?? 5);
+        $limitVal = (int) ($alertLimit ?? StockConstants::DEFAULT_ALERT_LIMIT);
 
         // Preserve Disabled status if explicitly set
         if ($currentStatus === ProductStatus::DISABLED->value || $currentStatus === 'Disabled') {
@@ -155,7 +157,7 @@ class ProductService
     public function createProduct(array $data): Product
     {
         return DB::transaction(function () use ($data) {
-            $alertLimit = $data['alert_limit'] ?? 5;
+            $alertLimit = $data['alert_limit'] ?? StockConstants::DEFAULT_ALERT_LIMIT;
             $status = $this->calculateStatus($data['stock'], $alertLimit);
 
             // 1. Save base product
@@ -165,7 +167,7 @@ class ProductService
                 'chinese_name'      => $data['chinese_name'] ?? null,
                 'part_no'           => $data['part_no'] ?? null,
                 'category_id'       => $data['category_id'],
-                'uom'               => $data['uom'] ?? 'Piece / PCS',
+                'uom'               => $data['uom'] ?? StockConstants::DEFAULT_UOM,
                 'address'           => $data['address'] ?? null,
                 'stock'             => $data['stock'],
                 'alert_limit'       => $alertLimit,
@@ -190,7 +192,7 @@ class ProductService
                         'chinese_name'      => $variantData['chinese_name'] ?? null,
                         'part_no'           => $variantData['part_no'] ?? null,
                         'category_id'       => $data['category_id'],
-                        'uom'               => $variantData['uom'] ?? ($data['uom'] ?? 'Piece / PCS'),
+                        'uom'               => $variantData['uom'] ?? ($data['uom'] ?? StockConstants::DEFAULT_UOM),
                         'address'           => $data['address'] ?? null,
                         'stock'             => $variantData['stock'],
                         'alert_limit'       => $variantAlertLimit,
@@ -255,7 +257,7 @@ class ProductService
                     'chinese_name' => $data['chinese_name'] ?? null,
                     'part_no'      => $data['part_no'] ?? null,
                     'category_id'  => $data['category_id'],
-                    'uom'          => $data['uom'] ?? 'Piece / PCS',
+                    'uom'          => $data['uom'] ?? StockConstants::DEFAULT_UOM,
                     'address'      => $data['address'] ?? null,
                     'stock'        => $data['stock'],
                     'alert_limit'  => $alertLimit,
@@ -316,7 +318,7 @@ class ProductService
                             'chinese_name'      => array_key_exists('chinese_name', $variantData) ? $variantData['chinese_name'] : ($variant ? $variant->chinese_name : null),
                             'part_no'           => $variantData['part_no'] ?? null,
                             'category_id'       => $data['category_id'],
-                            'uom'               => $variantData['uom'] ?? ($data['uom'] ?? 'Piece / PCS'),
+                            'uom'               => $variantData['uom'] ?? ($data['uom'] ?? StockConstants::DEFAULT_UOM),
                             'address'           => $data['address'] ?? null,
                             'stock'             => $variantData['stock'],
                             'alert_limit'       => $variantAlertLimit,
@@ -447,9 +449,9 @@ class ProductService
             }
 
             // Generate SI No for restock
-            $siNo = 'INV-RESTOCK-' . str_pad(
-                Transaction::where('si_no', 'like', 'INV-RESTOCK-%')->count() + 1,
-                4, '0', STR_PAD_LEFT
+            $siNo = InvoiceConstants::SI_PREFIX_RESTOCK . str_pad(
+                Transaction::where('si_no', 'like', InvoiceConstants::SI_PREFIX_RESTOCK . '%')->count() + 1,
+                InvoiceConstants::RESTOCK_NUMBER_PADDING, '0', STR_PAD_LEFT
             );
 
             $transaction = Transaction::create([
@@ -510,9 +512,9 @@ class ProductService
                 'status'  => $newStatus,
             ]);
 
-            $siNo = 'INV-DAMAGED-' . str_pad(
-                Transaction::where('si_no', 'like', 'INV-DAMAGED-%')->count() + 1,
-                3, '0', STR_PAD_LEFT
+            $siNo = InvoiceConstants::SI_PREFIX_DAMAGED . str_pad(
+                Transaction::where('si_no', 'like', InvoiceConstants::SI_PREFIX_DAMAGED . '%')->count() + 1,
+                InvoiceConstants::DAMAGED_NUMBER_PADDING, '0', STR_PAD_LEFT
             );
 
             $transaction = Transaction::create([

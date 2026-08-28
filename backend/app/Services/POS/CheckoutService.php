@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 use App\Services\ActivityLogs\ActivityLogService;
+use App\Services\POS\CartProcessor;
+use App\Services\Constants\InvoiceConstants;
 
 class CheckoutService
 {
@@ -51,37 +53,13 @@ class CheckoutService
                 ->get()
                 ->keyBy('id');
 
-            // 2. Re-verify stock for all items at commit time
-            foreach ($cart as $item) {
-                $product = $products->get($item['product_id']);
-                if (!$product || $product->stock < $item['qty']) {
-                    throw ValidationException::withMessages([
-                        'stock' => [
-                            "Insufficient stock for product: {$product->name}. "
-                            . "Available: {$product->stock}, Requested: {$item['qty']}."
-                        ],
-                    ]);
-                }
-            }
+            // 2. SINGLE-PASS processing: validate + calculate + prepare
+            $processor = (new CartProcessor($this->productService))
+                ->process($cart, $products);
 
-            // 3. Calculate grand total considering item discounts & order-wide discount
-            $subtotal = 0;
-            foreach ($cart as $item) {
-                $product = $products->get($item['product_id']);
-                $origPrice = $item['price_tier'] === 'price2' ? $product->price2 : $product->price1;
-                $origLineTotal = $origPrice * $item['qty'];
-                $itemDiscount = (float)($item['item_discount'] ?? 0);
+            $subtotal = $processor->getSubtotal();
 
-                if ($itemDiscount > $origLineTotal) {
-                    throw ValidationException::withMessages([
-                        'cart' => ["Discount for {$product->name} (₱{$itemDiscount}) cannot exceed the line total of ₱" . number_format($origLineTotal, 2) . "."],
-                    ]);
-                }
-
-                $lineTotal = max(0, $origLineTotal - $itemDiscount);
-                $subtotal += $lineTotal;
-            }
-
+            // 3. Validate order-level discount
             $orderDiscount = (float)($data['discount_amount'] ?? 0);
             if ($orderDiscount > $subtotal) {
                 throw ValidationException::withMessages([
@@ -94,32 +72,8 @@ class CheckoutService
             // 4. Validate payment amounts
             $this->validatePayment($data, $grandTotal);
 
-            // 5. Deduct stock, increment sales_count, recalculate status
-            foreach ($cart as $item) {
-                $product = $products->get($item['product_id']);
-                $newStock = $product->stock - $item['qty'];
-                $newStatus = $this->productService->calculateStatus(
-                    $newStock,
-                    $product->alert_limit,
-                    is_object($product->status) ? $product->status->value : $product->status
-                );
-
-                $isDead = (bool)$product->is_dead_stock;
-                $updateData = [
-                    'stock'       => $newStock,
-                    'status'      => $newStatus,
-                ];
-
-                if ($isDead) {
-                    $updateData['is_dead_stock'] = false;
-                }
-
-                $product->update($updateData);
-
-                if ($isDead) {
-                    event(new \App\Events\ProductUpdated($product->id, ['is_dead_stock' => false]));
-                }
-            }
+            // 5. Apply stock updates (consolidated from processor)
+            $processor->applyStockUpdates();
 
             // 6. Upsert customer by name
             $customer = Customer::firstOrCreate(
@@ -167,25 +121,8 @@ class CheckoutService
                 'business_snapshot' => Setting::getBusinessSnapshot(), // Write-once BIR compliance snapshot
             ]);
 
-            // 11. Create TransactionItem records
-            foreach ($cart as $item) {
-                $product = $products->get($item['product_id']);
-                $origPrice = $item['price_tier'] === 'price2' ? $product->price2 : $product->price1;
-                $itemDiscount = (float)($item['item_discount'] ?? 0);
-
-                TransactionItem::create([
-                    'transaction_id' => $transaction->id,
-                    'product_id'     => $product->id,
-                    'item_name'      => $item['name'] ?? $item['item_name'] ?? $product->name,
-                    'part_no'        => $item['part_no'] ?? $product->part_no,
-                    'qty'            => $item['qty'],
-                    'price'          => $origPrice,
-                    'original_price' => $origPrice,
-                    'discount'       => $itemDiscount,
-                    'price_tier'     => $item['price_tier'],
-                    'unit'           => 'pc',
-                ]);
-            }
+            // 11. Bulk insert transaction items
+            $transaction->items()->createMany($processor->getTransactionItems());
 
             return $transaction->load('items.product', 'customer', 'cashier', 'checker');
         });
@@ -310,26 +247,30 @@ class CheckoutService
     }
 
     /**
-     * Generate a fallback invoice number based on doc_type.
-     * Used only when mode = manual and no SI number was provided (e.g. automated tests).
-     * Format: {PREFIX}-{YEAR}-{3-digit random}
+     * Generate a fallback SI number when mode = manual and the cashier left the field blank.
+     * Produces pure numeric output consistent with the auto-mode format (no prefix, no year).
+     * Format: zero-padded random number e.g. "04271", "00893"
+     *
+     * In normal operation this never fires — the frontend enforces a required SI field in manual
+     * mode. This is a last-resort safety net for edge cases and automated tests.
      */
     public function generateSiNo(string $docType): string
     {
-        $prefix = match ($docType) {
-            'D.R.'  => 'DR',
-            'C.R.'  => 'CR',
-            default => 'SI',
-        };
-
-        $year   = now()->year;
-        $suffix = str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
-        $candidate = "{$prefix}-{$year}-{$suffix}";
+        $candidate = str_pad(
+            rand(1, InvoiceConstants::SI_RANDOM_SUFFIX_MAX),
+            InvoiceConstants::SI_PADDING_LENGTH,
+            '0',
+            STR_PAD_LEFT
+        );
 
         // Ensure uniqueness
         while (Transaction::where('si_no', $candidate)->exists()) {
-            $suffix    = str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
-            $candidate = "{$prefix}-{$year}-{$suffix}";
+            $candidate = str_pad(
+                rand(1, InvoiceConstants::SI_RANDOM_SUFFIX_MAX),
+                InvoiceConstants::SI_PADDING_LENGTH,
+                '0',
+                STR_PAD_LEFT
+            );
         }
 
         return $candidate;

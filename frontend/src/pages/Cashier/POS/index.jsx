@@ -91,7 +91,7 @@ export default function POS() {
                     <div style={{
                         display: isMobile ? 'flex' : 'grid',
                         flexDirection: 'column',
-                        gridTemplateColumns: isMobile ? 'none' : '1fr 480px',
+                        gridTemplateColumns: isMobile ? 'none' : 'minmax(0, 1fr) 480px',
                         gap: '20px',
                         flex: 1,
                         minHeight: 0,

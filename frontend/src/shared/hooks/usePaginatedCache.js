@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
+import { PAGINATED_CACHE_MAX_PAGES } from '../../config/constants';
 
 // Import so clearEntireCache can wipe the customer cache on logout too
 import { resetCustomerCache } from './useCustomerCache';
@@ -105,7 +106,7 @@ export default function usePaginatedCache(storeName, endpoint, params) {
                     pageData = res.data.data;
                     let lastPage = res.data.last_page;
                     if (storeName === 'history' || storeName === 'daily-sales') {
-                        lastPage = Math.min(lastPage, 50);
+                        lastPage = Math.min(lastPage, PAGINATED_CACHE_MAX_PAGES);
                     }
                     pageInfo = {
                         current_page: res.data.current_page,

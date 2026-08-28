@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import api from '../shared/api';
 import echo from '../lib/echo';
+import { NOTIFICATION_POLL_INTERVAL_MS, REALTIME_DEBOUNCE_POLL_MS, NOTIFICATION_BUBBLE_DISPLAY_MS } from '../config/constants';
 
 const NotificationContext = createContext();
 
@@ -21,7 +22,7 @@ export const NotificationProvider = ({ children }) => {
         setBubbleNotif(notif);
         bubbleTimer.current = setTimeout(() => {
             setBubbleNotif(null);
-        }, 3000);
+        }, NOTIFICATION_BUBBLE_DISPLAY_MS);
     }, []);
 
     const dismissBubble = useCallback(() => {
@@ -110,7 +111,7 @@ export const NotificationProvider = ({ children }) => {
         }
     }, [showBubble]);
 
-    const schedulePoll = useCallback((delay = 15000) => { // 15 seconds fallback for responsive UI
+    const schedulePoll = useCallback((delay = NOTIFICATION_POLL_INTERVAL_MS) => { // 15 seconds fallback for responsive UI
         if (pollTimer.current) clearTimeout(pollTimer.current);
         pollTimer.current = setTimeout(() => {
             fetchNotifications().finally(() => schedulePoll());
@@ -118,7 +119,7 @@ export const NotificationProvider = ({ children }) => {
     }, [fetchNotifications]);
 
     useEffect(() => {
-        fetchNotifications().finally(() => schedulePoll(15000));
+        fetchNotifications().finally(() => schedulePoll(NOTIFICATION_POLL_INTERVAL_MS));
 
         const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
         const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
@@ -160,7 +161,7 @@ export const NotificationProvider = ({ children }) => {
     }, [fetchNotifications, schedulePoll, showBubble]);
 
     const debouncePoll = () => {
-        schedulePoll(5000);
+        schedulePoll(REALTIME_DEBOUNCE_POLL_MS);
     };
 
     const markAsRead = async (id) => {

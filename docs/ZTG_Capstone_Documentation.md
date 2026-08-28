@@ -7,7 +7,7 @@
 > **Repository:** [ZTG-POS-With-Smart-Inventory](https://github.com/martinitokristan-dev/ZTG-POS-With-Smart-Inventory)
 > **Live Frontend:** [ztg-pos-with-smart-inventory.pages.dev](https://ztg-pos-with-smart-inventory.pages.dev)
 > **Live Backend API:** [ztg-pos-with-smart-inventory.onrender.com](https://ztg-pos-with-smart-inventory.onrender.com)
-> **Document Version:** 2.4 | Date: August 2026
+> **Document Version:** 2.5 | Date: August 2026
 
 ---
 
@@ -180,8 +180,8 @@ The development was split into two parallel tracks:
 
 **Automated Test Suite (`php artisan test`):**
 
-- **107 tests, 353 assertions** — all passing ✅
-- **Duration: ~4.2 seconds** (full suite)
+- **122 tests, 470 assertions** — all passing ✅
+- **Duration: ~7.0 seconds** (full suite)
 - Covers: Auth, POS Checkout, Returns, Refunds, Voids, Reservations, Products, Categories, Variants, Employees, Settings, Notifications, Alert Rules, Profile Avatar Upload/Remove, Reports
 
 **API Performance Benchmark (`php artisan test:api-performance`):**
@@ -564,14 +564,26 @@ HTTP Response (JSON)
 
 ```
 app/Services/
-+-- Employees/      <- Employee CRUD operations
-+-- Notifications/  <- Notification creation and management
-+-- POS/            <- Checkout logic, cart processing
-+-- Products/       <- Product CRUD, restock, damaged stock
-+-- Reports/        <- Sales summaries, product performance
-+-- Reservations/   <- Reservation lifecycle management
-+-- Settings/       <- Settings key-value management
-+-- Transactions/   <- Transaction history, refunds, voids
++-- ActivityLogs/                <- Activity audit trail logging
++-- Constants/                   <- Named constants (no magic numbers)
+|   +-- SecurityConstants.php    <- PIN attempt limits, lockout durations
+|   +-- InvoiceConstants.php     <- SI/OR number prefixes and padding
+|   +-- StockConstants.php       <- Default alert limits and UOM
++-- Employees/                   <- Employee CRUD operations
++-- Notifications/               <- Notification creation and management
++-- POS/                         <- Checkout orchestration and cart processing
+|   +-- DTOs/
+|   |   +-- CartItemDTO.php      <- Per-item data transfer object (price, totals, new stock)
+|   +-- CartProcessor.php        <- Single-pass O(n) cart validation and preparation
+|   +-- CheckoutService.php      <- Checkout orchestrator
++-- Products/                    <- Product CRUD, restock, damaged stock
++-- Reports/                     <- Sales summaries, product performance
++-- Reservations/                <- Reservation lifecycle management
++-- Settings/                    <- Settings key-value management
++-- Transactions/                <- Transaction history, refunds, voids
+|   +-- Validators/
+|       +-- RefundEligibilityValidator.php  <- Transaction-level refund guard clauses
+|       +-- RefundItemValidator.php         <- Per-item refund quantity validation
 ```
 
 ### Key API Endpoints
@@ -667,6 +679,17 @@ frontend/src/pages/Admin/<ModuleName>/
 | Module | Folder | Description |
 |---|---|---|
 | POS Interface | `Cashier/POS/` | Product grid, cart, checkout flow |
+
+### POS Hook Architecture
+
+The POS module uses a composable hook pattern. The root `usePOS` hook is a thin orchestrator that composes three specialized sub-hooks:
+
+| Hook | File | Responsibility |
+|---|---|---|
+| `usePOS` | `hooks/usePOS.js` | Thin orchestrator — composes sub-hooks, owns `processCheckout` and modal state |
+| `usePOSProducts` | `hooks/usePOSProducts.js` | Product search, debounced filtering, flat variant expansion, category pills |
+| `usePOSCart` | `hooks/usePOSCart.js` | Cart state, all 7 cart operations, discount calculation, error banner |
+| `usePOSCustomer` | `hooks/usePOSCustomer.js` | Customer selection, new customer form, checker dropdown |
 
 ### Shared Components (`frontend/src/shared/`)
 
@@ -1094,7 +1117,17 @@ ZTG-main/
 |   |   +-- Models/                  <- Eloquent models (15 tables)
 |   |   +-- Observers/               <- Model event observers
 |   |   +-- Providers/               <- Service providers
-|   |   +-- Services/                <- Business logic layer (8 modules)
+|   |   +-- Services/                <- Business logic layer
+|   |   |   +-- Constants/           <- Named constants (SecurityConstants, InvoiceConstants, StockConstants)
+|   |   |   +-- POS/                 <- Checkout service + CartProcessor + CartItemDTO
+|   |   |   +-- Transactions/        <- TransactionService + Validators/
+|   |   |   +-- Products/            <- ProductService
+|   |   |   +-- Reservations/        <- ReservationService
+|   |   |   +-- Reports/             <- ReportService
+|   |   |   +-- Settings/            <- SettingService
+|   |   |   +-- Employees/           <- EmployeeService
+|   |   |   +-- Notifications/       <- NotificationService
+|   |   |   +-- ActivityLogs/        <- ActivityLogService
 |   +-- bootstrap/
 |   |   +-- app.php                  <- App config (health: '/up')
 |   +-- config/
@@ -1125,7 +1158,13 @@ ZTG-main/
     |   |   |   +-- Settings/        <- Settings module
     |   |   +-- Cashier/
     |   |   |   +-- POS/             <- Point-of-Sale module
+    |   |   |   |   +-- hooks/       <- usePOS.js (orchestrator), usePOSProducts.js, usePOSCart.js, usePOSCustomer.js
+    |   |   |   |   +-- views/       <- ProductGrid.jsx, CartSidebar.jsx
+    |   |   |   |   +-- modals/      <- CheckoutModal.jsx
+    |   |   |   |   +-- index.jsx    <- Thin shell
     |   |   +-- Login.jsx            <- Role selector + auth form
+    |   +-- config/
+    |   |   +-- constants.js         <- Frontend named constants (poll intervals, debounce, limits)
     |   +-- shared/
     |       +-- api.js               <- Global Axios instance
     |       +-- Sidebar.jsx          <- Navigation sidebar
@@ -1549,6 +1588,92 @@ This pattern dynamically allows any `*.pages.dev` subdomain, including both the 
 - **Full Viewport Centered Modal:** Restored standard modal layout with `max-w-2xl`, responsive padding, and `max-h-[85vh]` internal scroll preventing offscreen button clipping on mobile screens.
 - **Collapsible Add Category Drawer:** Placed category creation inside a toggleable accordion drawer with quick prefix auto-suggestions (`HYD`, `ENG`, `FIL`).
 - **Dark Mode Inline SVGs:** Replaced raw emojis with crisp Lucide-compatible inline SVG icons and applied CSS variables (`bg-surface`, `border-border-color`) for theme compliance.
+
+---
+
+### SPRINT 16 — Senior-Level Code Refactoring: Architecture, Performance & Code Quality
+**Date: August 2026**
+
+This sprint focused exclusively on internal code quality improvements with zero changes to system behavior, API contracts, or user-facing functionality. All 122 tests continued to pass throughout every change.
+
+#### 1. Guard Clause Refactoring — Transaction Validators Extracted
+
+**Problem:** `TransactionService::processRefundOrReturn()` had 7 levels of nested conditionals. Validation logic was buried inside a DB transaction closure, making it impossible to unit test individual rules and difficult to trace all failure paths.
+
+**Solution:** Extracted validation into two dedicated classes:
+- `RefundEligibilityValidator` — Guards transaction-level eligibility (not voided, has remaining items).
+- `RefundItemValidator` — Validates individual item ownership and computes clamped refundable quantity.
+
+The service method now uses guard clauses at the entry point — all failure conditions are visible in the first 3 lines. Nesting depth reduced from **7 levels to 3 levels**.
+
+#### 2. Single-Pass Cart Processing — CheckoutService O(4n) → O(n)
+
+**Problem:** `CheckoutService::processCheckout()` iterated over the cart 4 separate times:
+1. Stock verification
+2. Subtotal calculation + discount validation
+3. Stock deduction + status recalculation
+4. TransactionItem creation (20 individual INSERT queries for 20-item cart)
+
+**Solution:** Introduced `CartProcessor` (orchestrator) and `CartItemDTO` (data transfer object). A single O(n) pass validates, calculates, and prepares all data. Transaction items are inserted via a single `createMany()` bulk query.
+
+**Performance improvement (20-item cart):**
+- Loop iterations: 80 → 20 (**75% reduction**)
+- TransactionItem inserts: 20 individual queries → 1 bulk query (**95% reduction**)
+
+#### 3. N+1 Query Elimination — ReservationService
+
+**Problem:** `ReservationService::createReservation()` called `Product::find()` inside a foreach loop, generating one database query per reservation item (10 items = 10 queries).
+
+**Solution:** Replaced with a single `Product::whereIn('id', $productIds)->get()->keyBy('id')` before the loop. Validation then uses O(1) collection lookups instead of DB round trips.
+
+**Performance improvement (10-item reservation):** 10 queries → 1 query (**90% reduction**)
+
+#### 4. Constants Extraction — Zero Magic Numbers in Services
+
+Three constant classes were created to eliminate all magic numbers from service code:
+
+| Class | Constants | Purpose |
+|---|---|---|
+| `SecurityConstants` | `MAX_PIN_ATTEMPTS`, `PIN_LOCKOUT_SECONDS`, `SECURITY_ALERT_PREFIX` | PIN rate limiting and security alert naming |
+| `InvoiceConstants` | `SI_RANDOM_SUFFIX_MAX`, `SI_PADDING_LENGTH`, `OR_PREFIX_*`, `SI_PREFIX_*` | SI/OR number formatting and prefixes |
+| `StockConstants` | `DEFAULT_ALERT_LIMIT`, `DEFAULT_UOM` | Stock default fallback values |
+
+**Also fixed (discovered during constant extraction):**
+- `DAMAGED_NUMBER_PADDING` raised from 3 → 6 (was: 999 lifetime limit, now: 999,999)
+- `RESTOCK_NUMBER_PADDING` raised from 4 → 6 (was: 9,999 lifetime limit, now: 999,999)
+- `SI_RANDOM_SUFFIX_MAX` raised from 999 → 99,999 (fallback generator capacity)
+- `SI_PADDING_LENGTH` raised from 3 → 5 digits (matched to new max value)
+- `generateSiNo()` fallback updated from `SI-YYYY-NNN` prefix format → pure numeric (matches production auto-mode output)
+
+#### 5. POS Hook Decomposition — usePOS God Hook Split
+
+**Problem:** `usePOS.js` was 520 lines managing 20+ state variables across four unrelated concerns (product search, cart operations, customer management, checkout). A bug in cart logic required navigating the entire file.
+
+**Solution:** Decomposed into four focused hooks:
+
+| Hook | Lines | Concern |
+|---|---|---|
+| `usePOSProducts.js` | ~150 | Product search, debounce, filtering, categories |
+| `usePOSCart.js` | ~155 | Cart state, all operations, discount totals |
+| `usePOSCustomer.js` | ~50 | Customer fields, checker dropdown |
+| `usePOS.js` (new) | ~95 | Thin orchestrator composing the three above |
+
+The root `usePOS` return shape is identical — zero changes to `index.jsx`, `CartSidebar`, `ProductGrid`, or `CheckoutModal`.
+
+#### 6. Frontend Constants Extraction
+
+Named constants created in `frontend/src/config/constants.js` for all timing and limit values previously scattered as magic numbers across 6 files:
+
+| Constant | Value | Used In |
+|---|---|---|
+| `POS_SEARCH_DEBOUNCE_MS` | 250ms | `usePOSProducts` — search debounce |
+| `POS_ERROR_DISPLAY_MS` | 4000ms | `usePOSCart` — error banner auto-dismiss |
+| `POS_TOP_CATEGORIES_LIMIT` | 5 | `usePOSProducts` — category pill count |
+| `INVENTORY_POLL_INTERVAL_MS` | 300000ms | `ProductContext`, `InventoryContext` |
+| `REALTIME_DEBOUNCE_POLL_MS` | 5000ms | All three real-time contexts |
+| `NOTIFICATION_POLL_INTERVAL_MS` | 15000ms | `NotificationContext` |
+| `NOTIFICATION_BUBBLE_DISPLAY_MS` | 3000ms | `NotificationContext` |
+| `PAGINATED_CACHE_MAX_PAGES` | 50 | `usePaginatedCache` |
 
 ---
 

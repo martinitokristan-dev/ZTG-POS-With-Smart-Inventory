@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import api from '../shared/api';
 import echo from '../lib/echo';
+import { INVENTORY_POLL_INTERVAL_MS, REALTIME_DEBOUNCE_POLL_MS } from '../config/constants';
 
 const ProductContext = createContext();
 
@@ -92,7 +93,7 @@ export const ProductProvider = ({ children }) => {
         }
     }, []);
 
-    const schedulePoll = useCallback((delay = 300000) => { // 5 minutes fallback
+    const schedulePoll = useCallback((delay = INVENTORY_POLL_INTERVAL_MS) => { // 5 minutes fallback
         if (pollTimer.current) clearTimeout(pollTimer.current);
         pollTimer.current = setTimeout(() => {
             fetchData().finally(() => schedulePoll());
@@ -102,7 +103,7 @@ export const ProductProvider = ({ children }) => {
     useEffect(() => {
         const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
         if (token) {
-            fetchData().finally(() => schedulePoll(300000));
+            fetchData().finally(() => schedulePoll(INVENTORY_POLL_INTERVAL_MS));
         } else {
             setInitialLoading(false);
         }
@@ -183,7 +184,7 @@ export const ProductProvider = ({ children }) => {
     }, [fetchData, schedulePoll]);
 
     const debouncePoll = () => {
-        schedulePoll(5000);
+        schedulePoll(REALTIME_DEBOUNCE_POLL_MS);
     };
 
     /**

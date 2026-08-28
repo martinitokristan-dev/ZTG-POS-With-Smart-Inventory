@@ -1729,17 +1729,34 @@ tr:hover td {
         /* Stock Pill Indicators */
         .stock-badge {
             display: inline-flex;
-            align-items: center;
+            align-items: baseline;
             justify-content: center;
-            min-width: 28px;
-            height: 28px;
-            padding: 0 10px;
-            border-radius: 14px;
+            gap: 3px;
+            white-space: nowrap;
+            min-width: 24px;
+            padding: 3px 8px;
+            border-radius: 12px;
             font-weight: 600;
             font-size: 13px;
+            line-height: 1.2;
             font-variant-numeric: tabular-nums;
             border: 1px solid transparent;
             transition: all 0.2s ease;
+            flex-shrink: 0;
+            box-sizing: border-box;
+        }
+        .stock-badge .stock-qty {
+            font-weight: 700;
+            font-size: 13px;
+            line-height: 1;
+        }
+        .stock-badge .stock-uom {
+            font-size: 9.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            opacity: 0.85;
+            line-height: 1;
         }
         .stock-badge.stock-in {
             background-color: #ECFDF5;

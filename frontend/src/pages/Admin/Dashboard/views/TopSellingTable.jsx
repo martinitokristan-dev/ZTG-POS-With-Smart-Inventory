@@ -40,8 +40,8 @@ export default function TopSellingTable({ topProducts }) {
                                 </td>
                                 <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-primary)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{p.partNo}</td>
                                 <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-secondary)', fontWeight: 500 }}>{p.category}</td>
-                                <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-primary)', fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                                    {p.unitsSold} <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--table-text-secondary)' }}>{p.uom || 'pcs'}</span>
+                                <td style={{ padding: '12px 16px', fontSize: 14, color: 'var(--table-text-primary)', fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                                    {p.unitsSold} <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--table-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{p.uom ? p.uom.replace(/^.*\/\s*/, '') : 'PCS'}</span>
                                 </td>
                                 <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--table-text-primary)', fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{p.revenue.toLocaleString()}</td>
                                 <td style={{ padding: '12px 16px' }}>

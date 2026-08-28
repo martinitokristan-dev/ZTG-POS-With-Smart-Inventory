@@ -21,16 +21,28 @@ use Carbon\Carbon;
 use Carbon\CarbonInterface;
 
 use App\Services\ActivityLogs\ActivityLogService;
+use App\Services\Transactions\Validators\RefundEligibilityValidator;
+use App\Services\Transactions\Validators\RefundItemValidator;
+use App\Services\Constants\SecurityConstants;
+use App\Services\Constants\InvoiceConstants;
 
 class TransactionService
 {
     protected ProductService $productService;
     protected ActivityLogService $activityLogService;
+    protected RefundEligibilityValidator $refundEligibilityValidator;
+    protected RefundItemValidator $refundItemValidator;
 
-    public function __construct(ProductService $productService, ActivityLogService $activityLogService)
-    {
+    public function __construct(
+        ProductService $productService, 
+        ActivityLogService $activityLogService,
+        RefundEligibilityValidator $refundEligibilityValidator,
+        RefundItemValidator $refundItemValidator
+    ) {
         $this->productService = $productService;
         $this->activityLogService = $activityLogService;
+        $this->refundEligibilityValidator = $refundEligibilityValidator;
+        $this->refundItemValidator = $refundItemValidator;
     }
 
     /**
@@ -157,7 +169,7 @@ class TransactionService
         $ip = request()?->ip() ?? '127.0.0.1';
         $throttleKey = "pin-verify|{$userId}|{$ip}";
 
-        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+        if (RateLimiter::tooManyAttempts($throttleKey, SecurityConstants::MAX_PIN_ATTEMPTS)) {
             $seconds = RateLimiter::availableIn($throttleKey);
             throw ValidationException::withMessages([
                 'approval_pin' => ["Too many failed PIN verification attempts. Please wait {$seconds} second(s) before trying again."],
@@ -188,12 +200,12 @@ class TransactionService
             return true;
         }
 
-        RateLimiter::hit($throttleKey, 60);
+        RateLimiter::hit($throttleKey, SecurityConstants::PIN_LOCKOUT_SECONDS);
         $attempts = RateLimiter::attempts($throttleKey);
 
         // Log a security alert for failed PIN/Password attempt
         Transaction::create([
-            'si_no'          => 'SEC-' . now()->timestamp,
+            'si_no'          => SecurityConstants::SECURITY_ALERT_PREFIX . now()->timestamp,
             'date'           => now(),
             'cashier_id'     => $userId,
             'total_qty'      => 0,
@@ -201,10 +213,10 @@ class TransactionService
             'payment_method' => 'N/A',
             'status'         => TransactionStatus::SECURITY_ALERT->value,
             'type'           => TransactionType::SYSTEM->value,
-            'internal_notes' => "Failed PIN/Password attempt (Attempt {$attempts}/5)" . ($context ? " — {$context}" : '') . '. Approver ID: ' . $userId,
+            'internal_notes' => "Failed PIN/Password attempt (Attempt {$attempts}/" . SecurityConstants::MAX_PIN_ATTEMPTS . ")" . ($context ? " — {$context}" : '') . '. Approver ID: ' . $userId,
         ]);
 
-        if ($attempts >= 5) {
+        if ($attempts >= SecurityConstants::MAX_PIN_ATTEMPTS) {
             $seconds = RateLimiter::availableIn($throttleKey);
             throw ValidationException::withMessages([
                 'approval_pin' => ["Too many failed PIN verification attempts. Please wait {$seconds} second(s) before trying again."],
@@ -246,29 +258,10 @@ class TransactionService
         $markDamaged = $data['mark_damaged'];
         $reason      = $data['reason'];
 
-        // 1. Ensure transaction is eligible for refund (Completed or Partial Refund with remaining items)
-        $currentStatus = is_object($transaction->status) ? $transaction->status->value : $transaction->status;
-        
-        if ($currentStatus === 'Void') {
-            throw ValidationException::withMessages([
-                'transaction' => ['Voided transactions cannot be refunded or returned.'],
-            ]);
-        }
+        // Guard clauses at method entry — fail fast
+        $this->refundEligibilityValidator->validate($transaction);
 
-        $totalRemainingQty = $transaction->items->reduce(function ($sum, $item) {
-            $rawQty = (int) ($item->qty ?? 0);
-            $refundedQty = (int) ($item->refunded_qty ?? 0);
-            $netQty = $item->net_qty !== null ? (int) $item->net_qty : max(0, $rawQty - $refundedQty);
-            return $sum + $netQty;
-        }, 0);
-
-        if ($totalRemainingQty <= 0) {
-            throw ValidationException::withMessages([
-                'transaction' => ['This transaction has already been fully refunded or returned.'],
-            ]);
-        }
-
-        // 2. Verify approver PIN
+        // PIN verification
         $contextMsg = "for {$refundType} on invoice {$transaction->si_no}. Approver ID: {$approverId}";
         if (!$this->verifyPin($approverId, $pin, $contextMsg)) {
             throw ValidationException::withMessages([
@@ -284,17 +277,8 @@ class TransactionService
             foreach ($refundedItems as $refundEntry) {
                 $item = TransactionItem::findOrFail($refundEntry['item_id']);
 
-                // Ensure item belongs to this transaction
-                if ($item->transaction_id !== $transaction->id) {
-                    throw ValidationException::withMessages([
-                        'items' => ["Item ID {$item->id} does not belong to this transaction."],
-                    ]);
-                }
-
-                $rawQty = (int) ($item->qty ?? 0);
-                $refundedQty = (int) ($item->refunded_qty ?? 0);
-                $netAvailable = max(0, $rawQty - $refundedQty);
-                $qty = min((int) $refundEntry['qty'], $netAvailable);
+                // Use validator instead of inline checks
+                $qty = $this->refundItemValidator->validate($item, $transaction->id, (int) $refundEntry['qty']);
 
                 if ($qty <= 0) {
                     continue;
@@ -303,7 +287,7 @@ class TransactionService
                 $totalRefundAmount += $item->price * $qty;
 
                 // Track refunded_qty per line-item
-                $newRefundedQty = $refundedQty + $qty;
+                $newRefundedQty = (int) ($item->refunded_qty ?? 0) + $qty;
                 $item->update([
                     'refunded_qty' => $newRefundedQty,
                 ]);
@@ -337,8 +321,8 @@ class TransactionService
             $netSaleAmount = max(0, round($originalAmount - $totalRefundedSoFar, 2));
 
             // Build OR No
-            $orPrefix = $refundType === 'Refund' ? 'OR-RFD' : 'OR-RTN';
-            $orNo = $orPrefix . '-' . now()->timestamp;
+            $orPrefix = $refundType === 'Refund' ? InvoiceConstants::OR_PREFIX_REFUND : InvoiceConstants::OR_PREFIX_RETURN;
+            $orNo = $orPrefix . now()->timestamp;
 
             // Determine action_type string
             $actionType = $refundType === 'Refund'
@@ -478,7 +462,7 @@ class TransactionService
                 $invAction = implode('; ', $invActions) ?: 'Restocked to Shelf';
             }
 
-            $orNo = 'OR-VOID-' . now()->timestamp;
+            $orNo = InvoiceConstants::OR_PREFIX_VOID . now()->timestamp;
             $approver = User::find($adminId);
 
             // Preserve original sale amount; void = full cancellation (net = 0)

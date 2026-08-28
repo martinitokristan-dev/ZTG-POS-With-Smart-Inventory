@@ -157,25 +157,48 @@ class ReservationService
     public function createReservation(array $data, int $reservedById): Reservation
     {
         $reservation = DB::transaction(function () use ($data, $reservedById) {
-            // 1. Validate stock availability (for inventory products only)
-            foreach ($data['items'] as $item) {
-                if (!empty($item['product_id'])) {
-                    $product = Product::find($item['product_id']);
-                    if ($product) {
-                        if ($product->stock <= 0) {
-                            throw ValidationException::withMessages([
-                                'items' => ["Product '{$product->name}' is out of stock and cannot be reserved."],
-                            ]);
-                        }
+            // 1. Extract all product IDs (single pass)
+            $productIds = array_filter(
+                array_column($data['items'], 'product_id')
+            );
 
-                        if ($item['qty'] > $product->stock) {
-                            throw ValidationException::withMessages([
-                                'items' => [
-                                    "Requested qty ({$item['qty']}) for '{$product->name}' exceeds available stock ({$product->stock})."
-                                ],
-                            ]);
-                        }
-                    }
+            // 2. Bulk load products (SINGLE QUERY instead of N queries)
+            $products = Product::whereIn('id', $productIds)
+                ->get()
+                ->keyBy('id');
+
+            // 3. Validate stock availability (single loop, no queries)
+            foreach ($data['items'] as $item) {
+                if (empty($item['product_id'])) {
+                    continue; // Skip non-inventory items
+                }
+
+                // Guard: Product exists in loaded collection
+                if (!$products->has($item['product_id'])) {
+                    throw ValidationException::withMessages([
+                        'items' => ["Product ID {$item['product_id']} not found."],
+                    ]);
+                }
+
+                $product = $products[$item['product_id']];
+
+                // Guard: Stock availability
+                if ($product->stock <= 0) {
+                    throw ValidationException::withMessages([
+                        'items' => [
+                            "Product '{$product->name}' is out of stock and cannot be reserved."
+                        ],
+                    ]);
+                }
+
+                // Guard: Sufficient quantity
+                if ($item['qty'] > $product->stock) {
+                    throw ValidationException::withMessages([
+                        'items' => [
+                            "Requested qty ({$item['qty']}) for '{$product->name}' " .
+                            "exceeds available stock ({$product->stock})."
+                        ],
+                    ]);
                 }
             }
 

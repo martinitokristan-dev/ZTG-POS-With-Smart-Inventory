@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import api from '../shared/api';
 import echo from '../lib/echo';
+import { INVENTORY_POLL_INTERVAL_MS, REALTIME_DEBOUNCE_POLL_MS } from '../config/constants';
 
 const InventoryContext = createContext();
 
@@ -54,7 +55,7 @@ export const InventoryProvider = ({ children }) => {
         }
     }, []);
 
-    const schedulePoll = useCallback((delay = 300000) => { // 5 minutes fallback
+    const schedulePoll = useCallback((delay = INVENTORY_POLL_INTERVAL_MS) => { // 5 minutes fallback
         if (pollTimer.current) clearTimeout(pollTimer.current);
         pollTimer.current = setTimeout(() => {
             fetchInventory().finally(() => schedulePoll());
@@ -62,7 +63,7 @@ export const InventoryProvider = ({ children }) => {
     }, [fetchInventory]);
 
     useEffect(() => {
-        fetchInventory().finally(() => schedulePoll(300000));
+        fetchInventory().finally(() => schedulePoll(INVENTORY_POLL_INTERVAL_MS));
 
         const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
         const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
@@ -127,7 +128,7 @@ export const InventoryProvider = ({ children }) => {
     }, [fetchInventory, schedulePoll]);
 
     const debouncePoll = () => {
-        schedulePoll(5000);
+        schedulePoll(REALTIME_DEBOUNCE_POLL_MS);
     };
 
     const optimisticUpdateStock = (id, newStock) => {

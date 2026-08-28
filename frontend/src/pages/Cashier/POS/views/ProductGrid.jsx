@@ -134,6 +134,7 @@ export default function ProductGrid({
                                 const isLow = p.stock > 0 && p.stock <= 5;
                                 const isOut = p.stock <= 0;
                                 const stockBadgeClass = isOut ? 'stock-badge stock-out' : isLow ? 'stock-badge stock-low' : 'stock-badge stock-in';
+                                const uomClean = p.uom ? p.uom.replace(/^.*\/\s*/, '').trim().toUpperCase() : 'PCS';
 
                                 return (
                                     <tr 
@@ -167,9 +168,14 @@ export default function ProductGrid({
                                         {track_warehouse_locations && (
                                             <td style={{ padding: '12px 14px', fontSize: '15px', color: 'var(--table-text-secondary)', fontWeight: '500' }}>{p.address || '—'}</td>
                                         )}
-                                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                                        <td style={{ padding: '12px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                                             <span className={stockBadgeClass}>
-                                                {show_stock_levels_pos ? `${p.stock} ${p.uom ? p.uom.replace(/^.*\/\s*/, '') : ''}`.trim() : (isOut ? 'OOS' : 'In Stock')}
+                                                {show_stock_levels_pos ? (
+                                                    <>
+                                                        <span className="stock-qty">{p.stock}</span>
+                                                        <span className="stock-uom">{uomClean}</span>
+                                                    </>
+                                                ) : (isOut ? 'OOS' : 'In Stock')}
                                             </span>
                                         </td>
                                         <td style={{ padding: '12px 14px', fontSize: '15px', fontWeight: '600', textAlign: 'right', color: 'var(--table-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>

@@ -176,22 +176,36 @@ class PhaseFourTest extends TestCase
 
     public function test_checkout_generates_si_no_in_correct_format()
     {
+        // Auto mode: system generates pure numeric sequential SI number (no prefix)
+        \App\Models\Setting::updateOrCreate(['key' => 'si_numbering_mode'], ['value' => 'auto']);
+        \App\Models\Setting::updateOrCreate(['key' => 'si_counter_si'], ['value' => '000001']);
+        \App\Models\Setting::updateOrCreate(['key' => 'si_auto_digits'], ['value' => '6']);
+
         $response = $this->actingAs($this->cashier)
             ->postJson('/api/pos/checkout', $this->cartPayload(['doc_type' => 'S.I.']));
 
         $response->assertStatus(201);
         $siNo = $response->json('transaction.si_no');
-        $this->assertMatchesRegularExpression('/^SI-\d{4}-\d{3}$/', $siNo);
+        // Pure numeric — no SI- prefix, no year, no dash. Matches actual production output.
+        $this->assertMatchesRegularExpression('/^\d+$/', $siNo);
+        $this->assertEquals('000001', $siNo);
     }
 
-    public function test_checkout_dr_generates_dr_prefix()
+    public function test_checkout_dr_generates_pure_numeric_si_no()
     {
+        // Auto mode: D.R. uses its own independent counter, still pure numeric (no prefix)
+        \App\Models\Setting::updateOrCreate(['key' => 'si_numbering_mode'], ['value' => 'auto']);
+        \App\Models\Setting::updateOrCreate(['key' => 'si_counter_dr'], ['value' => '000001']);
+        \App\Models\Setting::updateOrCreate(['key' => 'si_auto_digits'], ['value' => '6']);
+
         $response = $this->actingAs($this->cashier)
             ->postJson('/api/pos/checkout', $this->cartPayload(['doc_type' => 'D.R.']));
 
         $response->assertStatus(201);
         $siNo = $response->json('transaction.si_no');
-        $this->assertStringStartsWith('DR-', $siNo);
+        // Pure numeric — D.R. counter is independent from S.I. counter, both produce plain numbers
+        $this->assertMatchesRegularExpression('/^\d+$/', $siNo);
+        $this->assertEquals('000001', $siNo);
     }
 
     public function test_checkout_blocks_if_cash_tendered_is_less_than_total()
