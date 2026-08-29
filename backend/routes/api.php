@@ -30,6 +30,8 @@ Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'
 Route::post('/auth/reveal-credentials', [StaffVerificationController::class, 'revealCredentials']);
 Route::post('/auth/send-credential-backup', [StaffVerificationController::class, 'sendBackupEmail']);
 Route::get('/media/{path}', [MediaController::class, 'show'])->where('path', '.*');
+// Public branding — returns only business_name & business_logo, no sensitive data
+Route::get('/public/branding', [SettingController::class, 'publicBranding']);
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {

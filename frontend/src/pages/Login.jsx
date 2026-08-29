@@ -61,11 +61,10 @@ function Login() {
     }, []);
 
     React.useEffect(() => {
-        const fetchSettings = async () => {
-            const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
-            if (!token) return; // Unauthenticated guest on login screen uses cached logo
+        const fetchBranding = async () => {
             try {
-                const res = await api.get('/settings');
+                // Public endpoint — no auth required, safe for first-time visitors
+                const res = await api.get('/public/branding');
                 if (res.data) {
                     const newLogo = res.data.business_logo || null;
                     const newName = res.data.business_name || '';
@@ -83,10 +82,10 @@ function Login() {
                     }
                 }
             } catch (e) {
-                // Silently ignore 401 on login page
+                // Silently ignore — cached values (if any) remain shown
             }
         };
-        fetchSettings();
+        fetchBranding();
     }, []);
 
     const handleLogin = async (e) => {

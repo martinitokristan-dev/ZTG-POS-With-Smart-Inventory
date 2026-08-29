@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateSettingsRequest;
+use App\Models\Setting;
 use App\Services\Settings\SettingService;
 use Illuminate\Http\JsonResponse;
 
@@ -44,6 +45,18 @@ class SettingController extends Controller
     public function siPreview(): JsonResponse
     {
         return response()->json($this->settingService->getSiPreview());
+    }
+
+    /**
+     * Return only the public-safe branding fields for the login page.
+     * No authentication required — exposes only cosmetic identity fields.
+     */
+    public function publicBranding(): JsonResponse
+    {
+        return response()->json([
+            'business_name' => Setting::where('key', 'business_name')->value('value'),
+            'business_logo' => Setting::where('key', 'business_logo')->value('value'),
+        ]);
     }
 }
 
