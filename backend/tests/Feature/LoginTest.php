@@ -22,36 +22,39 @@ class LoginTest extends TestCase
         parent::setUp();
 
         $this->admin = User::create([
-            'full_name'    => 'System Administrator',
-            'phone_number' => '09123456789',
-            'email'        => 'admin@ztg.com',
-            'username'     => 'admin',
-            'password'     => Hash::make('password123'),
-            'pin'          => '1234',
-            'role'         => UserRole::ADMIN,
-            'status'       => UserStatus::ACTIVE,
+            'full_name'         => 'System Administrator',
+            'phone_number'      => '09123456789',
+            'email'             => 'admin@ztg.com',
+            'username'          => 'admin',
+            'password'          => Hash::make('password123'),
+            'pin'               => '1234',
+            'role'              => UserRole::ADMIN,
+            'status'            => UserStatus::ACTIVE,
+            'email_verified_at' => now(),
         ]);
 
         $this->cashier = User::create([
-            'full_name'    => 'Jane Cashier',
-            'phone_number' => '09987654321',
-            'email'        => 'cashier@ztg.com',
-            'username'     => 'cashier1',
-            'password'     => Hash::make('cashier123'),
-            'pin'          => '5678',
-            'role'         => UserRole::CASHIER,
-            'status'       => UserStatus::ACTIVE,
+            'full_name'         => 'Jane Cashier',
+            'phone_number'      => '09987654321',
+            'email'             => 'cashier@ztg.com',
+            'username'          => 'cashier1',
+            'password'          => Hash::make('cashier123'),
+            'pin'               => '5678',
+            'role'              => UserRole::CASHIER,
+            'status'            => UserStatus::ACTIVE,
+            'email_verified_at' => now(),
         ]);
 
         $this->inactiveUser = User::create([
-            'full_name'    => 'Disabled User',
-            'phone_number' => '09000000000',
-            'email'        => 'disabled@ztg.com',
-            'username'     => 'disabled_user',
-            'password'     => Hash::make('secret123'),
-            'pin'          => '9999',
-            'role'         => UserRole::CASHIER,
-            'status'       => UserStatus::INACTIVE,
+            'full_name'         => 'Disabled User',
+            'phone_number'      => '09000000000',
+            'email'             => 'disabled@ztg.com',
+            'username'          => 'disabled_user',
+            'password'          => Hash::make('secret123'),
+            'pin'               => '9999',
+            'role'              => UserRole::CASHIER,
+            'status'            => UserStatus::INACTIVE,
+            'email_verified_at' => now(),
         ]);
     }
 

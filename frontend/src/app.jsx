@@ -5,7 +5,8 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import VerifyCredentials from './pages/Auth/VerifyCredentials';
+import SetPassword from './pages/Auth/SetPassword';
+import Unauthorized from './pages/Errors/Unauthorized';
 import PrivateRoute from './shared/PrivateRoute';
 import AppShell from './shared/AppShell';
 
@@ -22,6 +23,7 @@ import DailySales from './pages/Cashier/DailySales/index.jsx';
 import CustomerLog from './pages/Cashier/CustomerLog/index.jsx';
 import SystemStatus from './pages/Admin/SystemStatus/index.jsx';
 import ActivityLogs from './pages/Admin/ActivityLogs/index.jsx';
+import UserManagement from './pages/Admin/UserManagement/index.jsx';
 
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ProductProvider } from './contexts/ProductContext';
@@ -42,16 +44,18 @@ function AuthLayout({ allowedRoles }) {
 
 function App() {
     return (
-        <NotificationProvider>
-            <ProductProvider>
-                <InventoryProvider>
-                    <BrowserRouter>
+        <BrowserRouter>
+            <NotificationProvider>
+                <ProductProvider>
+                    <InventoryProvider>
                         <Routes>
                             {/* Public Routes */}
                             <Route path="/login" element={<Login />} />
                             <Route path="/forgot-password" element={<ForgotPassword />} />
                             <Route path="/reset-password" element={<ResetPassword />} />
-                            <Route path="/verify-credentials" element={<VerifyCredentials />} />
+                            <Route path="/set-password" element={<SetPassword />} />
+                            <Route path="/unauthorized" element={<Unauthorized />} />
+                            <Route path="/403" element={<Unauthorized />} />
 
                             {/*
                              * All authenticated routes share AppShell as a
@@ -62,26 +66,42 @@ function App() {
 
                                 {/* Admin + Supervisor */}
                                 <Route path="/dashboard" element={
-                                    <PrivateRoute allowedRoles={['Admin', 'Supervisor']}>
+                                    <PrivateRoute allowedRoles={['Admin', 'Supervisor']} requiredModule="dashboard">
                                         <Dashboard />
                                     </PrivateRoute>
                                 } />
 
                                 {/* Admin only */}
+                                <Route path="/user-management" element={
+                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="user_management">
+                                        <UserManagement />
+                                    </PrivateRoute>
+                                } />
+                                <Route path="/user-management/roles" element={
+                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="user_management">
+                                        <UserManagement />
+                                    </PrivateRoute>
+                                } />
+                                <Route path="/user-management/checkers" element={
+                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="user_management">
+                                        <UserManagement />
+                                    </PrivateRoute>
+                                } />
+
                                 <Route path="/product-management" element={
-                                    <PrivateRoute allowedRoles={['Admin']}>
+                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="products">
                                         <ProductManagement />
                                     </PrivateRoute>
                                 } />
 
                                 <Route path="/inventory" element={
-                                    <PrivateRoute allowedRoles={['Admin']}>
+                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="inventory">
                                         <Inventory />
                                     </PrivateRoute>
                                 } />
 
                                 <Route path="/history-logs" element={
-                                    <PrivateRoute allowedRoles={['Admin']}>
+                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="history_logs">
                                         <HistoryLogs />
                                     </PrivateRoute>
                                 } />
@@ -89,53 +109,53 @@ function App() {
                                 <Route path="/activity-logs" element={<Navigate to="/settings?tab=activity" replace />} />
 
                                 <Route path="/sales-log" element={
-                                    <PrivateRoute allowedRoles={['Admin']}>
+                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="sales_log">
                                         <SalesLog />
                                     </PrivateRoute>
                                 } />
 
                                 <Route path="/reports" element={
-                                    <PrivateRoute allowedRoles={['Admin']}>
+                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="reports">
                                         <Reports />
                                     </PrivateRoute>
                                 } />
 
                                 {/* Admin + Cashier */}
                                 <Route path="/reservations" element={
-                                    <PrivateRoute allowedRoles={['Admin', 'Cashier']}>
+                                    <PrivateRoute allowedRoles={['Admin', 'Cashier']} requiredModule="reservations">
                                         <Reservations />
                                     </PrivateRoute>
                                 } />
 
-                                {/* Admin + Cashier + Supervisor */}
+                                {/* All authenticated roles */}
                                 <Route path="/settings" element={
-                                    <PrivateRoute allowedRoles={['Admin', 'Cashier', 'Supervisor']}>
+                                    <PrivateRoute allowedRoles={['Admin', 'Cashier', 'Technical Operations', 'Supervisor']}>
                                         <Settings />
                                     </PrivateRoute>
                                 } />
 
-                                {/* Secret Isolated System Status Route (Admin only, not in Sidebar) */}
+                                {/* System Status (Admin & Technical Operations) */}
                                 <Route path="/system-status" element={
-                                    <PrivateRoute allowedRoles={['Admin']}>
+                                    <PrivateRoute allowedRoles={['Admin', 'Technical Operations']} requiredModule="system_status">
                                         <SystemStatus />
                                     </PrivateRoute>
                                 } />
 
-                                {/* Cashier only */}
+                                {/* Cashier only / POS */}
                                 <Route path="/pos" element={
-                                    <PrivateRoute allowedRoles={['Admin', 'Cashier']}>
+                                    <PrivateRoute allowedRoles={['Admin', 'Cashier']} requiredModule="pos">
                                         <POS />
                                     </PrivateRoute>
                                 } />
 
                                 <Route path="/daily-sales" element={
-                                    <PrivateRoute allowedRoles={['Cashier']}>
+                                    <PrivateRoute allowedRoles={['Cashier', 'Admin']} requiredModule="sales_log">
                                         <DailySales />
                                     </PrivateRoute>
                                 } />
 
                                 <Route path="/customer-log" element={
-                                    <PrivateRoute allowedRoles={['Cashier']}>
+                                    <PrivateRoute allowedRoles={['Cashier', 'Admin']} requiredModule="pos">
                                         <CustomerLog />
                                     </PrivateRoute>
                                 } />
@@ -145,10 +165,10 @@ function App() {
                             {/* Catch-all */}
                             <Route path="*" element={<Navigate to="/login" replace />} />
                         </Routes>
-                    </BrowserRouter>
-                </InventoryProvider>
-            </ProductProvider>
-        </NotificationProvider>
+                    </InventoryProvider>
+                </ProductProvider>
+            </NotificationProvider>
+        </BrowserRouter>
     );
 }
 

@@ -27,25 +27,27 @@ class ActivityLogTest extends TestCase
         RateLimiter::clear('cashier|127.0.0.1');
 
         $this->admin = User::create([
-            'full_name'    => 'System Administrator',
-            'phone_number' => '09123456789',
-            'email'        => 'admin@ztg.com',
-            'username'     => 'admin',
-            'password'     => Hash::make('AdminPass123!'),
-            'pin'          => 'AdminPass123!',
-            'role'         => UserRole::ADMIN,
-            'status'       => UserStatus::ACTIVE,
+            'full_name'         => 'System Administrator',
+            'phone_number'      => '09123456789',
+            'email'             => 'admin@ztg.com',
+            'username'          => 'admin',
+            'password'          => Hash::make('AdminPass123!'),
+            'pin'               => 'AdminPass123!',
+            'role'              => UserRole::ADMIN,
+            'status'            => UserStatus::ACTIVE,
+            'email_verified_at' => now(),
         ]);
 
         $this->cashier = User::create([
-            'full_name'    => 'Jane Cashier',
-            'phone_number' => '09987654321',
-            'email'        => 'cashier@ztg.com',
-            'username'     => 'cashier',
-            'password'     => Hash::make('CashierPass123!'),
-            'pin'          => 'CashierPass123!',
-            'role'         => UserRole::CASHIER,
-            'status'       => UserStatus::ACTIVE,
+            'full_name'         => 'Jane Cashier',
+            'phone_number'      => '09987654321',
+            'email'             => 'cashier@ztg.com',
+            'username'          => 'cashier',
+            'password'          => Hash::make('CashierPass123!'),
+            'pin'               => 'CashierPass123!',
+            'role'              => UserRole::CASHIER,
+            'status'            => UserStatus::ACTIVE,
+            'email_verified_at' => now(),
         ]);
     }
 

@@ -110,6 +110,8 @@ function Login() {
                 navigate('/dashboard');
             } else if (user.role === 'Cashier') {
                 navigate('/pos');
+            } else if (user.role === 'Technical Operations') {
+                navigate('/system-status');
             } else if (user.role === 'Checker') {
                 navigate('/inventory');
             } else {
@@ -117,7 +119,9 @@ function Login() {
             }
         } catch (err) {
             console.error(err);
-            if (err.response && err.response.data && err.response.data.errors) {
+            if (err.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
+                setError('Your account is pending email verification. Please check your inbox for the setup link sent by your administrator.');
+            } else if (err.response && err.response.data && err.response.data.errors) {
                 const errors = err.response.data.errors;
                 const firstKey = Object.keys(errors)[0];
                 setError(errors[firstKey]?.[0] || 'Invalid username or password.');

@@ -75,4 +75,23 @@ class EmployeeController extends Controller
             'message' => 'Employee deleted successfully.',
         ]);
     }
+
+    /**
+     * Resend the staff verification email (admin action).
+     * Generates a fresh token + temp password and re-locks the account until verified.
+     */
+    public function resendVerification(User $employee): JsonResponse
+    {
+        try {
+            $this->employeeService->resendVerification($employee);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Failed to resend verification email. Please check mail server settings.'], 500);
+        }
+
+        return response()->json([
+            'message' => "Verification email resent to {$employee->email}. The account has been re-locked until they click the new link.",
+        ]);
+    }
 }

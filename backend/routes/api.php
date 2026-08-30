@@ -21,14 +21,16 @@ use App\Http\Controllers\SystemHealthController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\StaffVerificationController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\UserPermissionController;
 use Illuminate\Support\Facades\Route;
 
 // Public authentication & media routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink']);
 Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword']);
-Route::post('/auth/reveal-credentials', [StaffVerificationController::class, 'revealCredentials']);
-Route::post('/auth/send-credential-backup', [StaffVerificationController::class, 'sendBackupEmail']);
+Route::get('/auth/set-password', [StaffVerificationController::class, 'getSetPasswordPage']);
+Route::post('/auth/set-password', [StaffVerificationController::class, 'setPassword']);
 Route::get('/media/{path}', [MediaController::class, 'show'])->where('path', '.*');
 // Public branding — returns only business_name & business_logo, no sensitive data
 Route::get('/public/branding', [SettingController::class, 'publicBranding']);
@@ -37,6 +39,12 @@ Route::get('/public/branding', [SettingController::class, 'publicBranding']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+    Route::get('/user/permissions', [UserPermissionController::class, 'me']);
+
+    // System health diagnostics (Admin & Technical Operations)
+    Route::middleware('role:Admin,Technical Operations')->group(function () {
+        Route::get('/system-health/diagnostics', [SystemHealthController::class, 'diagnostics']);
+    });
 
     // Profile self-management routes
     Route::put('/profile', [ProfileController::class, 'update']);
@@ -57,8 +65,19 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Admin-only management routes
     Route::middleware('role:Admin')->group(function () {
-        // System health and incident root-cause analysis
-        Route::get('/system-health/diagnostics', [SystemHealthController::class, 'diagnostics']);
+        // Roles & Permissions Management (Admin only)
+        Route::get('/roles', [RoleController::class, 'index']);
+        Route::get('/roles/modules', [RoleController::class, 'modules']);
+        Route::post('/roles', [RoleController::class, 'store']);
+        Route::get('/roles/{role}', [RoleController::class, 'show']);
+        Route::put('/roles/{role}', [RoleController::class, 'update']);
+        Route::delete('/roles/{role}', [RoleController::class, 'destroy']);
+        Route::get('/roles/{role}/users', [RoleController::class, 'users']);
+
+        // User Permission Overrides (Admin only)
+        Route::get('/users/{user}/permissions', [UserPermissionController::class, 'show']);
+        Route::put('/users/{user}/permissions', [UserPermissionController::class, 'update']);
+        Route::delete('/users/{user}/permissions', [UserPermissionController::class, 'reset']);
 
         // General Settings update
         Route::put('/settings', [SettingController::class, 'update']);
@@ -85,6 +104,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
         Route::patch('/employees/{employee}/toggle', [EmployeeController::class, 'toggle']);
         Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
+        Route::post('/employees/{employee}/resend-verification', [EmployeeController::class, 'resendVerification']);
 
         // Checker Management
         Route::post('/checkers', [CheckerController::class, 'store']);
@@ -113,11 +133,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/activity-logs/users/{user_id}/force-logout', [ActivityLogController::class, 'forceLogoutUser']);
     });
 
-    // POS routes: Admin and Cashier
-    Route::middleware('role:Admin,Cashier')->group(function () {
+    // POS routes: guarded by pos permission
+    Route::middleware('permission:pos,can_view')->group(function () {
         Route::get('/checkers', [CheckerController::class, 'index']);
         Route::get('/pos/products', [PosController::class, 'products']);
-        Route::post('/pos/checkout', [PosController::class, 'checkout']);
+        Route::post('/pos/checkout', [PosController::class, 'checkout'])->middleware('permission:pos,can_create');
     });
 
     // Transaction / History Log routes
@@ -132,14 +152,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/transactions/{transaction}/pay', [TransactionController::class, 'pay']);
     });
 
-    // Reservation routes
-    Route::get('/reservations', [ReservationController::class, 'index']);
-    Route::get('/reservations/{reservation}', [ReservationController::class, 'show']);
-
-    Route::middleware('role:Admin,Cashier')->group(function () {
-        Route::post('/reservations', [ReservationController::class, 'store']);
-        Route::post('/reservations/{reservation}/fulfill', [ReservationController::class, 'fulfill']);
-        Route::post('/reservations/{reservation}/cancel', [ReservationController::class, 'cancel']);
+    // Reservation routes: guarded by reservations permission
+    Route::middleware('permission:reservations,can_view')->group(function () {
+        Route::get('/reservations', [ReservationController::class, 'index']);
+        Route::get('/reservations/{reservation}', [ReservationController::class, 'show']);
+        Route::post('/reservations', [ReservationController::class, 'store'])->middleware('permission:reservations,can_create');
+        Route::post('/reservations/{reservation}/fulfill', [ReservationController::class, 'fulfill'])->middleware('permission:reservations,can_edit');
+        Route::post('/reservations/{reservation}/cancel', [ReservationController::class, 'cancel'])->middleware('permission:reservations,can_edit');
     });
 
 
@@ -149,21 +168,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 
-    // Logs: Cashier + Admin
-    Route::middleware('role:Admin,Cashier')->group(function () {
-        Route::get('/daily-sales', [ReportController::class, 'dailySales']);
-        Route::get('/customer-log', [ReportController::class, 'customerLog']);
-    });
+    // Logs: guarded by specific module permissions
+    Route::get('/daily-sales', [ReportController::class, 'dailySales'])->middleware('permission:sales_log,can_view');
+    Route::get('/customer-log', [ReportController::class, 'customerLog'])->middleware('permission:pos,can_view');
 
     // Admin Reports & Inventory summary
-    Route::middleware('role:Admin')->group(function () {
+    Route::middleware('permission:reports,can_view')->group(function () {
         Route::get('/reports/generation-status', [ReportController::class, 'generationStatus']);
         Route::post('/reports/mark-generated', [ReportController::class, 'markGenerated']);
         Route::get('/reports/sales-summary', [ReportController::class, 'salesSummary']);
         Route::get('/reports/product-performance', [ReportController::class, 'productPerformance']);
         Route::get('/reports/refund-void-analysis', [ReportController::class, 'refundVoidAnalysis']);
-        Route::get('/inventory', [ReportController::class, 'inventory']);
     });
+    Route::get('/inventory', [ReportController::class, 'inventory'])->middleware('permission:inventory,can_view');
 
 
     // Example routes for RBAC testing

@@ -3,7 +3,6 @@
 namespace App\Services\Mail;
 
 use App\Mail\ResetPasswordMail;
-use App\Mail\StaffCredentialBackupMail;
 use App\Mail\StaffVerificationMail;
 use App\Models\Setting;
 use App\Models\User;
@@ -42,7 +41,7 @@ class BrevoMailService
     }
 
     /**
-     * Send staff account verification & credential access email via Brevo REST API v3, or fallback to Laravel Mail.
+     * Send staff account verification & password setup email via Brevo REST API v3, or fallback to Laravel Mail.
      */
     public function sendStaffVerification(User $user, string $token, int $expiryHours = 48): bool
     {
@@ -52,27 +51,7 @@ class BrevoMailService
         if (!empty($apiKey) && !app()->environment('testing')) {
             $businessName = $this->getBusinessName();
             $toName = $user->full_name ?: $user->username;
-            $subject = "{$businessName} — Verify Your Staff Account & Credentials";
-            $html = $mailable->buildHtml();
-            return $this->sendViaBrevoApi($user->email, $toName, $subject, $html, $apiKey);
-        }
-
-        Mail::to($user->email)->send($mailable);
-        return true;
-    }
-
-    /**
-     * Send staff credential backup email via Brevo REST API v3, or fallback to Laravel Mail.
-     */
-    public function sendStaffCredentialBackup(User $user, ?string $password = null): bool
-    {
-        $apiKey = config('services.brevo.api_key');
-        $mailable = new StaffCredentialBackupMail($user, $password);
-
-        if (!empty($apiKey) && !app()->environment('testing')) {
-            $businessName = $this->getBusinessName();
-            $toName = $user->full_name ?: $user->username;
-            $subject = "{$businessName} — Your Account Details Backup";
+            $subject = "{$businessName} — Set Your Password & Activate Your Account";
             $html = $mailable->buildHtml();
             return $this->sendViaBrevoApi($user->email, $toName, $subject, $html, $apiKey);
         }

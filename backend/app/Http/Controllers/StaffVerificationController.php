@@ -2,33 +2,35 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\StaffCredentialBackupMail;
 use App\Models\StaffVerificationToken;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class StaffVerificationController extends Controller
 {
     /**
-     * Verify token and reveal the staff credentials (1-time only).
+     * Retrieve staff account details for the Set Password page.
      */
-    public function revealCredentials(Request $request): JsonResponse
+    public function getSetPasswordPage(Request $request): JsonResponse
     {
-        $request->validate([
-            'token' => 'required|string',
-        ]);
+        $token = $request->query('token') ?: $request->input('token');
 
-        $token = $request->input('token');
+        if (empty($token)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Activation token is missing.',
+            ], 422);
+        }
 
         $tokenRecord = StaffVerificationToken::with('user.profile')->where('token', $token)->first();
 
         if (!$tokenRecord || !$tokenRecord->user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid or expired credential link.',
+                'message' => 'Invalid or expired activation link.',
             ], 404);
         }
 
@@ -36,108 +38,70 @@ class StaffVerificationController extends Controller
             return response()->json([
                 'success' => false,
                 'code'    => 'EXPIRED',
-                'message' => 'This verification link has expired (48-hour limit reached). Please contact your administrator.',
+                'message' => 'This activation link has expired (48-hour limit reached). Please contact your administrator to resend an invite.',
             ], 410);
         }
-
-        if ($tokenRecord->isViewed()) {
-            return response()->json([
-                'success' => false,
-                'code'    => 'ALREADY_VIEWED',
-                'message' => 'This credential link has already been viewed and expired for security reasons. Please contact your administrator if you need a password reset.',
-            ], 410);
-        }
-
-        // Decrypt password
-        try {
-            $decryptedPassword = Crypt::decryptString($tokenRecord->encrypted_password);
-        } catch (\Throwable $e) {
-            Log::error("Failed to decrypt staff password for token {$token}: " . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Unable to securely decrypt credentials. Please contact your administrator.',
-            ], 500);
-        }
-
-        // Mark as viewed (single-use enforcement)
-        $tokenRecord->viewed_at = now();
-        $tokenRecord->save();
 
         $user = $tokenRecord->user;
-        $roleValue = is_object($user->role) ? $user->role->value : (string)$user->role;
+        $roleValue = is_object($user->role) ? $user->role->value : (string) $user->role;
 
         return response()->json([
-            'success'     => true,
-            'credentials' => [
+            'success' => true,
+            'user'    => [
                 'full_name' => $user->full_name ?: $user->username,
                 'username'  => $user->username,
                 'email'     => $user->email,
                 'role'      => $roleValue,
-                'password'  => $decryptedPassword,
-                'token'     => $tokenRecord->token,
             ],
         ]);
     }
 
     /**
-     * Dispatch an account details backup email to the staff member.
+     * Set personal password and activate the staff account.
      */
-    public function sendBackupEmail(Request $request): JsonResponse
+    public function setPassword(Request $request): JsonResponse
     {
         $request->validate([
-            'token' => 'required|string',
+            'token'    => 'required|string',
+            'password' => ['required', 'string', 'min:6', 'confirmed', 'regex:/[A-Z]/', 'regex:/[\W_]/'],
+        ], [
+            'password.required'  => 'Please enter your new password.',
+            'password.min'       => 'Password must be at least 6 characters long.',
+            'password.regex'     => 'Password must contain at least one uppercase letter and one special character.',
+            'password.confirmed' => 'The password confirmation does not match.',
         ]);
 
         $token = $request->input('token');
-
         $tokenRecord = StaffVerificationToken::with('user.profile')->where('token', $token)->first();
 
         if (!$tokenRecord || !$tokenRecord->user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid or expired credential token.',
+                'message' => 'Invalid or expired activation link.',
             ], 404);
         }
 
         if ($tokenRecord->isExpired()) {
             return response()->json([
                 'success' => false,
-                'message' => 'This verification link has expired.',
+                'code'    => 'EXPIRED',
+                'message' => 'This activation link has expired. Please contact your administrator for a new invite.',
             ], 410);
         }
 
         $user = $tokenRecord->user;
 
-        if (empty($user->email)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No registered email address found for this account.',
-            ], 422);
-        }
+        // Update user password and activate the account
+        $user->password = Hash::make($request->input('password'));
+        $user->email_verified_at = now();
+        $user->save();
 
-        $decryptedPassword = null;
-        if (!empty($tokenRecord->encrypted_password)) {
-            try {
-                $decryptedPassword = Crypt::decryptString($tokenRecord->encrypted_password);
-            } catch (\Throwable $e) {
-                Log::warning("Could not decrypt password for backup email (token {$token}): " . $e->getMessage());
-            }
-        }
-
-        try {
-            app(\App\Services\Mail\BrevoMailService::class)->sendStaffCredentialBackup($user, $decryptedPassword);
-            $tokenRecord->update(['backup_sent_at' => now()]);
-        } catch (\Throwable $e) {
-            Log::error("Failed to send staff credential backup email: " . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to deliver backup email. Please check server mail settings.',
-            ], 500);
-        }
+        // Burn / Delete the one-time token
+        $tokenRecord->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'Account information backup has been sent to ' . $user->email,
+            'message' => 'Your password has been set successfully! Your account is now active.',
         ]);
     }
 }

@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('staff_verification_tokens', function (Blueprint $table) {
+        Schema::create('roles', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->string('token', 64)->unique()->index();
-            $table->timestamp('expires_at');
+            $table->string('name', 50)->unique();
+            $table->string('description', 255)->nullable();
+            $table->boolean('is_system')->default(false); // System roles (Admin, Cashier, Technical Operations) cannot be deleted
             $table->timestamps();
         });
     }
@@ -25,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('staff_verification_tokens');
+        Schema::dropIfExists('roles');
     }
 };

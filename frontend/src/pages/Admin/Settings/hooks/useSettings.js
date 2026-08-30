@@ -202,6 +202,7 @@ export default function useSettings() {
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [showDeleteEmployeeModal, setShowDeleteEmployeeModal] = useState(false);
     const [employeeToDelete, setEmployeeToDelete] = useState(null);
+    const [employeeErrors, setEmployeeErrors] = useState({});
     const [employeeForm, setEmployeeForm] = useState({
         full_name: '',
         phone_number: '',
@@ -1005,6 +1006,7 @@ export default function useSettings() {
     // ------------------------------------------------------------------------
     const openAddEmployee = () => {
         setSelectedEmployee(null);
+        setEmployeeErrors({});
         setEmployeeForm({
             full_name: '',
             phone_number: '',
@@ -1020,6 +1022,7 @@ export default function useSettings() {
 
     const openEditEmployee = (emp) => {
         setSelectedEmployee(emp);
+        setEmployeeErrors({});
         setEmployeeForm({
             full_name: emp.full_name || emp.name || '',
             phone_number: emp.phone_number || '',
@@ -1035,6 +1038,7 @@ export default function useSettings() {
 
     const handleEmployeeSubmit = async (e) => {
         if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        setEmployeeErrors({});
         setEmployeeSubmitting(true);
         try {
             const fullName = (employeeForm.full_name || employeeForm.name || '').trim();
@@ -1119,14 +1123,13 @@ export default function useSettings() {
         } catch (err) {
             console.error('Failed to save staff:', err);
             const errData = err.response?.data;
-            let errMsg = 'Failed to save staff.';
             if (errData?.errors) {
-                const firstKey = Object.keys(errData.errors)[0];
-                errMsg = errData.errors[firstKey]?.[0] || errMsg;
+                setEmployeeErrors(errData.errors);
             } else if (errData?.message) {
-                errMsg = errData.message;
+                showToast(errData.message, 'error');
+            } else {
+                showToast('Failed to save staff account.', 'error');
             }
-            showToast(errMsg, 'error');
         } finally {
             setEmployeeSubmitting(false);
         }
@@ -1188,6 +1191,23 @@ export default function useSettings() {
         } catch (err) {
             showToast(err.response?.data?.message || 'Failed to delete staff member.', 'error');
             throw err;
+        }
+    };
+
+    // ------------------------------------------------------------------------
+    // TAB 5 EXTRA: RESEND VERIFICATION
+    // ------------------------------------------------------------------------
+    const handleResendVerification = async (emp) => {
+        try {
+            const res = await api.post(`/employees/${emp.id}/resend-verification`);
+            // Re-lock the account locally so the badge reflects the new state immediately
+            setEmployees(prev => prev.map(e =>
+                e.id === emp.id ? { ...e, email_verified_at: null } : e
+            ));
+            resetSettingsCache('employees');
+            showToast(res.data?.message || 'Verification email resent successfully.', 'success');
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Failed to resend verification email.', 'error');
         }
     };
 
@@ -1275,8 +1295,9 @@ export default function useSettings() {
         // Tab 5: Employees
         employees, showEmployeeModal, setShowEmployeeModal, employeeForm, setEmployeeForm, selectedEmployee, setSelectedEmployee,
         showDeleteEmployeeModal, setShowDeleteEmployeeModal, employeeToDelete, setEmployeeToDelete,
+        employeeErrors, setEmployeeErrors,
         handleEmployeeSubmit, openEditEmployee, handleToggleEmployee, handleDeleteEmployee: openDeleteEmployeeModal,
-        openDeleteEmployeeModal, handleConfirmDeleteEmployee, openAddEmployee,
+        openDeleteEmployeeModal, handleConfirmDeleteEmployee, openAddEmployee, handleResendVerification,
 
         // Tab 6: Checkers
         checkers, showCheckerModal, setShowCheckerModal, checkerForm, setCheckerForm, selectedChecker, setSelectedChecker,

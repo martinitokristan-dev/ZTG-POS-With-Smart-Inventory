@@ -19,10 +19,11 @@ class AdminUserSeeder extends Seeder
         $user = User::updateOrCreate(
             ['username' => 'admin'],
             [
-                'password' => Hash::make('Admin*123'),
-                'pin'      => 'Admin*123',
-                'role'     => UserRole::ADMIN,
-                'status'   => UserStatus::ACTIVE,
+                'password'          => Hash::make('Admin*123'),
+                'pin'               => 'Admin*123',
+                'role'              => UserRole::ADMIN,
+                'status'            => UserStatus::ACTIVE,
+                'email_verified_at' => now(), // Admin is pre-verified — no email lock needed
             ]
         );
 

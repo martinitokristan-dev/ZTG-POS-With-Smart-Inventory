@@ -110,21 +110,42 @@ class AuthController extends Controller
             ]);
         }
 
-        // 4. Success — clear rate limiter & issue token
+        // 4. Block login if email has not been verified yet (staff must click the setup link)
+        if (is_null($user->email_verified_at)) {
+            $this->activityLogService->log(
+                action: 'login',
+                module: 'Auth',
+                description: "Unverified account login blocked for {$user->full_name} ({$user->username})",
+                status: 'Failed',
+                severity: 'warning',
+                metadata: ['user_id' => $user->id],
+                userId: $user->id,
+                request: $request
+            );
+
+            return response()->json([
+                'message' => 'Your account is pending email verification. Please check your inbox for the setup link sent by your administrator.',
+                'code'    => 'EMAIL_NOT_VERIFIED',
+            ], 403);
+        }
+
+        // 5. Success — clear rate limiter & issue token
         RateLimiter::clear($throttleKey);
 
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        $roleName = is_object($user->role) ? $user->role->value : (string) $user->role;
 
         // Log successful login
         $this->activityLogService->log(
             action: 'login',
             module: 'Auth',
-            description: "User {$user->full_name} ({$user->role->value}) logged in successfully",
+            description: "User {$user->full_name} ({$roleName}) logged in successfully",
             status: 'Success',
             severity: 'info',
             metadata: [
                 'user_id' => $user->id,
-                'role'    => $user->role->value ?? $user->role,
+                'role'    => $roleName,
             ],
             userId: $user->id,
             request: $request
@@ -138,9 +159,10 @@ class AuthController extends Controller
                 'phone_number'  => $user->phone_number,
                 'email'         => $user->email,
                 'username'      => $user->username,
-                'role'          => $user->role->value ?? $user->role,
+                'role'          => $roleName,
                 'profile_photo' => $user->profile_photo,
                 'name'          => $user->full_name,
+                'permissions'   => $user->getEffectivePermissions(),
             ],
         ]);
     }
@@ -153,10 +175,11 @@ class AuthController extends Controller
         $user = $request->user();
 
         if ($user) {
+            $roleName = is_object($user->role) ? $user->role->value : (string) $user->role;
             $this->activityLogService->log(
                 action: 'logout',
                 module: 'Auth',
-                description: "User {$user->full_name} ({$user->role->value}) logged out",
+                description: "User {$user->full_name} ({$roleName}) logged out",
                 status: 'Success',
                 severity: 'info',
                 metadata: ['user_id' => $user->id],
@@ -188,6 +211,7 @@ class AuthController extends Controller
                 'role'          => $user->role->value ?? $user->role,
                 'profile_photo' => $user->profile_photo,
                 'name'          => $user->full_name,
+                'permissions'   => $user->getEffectivePermissions(),
             ]
         ]);
     }

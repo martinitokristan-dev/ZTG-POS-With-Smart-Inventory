@@ -1,0 +1,220 @@
+import React from 'react';
+import api from '../../../../shared/api';
+
+export function useRoles() {
+    const [roles, setRoles] = React.useState([]);
+    const [modules, setModules] = React.useState({});
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState(null);
+
+    // Modal state for viewing a role (read-only)
+    const [showRoleViewModal, setShowRoleViewModal] = React.useState(false);
+    const [selectedRoleForView, setSelectedRoleForView] = React.useState(null);
+
+    // Modal state for creating / editing a role
+    const [showRoleModal, setShowRoleModal] = React.useState(false);
+    const [editingRole, setEditingRole] = React.useState(null);
+    const [roleForm, setRoleForm] = React.useState({
+        name: '',
+        description: '',
+        permissions: {},
+    });
+    const [formErrors, setFormErrors] = React.useState({});
+    const [isSaving, setIsSaving] = React.useState(false);
+
+    // Modal state for viewing users assigned to a role
+    const [showUsersModal, setShowUsersModal] = React.useState(false);
+    const [selectedRoleForUsers, setSelectedRoleForUsers] = React.useState(null);
+    const [assignedUsers, setAssignedUsers] = React.useState([]);
+    const [loadingUsers, setLoadingUsers] = React.useState(false);
+
+    // Delete confirmation state
+    const [deletingRoleId, setDeletingRoleId] = React.useState(null);
+
+    const fetchRoles = React.useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await api.get('/roles');
+            setRoles(res.data.roles || []);
+            setModules(res.data.modules || {});
+        } catch (err) {
+            console.error('Failed to fetch roles:', err);
+            setError(err.response?.data?.message || 'Failed to load roles and permissions.');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    React.useEffect(() => {
+        fetchRoles();
+    }, [fetchRoles]);
+
+    const openCreateRoleModal = () => {
+        setEditingRole(null);
+        // Initialize default empty matrix with all modules
+        const initialPerms = {};
+        Object.keys(modules).forEach((modKey) => {
+            initialPerms[modKey] = {
+                has_access: false,
+                can_view: false,
+                can_create: false,
+                can_edit: false,
+                can_delete: false,
+            };
+        });
+
+        setRoleForm({
+            name: '',
+            description: '',
+            permissions: initialPerms,
+        });
+        setFormErrors({});
+        setShowRoleModal(true);
+    };
+
+    const openEditRoleModal = (role) => {
+        setEditingRole(role);
+        // Build permissions object from role.permissions
+        const permsObj = {};
+        const rolePermsMap = {};
+        (role.permissions || []).forEach((p) => {
+            rolePermsMap[p.module] = p;
+        });
+
+        Object.keys(modules).forEach((modKey) => {
+            const existing = rolePermsMap[modKey];
+            permsObj[modKey] = {
+                has_access: Boolean(existing?.has_access),
+                can_view: Boolean(existing?.can_view),
+                can_create: Boolean(existing?.can_create),
+                can_edit: Boolean(existing?.can_edit),
+                can_delete: Boolean(existing?.can_delete),
+            };
+        });
+
+        setRoleForm({
+            name: role.name || '',
+            description: role.description || '',
+            permissions: permsObj,
+        });
+        setFormErrors({});
+        setShowRoleModal(true);
+    };
+
+    const handleSaveRole = async (e) => {
+        if (e) e.preventDefault();
+        setFormErrors({});
+        setIsSaving(true);
+
+        try {
+            if (editingRole) {
+                await api.put(`/roles/${editingRole.id}`, roleForm);
+            } else {
+                await api.post('/roles', roleForm);
+            }
+            setShowRoleModal(false);
+            fetchRoles();
+            
+            // Refresh current session permissions
+            try {
+                const userRes = await api.get('/user');
+                if (userRes.data?.user) {
+                    localStorage.setItem('auth_user', JSON.stringify(userRes.data.user));
+                    sessionStorage.setItem('auth_user', JSON.stringify(userRes.data.user));
+                }
+            } catch (e) {
+                console.warn('Could not refresh auth_user session:', e);
+            }
+
+            // Dispatch event for settings / sidebar updates
+            window.dispatchEvent(new Event('auth_user_updated'));
+        } catch (err) {
+            console.error('Failed to save role:', err);
+            if (err.response?.data?.errors) {
+                setFormErrors(err.response.data.errors);
+            } else {
+                setFormErrors({ general: err.response?.data?.message || 'Failed to save role.' });
+            }
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDeleteRole = async (role) => {
+        if (role.is_system) {
+            alert('System roles cannot be deleted.');
+            return;
+        }
+
+        if (role.users_count > 0) {
+            alert(`Cannot delete role "${role.name}" because ${role.users_count} user(s) are assigned to it. Please reassign them first.`);
+            return;
+        }
+
+        if (!window.confirm(`Are you sure you want to delete the role "${role.name}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        setDeletingRoleId(role.id);
+        try {
+            await api.delete(`/roles/${role.id}`);
+            fetchRoles();
+        } catch (err) {
+            console.error('Failed to delete role:', err);
+            alert(err.response?.data?.message || 'Failed to delete role.');
+        } finally {
+            setDeletingRoleId(null);
+        }
+    };
+
+    const openViewUsersModal = async (role) => {
+        setSelectedRoleForUsers(role);
+        setShowUsersModal(true);
+        setLoadingUsers(true);
+        try {
+            const res = await api.get(`/roles/${role.id}/users`);
+            setAssignedUsers(res.data.users || []);
+        } catch (err) {
+            console.error('Failed to fetch users for role:', err);
+            setAssignedUsers([]);
+        } finally {
+            setLoadingUsers(false);
+        }
+    };
+
+    const openViewRoleModal = (role) => {
+        setSelectedRoleForView(role);
+        setShowRoleViewModal(true);
+    };
+
+    return {
+        roles,
+        modules,
+        loading,
+        error,
+        fetchRoles,
+        showRoleViewModal,
+        setShowRoleViewModal,
+        selectedRoleForView,
+        openViewRoleModal,
+        showRoleModal,
+        setShowRoleModal,
+        editingRole,
+        roleForm,
+        setRoleForm,
+        formErrors,
+        isSaving,
+        openCreateRoleModal,
+        openEditRoleModal,
+        handleSaveRole,
+        handleDeleteRole,
+        deletingRoleId,
+        showUsersModal,
+        setShowUsersModal,
+        selectedRoleForUsers,
+        assignedUsers,
+        loadingUsers,
+        openViewUsersModal,
+    };
+}

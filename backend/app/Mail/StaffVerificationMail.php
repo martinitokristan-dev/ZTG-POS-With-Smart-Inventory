@@ -43,7 +43,7 @@ class StaffVerificationMail extends Mailable
     {
         $businessName = $this->getBusinessName();
         return new Envelope(
-            subject: "{$businessName} — Verify Your Staff Account & Credentials",
+            subject: "{$businessName} — Set Your Password & Activate Your Account",
         );
     }
 
@@ -68,7 +68,7 @@ class StaffVerificationMail extends Mailable
         $userRole = htmlspecialchars(is_object($this->user->role) ? $this->user->role->value : (string)$this->user->role, ENT_QUOTES, 'UTF-8');
         $expiry = $this->expiryHours;
         $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173'));
-        $verifyUrl = rtrim($frontendUrl, '/') . '/verify-credentials?token=' . urlencode($this->token);
+        $verifyUrl = rtrim($frontendUrl, '/') . '/set-password?token=' . urlencode($this->token);
         $currentYear = date('Y');
 
         return <<<HTML
@@ -77,7 +77,7 @@ class StaffVerificationMail extends Mailable
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Your Staff Account</title>
+    <title>Set Your Password & Activate Account</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1E293B; -webkit-font-smoothing: antialiased;">
     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #F8FAFC; padding: 48px 16px;">
@@ -101,7 +101,7 @@ class StaffVerificationMail extends Mailable
                     <tr>
                         <td style="padding: 32px 32px 28px 32px;">
                             <div style="display: inline-block; padding: 3px 10px; background-color: #EFF6FF; border: 1px solid #DBEAFE; border-radius: 6px; color: #1D4ED8; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 18px;">
-                                Staff Account Setup
+                                Account Activation
                             </div>
 
                             <h2 style="margin: 0 0 12px 0; color: #0F172A; font-size: 18px; font-weight: 700; line-height: 1.3;">
@@ -113,7 +113,7 @@ class StaffVerificationMail extends Mailable
                             </p>
 
                             <p style="margin: 0 0 24px 0; color: #475569; font-size: 13.5px; line-height: 1.6;">
-                                Click the button below to verify your account and securely reveal your login username and temporary password.
+                                Click the button below to choose your personal password and activate your account for POS and system access.
                             </p>
 
                             <!-- Direct Action Button -->
@@ -121,21 +121,20 @@ class StaffVerificationMail extends Mailable
                                 <tr>
                                     <td align="center">
                                         <a href="{$verifyUrl}" target="_blank" style="display: inline-block; width: 100%; box-sizing: border-box; background-color: #2563EB; color: #FFFFFF; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; text-align: center; letter-spacing: 0.2px;">
-                                            Verify & View My Credentials
+                                            Set My Password & Activate Account
                                         </a>
                                     </td>
                                 </tr>
                             </table>
 
-                            <!-- Single-Use Security Notice -->
-                            <div style="background-color: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 12px 14px; margin-bottom: 22px;">
-                                <p style="margin: 0; color: #92400E; font-size: 12px; line-height: 1.5;">
-                                    <strong>⚠️ Single-Use Security Notice:</strong> This link can only be accessed <strong>once</strong> and expires in {$expiry} hours. Please copy your credentials or use the <em>"Send to My Email"</em> button once the page opens.
+                            <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 14px; margin-bottom: 22px;">
+                                <p style="margin: 0; color: #64748B; font-size: 12px; line-height: 1.5;">
+                                    ⏱️ <strong>Note:</strong> This activation link is valid for <strong>{$expiry} hours</strong>. If you did not expect this invitation, please contact your administrator.
                                 </p>
                             </div>
 
                             <p style="margin: 0; color: #94A3B8; font-size: 11.5px; line-height: 1.5; word-break: break-all;">
-                                If the button does not work, copy and paste this link into your browser:<br>
+                                If the button above does not work, copy and paste this link into your browser:<br>
                                 <a href="{$verifyUrl}" style="color: #2563EB; text-decoration: underline;">{$verifyUrl}</a>
                             </p>
                         </td>

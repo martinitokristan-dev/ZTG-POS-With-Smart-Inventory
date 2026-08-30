@@ -3,8 +3,6 @@ import useSettings from './hooks/useSettings';
 import ProfileTab from './tabs/ProfileTab';
 import GeneralTab from './tabs/GeneralTab';
 import ProductsTab from './tabs/ProductsTab';
-import EmployeesTab from './tabs/EmployeesTab';
-import CheckersTab from './tabs/CheckersTab';
 import ActivityLogs from '../ActivityLogs/index.jsx';
 import CategoryModal from './modals/CategoryModal';
 import EmployeeModal from './modals/EmployeeModal';
@@ -34,9 +32,10 @@ export default function SettingsView() {
         alertRules, showRuleModal, setShowRuleModal, ruleForm, setRuleForm,
         employees, showEmployeeModal, setShowEmployeeModal, employeeForm, setEmployeeForm, selectedEmployee, setSelectedEmployee,
         showDeleteEmployeeModal, setShowDeleteEmployeeModal, employeeToDelete, setEmployeeToDelete,
+        employeeErrors, setEmployeeErrors,
         handleProfileSubmit, handlePasswordSubmit, handleCategorySubmit, handleDeleteCategory, handleAddVariantOption, handleUpdateVariantOption, handleDeleteVariantOption, getOptionsForType,
         handleRuleSubmit, handleToggleRule, handleDeleteRule,
-        handleEmployeeSubmit, openEditEmployee, handleToggleEmployee, handleDeleteEmployee, handleConfirmDeleteEmployee, openAddEmployee,
+        handleEmployeeSubmit, openEditEmployee, handleToggleEmployee, handleDeleteEmployee, handleConfirmDeleteEmployee, openAddEmployee, handleResendVerification,
         checkers, showCheckerModal, setShowCheckerModal, checkerForm, setCheckerForm, selectedChecker, setSelectedChecker, handleCheckerSubmit, openEditChecker, openAddChecker,
         profileSubmitting, passwordSubmitting, employeeSubmitting
     } = useSettings();
@@ -46,24 +45,25 @@ export default function SettingsView() {
         return stored ? JSON.parse(stored) : null;
     }, []);
 
-    const isCashier = profileData?.role === 'Cashier' || authUser?.role === 'Cashier';
+    const userRole = profileData?.role || authUser?.role;
+    const isAdmin = userRole === 'Admin' || userRole === 'Administrator';
 
-    // Force active tab to account if cashier
+    // Force active tab to account if not Admin
     React.useEffect(() => {
-        if (isCashier && activeTab !== 'account') {
+        if (!isAdmin && activeTab !== 'account') {
             setActiveTab('account');
         }
-    }, [isCashier, activeTab, setActiveTab]);
+    }, [isAdmin, activeTab, setActiveTab]);
 
     return (
         <>
             <div className="top-bar">
                 <div>
                     <h1 id="settingsPageTitle" style={{ fontSize: '20px', marginBottom: '2px' }}>
-                        {isCashier ? 'My Account' : 'System Settings'}
+                        {!isAdmin ? 'My Account' : 'System Settings'}
                     </h1>
                     <div id="settingsPageDesc" className="page-description" style={{ marginTop: 0, fontSize: '12px' }}>
-                        {isCashier ? 'Manage your personal details, photo, and account security.' : 'Configure inventory thresholds, categories, account profile, alerts, and employee access.'}
+                        {!isAdmin ? 'Manage your personal details, photo, and account security.' : 'Configure inventory thresholds, categories, account profile, alerts, and employee access.'}
                     </div>
                 </div>
                 <div className="top-bar-actions"></div>
@@ -71,18 +71,16 @@ export default function SettingsView() {
 
             <div className="content-body settings-page-body">
                 {loading ? (
-                    <LoadingSpinner text={isCashier ? 'Loading account...' : 'Loading settings...'} />
+                    <LoadingSpinner text={!isAdmin ? 'Loading account...' : 'Loading settings...'} />
                 ) : (
                     <div className="settings-tabs-wrap" style={{ paddingBottom: '60px' }}>
-                        {/* Primary Navigation Tabs Header (Hidden for Cashiers) */}
-                        {!isCashier && (
+                        {/* Primary Navigation Tabs Header (Admin only) */}
+                        {isAdmin && (
                             <div className="tabs-header">
                                 {[
                                     { id: 'account', label: 'My Account' },
                                     { id: 'general', label: 'General' },
                                     { id: 'products', label: 'Products Settings' },
-                                    { id: 'employees', label: "Employee's role" },
-                                    { id: 'checkers', label: 'Checkers' }
                                 ].map(tab => (
                                     <button
                                         key={tab.id}
@@ -99,7 +97,7 @@ export default function SettingsView() {
                         <div className={`tab-content ${activeTab === 'account' ? 'active' : ''}`}>
                             {activeTab === 'account' && (
                                 <>
-                                    {isCashier ? (
+                                    {!isAdmin ? (
                                         <ProfileTab
                                             profileData={profileData} setProfileData={setProfileData} handleProfileSubmit={handleProfileSubmit}
                                             setShowPasswordModal={setShowPasswordModal} showPIN={showPIN} setShowPIN={setShowPIN} isProfileDirty={isProfileDirty}
@@ -346,7 +344,7 @@ export default function SettingsView() {
                             )}
                         </div>
 
-                        {!isCashier && (
+                        {isAdmin && (
                             <>
                                 {/* TAB 2: GENERAL */}
                                 <div className={`tab-content ${activeTab === 'general' ? 'active' : ''}`}>
@@ -420,35 +418,9 @@ export default function SettingsView() {
                                     )}
                                 </div>
 
-                                {/* TAB 4: EMPLOYEES */}
-                                <div className={`tab-content ${activeTab === 'employees' ? 'active' : ''}`}>
-                                    {activeTab === 'employees' && (
-                                        <EmployeesTab 
-                                            employees={employees}
-                                            openEditEmployee={openEditEmployee}
-                                            openAddEmployee={openAddEmployee}
-                                            handleToggleEmployee={handleToggleEmployee}
-                                            handleDeleteEmployee={handleDeleteEmployee}
-                                            setSelectedEmployee={setSelectedEmployee}
-                                            setEmployeeForm={setEmployeeForm}
-                                            setShowEmployeeModal={setShowEmployeeModal}
-                                        />
-                                    )}
-                                </div>
 
-                                {/* TAB 5: CHECKERS */}
-                                <div className={`tab-content ${activeTab === 'checkers' ? 'active' : ''}`}>
-                                    {activeTab === 'checkers' && (
-                                        <CheckersTab 
-                                            checkers={checkers}
-                                            openEditChecker={openEditChecker}
-                                            openAddChecker={openAddChecker}
-                                            setSelectedChecker={setSelectedChecker}
-                                            setCheckerForm={setCheckerForm}
-                                            setShowCheckerModal={setShowCheckerModal}
-                                        />
-                                    )}
-                                </div>
+
+
                             </>
                         )}
                     </div>
@@ -477,6 +449,8 @@ export default function SettingsView() {
                 onSubmit={handleEmployeeSubmit}
                 selectedEmployee={selectedEmployee}
                 submitting={employeeSubmitting}
+                employeeErrors={employeeErrors}
+                setEmployeeErrors={setEmployeeErrors}
             />
 
             <PasswordModal

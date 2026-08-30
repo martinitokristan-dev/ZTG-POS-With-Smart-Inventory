@@ -98,6 +98,33 @@
   stroke: #FFFFFF !important;
 }
 
+.admin-sidebar a.sidebar-subitem.active,
+.admin-sidebar a.sidebar-subitem[aria-current="page"] {
+  background-color: #3B82F6 !important;
+  color: #FFFFFF !important;
+  font-weight: 500 !important;
+}
+
+.admin-sidebar a.sidebar-subitem.active svg,
+.admin-sidebar a.sidebar-subitem[aria-current="page"] svg {
+  stroke: #FFFFFF !important;
+}
+
+[data-theme="dark"] .admin-sidebar a.sidebar-subitem.active,
+[data-theme="dark"] .admin-sidebar a.sidebar-subitem[aria-current="page"],
+html.dark-theme .admin-sidebar a.sidebar-subitem.active,
+body.dark-theme .admin-sidebar a.sidebar-subitem.active {
+  background-color: #3B82F6 !important;
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .admin-sidebar a.sidebar-subitem.active svg,
+[data-theme="dark"] .admin-sidebar a.sidebar-subitem[aria-current="page"] svg,
+html.dark-theme .admin-sidebar a.sidebar-subitem.active svg,
+body.dark-theme .admin-sidebar a.sidebar-subitem.active svg {
+  stroke: #FFFFFF !important;
+}
+
 
 [data-theme="dark"], html.dark-theme, body.dark-theme {
   --bg-canvas: #0B1329;
@@ -2549,6 +2576,45 @@ tr:hover td {
 .actions-dropdown-item.enable:hover {
     background: var(--success-light);
     color: var(--success);
+}
+
+/* Responsive Actions: Inline buttons when ample space, transform to 3-dots dropdown when zoomed/narrow */
+.actions-cell-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.actions-inline-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.actions-dropdown-group {
+    display: none;
+    position: relative;
+}
+
+/* Wide table action collapse (e.g. Manage Users with 5-6 buttons) */
+@media (max-width: 1400px) {
+    .actions-collapse-wide .actions-inline-group {
+        display: none !important;
+    }
+    .actions-collapse-wide .actions-dropdown-group {
+        display: inline-block !important;
+    }
+}
+
+/* Compact table action collapse (e.g. Roles & Checkers with 2-3 buttons) */
+@media (max-width: 1100px) {
+    .actions-collapse-compact .actions-inline-group {
+        display: none !important;
+    }
+    .actions-collapse-compact .actions-dropdown-group {
+        display: inline-block !important;
+    }
 }
 
 .table-card {

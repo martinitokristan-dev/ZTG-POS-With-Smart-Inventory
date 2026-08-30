@@ -4,12 +4,10 @@ namespace Tests\Feature;
 
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
-use App\Mail\StaffCredentialBackupMail;
 use App\Mail\StaffVerificationMail;
 use App\Models\StaffVerificationToken;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -31,6 +29,7 @@ class StaffVerificationTest extends TestCase
             'password'     => Hash::make('Admin*123'),
             'role'         => UserRole::ADMIN,
             'status'       => UserStatus::ACTIVE,
+            'email_verified_at' => now(),
         ]);
     }
 
@@ -41,34 +40,32 @@ class StaffVerificationTest extends TestCase
         $response = $this->actingAs($this->admin)->postJson('/api/employees', [
             'full_name'    => 'Sarah Connor',
             'phone_number' => '09123456789',
-            'email'        => 'sarah@ztg.com',
+            'email'        => 'sarah@gmail.com',
             'username'     => 'sarah_c',
-            'password'     => 'Secret*123',
             'role'         => 'Cashier',
             'status'       => 'Active',
         ]);
 
         $response->assertStatus(201);
 
-        $newEmployee = User::where('username', 'sarah_c')->first();
-        $this->assertNotNull($newEmployee);
+        $newUser = User::where('username', 'sarah_c')->first();
+        $this->assertNotNull($newUser);
+        $this->assertNull($newUser->email_verified_at);
 
         // Assert token record exists
-        $tokenRecord = StaffVerificationToken::where('user_id', $newEmployee->id)->first();
+        $tokenRecord = StaffVerificationToken::where('user_id', $newUser->id)->first();
         $this->assertNotNull($tokenRecord);
         $this->assertEquals(64, strlen($tokenRecord->token));
-        $this->assertNull($tokenRecord->viewed_at);
-        $this->assertEquals('Secret*123', Crypt::decryptString($tokenRecord->encrypted_password));
 
         // Assert email dispatched
-        Mail::assertSent(StaffVerificationMail::class, function ($mail) use ($newEmployee) {
-            return $mail->user->id === $newEmployee->id && $mail->hasTo('sarah@ztg.com');
+        Mail::assertSent(StaffVerificationMail::class, function ($mail) use ($newUser) {
+            return $mail->user->id === $newUser->id && $mail->hasTo('sarah@gmail.com');
         });
     }
 
-    public function test_employee_can_reveal_credentials_once()
+    public function test_employee_can_fetch_set_password_page_info()
     {
-        $employee = User::create([
+        $user = User::create([
             'full_name' => 'Alex Cashier',
             'email'     => 'alex@ztg.com',
             'username'  => 'alex_cashier',
@@ -78,65 +75,97 @@ class StaffVerificationTest extends TestCase
         ]);
 
         $tokenRecord = StaffVerificationToken::create([
-            'user_id'            => $employee->id,
-            'token'              => 'test_token_12345678901234567890123456789012345678901234567890123456',
-            'encrypted_password' => Crypt::encryptString('MySecurePass*99'),
-            'expires_at'         => now()->addHours(48),
+            'user_id'    => $user->id,
+            'token'      => 'test_token_12345678901234567890123456789012345678901234567890123456',
+            'expires_at' => now()->addHours(48),
         ]);
 
-        $response = $this->postJson('/api/auth/reveal-credentials', [
-            'token' => $tokenRecord->token,
-        ]);
+        $response = $this->getJson('/api/auth/set-password?token=' . $tokenRecord->token);
 
         $response->assertStatus(200)
             ->assertJson([
-                'success'     => true,
-                'credentials' => [
+                'success' => true,
+                'user'    => [
                     'full_name' => 'Alex Cashier',
                     'username'  => 'alex_cashier',
                     'email'     => 'alex@ztg.com',
                     'role'      => 'Cashier',
-                    'password'  => 'MySecurePass*99',
                 ],
             ]);
-
-        // Assert marked as viewed
-        $this->assertNotNull($tokenRecord->fresh()->viewed_at);
     }
 
-    public function test_second_reveal_attempt_is_blocked_as_already_viewed()
+    public function test_employee_can_set_new_password_and_activate_account()
     {
-        $employee = User::create([
+        $user = User::create([
             'full_name' => 'Bob Staff',
             'email'     => 'bob@ztg.com',
             'username'  => 'bob_staff',
-            'password'  => Hash::make('Pass*1234'),
+            'password'  => Hash::make('Placeholder*123'),
             'role'      => UserRole::CASHIER,
             'status'    => UserStatus::ACTIVE,
+            'email_verified_at' => null,
         ]);
 
         $tokenRecord = StaffVerificationToken::create([
-            'user_id'            => $employee->id,
-            'token'              => 'already_viewed_token_12345678901234567890123456789012345678901234',
-            'encrypted_password' => Crypt::encryptString('BobSecret*456'),
-            'expires_at'         => now()->addHours(48),
-            'viewed_at'          => now()->subMinute(),
+            'user_id'    => $user->id,
+            'token'      => 'set_password_token_1234567890123456789012345678901234567890123456',
+            'expires_at' => now()->addHours(48),
         ]);
 
-        $response = $this->postJson('/api/auth/reveal-credentials', [
-            'token' => $tokenRecord->token,
+        $response = $this->postJson('/api/auth/set-password', [
+            'token'                 => $tokenRecord->token,
+            'password'              => 'BrandNewSecret*99',
+            'password_confirmation' => 'BrandNewSecret*99',
         ]);
 
-        $response->assertStatus(410)
+        $response->assertStatus(200)
             ->assertJson([
-                'success' => false,
-                'code'    => 'ALREADY_VIEWED',
+                'success' => true,
             ]);
+
+        $user->refresh();
+        $this->assertNotNull($user->email_verified_at);
+        $this->assertTrue(Hash::check('BrandNewSecret*99', $user->password));
+
+        // Token should be burned/deleted
+        $this->assertNull(StaffVerificationToken::where('token', $tokenRecord->token)->first());
     }
 
-    public function test_expired_token_is_blocked()
+    public function test_invalid_password_format_fails_set_password()
     {
-        $employee = User::create([
+        $user = User::create([
+            'full_name' => 'Diana Prince',
+            'email'     => 'diana@ztg.com',
+            'username'  => 'diana_cashier',
+            'password'  => Hash::make('Placeholder*123'),
+            'role'      => UserRole::CASHIER,
+            'status'    => UserStatus::ACTIVE,
+            'email_verified_at' => null,
+        ]);
+
+        $tokenRecord = StaffVerificationToken::create([
+            'user_id'    => $user->id,
+            'token'      => 'diana_token_123456789012345678901234567890123456789012345678901234',
+            'expires_at' => now()->addHours(48),
+        ]);
+
+        // Missing uppercase and special character, and mismatch confirmation
+        $response = $this->postJson('/api/auth/set-password', [
+            'token'                 => $tokenRecord->token,
+            'password'              => 'simple',
+            'password_confirmation' => 'different',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['password']);
+
+        $user->refresh();
+        $this->assertNull($user->email_verified_at);
+    }
+
+    public function test_expired_token_is_blocked_on_set_password()
+    {
+        $user = User::create([
             'full_name' => 'Charlie Staff',
             'email'     => 'charlie@ztg.com',
             'username'  => 'charlie_staff',
@@ -146,14 +175,15 @@ class StaffVerificationTest extends TestCase
         ]);
 
         $tokenRecord = StaffVerificationToken::create([
-            'user_id'            => $employee->id,
-            'token'              => 'expired_token_1234567890123456789012345678901234567890123456789012',
-            'encrypted_password' => Crypt::encryptString('Charlie*789'),
-            'expires_at'         => now()->subHour(),
+            'user_id'    => $user->id,
+            'token'      => 'expired_token_1234567890123456789012345678901234567890123456789012',
+            'expires_at' => now()->subHour(),
         ]);
 
-        $response = $this->postJson('/api/auth/reveal-credentials', [
-            'token' => $tokenRecord->token,
+        $response = $this->postJson('/api/auth/set-password', [
+            'token'                 => $tokenRecord->token,
+            'password'              => 'NewPass*12345',
+            'password_confirmation' => 'NewPass*12345',
         ]);
 
         $response->assertStatus(410)
@@ -163,45 +193,9 @@ class StaffVerificationTest extends TestCase
             ]);
     }
 
-    public function test_staff_can_request_credential_backup_email()
-    {
-        Mail::fake();
-
-        $employee = User::create([
-            'full_name' => 'Diana Prince',
-            'email'     => 'diana@ztg.com',
-            'username'  => 'diana_cashier',
-            'password'  => Hash::make('Pass*1234'),
-            'role'      => UserRole::CASHIER,
-            'status'    => UserStatus::ACTIVE,
-        ]);
-
-        $tokenRecord = StaffVerificationToken::create([
-            'user_id'            => $employee->id,
-            'token'              => 'backup_email_token_1234567890123456789012345678901234567890123456',
-            'encrypted_password' => Crypt::encryptString('DianaPass*123'),
-            'expires_at'         => now()->addHours(48),
-        ]);
-
-        $response = $this->postJson('/api/auth/send-credential-backup', [
-            'token' => $tokenRecord->token,
-        ]);
-
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-            ]);
-
-        $this->assertNotNull($tokenRecord->fresh()->backup_sent_at);
-
-        Mail::assertSent(StaffCredentialBackupMail::class, function ($mail) use ($employee) {
-            return $mail->user->id === $employee->id && $mail->hasTo('diana@ztg.com');
-        });
-    }
-
     public function test_admin_can_delete_staff_member()
     {
-        $employee = User::create([
+        $user = User::create([
             'full_name' => 'To Be Deleted',
             'email'     => 'delete_me@ztg.com',
             'username'  => 'todelete',
@@ -210,14 +204,14 @@ class StaffVerificationTest extends TestCase
             'status'    => UserStatus::ACTIVE,
         ]);
 
-        $response = $this->actingAs($this->admin)->deleteJson("/api/employees/{$employee->id}");
+        $response = $this->actingAs($this->admin)->deleteJson("/api/employees/{$user->id}");
 
         $response->assertStatus(200)
             ->assertJson([
                 'message' => 'Employee deleted successfully.',
             ]);
 
-        $this->assertNull(User::find($employee->id));
+        $this->assertNull(User::find($user->id));
     }
 
     public function test_admin_cannot_delete_default_admin()
