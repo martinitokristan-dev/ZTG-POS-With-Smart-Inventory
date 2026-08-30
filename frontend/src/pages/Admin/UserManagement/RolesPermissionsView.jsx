@@ -167,24 +167,26 @@ export default function RolesPermissionsView({
                                                 {role.description || '—'}
                                             </td>
 
-                                            {/* Users Assigned */}
+                                            {/* Users Assigned (Plain static icon with count) */}
                                             <td style={{ padding: '12px 16px' }}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => onViewUsers(role)}
+                                                <div
                                                     style={{
-                                                        background: 'none',
-                                                        border: 'none',
-                                                        padding: 0,
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
                                                         color: 'var(--text-primary)',
-                                                        fontWeight: '500',
-                                                        cursor: 'pointer',
                                                         fontSize: '13px',
-                                                        textDecoration: 'none',
+                                                        fontWeight: '500',
                                                     }}
                                                 >
-                                                    {role.users_count || 0} user{role.users_count === 1 ? '' : 's'}
-                                                </button>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                                        <circle cx="9" cy="7" r="4" />
+                                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                                    </svg>
+                                                    <span>{role.users_count || 0} user{role.users_count === 1 ? '' : 's'}</span>
+                                                </div>
                                             </td>
 
                                             {/* Permissions Summary (Plain text with commas, no blue/green pills) */}
@@ -223,7 +225,24 @@ export default function RolesPermissionsView({
                                                             </svg>
                                                         </button>
 
-                                                        {/* 2. Edit Role (if not default SuperAdmin) */}
+                                                        {/* 2. Manage Assigned Users */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => onViewUsers(role)}
+                                                            className="action-trigger-btn"
+                                                            data-tooltip={`Assigned Staff (${role.users_count || 0})`}
+                                                            aria-label="Assigned Staff"
+                                                            style={{ color: '#2563EB' }}
+                                                        >
+                                                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                                                <circle cx="9" cy="7" r="4" />
+                                                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                                            </svg>
+                                                        </button>
+
+                                                        {/* 3. Edit Role (if not default SuperAdmin) */}
                                                         {!isSuperAdmin && (
                                                             <button
                                                                 type="button"
@@ -239,7 +258,7 @@ export default function RolesPermissionsView({
                                                             </button>
                                                         )}
 
-                                                        {/* 3. Delete Role (non-system only) */}
+                                                        {/* 4. Delete Role (non-system only) */}
                                                         {!role.is_system && (
                                                             <button
                                                                 type="button"
@@ -269,10 +288,10 @@ export default function RolesPermissionsView({
                                                             aria-label="More actions"
                                                             data-tooltip="More actions"
                                                         >
-                                                            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
-                                                                <circle cx="12" cy="5" r="2"></circle>
-                                                                <circle cx="12" cy="12" r="2"></circle>
-                                                                <circle cx="12" cy="19" r="2"></circle>
+                                                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                <circle cx="12" cy="12" r="1.5"></circle>
+                                                                <circle cx="12" cy="5" r="1.5"></circle>
+                                                                <circle cx="12" cy="19" r="1.5"></circle>
                                                             </svg>
                                                         </button>
 
@@ -299,7 +318,25 @@ export default function RolesPermissionsView({
                                                                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                                                                         <circle cx="12" cy="12" r="3" />
                                                                     </svg>
-                                                                    <span>View Details</span>
+                                                                    <span>View Permissions</span>
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setOpenDropdownId(null);
+                                                                        onViewUsers(role);
+                                                                    }}
+                                                                    className="actions-dropdown-item"
+                                                                    style={{ color: '#2563EB' }}
+                                                                >
+                                                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                                                        <circle cx="9" cy="7" r="4" />
+                                                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                                                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                                                    </svg>
+                                                                    <span>Assigned Staff ({role.users_count || 0})</span>
                                                                 </button>
 
                                                                 {!isSuperAdmin && (

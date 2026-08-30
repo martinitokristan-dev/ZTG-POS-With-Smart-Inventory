@@ -148,6 +148,52 @@ class RoleService
     }
 
     /**
+     * Assign an existing user to a role.
+     *
+     * @param Role $role
+     * @param int $userId
+     * @return User
+     * @throws ValidationException
+     */
+    public function assignUserToRole(Role $role, int $userId): User
+    {
+        $user = User::findOrFail($userId);
+
+        if ($user->username === 'admin' && $role->name !== 'Admin') {
+            throw ValidationException::withMessages([
+                'user' => 'The default system administrator cannot be reassigned from the Admin role.',
+            ]);
+        }
+
+        $user->update(['role' => $role->name]);
+        return $user->load('profile');
+    }
+
+    /**
+     * Remove / Reassign a user from a role to another role.
+     *
+     * @param Role $role
+     * @param int $userId
+     * @param string|null $targetRoleName
+     * @return User
+     * @throws ValidationException
+     */
+    public function removeUserFromRole(Role $role, int $userId, ?string $targetRoleName = null): User
+    {
+        $user = User::findOrFail($userId);
+
+        if ($user->username === 'admin') {
+            throw ValidationException::withMessages([
+                'user' => 'The default system administrator cannot be removed from the Admin role.',
+            ]);
+        }
+
+        $newRole = $targetRoleName ?? 'Cashier';
+        $user->update(['role' => $newRole]);
+        return $user->load('profile');
+    }
+
+    /**
      * Sync the permissions matrix for a role across all standard modules.
      *
      * @param Role $role

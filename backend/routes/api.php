@@ -73,6 +73,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/roles/{role}', [RoleController::class, 'update']);
         Route::delete('/roles/{role}', [RoleController::class, 'destroy']);
         Route::get('/roles/{role}/users', [RoleController::class, 'users']);
+        Route::post('/roles/{role}/assign-user', [RoleController::class, 'assignUser']);
+        Route::post('/roles/{role}/remove-user', [RoleController::class, 'removeUser']);
 
         // User Permission Overrides (Admin only)
         Route::get('/users/{user}/permissions', [UserPermissionController::class, 'show']);

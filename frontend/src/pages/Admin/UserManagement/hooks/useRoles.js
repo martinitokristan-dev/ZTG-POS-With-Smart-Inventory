@@ -183,6 +183,34 @@ export function useRoles() {
         }
     };
 
+    const handleAssignUserToRole = async (roleId, userId) => {
+        try {
+            const res = await api.post(`/roles/${roleId}/assign-user`, { user_id: userId });
+            fetchRoles();
+            if (selectedRoleForUsers?.id === roleId) {
+                setAssignedUsers(res.data.role?.users || []);
+            }
+            return res.data;
+        } catch (err) {
+            console.error('Failed to assign user to role:', err);
+            throw err;
+        }
+    };
+
+    const handleRemoveUserFromRole = async (roleId, userId, targetRole = 'Cashier') => {
+        try {
+            const res = await api.post(`/roles/${roleId}/remove-user`, { user_id: userId, target_role: targetRole });
+            fetchRoles();
+            if (selectedRoleForUsers?.id === roleId) {
+                setAssignedUsers(res.data.role?.users || []);
+            }
+            return res.data;
+        } catch (err) {
+            console.error('Failed to reassign user from role:', err);
+            throw err;
+        }
+    };
+
     const openViewRoleModal = (role) => {
         setSelectedRoleForView(role);
         setShowRoleViewModal(true);
@@ -216,5 +244,7 @@ export function useRoles() {
         assignedUsers,
         loadingUsers,
         openViewUsersModal,
+        handleAssignUserToRole,
+        handleRemoveUserFromRole,
     };
 }

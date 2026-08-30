@@ -256,4 +256,38 @@ class UserManagementTest extends TestCase
         $adminDailySalesResponse = $this->actingAs($this->admin)->getJson('/api/daily-sales');
         $adminDailySalesResponse->assertStatus(200);
     }
+
+    public function test_admin_can_assign_and_reassign_user_to_role(): void
+    {
+        $techOpsRole = Role::where('name', 'Technical Operations')->firstOrFail();
+
+        // 1. Assign cashier to Technical Operations
+        $assignResponse = $this->actingAs($this->admin)->postJson("/api/roles/{$techOpsRole->id}/assign-user", [
+            'user_id' => $this->cashier->id,
+        ]);
+
+        $assignResponse->assertStatus(200);
+        $this->assertEquals('Technical Operations', $this->cashier->fresh()->role);
+
+        // 2. Remove / Reassign cashier back to Cashier
+        $removeResponse = $this->actingAs($this->admin)->postJson("/api/roles/{$techOpsRole->id}/remove-user", [
+            'user_id'     => $this->cashier->id,
+            'target_role' => 'Cashier',
+        ]);
+
+        $removeResponse->assertStatus(200);
+        $this->assertEquals('Cashier', $this->cashier->fresh()->role);
+    }
+
+    public function test_default_admin_cannot_be_reassigned_or_removed_from_admin_role(): void
+    {
+        $cashierRole = Role::where('name', 'Cashier')->firstOrFail();
+
+        $response = $this->actingAs($this->admin)->postJson("/api/roles/{$cashierRole->id}/assign-user", [
+            'user_id' => $this->admin->id,
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertEquals('Admin', $this->admin->fresh()->role);
+    }
 }

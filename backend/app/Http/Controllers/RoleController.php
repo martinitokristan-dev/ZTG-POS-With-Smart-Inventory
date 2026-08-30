@@ -110,4 +110,41 @@ class RoleController extends Controller
             'users' => $roleWithUsers->users,
         ]);
     }
+
+    /**
+     * Assign an existing user to this role.
+     */
+    public function assignUser(Request $request, Role $role): JsonResponse
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
+
+        $user = $this->roleService->assignUserToRole($role, $validated['user_id']);
+
+        return response()->json([
+            'message' => "User '{$user->username}' assigned to role '{$role->name}' successfully.",
+            'user'    => $user,
+            'role'    => $this->roleService->getRoleDetails($role),
+        ]);
+    }
+
+    /**
+     * Remove / Reassign a user from this role.
+     */
+    public function removeUser(Request $request, Role $role): JsonResponse
+    {
+        $validated = $request->validate([
+            'user_id'     => 'required|integer|exists:users,id',
+            'target_role' => 'nullable|string|exists:roles,name',
+        ]);
+
+        $user = $this->roleService->removeUserFromRole($role, $validated['user_id'], $validated['target_role'] ?? null);
+
+        return response()->json([
+            'message' => "User '{$user->username}' reassigned from role '{$role->name}' to '{$user->role}'.",
+            'user'    => $user,
+            'role'    => $this->roleService->getRoleDetails($role),
+        ]);
+    }
 }

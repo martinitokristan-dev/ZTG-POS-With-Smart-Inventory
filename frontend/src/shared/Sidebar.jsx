@@ -818,71 +818,13 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
                         </div>
                     ))}
 
-                    {/* Collapse / Expand Toggle Button */}
-                    {!isMobile && (
-                        <div style={{ marginTop: 8, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                            <button
-                                type="button"
-                                onClick={toggleCollapse}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
-                                    gap: 10,
-                                    padding: '10px 12px',
-                                    width: '100%',
-                                    height: '42px',
-                                    color: 'var(--text-secondary, #64748B)',
-                                    backgroundColor: 'transparent',
-                                    border: 'none',
-                                    borderRadius: 8,
-                                    cursor: 'pointer',
-                                    fontSize: 14,
-                                    fontWeight: 500,
-                                    transition: 'background-color 0.2s ease, color 0.2s ease',
-                                    boxSizing: 'border-box'
-                                }}
-                                onMouseEnter={(e) => {
-                                    showTooltip(e, effectiveCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar');
-                                    e.currentTarget.style.backgroundColor = '#3B82F6';
-                                    e.currentTarget.style.color = '#FFFFFF';
-                                    e.currentTarget.querySelectorAll('svg').forEach(s => s.style.stroke = '#FFFFFF');
-                                }}
-                                onMouseLeave={(e) => {
-                                    hideTooltip();
-                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                    e.currentTarget.style.color = 'var(--text-secondary, #64748B)';
-                                    e.currentTarget.querySelectorAll('svg').forEach(s => s.style.stroke = 'currentColor');
-                                }}
-                                aria-label={effectiveCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-                            >
-                                <svg style={{ width: 18, height: 18, stroke: 'currentColor', fill: 'none', strokeWidth: 2, flexShrink: 0 }} viewBox="0 0 24 24">
-                                    {effectiveCollapsed ? (
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                                    ) : (
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7M19 19l-7-7 7-7" />
-                                    )}
-                                </svg>
-                                <span style={{
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    opacity: effectiveCollapsed ? 0 : 1,
-                                    maxWidth: effectiveCollapsed ? 0 : 140,
-                                    transition: 'opacity 0.2s ease, max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                                    display: 'inline-block'
-                                }}>
-                                    Collapse Sidebar
-                                </span>
-                            </button>
-                        </div>
-                    )}
                 </div>
 
                 {/* Footer / User Profile & Sign Out */}
                 <div 
                     className="admin-sidebar-footer"
                     style={{
-                        padding: '12px 14px 16px 14px',
+                        padding: effectiveCollapsed ? '12px 8px 16px 8px' : '12px 14px 16px 14px',
                         backgroundColor: 'transparent',
                         borderTop: '1px solid var(--border)',
                         flexShrink: 0,
@@ -895,67 +837,135 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
                     <div 
                         style={{
                             display: 'flex',
+                            flexDirection: effectiveCollapsed ? 'column' : 'row',
                             alignItems: 'center',
-                            gap: 12,
+                            justifyContent: effectiveCollapsed ? 'center' : 'space-between',
+                            gap: effectiveCollapsed ? 8 : 8,
                             padding: '4px 6px',
                             position: 'relative',
-                            cursor: effectiveCollapsed ? 'pointer' : 'default',
                             width: '100%',
                             boxSizing: 'border-box'
                         }}
-                        onMouseEnter={(e) => showTooltip(e, `${name} (${role === 'Admin' ? 'Administrator' : role})`)}
-                        onMouseLeave={hideTooltip}
                     >
-                        {/* Avatar */}
-                        <div style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: '50%',
-                            backgroundColor: (user?.profile_photo && !avatarError) ? 'transparent' : '#3B82F6',
-                            color: '#FFFFFF',
-                            fontWeight: 700,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 13,
-                            flexShrink: 0,
-                            overflow: 'hidden',
-                            border: (user?.profile_photo && !avatarError) ? '2px solid var(--border)' : 'none',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
-                        }}>
-                            {(user?.profile_photo && !avatarError) ? (
-                                <img
-                                    src={fixImageUrl(user.profile_photo)}
-                                    alt="User Profile"
-                                    style={{
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover',
-                                        display: 'block'
-                                    }}
-                                    onError={() => setAvatarError(true)}
-                                />
-                            ) : (
-                                getInitials(name)
+                        {/* Profile Info (Avatar + Text) */}
+                        <div 
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 10,
+                                minWidth: 0,
+                                flex: effectiveCollapsed ? 'none' : 1,
+                                cursor: 'default',
+                            }}
+                            onMouseEnter={(e) => showTooltip(e, `${name} (${role === 'Admin' ? 'Administrator' : role})`)}
+                            onMouseLeave={hideTooltip}
+                        >
+                            {/* Avatar */}
+                            <div style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: '50%',
+                                backgroundColor: (user?.profile_photo && !avatarError) ? 'transparent' : '#3B82F6',
+                                color: '#FFFFFF',
+                                fontWeight: 700,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 13,
+                                flexShrink: 0,
+                                overflow: 'hidden',
+                                border: (user?.profile_photo && !avatarError) ? '2px solid var(--border)' : 'none',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+                            }}>
+                                {(user?.profile_photo && !avatarError) ? (
+                                    <img
+                                        src={fixImageUrl(user.profile_photo)}
+                                        alt="User Profile"
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover',
+                                            display: 'block'
+                                        }}
+                                        onError={() => setAvatarError(true)}
+                                    />
+                                ) : (
+                                    getInitials(name)
+                                )}
+                            </div>
+
+                            {!effectiveCollapsed && (
+                                <div style={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                }}>
+                                    <div style={{ color: 'var(--text-primary, #1E293B)', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {name}
+                                    </div>
+                                    <div style={{ color: 'var(--text-secondary, #64748B)', fontSize: 11, fontWeight: 500, marginTop: '1px' }}>
+                                        {role === 'Admin' ? 'Administrator' : role}
+                                    </div>
+                                </div>
                             )}
                         </div>
 
-                        <div style={{
-                            flex: 1,
-                            minWidth: 0,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            opacity: effectiveCollapsed ? 0 : 1,
-                            maxWidth: effectiveCollapsed ? 0 : 180,
-                            transition: 'opacity 0.2s ease, max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
-                        }}>
-                            <div style={{ color: 'var(--text-primary, #1E293B)', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {name}
-                            </div>
-                            <div style={{ color: 'var(--text-secondary, #64748B)', fontSize: 11, fontWeight: 500, marginTop: '1px' }}>
-                                {role === 'Admin' ? 'Administrator' : role}
-                            </div>
-                        </div>
+                        {/* Collapse / Expand Chevron Icon Button */}
+                        {!isMobile && (
+                            <button
+                                type="button"
+                                onClick={toggleCollapse}
+                                title={effectiveCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 8,
+                                    border: '1px solid var(--border, #CBD5E1)',
+                                    backgroundColor: 'var(--bg-secondary, #F8FAFC)',
+                                    color: 'var(--text-secondary, #475569)',
+                                    cursor: 'pointer',
+                                    flexShrink: 0,
+                                    padding: 0,
+                                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
+                                    transition: 'all 0.15s ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                    showTooltip(e, effectiveCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar');
+                                    e.currentTarget.style.backgroundColor = '#EFF6FF';
+                                    e.currentTarget.style.color = '#2563EB';
+                                    e.currentTarget.style.borderColor = '#93C5FD';
+                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    hideTooltip();
+                                    e.currentTarget.style.backgroundColor = 'var(--bg-secondary, #F8FAFC)';
+                                    e.currentTarget.style.color = 'var(--text-secondary, #475569)';
+                                    e.currentTarget.style.borderColor = 'var(--border, #CBD5E1)';
+                                    e.currentTarget.style.transform = 'scale(1)';
+                                }}
+                                aria-label={effectiveCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                            >
+                                <svg style={{ width: 17, height: 17, stroke: 'currentColor', fill: 'none', strokeWidth: 2.2, strokeLinecap: 'round', strokeLinejoin: 'round', flexShrink: 0 }} viewBox="0 0 24 24">
+                                    {effectiveCollapsed ? (
+                                        <>
+                                            <polyline points="3 17 8 12 3 7" />
+                                            <polyline points="10 17 15 12 10 7" />
+                                            <polyline points="17 17 22 12 17 7" />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <polyline points="7 17 2 12 7 7" />
+                                            <polyline points="14 17 9 12 14 7" />
+                                            <polyline points="21 17 16 12 21 7" />
+                                        </>
+                                    )}
+                                </svg>
+                            </button>
+                        )}
                     </div>
 
                     {/* Sign Out Link / Button matching Reference Style */}
