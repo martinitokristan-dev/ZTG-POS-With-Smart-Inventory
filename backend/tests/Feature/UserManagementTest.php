@@ -257,11 +257,14 @@ class UserManagementTest extends TestCase
         $adminDailySalesResponse->assertStatus(200);
     }
 
-    public function test_admin_can_assign_and_reassign_user_to_role(): void
+    public function test_admin_can_assign_and_remove_user_from_role(): void
     {
         $techOpsRole = Role::where('name', 'Technical Operations')->firstOrFail();
 
-        // 1. Assign cashier to Technical Operations
+        // 1. Clear cashier's role so they are unassigned
+        $this->cashier->update(['role' => '']);
+
+        // 2. Assign cashier (unassigned) to Technical Operations
         $assignResponse = $this->actingAs($this->admin)->postJson("/api/roles/{$techOpsRole->id}/assign-user", [
             'user_id' => $this->cashier->id,
         ]);
@@ -269,13 +272,27 @@ class UserManagementTest extends TestCase
         $assignResponse->assertStatus(200);
         $this->assertEquals('Technical Operations', $this->cashier->fresh()->role);
 
-        // 2. Remove / Reassign cashier back to Cashier
+        // 3. Remove cashier from Technical Operations (no target_role → becomes Unassigned)
         $removeResponse = $this->actingAs($this->admin)->postJson("/api/roles/{$techOpsRole->id}/remove-user", [
-            'user_id'     => $this->cashier->id,
-            'target_role' => 'Cashier',
+            'user_id' => $this->cashier->id,
         ]);
 
         $removeResponse->assertStatus(200);
+        // Role becomes empty string (Unassigned) — not defaulted to Cashier anymore
+        $this->assertEquals('', $this->cashier->fresh()->role);
+    }
+
+    public function test_cannot_assign_user_who_already_has_a_role(): void
+    {
+        $techOpsRole = Role::where('name', 'Technical Operations')->firstOrFail();
+
+        // cashier already has 'Cashier' role — should be blocked
+        $response = $this->actingAs($this->admin)->postJson("/api/roles/{$techOpsRole->id}/assign-user", [
+            'user_id' => $this->cashier->id,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('errors.user.0', fn ($msg) => str_contains($msg, 'already has the'));
         $this->assertEquals('Cashier', $this->cashier->fresh()->role);
     }
 

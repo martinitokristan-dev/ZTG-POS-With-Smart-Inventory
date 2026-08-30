@@ -165,6 +165,13 @@ class RoleService
             ]);
         }
 
+        // Enforce 1-role-per-user: block if already assigned to a different role
+        if (!empty(trim($user->role ?? '')) && strtolower($user->role) !== strtolower($role->name)) {
+            throw ValidationException::withMessages([
+                'user' => "'{$user->username}' already has the '{$user->role}' role assigned. Remove them from that role first before assigning a new one.",
+            ]);
+        }
+
         $user->update(['role' => $role->name]);
         return $user->load('profile');
     }
@@ -188,7 +195,9 @@ class RoleService
             ]);
         }
 
-        $newRole = $targetRoleName ?? 'Cashier';
+        // If no target role specified, mark as unassigned (empty string).
+        // The user will appear as "Unassigned" in Manage Users until re-assigned.
+        $newRole = ($targetRoleName !== null && trim($targetRoleName) !== '') ? $targetRoleName : '';
         $user->update(['role' => $newRole]);
         return $user->load('profile');
     }

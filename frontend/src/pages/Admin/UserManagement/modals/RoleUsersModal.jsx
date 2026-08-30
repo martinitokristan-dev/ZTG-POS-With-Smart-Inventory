@@ -1,68 +1,40 @@
 import React, { useState } from 'react';
-import IOSSelect from '../../../../shared/components/IOSSelect';
 
 /**
- * RoleUsersModal — View and manage list of staff users currently assigned to a role.
- * Allows quick assignment of existing staff and removing/reassigning.
+ * RoleUsersModal — View staff assigned to a role and manage membership.
  */
 export default function RoleUsersModal({
     isOpen,
     onClose,
     role,
     users = [],
-    allUsers = [],
     loading = false,
-    onAssignUser,
     onRemoveUser,
     onAddStaffForRole,
 }) {
-    const [selectedUserId, setSelectedUserId] = useState('');
-    const [isAssigning, setIsAssigning] = useState(false);
     const [actionLoadingId, setActionLoadingId] = useState(null);
+    const [removeError, setRemoveError] = useState('');
 
     if (!isOpen || !role) return null;
 
-    // Filter staff members who are NOT currently assigned to this role
-    const availableUsersToAssign = (allUsers || []).filter(
-        (u) => (u.role || '').toLowerCase() !== (role.name || '').toLowerCase()
-    );
-
-    const userOptions = availableUsersToAssign.map((u) => ({
-        value: String(u.id),
-        label: `${u.full_name || u.name || u.username} (@${u.username})`,
-    }));
-
-    const handleAssign = async () => {
-        if (!selectedUserId || !onAssignUser) return;
-        setIsAssigning(true);
-        try {
-            await onAssignUser(role.id, parseInt(selectedUserId, 10));
-            setSelectedUserId('');
-        } catch (err) {
-            alert(err.response?.data?.message || 'Failed to assign staff member.');
-        } finally {
-            setIsAssigning(false);
-        }
-    };
-
     const handleRemove = async (user) => {
         if (user.username === 'admin') {
-            alert('The default system administrator cannot be removed from the Admin role.');
+            setRemoveError('The default system administrator cannot be removed from the Admin role.');
             return;
         }
 
-        const targetRole = role.name === 'Cashier' ? 'Admin' : 'Cashier';
-        if (!window.confirm(`Reassign @${user.username} from "${role.name}" to "${targetRole}"?`)) {
+        if (!window.confirm(`Remove @${user.username} from the "${role.name}" role? They will become unassigned until re-assigned from Manage Users.`)) {
             return;
         }
 
+        setRemoveError('');
         setActionLoadingId(user.id);
         try {
             if (onRemoveUser) {
-                await onRemoveUser(role.id, user.id, targetRole);
+                await onRemoveUser(role.id, user.id, '');
             }
         } catch (err) {
-            alert(err.response?.data?.message || 'Failed to reassign staff member.');
+            setRemoveError(err.response?.data?.message || 'Failed to remove staff member.');
         } finally {
             setActionLoadingId(null);
         }
@@ -91,8 +63,8 @@ export default function RoleUsersModal({
                     backgroundColor: 'var(--bg-card, #FFFFFF)',
                     borderRadius: '16px',
                     width: '100%',
-                    maxWidth: '840px',
-                    maxHeight: '88vh',
+                    maxWidth: '640px',
+                    maxHeight: '82vh',
                     display: 'flex',
                     flexDirection: 'column',
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
@@ -101,28 +73,9 @@ export default function RoleUsersModal({
                 }}
             >
                 {/* Header */}
-                <div
-                    style={{
-                        padding: '18px 24px',
-                        borderBottom: '1px solid var(--border)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                    }}
-                >
+                <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div
-                            style={{
-                                width: '38px',
-                                height: '38px',
-                                borderRadius: '10px',
-                                backgroundColor: '#EFF6FF',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#2563EB',
-                            }}
-                        >
+                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB', flexShrink: 0 }}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                                 <circle cx="9" cy="7" r="4" />
@@ -132,14 +85,13 @@ export default function RoleUsersModal({
                         </div>
                         <div>
                             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                Staff Assigned to {role.name}
+                                {role.name} — Assigned Staff
                             </h3>
-                            <p style={{ margin: '3px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                                {users.length} staff member{users.length === 1 ? '' : 's'} assigned to this role
+                            <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
+                                {users.length} staff member{users.length === 1 ? '' : 's'} assigned
                             </p>
                         </div>
                     </div>
-
                     <button
                         type="button"
                         onClick={onClose}
@@ -150,6 +102,9 @@ export default function RoleUsersModal({
                             color: 'var(--text-muted)',
                             padding: '6px',
                             borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                         }}
                     >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -161,164 +116,126 @@ export default function RoleUsersModal({
 
                 {/* Body */}
                 <div style={{ padding: '20px 24px', flex: 1, overflowY: 'auto' }}>
-                    {/* Quick Assign Existing Staff Bar */}
-                    {onAssignUser && availableUsersToAssign.length > 0 && (
-                        <div
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                padding: '14px 16px',
-                                backgroundColor: 'var(--bg-secondary, #F8FAFC)',
-                                borderRadius: '12px',
-                                border: '1px solid var(--border)',
-                                marginBottom: '20px',
-                                flexWrap: 'wrap',
-                            }}
-                        >
-                            <div style={{ flex: 1, minWidth: '240px' }}>
-                                <IOSSelect
-                                    value={selectedUserId}
-                                    onChange={(e) => setSelectedUserId(e.target.value)}
-                                    options={userOptions}
-                                    placeholder="Select an existing staff member to assign..."
-                                />
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={handleAssign}
-                                disabled={!selectedUserId || isAssigning}
-                                style={{
-                                    height: '38px',
-                                    padding: '0 18px',
-                                    fontSize: '13px',
-                                    fontWeight: '600',
-                                    borderRadius: '8px',
-                                    border: 'none',
-                                    backgroundColor: selectedUserId ? '#2563EB' : '#94A3B8',
-                                    color: '#FFFFFF',
-                                    cursor: selectedUserId && !isAssigning ? 'pointer' : 'not-allowed',
-                                    transition: 'all 0.15s ease',
-                                    whiteSpace: 'nowrap',
-                                }}
-                            >
-                                {isAssigning ? 'Assigning...' : 'Assign to Role'}
-                            </button>
+                    {removeError && (
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px 14px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '10px', color: '#DC2626', fontSize: '13px', marginBottom: '16px' }}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}>
+                                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                            </svg>
+                            {removeError}
                         </div>
                     )}
 
-                    {/* Assigned Staff Members List */}
-                    <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
-                        Current Members ({users.length})
-                    </div>
-
                     {loading ? (
-                        <div style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
                             Loading assigned staff...
                         </div>
                     ) : users.length === 0 ? (
                         <div
                             style={{
                                 textAlign: 'center',
-                                padding: '40px 20px',
+                                padding: '44px 24px',
                                 backgroundColor: 'var(--bg-secondary, #F8FAFC)',
-                                borderRadius: '12px',
+                                borderRadius: '14px',
                                 border: '1px dashed var(--border)',
-                                color: 'var(--text-muted)',
-                                fontSize: '13px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '12px',
                             }}
                         >
-                            No staff members are currently assigned to this role.
+                            <div
+                                style={{
+                                    width: '52px',
+                                    height: '52px',
+                                    borderRadius: '50%',
+                                    backgroundColor: '#EFF6FF',
+                                    color: '#2563EB',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                    <circle cx="9" cy="7" r="4" />
+                                    <line x1="19" y1="8" x2="19" y2="14" />
+                                    <line x1="22" y1="11" x2="16" y2="11" />
+                                </svg>
+                            </div>
+
+                            <div>
+                                <div style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>
+                                    No staff assigned to this role yet
+                                </div>
+                                <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                                    Add a new staff member to start using this role.
+                                </div>
+                            </div>
+
+                            {onAddStaffForRole && (
+                                <button
+                                    type="button"
+                                    onClick={() => onAddStaffForRole(role.name)}
+                                    style={{
+                                        marginTop: '6px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        padding: '10px 20px',
+                                        fontSize: '13.5px',
+                                        fontWeight: '600',
+                                        borderRadius: '8px',
+                                        backgroundColor: '#2563EB',
+                                        color: '#FFFFFF',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+                                        transition: 'all 0.15s ease',
+                                    }}
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19" />
+                                        <line x1="5" y1="12" x2="19" y2="12" />
+                                    </svg>
+                                    Add Staff to {role.name}
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
                             {users.map((u) => {
                                 const isDefaultAdmin = u.username === 'admin';
                                 const isWorking = actionLoadingId === u.id;
-
                                 return (
-                                    <div
-                                        key={u.id}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            padding: '12px 16px',
-                                            borderRadius: '10px',
-                                            border: '1px solid var(--border)',
-                                            backgroundColor: 'var(--bg-card, #FFFFFF)',
-                                            gap: '12px',
-                                            flexWrap: 'wrap',
-                                        }}
-                                    >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '220px' }}>
-                                            <div
-                                                style={{
-                                                    width: '36px',
-                                                    height: '36px',
-                                                    borderRadius: '50%',
-                                                    backgroundColor: '#EFF6FF',
-                                                    color: '#2563EB',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontWeight: '700',
-                                                    fontSize: '13px',
-                                                    flexShrink: 0,
-                                                }}
-                                            >
+                                    <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card, #FFFFFF)', gap: '12px', flexWrap: 'wrap' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '200px' }}>
+                                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '13px', flexShrink: 0 }}>
                                                 {(u.full_name || u.name || u.username || 'U').charAt(0).toUpperCase()}
                                             </div>
-
                                             <div>
-                                                <div style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' }}>
-                                                    {u.full_name || u.name || u.username}
-                                                </div>
-                                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', gap: '10px', marginTop: '2px', flexWrap: 'wrap' }}>
+                                                <div style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' }}>{u.full_name || u.name || u.username}</div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
                                                     <span>@{u.username}</span>
                                                     {u.email && <span>• {u.email}</span>}
-                                                    {u.phone_number && <span>• {u.phone_number}</span>}
                                                 </div>
                                             </div>
                                         </div>
-
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <span
-                                                style={{
-                                                    fontSize: '11.5px',
-                                                    fontWeight: '600',
-                                                    padding: '3px 8px',
-                                                    borderRadius: '6px',
-                                                    backgroundColor: u.status === 'Active' ? '#DCFCE7' : '#F1F5F9',
-                                                    color: u.status === 'Active' ? '#166534' : '#64748B',
-                                                    border: u.status === 'Active' ? '1px solid #BBF7D0' : '1px solid var(--border)',
-                                                }}
-                                            >
+                                            <span style={{ fontSize: '11.5px', fontWeight: '600', padding: '3px 8px', borderRadius: '6px', backgroundColor: u.status === 'Active' ? '#DCFCE7' : '#F1F5F9', color: u.status === 'Active' ? '#166534' : '#64748B', border: u.status === 'Active' ? '1px solid #BBF7D0' : '1px solid var(--border)' }}>
                                                 {u.status || 'Active'}
                                             </span>
-
-                                            {/* Action: Remove / Reassign (non-default admin) */}
-                                            {!isDefaultAdmin && onRemoveUser && (
-                                                <button
-                                                    type="button"
-                                                    disabled={isWorking}
-                                                    onClick={() => handleRemove(u)}
-                                                    style={{
-                                                        padding: '6px 14px',
-                                                        fontSize: '12px',
-                                                        fontWeight: '600',
-                                                        borderRadius: '6px',
-                                                        border: '1px solid #FEE2E2',
-                                                        backgroundColor: '#FEF2F2',
-                                                        color: '#DC2626',
-                                                        cursor: isWorking ? 'wait' : 'pointer',
-                                                        transition: 'all 0.15s ease',
-                                                    }}
-                                                >
-                                                    {isWorking ? 'Removing...' : 'Remove / Reassign'}
+                                            {isDefaultAdmin ? (
+                                                <span title="System administrator — cannot be removed" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: 'var(--text-muted)', padding: '5px 10px', borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)' }}>
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                                    </svg>
+                                                    Protected
+                                                </span>
+                                            ) : onRemoveUser ? (
+                                                <button type="button" disabled={isWorking} onClick={() => handleRemove(u)} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '600', borderRadius: '6px', border: '1px solid #FEE2E2', backgroundColor: '#FEF2F2', color: '#DC2626', cursor: isWorking ? 'wait' : 'pointer', transition: 'all 0.15s ease', whiteSpace: 'nowrap' }}>
+                                                    {isWorking ? 'Removing...' : 'Remove from Role'}
                                                 </button>
-                                            )}
+                                            ) : null}
                                         </div>
                                     </div>
                                 );
@@ -327,37 +244,32 @@ export default function RoleUsersModal({
                     )}
                 </div>
 
-                {/* Footer — Register New Staff with this Role aligned to the right */}
-                {onAddStaffForRole && (
-                    <div
-                        style={{
-                            padding: '14px 24px',
-                            borderTop: '1px solid var(--border)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'flex-end',
-                            gap: '10px',
-                        }}
-                    >
+                {/* Footer (Only rendered when members exist to provide quick Add Staff action) */}
+                {users.length > 0 && onAddStaffForRole && (
+                    <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', backgroundColor: 'var(--bg-secondary, #F8FAFC)' }}>
                         <button
                             type="button"
-                            onClick={() => {
-                                onClose();
-                                onAddStaffForRole({ role: role.name });
-                            }}
+                            onClick={() => onAddStaffForRole(role.name)}
                             style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
                                 padding: '8px 18px',
                                 fontSize: '13px',
                                 fontWeight: '600',
                                 borderRadius: '8px',
-                                border: 'none',
                                 backgroundColor: '#2563EB',
                                 color: '#FFFFFF',
+                                border: 'none',
                                 cursor: 'pointer',
                                 transition: 'all 0.15s ease',
                             }}
                         >
-                            Register New Staff with this Role
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                            Add Staff to {role.name}
                         </button>
                     </div>
                 )}

@@ -170,11 +170,12 @@ export default function UserManagement() {
                     onClose={() => um.setShowUsersModal(false)}
                     role={um.selectedRoleForUsers}
                     users={um.assignedUsers}
-                    allUsers={um.users}
                     loading={um.loadingUsers}
-                    onAssignUser={um.handleAssignUserToRole}
                     onRemoveUser={um.handleRemoveUserFromRole}
-                    onAddStaffForRole={um.openAddEmployee}
+                    onAddStaffForRole={(roleName) => {
+                        um.setShowUsersModal(false);
+                        um.openAddEmployee(roleName);
+                    }}
                 />
 
                 <UserViewModal

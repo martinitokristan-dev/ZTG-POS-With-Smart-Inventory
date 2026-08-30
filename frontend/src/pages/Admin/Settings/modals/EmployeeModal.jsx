@@ -11,7 +11,6 @@ export default function EmployeeModal({
     employeeErrors, setEmployeeErrors
 }) {
     const [showPassword, setShowPassword] = useState(false);
-    const [showPin, setShowPin] = useState(false);
     const [availableRoles, setAvailableRoles] = useState([
         { value: 'Cashier', label: 'Cashier' },
         { value: 'Technical Operations', label: 'Technical Operations' },
@@ -63,7 +62,6 @@ export default function EmployeeModal({
     const emailError = getFieldError('email');
     const usernameError = getFieldError('username');
     const passwordError = getFieldError('password');
-    const pinError = getFieldError('pin');
 
     return (
         <div className="modal-overlay" style={{ display: 'flex' }}>
@@ -271,66 +269,20 @@ export default function EmployeeModal({
                             </div>
                         )}
 
-                        {/* Assigned Role */}
+                        {/* Assigned Role — required */}
                         <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label className="form-label">Assigned Role</label>
+                            <label className="form-label">
+                                Assigned Role <span style={{ color: '#DC2626' }}>*</span>
+                            </label>
                             <IOSSelect
-                                value={employeeForm.role || 'Cashier'}
+                                value={employeeForm.role || availableRoles[0]?.value || 'Cashier'}
                                 onChange={(e) => setEmployeeForm({ ...employeeForm, role: e.target.value })}
                                 options={availableRoles}
                             />
+                            <small style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+                                Each staff member must have exactly one role. This cannot be changed here after saving — use Manage Users to reassign.
+                            </small>
                         </div>
-
-                        {/* Manager PIN */}
-                        {employeeForm.role !== 'Cashier' && (
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Manager PIN / Approval Code</label>
-                                <div style={{ position: 'relative', width: '100%' }}>
-                                    <input
-                                        type={showPin ? "text" : "password"}
-                                        className="form-control"
-                                        placeholder="Custom PIN or Approval Code (Optional)"
-                                        style={{ paddingRight: '40px', ...(pinError ? { borderColor: '#EF4444', backgroundColor: '#FEF2F2' } : {}) }}
-                                        value={employeeForm.pin || ''}
-                                        onChange={(e) => {
-                                            clearFieldError('pin');
-                                            setEmployeeForm({ ...employeeForm, pin: e.target.value });
-                                        }}
-                                    />
-                                    <button
-                                        type="button"
-                                        style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', padding: '4px', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        onClick={() => setShowPin(!showPin)}
-                                    >
-                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-                                            {showPin ? (
-                                                <>
-                                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                                                    <line x1="1" y1="1" x2="23" y2="23"></line>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                                    <circle cx="12" cy="12" r="3"></circle>
-                                                </>
-                                            )}
-                                        </svg>
-                                    </button>
-                                </div>
-                                {pinError ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px', color: '#DC2626', fontSize: '11.5px', fontWeight: '500' }}>
-                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                                            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-                                        </svg>
-                                        <span>{pinError}</span>
-                                    </div>
-                                ) : (
-                                    <small style={{ color: 'var(--text-secondary)', fontSize: '11px', marginTop: '4px', display: 'block' }}>
-                                        Optional. If left blank, the employee's login password will automatically serve as their authorization PIN.
-                                    </small>
-                                )}
-                            </div>
-                        )}
                     </div>
                     <div className="modal-footer" style={{ padding: '16px 20px', marginTop: '8px' }}>
                         <button type="button" className="btn btn-secondary" onClick={handleClose} disabled={isBusy}>

@@ -155,8 +155,14 @@ export default function ManageUsersView({
                                             </td>
 
                                             {/* Assigned Role */}
-                                            <td style={{ padding: '12px 16px', color: 'var(--text-primary)', fontSize: '13px', fontWeight: '500' }}>
-                                                {u.role}
+                                            <td style={{ padding: '12px 16px', fontSize: '13px' }}>
+                                                {!u.role || u.role.trim() === '' ? (
+                                                    <span style={{ display: 'inline-block', fontSize: '11.5px', fontWeight: '600', padding: '3px 8px', borderRadius: '6px', backgroundColor: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A' }}>
+                                                        Unassigned
+                                                    </span>
+                                                ) : (
+                                                    <span style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{u.role}</span>
+                                                )}
                                             </td>
 
                                             {/* Account Status (Clean text badge, NO status dot circle) */}
