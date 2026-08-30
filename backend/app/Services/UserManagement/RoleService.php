@@ -29,7 +29,7 @@ class RoleService
      */
     public function listRoles(): Collection
     {
-        return Role::with(['permissions'])
+        return Role::with(['permissions', 'users.profile'])
             ->withCount('users')
             ->orderBy('is_system', 'desc')
             ->orderBy('name', 'asc')

@@ -27,6 +27,7 @@ export function useRoles() {
     const [selectedRoleForUsers, setSelectedRoleForUsers] = React.useState(null);
     const [assignedUsers, setAssignedUsers] = React.useState([]);
     const [loadingUsers, setLoadingUsers] = React.useState(false);
+    const [roleUsersCache, setRoleUsersCache] = React.useState({});
 
     // Delete confirmation state
     const [deletingRoleId, setDeletingRoleId] = React.useState(null);
@@ -36,8 +37,20 @@ export function useRoles() {
         setError(null);
         try {
             const res = await api.get('/roles');
-            setRoles(res.data.roles || []);
+            const fetchedRoles = res.data.roles || [];
+            setRoles(fetchedRoles);
             setModules(res.data.modules || {});
+
+            // Seed roleUsersCache with preloaded users from listRoles()
+            setRoleUsersCache((prev) => {
+                const updated = { ...prev };
+                fetchedRoles.forEach((r) => {
+                    if (Array.isArray(r.users)) {
+                        updated[r.id] = r.users;
+                    }
+                });
+                return updated;
+            });
         } catch (err) {
             console.error('Failed to fetch roles:', err);
             setError(err.response?.data?.message || 'Failed to load roles and permissions.');
@@ -171,13 +184,31 @@ export function useRoles() {
     const openViewUsersModal = async (role) => {
         setSelectedRoleForUsers(role);
         setShowUsersModal(true);
-        setLoadingUsers(true);
+
+        // Check if we already have users in cache or on the role object
+        const cachedUsers = roleUsersCache[role.id] ?? role.users;
+
+        if (Array.isArray(cachedUsers)) {
+            // INSTANT RENDER (0ms latency, zero flicker/blank state!)
+            setAssignedUsers(cachedUsers);
+            setLoadingUsers(false);
+        } else {
+            // Not in cache yet: show loading state
+            setAssignedUsers([]);
+            setLoadingUsers(true);
+        }
+
+        // Silent background refresh to guarantee fresh data
         try {
             const res = await api.get(`/roles/${role.id}/users`);
-            setAssignedUsers(res.data.users || []);
+            const freshUsers = res.data.users || [];
+            setAssignedUsers(freshUsers);
+            setRoleUsersCache((prev) => ({ ...prev, [role.id]: freshUsers }));
         } catch (err) {
             console.error('Failed to fetch users for role:', err);
-            setAssignedUsers([]);
+            if (!Array.isArray(cachedUsers)) {
+                setAssignedUsers([]);
+            }
         } finally {
             setLoadingUsers(false);
         }
@@ -186,10 +217,10 @@ export function useRoles() {
     const handleAssignUserToRole = async (roleId, userId) => {
         try {
             const res = await api.post(`/roles/${roleId}/assign-user`, { user_id: userId });
+            const updatedUsers = res.data.role?.users || [];
+            setAssignedUsers(updatedUsers);
+            setRoleUsersCache((prev) => ({ ...prev, [roleId]: updatedUsers }));
             fetchRoles();
-            if (selectedRoleForUsers?.id === roleId) {
-                setAssignedUsers(res.data.role?.users || []);
-            }
             return res.data;
         } catch (err) {
             console.error('Failed to assign user to role:', err);
@@ -197,13 +228,13 @@ export function useRoles() {
         }
     };
 
-    const handleRemoveUserFromRole = async (roleId, userId, targetRole = 'Cashier') => {
+    const handleRemoveUserFromRole = async (roleId, userId, targetRole = '') => {
         try {
             const res = await api.post(`/roles/${roleId}/remove-user`, { user_id: userId, target_role: targetRole });
+            const updatedUsers = res.data.role?.users || [];
+            setAssignedUsers(updatedUsers);
+            setRoleUsersCache((prev) => ({ ...prev, [roleId]: updatedUsers }));
             fetchRoles();
-            if (selectedRoleForUsers?.id === roleId) {
-                setAssignedUsers(res.data.role?.users || []);
-            }
             return res.data;
         } catch (err) {
             console.error('Failed to reassign user from role:', err);

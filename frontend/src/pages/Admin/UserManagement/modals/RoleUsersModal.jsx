@@ -88,7 +88,7 @@ export default function RoleUsersModal({
                                 {role.name} — Assigned Staff
                             </h3>
                             <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                                {users.length} staff member{users.length === 1 ? '' : 's'} assigned
+                                {loading ? 'Loading staff members...' : `${users.length} staff member${users.length === 1 ? '' : 's'} assigned`}
                             </p>
                         </div>
                     </div>
