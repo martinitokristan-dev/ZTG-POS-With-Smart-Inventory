@@ -40,14 +40,15 @@ class RolePermissionSeeder extends Seeder
         );
 
         foreach (array_keys(self::MODULES) as $module) {
+            $hasAccess = ($module !== 'system_status');
             RolePermission::updateOrCreate(
                 ['role_id' => $adminRole->id, 'module' => $module],
                 [
-                    'has_access' => true,
-                    'can_view'   => true,
-                    'can_create' => true,
-                    'can_edit'   => true,
-                    'can_delete' => true,
+                    'has_access' => $hasAccess,
+                    'can_view'   => $hasAccess,
+                    'can_create' => $hasAccess,
+                    'can_edit'   => $hasAccess,
+                    'can_delete' => $hasAccess,
                 ]
             );
         }
@@ -100,7 +101,7 @@ class RolePermissionSeeder extends Seeder
                     'can_view'   => $hasAccess,
                     'can_create' => $hasAccess,
                     'can_edit'   => $hasAccess,
-                    'can_delete' => false,
+                    'can_delete' => $hasAccess,
                 ]
             );
         }

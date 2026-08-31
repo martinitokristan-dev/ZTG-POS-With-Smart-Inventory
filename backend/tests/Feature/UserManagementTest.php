@@ -139,6 +139,32 @@ class UserManagementTest extends TestCase
         $this->assertDatabaseHas('roles', ['name' => 'Updated Role Name']);
     }
 
+    public function test_admin_cannot_update_system_roles(): void
+    {
+        $cashierRole = Role::where('name', 'Cashier')->first();
+        $adminRole   = Role::where('name', 'Admin')->first();
+        $techOpsRole = Role::where('name', 'Technical Operations')->first();
+
+        // Attempting to update Cashier system role
+        $responseCashier = $this->actingAs($this->admin)->putJson("/api/roles/{$cashierRole->id}", [
+            'name'        => 'Cashier Modified',
+            'description' => 'Modified Description',
+        ]);
+        $responseCashier->assertStatus(422)->assertJsonValidationErrors('role');
+
+        // Attempting to update Admin system role
+        $responseAdmin = $this->actingAs($this->admin)->putJson("/api/roles/{$adminRole->id}", [
+            'name' => 'Admin Modified',
+        ]);
+        $responseAdmin->assertStatus(422)->assertJsonValidationErrors('role');
+
+        // Attempting to update Technical Operations system role
+        $responseTech = $this->actingAs($this->admin)->putJson("/api/roles/{$techOpsRole->id}", [
+            'name' => 'TechOps Modified',
+        ]);
+        $responseTech->assertStatus(422)->assertJsonValidationErrors('role');
+    }
+
     public function test_admin_cannot_delete_system_roles(): void
     {
         $adminRole = Role::where('name', 'Admin')->first();
@@ -211,9 +237,16 @@ class UserManagementTest extends TestCase
         $this->assertFalse($this->techOps->hasPermission('pos', 'can_view'));
         $this->assertFalse($this->techOps->hasPermission('products', 'can_view'));
 
-        // Can access diagnostics endpoint
+        // Admin does not have system_status access (exclusive for Technical Operations)
+        $this->assertFalse($this->admin->hasPermission('system_status', 'can_view'));
+
+        // Can access diagnostics endpoint as TechOps
         $response = $this->actingAs($this->techOps)->getJson('/api/system-health/diagnostics');
         $response->assertStatus(200);
+
+        // Admin is blocked with 403 Forbidden on diagnostics endpoint
+        $adminDiagResponse = $this->actingAs($this->admin)->getJson('/api/system-health/diagnostics');
+        $adminDiagResponse->assertStatus(403);
     }
 
     public function test_unauthorized_users_are_blocked_with_403_on_restricted_endpoints(): void

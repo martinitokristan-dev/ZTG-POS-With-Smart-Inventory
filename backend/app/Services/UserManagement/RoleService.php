@@ -90,12 +90,14 @@ class RoleService
      */
     public function updateRole(Role $role, array $data): Role
     {
-        $name = trim($data['name'] ?? $role->name);
-
-        // Disallow renaming system roles
-        if ($role->is_system && strcasecmp($name, $role->name) !== 0) {
-            throw ValidationException::withMessages(['name' => 'System roles cannot be renamed.']);
+        // Disallow modifying system roles (Admin, Cashier, Technical Operations)
+        if ($role->is_system) {
+            throw ValidationException::withMessages([
+                'role' => "System roles ({$role->name}) are protected and cannot be modified.",
+            ]);
         }
+
+        $name = trim($data['name'] ?? $role->name);
 
         if (Role::where('name', $name)->where('id', '!=', $role->id)->exists()) {
             throw ValidationException::withMessages(['name' => 'A role with this name already exists.']);

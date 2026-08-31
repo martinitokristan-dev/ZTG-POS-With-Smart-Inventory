@@ -199,7 +199,7 @@ export default function RolesPermissionsView({
                                             <td style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.45 }}>
                                                 {isSuperAdmin ? (
                                                     <span style={{ fontWeight: '500', color: 'var(--text-primary)' }}>
-                                                        All Modules
+                                                        All Business Modules (10 Modules)
                                                     </span>
                                                 ) : accessibleModules.length === 0 ? (
                                                     <span style={{ color: 'var(--text-muted)' }}>
@@ -248,8 +248,8 @@ export default function RolesPermissionsView({
                                                             </svg>
                                                         </button>
 
-                                                        {/* 3. Edit Role (if not default SuperAdmin) */}
-                                                        {!isSuperAdmin && (
+                                                        {/* 3. Edit Role (non-system custom roles only) */}
+                                                        {!role.is_system && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => onEditRole(role)}
@@ -345,7 +345,7 @@ export default function RolesPermissionsView({
                                                                     <span>Assigned Staff ({role.users_count || 0})</span>
                                                                 </button>
 
-                                                                {canEdit && !isSuperAdmin && (
+                                                                {canEdit && !role.is_system && (
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => {

@@ -7,7 +7,6 @@ import StatCards from './views/StatCards';
 import SalesTrendChart from './views/SalesTrendChart';
 import CriticalStockAlerts from './views/CriticalStockAlerts';
 import TopSellingTable from './views/TopSellingTable';
-import DashboardSystemStatusCard from './views/DashboardSystemStatusCard';
 
 export default function Dashboard() {
     const {
@@ -107,9 +106,6 @@ export default function Dashboard() {
                                 </div>
                             )}
                         </div>
-
-                        {/* Real-time System Status & Infrastructure Card (Visible only to authorized users) */}
-                        <DashboardSystemStatusCard />
 
                         <TopSellingTable topProducts={topProducts} />
                     </>

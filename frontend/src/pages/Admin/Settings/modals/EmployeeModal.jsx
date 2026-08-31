@@ -13,17 +13,18 @@ export default function EmployeeModal({
     const [showPassword, setShowPassword] = useState(false);
     const [availableRoles, setAvailableRoles] = useState([
         { value: 'Cashier', label: 'Cashier' },
-        { value: 'Technical Operations', label: 'Technical Operations' },
         { value: 'Admin', label: 'Administrator' }
     ]);
 
     useEffect(() => {
         api.get('/roles').then((res) => {
             if (res.data?.roles && res.data.roles.length > 0) {
-                const mapped = res.data.roles.map(r => ({
-                    value: r.name,
-                    label: r.name === 'Admin' ? 'Administrator' : r.name
-                }));
+                const mapped = res.data.roles
+                    .filter(r => r.name !== 'Technical Operations')
+                    .map(r => ({
+                        value: r.name,
+                        label: r.name === 'Admin' ? 'Administrator' : r.name
+                    }));
                 setAvailableRoles(mapped);
             }
         }).catch(() => {});

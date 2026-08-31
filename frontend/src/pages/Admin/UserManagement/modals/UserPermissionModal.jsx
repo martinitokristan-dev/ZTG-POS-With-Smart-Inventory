@@ -19,8 +19,10 @@ export default function UserPermissionModal({
 }) {
     if (!isOpen || !user) return null;
 
-    const moduleKeys = Object.keys(modules || {});
     const baseRole = user.role || 'Cashier';
+    const isTechUser = baseRole === 'Technical Operations' || (typeof baseRole === 'string' && baseRole.toLowerCase().includes('tech'));
+    // Filter out internal infrastructure diagnostic modules from standard staff custom overrides
+    const moduleKeys = Object.keys(modules || {}).filter((key) => key !== 'system_status' || isTechUser);
     const hasCustomOverrides = userPermissionSummary?.has_custom_overrides;
 
     // Toggle module access

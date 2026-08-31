@@ -118,16 +118,39 @@ export default function RoleViewModal({
                             const modObj = modules[modKey];
                             const modLabel = typeof modObj === 'object' && modObj !== null ? (modObj.label || modKey) : (modObj || modKey);
                             const perm = rolePermsMap[modKey];
-                            const hasAccess = role.name === 'Admin' || Boolean(perm?.has_access);
+                            const isTechRole = role.name === 'Technical Operations' || (typeof role.name === 'string' && role.name.toLowerCase().includes('tech'));
+                            const isAdminRole = role.name === 'Admin' || role.name === 'Administrator';
+
+                            // system_status is exclusively reserved for Technical Operations
+                            let hasAccess = false;
+                            if (modKey === 'system_status') {
+                                hasAccess = isTechRole || (!isAdminRole && Boolean(perm?.has_access));
+                            } else if (isAdminRole) {
+                                hasAccess = true;
+                            } else {
+                                hasAccess = Boolean(perm?.has_access);
+                            }
+
+                            const isFullAccess =
+                                (isAdminRole && modKey !== 'system_status') ||
+                                (isTechRole && modKey === 'system_status') ||
+                                (role.name === 'Cashier' && ['pos', 'reservations', 'sales_log'].includes(modKey)) ||
+                                (perm && perm.can_view && perm.can_create && perm.can_edit && perm.can_delete);
 
                             const actions = [];
-                            if (role.name === 'Admin') {
-                                actions.push('Full Access');
-                            } else if (hasAccess && perm) {
-                                if (perm.can_view) actions.push('View');
-                                if (perm.can_create) actions.push('Create');
-                                if (perm.can_edit) actions.push('Edit');
-                                if (perm.can_delete) actions.push('Delete');
+                            if (hasAccess) {
+                                if (isAdminRole && modKey !== 'system_status') {
+                                    actions.push('Full Access');
+                                } else if (isTechRole && modKey === 'system_status') {
+                                    actions.push('Full Access');
+                                } else if (role.name === 'Cashier' && ['pos', 'reservations', 'sales_log'].includes(modKey)) {
+                                    actions.push('Full Access');
+                                } else if (perm) {
+                                    if (perm.can_view) actions.push('View');
+                                    if (perm.can_create) actions.push('Create');
+                                    if (perm.can_edit) actions.push('Edit');
+                                    if (perm.can_delete) actions.push('Delete');
+                                }
                             }
 
                             return (
@@ -148,10 +171,16 @@ export default function RoleViewModal({
                                         <div style={{ fontWeight: '600', fontSize: '13.5px', color: hasAccess ? 'var(--text-primary)' : 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                             {modLabel}
                                         </div>
-                                        {hasAccess && actions.length > 0 && (
+                                        {hasAccess && actions.length > 0 ? (
                                             <div style={{ fontSize: '11.5px', color: '#2563EB', marginTop: '3px', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                 {actions.join(' • ')}
                                             </div>
+                                        ) : (
+                                            modKey === 'system_status' && !hasAccess && (
+                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                    Exclusive to Tech Ops
+                                                </div>
+                                            )
                                         )}
                                     </div>
 
@@ -168,7 +197,7 @@ export default function RoleViewModal({
                                             flexShrink: 0,
                                         }}
                                     >
-                                        {hasAccess ? (role.name === 'Admin' ? 'Full Access' : 'Allowed') : 'No Access'}
+                                        {hasAccess ? (isFullAccess ? 'Full Access' : 'Allowed') : 'No Access'}
                                     </span>
                                 </div>
                             );
@@ -176,8 +205,8 @@ export default function RoleViewModal({
                     </div>
                 </div>
 
-                {/* Footer — Edit Role Permissions aligned to the right, redundant Close removed */}
-                {onEdit && (
+                {/* Footer — Edit Role Permissions only shown for custom non-system roles */}
+                {onEdit && !role.is_system && (
                     <div
                         style={{
                             padding: '14px 24px',

@@ -16,7 +16,8 @@ export default function RoleModal({
 }) {
     if (!isOpen) return null;
 
-    const moduleKeys = Object.keys(modules || {});
+    // Filter out internal infrastructure diagnostic modules from custom business roles
+    const moduleKeys = Object.keys(modules || {}).filter((key) => key !== 'system_status');
 
     // Helper to toggle whole module access (Layer 1)
     const handleToggleModuleAccess = (modKey, enabled) => {

@@ -165,14 +165,16 @@ export default function RoleUsersModal({
 
                             <div>
                                 <div style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>
-                                    No staff assigned to this role yet
+                                    {role.name === 'Technical Operations' ? 'Reserved System Role' : 'No staff assigned to this role yet'}
                                 </div>
                                 <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                                    Add a new staff member to start using this role.
+                                    {role.name === 'Technical Operations' 
+                                        ? 'Technical Operations is reserved for internal system developers and infrastructure maintenance.'
+                                        : 'Add a new staff member to start using this role.'}
                                 </div>
                             </div>
 
-                            {onAddStaffForRole && (
+                            {onAddStaffForRole && role.name !== 'Technical Operations' && (
                                 <button
                                     type="button"
                                     onClick={() => onAddStaffForRole(role.name)}
@@ -244,8 +246,8 @@ export default function RoleUsersModal({
                     )}
                 </div>
 
-                {/* Footer (Only rendered when members exist to provide quick Add Staff action) */}
-                {users.length > 0 && onAddStaffForRole && (
+                {/* Footer (Only rendered when members exist and role is not Technical Operations) */}
+                {users.length > 0 && onAddStaffForRole && role.name !== 'Technical Operations' && (
                     <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', backgroundColor: 'var(--bg-secondary, #F8FAFC)' }}>
                         <button
                             type="button"

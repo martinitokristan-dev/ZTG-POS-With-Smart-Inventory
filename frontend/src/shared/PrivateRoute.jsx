@@ -58,8 +58,19 @@ function PrivateRoute({ children, allowedRoles, requiredModule, action = 'can_vi
     }
 
     const isAdmin = user.role === 'Admin' || user.role === 'Administrator';
+    const isTechOps = user.role === 'Technical Operations' || (typeof user.role === 'string' && user.role.toLowerCase().includes('tech'));
 
-    // 1. Role allowlist check (Non-Admin users with granular module permission are granted access)
+    // 1. Special Guard: system_status is exclusively restricted to Technical Operations role or explicit permission
+    if (requiredModule === 'system_status') {
+        const hasStatusAccess = Boolean(isTechOps || user.permissions?.system_status?.has_access);
+        if (!hasStatusAccess) {
+            console.warn(`[Access Denied 403] User '${user.username}' (${user.role}) lacks Technical Operations access to [system_status].`);
+            return <Navigate to="/unauthorized" replace />;
+        }
+        return children ?? <Outlet />;
+    }
+
+    // 2. Role allowlist check (Non-Admin users with granular module permission are granted access)
     if (allowedRoles && allowedRoles.length > 0 && !isAdmin) {
         const normRole = (user.role || '').toLowerCase();
         const matchesRole = allowedRoles.some(r => {
@@ -74,7 +85,7 @@ function PrivateRoute({ children, allowedRoles, requiredModule, action = 'can_vi
         }
     }
 
-    // 2. Granular Module Permission check (Non-Admin users checked against permissions matrix)
+    // 3. Granular Module Permission check for business modules (Non-Admin users checked against permissions matrix)
     if (requiredModule && !isAdmin) {
         const userPerms = user.permissions || {};
         const modPerm = userPerms[requiredModule];

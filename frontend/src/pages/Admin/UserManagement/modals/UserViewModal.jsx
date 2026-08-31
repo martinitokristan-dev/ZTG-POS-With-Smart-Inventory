@@ -189,16 +189,39 @@ export default function UserViewModal({
                             const modObj = modules[modKey];
                             const modLabel = typeof modObj === 'object' && modObj !== null ? (modObj.label || modKey) : (modObj || modKey);
                             const perm = userPerms[modKey];
-                            const hasAccess = user.role === 'Admin' || Boolean(perm?.has_access);
+                            const isTechRole = user.role === 'Technical Operations' || (typeof user.role === 'string' && user.role.toLowerCase().includes('tech'));
+                            const isAdminRole = user.role === 'Admin' || user.role === 'Administrator';
+
+                            // system_status is exclusively reserved for Technical Operations
+                            let hasAccess = false;
+                            if (modKey === 'system_status') {
+                                hasAccess = isTechRole || (!isAdminRole && Boolean(perm?.has_access));
+                            } else if (isAdminRole) {
+                                hasAccess = true;
+                            } else {
+                                hasAccess = Boolean(perm?.has_access);
+                            }
+
+                            const isFullAccess =
+                                (isAdminRole && modKey !== 'system_status') ||
+                                (isTechRole && modKey === 'system_status') ||
+                                (user.role === 'Cashier' && ['pos', 'reservations', 'sales_log'].includes(modKey)) ||
+                                (perm && perm.can_view && perm.can_create && perm.can_edit && perm.can_delete);
 
                             const actions = [];
-                            if (user.role === 'Admin') {
-                                actions.push('Full Access');
-                            } else if (hasAccess && perm) {
-                                if (perm.can_view) actions.push('View');
-                                if (perm.can_create) actions.push('Create');
-                                if (perm.can_edit) actions.push('Edit');
-                                if (perm.can_delete) actions.push('Delete');
+                            if (hasAccess) {
+                                if (isAdminRole && modKey !== 'system_status') {
+                                    actions.push('Full Access');
+                                } else if (isTechRole && modKey === 'system_status') {
+                                    actions.push('Full Access');
+                                } else if (user.role === 'Cashier' && ['pos', 'reservations', 'sales_log'].includes(modKey)) {
+                                    actions.push('Full Access');
+                                } else if (perm) {
+                                    if (perm.can_view) actions.push('View');
+                                    if (perm.can_create) actions.push('Create');
+                                    if (perm.can_edit) actions.push('Edit');
+                                    if (perm.can_delete) actions.push('Delete');
+                                }
                             }
 
                             return (
@@ -219,10 +242,16 @@ export default function UserViewModal({
                                         <div style={{ fontWeight: '600', fontSize: '13.5px', color: hasAccess ? 'var(--text-primary)' : 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                             {modLabel}
                                         </div>
-                                        {hasAccess && actions.length > 0 && (
+                                        {hasAccess && actions.length > 0 ? (
                                             <div style={{ fontSize: '11.5px', color: '#2563EB', marginTop: '3px', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                 {actions.join(' • ')}
                                             </div>
+                                        ) : (
+                                            modKey === 'system_status' && !hasAccess && (
+                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                    Exclusive to Tech Ops
+                                                </div>
+                                            )
                                         )}
                                     </div>
 
@@ -239,7 +268,7 @@ export default function UserViewModal({
                                             flexShrink: 0,
                                         }}
                                     >
-                                        {hasAccess ? (user.role === 'Admin' ? 'Full Access' : 'Allowed') : 'No Access'}
+                                        {hasAccess ? (isFullAccess ? 'Full Access' : 'Allowed') : 'No Access'}
                                     </span>
                                 </div>
                             );

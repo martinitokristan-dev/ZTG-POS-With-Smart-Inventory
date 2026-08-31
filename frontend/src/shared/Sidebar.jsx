@@ -325,11 +325,16 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
 
     const userPerms = user?.permissions || {};
     const isAdminUser = role === 'Admin' || role === 'Administrator';
+    const isTechOpsUser = role === 'Technical Operations' || (typeof role === 'string' && role.toLowerCase().includes('tech'));
 
     // Filter items dynamically based on active user permissions
     const navSections = masterNavSections.map(sec => ({
         ...sec,
         items: sec.items.filter(item => {
+            // System Status is exclusively for Technical Operations or users with explicit system_status permission
+            if (item.moduleKey === 'system_status') {
+                return Boolean(isTechOpsUser || userPerms.system_status?.has_access);
+            }
             if (isAdminUser) return true;
             if (!item.moduleKey) return true;
             if (item.moduleKey === 'settings') return true; // My Account / Settings is accessible to all authenticated users
