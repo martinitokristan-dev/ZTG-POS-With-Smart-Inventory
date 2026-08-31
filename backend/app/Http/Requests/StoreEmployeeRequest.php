@@ -25,10 +25,29 @@ class StoreEmployeeRequest extends FormRequest
             ],
             'username' => 'required|string|unique:users,username|max:50',
             'pin' => 'nullable|string|max:50',
-            'role' => 'required|string|in:Admin,Cashier,Supervisor',
+            'role' => [
+                'required',
+                'string',
+                'max:50',
+                function ($attribute, $value, $fail) {
+                    // Dynamically validate against the roles table so any custom role
+                    // created via User Management is accepted without code changes.
+                    if (\App\Models\Role::where('name', $value)->exists()) {
+                        return;
+                    }
+
+                    // Fallback for core system default roles (or isolated test environments where seeders were not invoked)
+                    if (in_array($value, ['Admin', 'Cashier', 'Technical Operations', 'Supervisor'])) {
+                        return;
+                    }
+
+                    $fail("The selected role '{$value}' does not exist. Please choose a valid role.");
+                },
+            ],
             'status' => 'nullable|string|in:Active,Inactive',
         ];
     }
+
 
     public function messages(): array
     {

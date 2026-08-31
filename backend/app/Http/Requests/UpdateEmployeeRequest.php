@@ -13,7 +13,7 @@ class UpdateEmployeeRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = $this->route('employee') 
+        $userId = $this->route('employee')
             ? ($this->route('employee')->id ?? $this->route('employee'))
             : ($this->route('user') ? ($this->route('user')->id ?? $this->route('user')) : $this->route('id'));
 
@@ -24,10 +24,29 @@ class UpdateEmployeeRequest extends FormRequest
             'username'     => 'required|string|max:50|unique:users,username,' . $userId,
             'password'     => ['nullable', 'string', 'min:6', 'regex:/[A-Z]/', 'regex:/[\W_]/'],
             'pin'          => 'nullable|string|max:50',
-            'role'         => 'required|string|in:Admin,Cashier,Supervisor',
+            'role'         => [
+                'required',
+                'string',
+                'max:50',
+                function ($attribute, $value, $fail) {
+                    // Dynamically validate against the roles table so any custom role
+                    // created via User Management is accepted without code changes.
+                    if (\App\Models\Role::where('name', $value)->exists()) {
+                        return;
+                    }
+
+                    // Fallback for core system default roles (or isolated test environments where seeders were not invoked)
+                    if (in_array($value, ['Admin', 'Cashier', 'Technical Operations', 'Supervisor'])) {
+                        return;
+                    }
+
+                    $fail("The selected role '{$value}' does not exist. Please choose a valid role.");
+                },
+            ],
             'status'       => 'nullable|string|in:Active,Inactive',
         ];
     }
+
 
     public function messages(): array
     {

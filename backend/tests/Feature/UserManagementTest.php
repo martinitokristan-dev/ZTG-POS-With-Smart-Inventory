@@ -307,4 +307,41 @@ class UserManagementTest extends TestCase
         $response->assertStatus(422);
         $this->assertEquals('Admin', $this->admin->fresh()->role);
     }
+
+    public function test_admin_can_register_staff_with_any_dynamic_custom_role(): void
+    {
+        // Create a fully custom role that was not pre-seeded
+        Role::create([
+            'name'        => 'Warehouse Supervisor',
+            'description' => 'Custom role for warehouse oversight',
+            'is_system'   => false,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson('/api/employees', [
+            'full_name'    => 'Kristan C Martinito',
+            'phone_number' => '09639126633',
+            'email'        => 'kcm@warehouse.com',
+            'username'     => 'kcm_supervisor',
+            'role'         => 'Warehouse Supervisor',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('employee.role', 'Warehouse Supervisor');
+
+        $this->assertDatabaseHas('users', ['username' => 'kcm_supervisor', 'role' => 'Warehouse Supervisor']);
+        $this->assertDatabaseHas('user_profiles', ['full_name' => 'Kristan C Martinito']);
+    }
+
+    public function test_registering_staff_with_nonexistent_role_returns_422(): void
+    {
+        $response = $this->actingAs($this->admin)->postJson('/api/employees', [
+            'full_name'    => 'Ghost Role Staff',
+            'email'        => 'ghost@ztg.com',
+            'username'     => 'ghoststaff',
+            'role'         => 'NonExistentRole',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors('role');
+    }
 }

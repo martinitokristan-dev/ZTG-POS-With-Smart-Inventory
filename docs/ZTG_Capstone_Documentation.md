@@ -7,7 +7,7 @@
 > **Repository:** [ZTG-POS-With-Smart-Inventory](https://github.com/martinitokristan-dev/ZTG-POS-With-Smart-Inventory)
 > **Live Frontend:** [ztg-pos-with-smart-inventory.pages.dev](https://ztg-pos-with-smart-inventory.pages.dev)
 > **Live Backend API:** [ztg-pos-with-smart-inventory.onrender.com](https://ztg-pos-with-smart-inventory.onrender.com)
-> **Document Version:** 2.5 | Date: August 2026
+> **Document Version:** 2.6 | Date: August 2026
 
 ---
 
@@ -342,7 +342,7 @@ The system uses a **Decoupled SPA + REST API** architecture (also called a **Hea
 
 ## 7. Database Design
 
-The system uses **20 database tables** with a MySQL-compatible schema, hosted on TiDB Cloud Serverless.
+The system uses **24 database tables** with a MySQL-compatible schema, hosted on TiDB Cloud Serverless.
 
 ### Entity-Relationship Diagram (ERD)
 
@@ -352,12 +352,16 @@ erDiagram
     users ||--o{ personal_access_tokens : "issues (tokenable_id)"
     users ||--o{ staff_verification_tokens : "receives (user_id)"
     users ||--o{ activity_logs : "generates (user_id)"
+    users ||--o{ user_permission_overrides : "has custom overrides (user_id)"
     users ||--o{ transactions : "processes (cashier_id)"
     users ||--o{ transactions : "approves (approver_id)"
     users ||--o{ reservations : "books (reserved_by_id)"
     users ||--o{ reservations : "fulfills (fulfilled_by_id)"
     users ||--o{ report_logs : "generates (user_id)"
     users ||--o{ notifications : "receives (user_id)"
+
+    roles ||--o{ role_permissions : "defines (role_id)"
+    roles ||--o{ users : "assigned to (role)"
 
     checkers ||--o{ transactions : "verifies (checker_id)"
 
@@ -380,6 +384,35 @@ erDiagram
 
     reservations ||--o{ reservation_items : "contains"
 
+    roles {
+        bigint id PK
+        string name UK
+        string description
+        boolean is_system
+    }
+
+    role_permissions {
+        bigint id PK
+        bigint role_id FK
+        string module
+        boolean has_access
+        boolean can_view
+        boolean can_create
+        boolean can_edit
+        boolean can_delete
+    }
+
+    user_permission_overrides {
+        bigint id PK
+        bigint user_id FK
+        string module
+        boolean has_access
+        boolean can_view
+        boolean can_create
+        boolean can_edit
+        boolean can_delete
+    }
+
     users {
         bigint id PK
         string username UK
@@ -387,6 +420,7 @@ erDiagram
         string pin
         string role
         string status
+        timestamp email_verified_at
     }
 
     user_profiles {
@@ -402,9 +436,7 @@ erDiagram
         bigint id PK
         bigint user_id FK
         string token UK
-        text encrypted_password
         timestamp expires_at
-        timestamp viewed_at
     }
 
     activity_logs {
@@ -417,6 +449,7 @@ erDiagram
         string device
         string status
         string severity
+        json metadata
     }
 
     personal_access_tokens {
@@ -439,8 +472,9 @@ erDiagram
         bigint parent_product_id FK
         string name
         string chinese_name
-        string part_no
+        string part_no UK
         bigint category_id FK
+        string uom
         string address
         int stock
         int alert_limit
@@ -471,11 +505,14 @@ erDiagram
     transactions {
         bigint id PK
         string si_no UK
+        string or_no
         datetime date
         bigint customer_id FK
         bigint cashier_id FK
         bigint checker_id FK
         decimal amount
+        decimal original_amount
+        decimal refunded_amount
         string payment_method
         string doc_type
         string status
@@ -488,7 +525,9 @@ erDiagram
         string item_name
         string part_no
         int qty
+        int refunded_qty
         decimal price
+        string unit
     }
 
     reservation_items {
@@ -506,25 +545,29 @@ erDiagram
 
 | Table | Key Columns | Description |
 |---|---|---|
-| `users` | `id`, `username`, `password`, `pin`, `role`, `status`, `remember_token` | Authentication credentials & access identity (Admin, Cashier, Supervisor) |
+| `users` | `id`, `username`, `password`, `pin`, `role`, `status`, `email_verified_at`, `remember_token` | Authentication credentials & access identity with verification timestamp |
 | `user_profiles` | `id`, `user_id`, `full_name`, `phone_number`, `email`, `profile_photo` | 1-to-1 personal identity, contact details, and Cloudinary avatars |
-| `staff_verification_tokens` | `id`, `user_id`, `token`, `encrypted_password`, `expires_at`, `viewed_at`, `backup_sent_at` | Secure single-use credentials revelation for newly invited staff members |
+| `roles` | `id`, `name`, `description`, `is_system` | System and custom RBAC roles (`Admin`, `Cashier`, `Technical Operations`, etc.) |
+| `role_permissions` | `id`, `role_id`, `module`, `has_access`, `can_view`, `can_create`, `can_edit`, `can_delete` | 2-layer permission matrix per module for dynamic RBAC enforcement |
+| `user_permission_overrides` | `id`, `user_id`, `module`, `has_access`, `can_view`, `can_create`, `can_edit`, `can_delete` | User-specific permission overrides taking precedence over assigned roles |
+| `staff_verification_tokens` | `id`, `user_id`, `token`, `expires_at` | Secure single-use verification links sent via Brevo email for staff password setup |
 | `activity_logs` | `id`, `user_id`, `action`, `module`, `description`, `ip_address`, `device`, `status`, `severity`, `metadata` | Comprehensive security & POS audit trail across all system modules |
 | `personal_access_tokens` | `id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `last_used_at`, `expires_at` | Laravel Sanctum API authentication tokens |
 | `password_reset_tokens` | `email`, `token`, `created_at` | Password reset tokens with 60-minute cryptographic validity |
 | `checkers` | `id`, `name`, `status` | Supervisor and floor checker staff profiles |
-| `products` | `id`, `parent_product_id`, `name`, `chinese_name`, `part_no`, `category_id`, `address`, `stock`, `alert_limit`, `price1`, `price2`, `status`, `is_dead_stock`, `damaged`, `image`, `notes` | Master inventory items and variants (supports nullable name/part_no for unclassified goods) |
-| `categories` | `id`, `name`, `prefix`, `chinese_name`, `allow_variants` | Product categorization with variant toggles |
-| `variant_types` | `id`, `name` | e.g., "Size", "Color", "Material" |
-| `variant_options` | `id`, `variant_type_id`, `value` | e.g., "Standard", "Heavy Duty", "300mm" |
+| `products` | `id`, `parent_product_id`, `name`, `chinese_name`, `part_no`, `category_id`, `uom`, `address`, `stock`, `alert_limit`, `price1`, `price2`, `status`, `is_dead_stock`, `damaged`, `image`, `notes` | Master inventory items and variants with dynamic UOM (Piece, Set, Roll, Box, Meter) |
+| `categories` | `id`, `name`, `prefix`, `chinese_name`, `allow_variants` | Product categorization supporting up to 3 variant dimensions |
+| `variant_types` | `id`, `name` | e.g., "Size", "Specification", "Material" |
+| `variant_options` | `id`, `variant_type_id`, `value` | e.g., "Standard", "Heavy Duty", "300mm", "OEM Cast" |
 | `product_variant_values` | `id`, `product_id`, `variant_option_id` | Product-specific variant combinations (junction table) |
 | `transactions` | `id`, `si_no`, `or_no`, `date`, `customer_id`, `cashier_id`, `checker_id`, `amount`, `original_amount`, `refunded_amount`, `payment_method`, `cheque_number`, `cheque_bank`, `cheque_date`, `doc_type`, `status` | Central sales, audit ledger, and refund tracking |
-| `transaction_items` | `id`, `transaction_id`, `product_id`, `item_name`, `part_no`, `qty`, `refunded_qty`, `price`, `original_price`, `discount`, `price_tier` | Line items per transaction with cumulative refund tracking |
+| `transaction_items` | `id`, `transaction_id`, `product_id`, `item_name`, `part_no`, `qty`, `refunded_qty`, `price`, `original_price`, `discount`, `price_tier`, `unit` | Line items per transaction with frozen product name, part no, and unit snapshots |
 | `reservations` | `id`, `order_no`, `customer_id`, `customer_name`, `customer_phone`, `engine_plate_number`, `payment_method`, `cheque_number`, `payment_type`, `deposit`, `total`, `date`, `pickup_date`, `date_get`, `doc_type`, `deposit_cr_no`, `balance_cr_no`, `si_no`, `status` | Pre-order holds with Dual Collection Receipt tracking (Deposit C.R. + Balance C.R.) |
 | `reservation_items` | `id`, `reservation_id`, `product_id`, `part_no`, `item_name`, `engine_plate_number`, `qty`, `price` | Line items per reservation order |
 | `customers` | `id`, `name`, `phone`, `email`, `tin`, `address` | Walk-in and registered customer registry |
 | `notifications` | `id`, `user_id`, `type`, `sub_type`, `title`, `message`, `link`, `is_read` | In-app real-time notification store (strictly isolated to Admin/Supervisor roles) |
-| `settings` | `id`, `key`, `value` | System-wide configuration store (business info, SI auto-numbering, void limits) |
+| `settings` | `id`, `key`, `value` | System-wide configuration store (business info, SI auto-numbering, void limits, UOM options) |
+| `alert_rules` | `id`, `name`, `type`, `threshold`, `is_active` | Configurable rules for automated low-stock and dead-stock alerts |
 | `report_logs` | `id`, `user_id`, `report_type`, `timeframe`, `created_at` | Report generation and export audit trail |
 
 ---
@@ -564,7 +607,7 @@ HTTP Response (JSON)
 
 ```
 app/Services/
-+-- ActivityLogs/                <- Activity audit trail logging
++-- ActivityLogs/                <- Activity audit trail logging & active session monitors
 +-- Constants/                   <- Named constants (no magic numbers)
 |   +-- SecurityConstants.php    <- PIN attempt limits, lockout durations
 |   +-- InvoiceConstants.php     <- SI/OR number prefixes and padding
@@ -576,72 +619,103 @@ app/Services/
 |   |   +-- CartItemDTO.php      <- Per-item data transfer object (price, totals, new stock)
 |   +-- CartProcessor.php        <- Single-pass O(n) cart validation and preparation
 |   +-- CheckoutService.php      <- Checkout orchestrator
-+-- Products/                    <- Product CRUD, restock, damaged stock
-+-- Reports/                     <- Sales summaries, product performance
++-- Products/                    <- Product CRUD, restock, damaged stock, dynamic UOM
++-- Reports/                     <- Sales summaries, product performance, dynamic UOM aggregation
 +-- Reservations/                <- Reservation lifecycle management
-+-- Settings/                    <- Settings key-value management
++-- Roles/                       <- Dynamic RBAC role creation, updates, and user assignment
++-- Settings/                    <- Settings key-value management & sequential SI numbering
 +-- Transactions/                <- Transaction history, refunds, voids
 |   +-- Validators/
 |       +-- RefundEligibilityValidator.php  <- Transaction-level refund guard clauses
 |       +-- RefundItemValidator.php         <- Per-item refund quantity validation
++-- Users/                       <- User profiles 3NF and permission overrides
 ```
 
 ### Key API Endpoints
 
-**Authentication (Public):**
+**Authentication & Verification (Public & Authenticated):**
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/login` | Login with employee ID + password. Returns Sanctum token. |
-| `POST` | `/api/logout` | Revoke current session token. |
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/api/login` | Public | Login with username / employee ID + password. Returns Sanctum token. |
+| `POST` | `/api/logout` | Authenticated | Revoke current session token. |
+| `GET` | `/api/staff-verification/{token}` | Public | Verify staff onboarding token and fetch account email/username. |
+| `POST` | `/api/staff-verification/{token}/set-password` | Public | Set new staff password, verify email, and activate account. |
 
-**Products (Authenticated):**
+**Dynamic Roles & Permissions (Admin Only):**
 
 | Method | Endpoint | Role | Description |
 |---|---|---|---|
-| `GET` | `/api/products` | All | List all products with variants |
-| `POST` | `/api/products` | Admin | Create a new product |
-| `PUT` | `/api/products/{id}` | Admin | Update product details |
-| `DELETE` | `/api/products/{id}` | Admin | Delete a product |
-| `POST` | `/api/products/restock` | Admin | Restock inventory |
-| `POST` | `/api/products/{id}/damaged` | Admin | Log damaged stock deduction |
+| `GET` | `/api/roles` | Admin | List all system and custom roles with full permission matrix & assigned user counts |
+| `POST` | `/api/roles` | Admin | Create a new custom role with module-level permissions |
+| `PUT` | `/api/roles/{id}` | Admin | Update custom role permissions or description |
+| `DELETE` | `/api/roles/{id}` | Admin | Delete custom role (system roles protected) |
+| `POST` | `/api/roles/{id}/users` | Admin | Assign or reassign users to a specific role |
+| `GET` | `/api/user-permissions/effective` | Authenticated | Fetch logged-in user's computed effective permissions (Role + Overrides) |
+| `POST` | `/api/user-permissions/override` | Admin | Save fine-grained permission override for a specific user |
+| `DELETE` | `/api/user-permissions/override/{id}` | Admin | Clear user-specific permission override |
 
-**POS (Admin + Cashier):**
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/pos/products` | Fetch POS-optimized product list |
-| `POST` | `/api/pos/checkout` | Process a sale (wrapped in DB transaction) |
-
-**Transactions:**
+**Activity Audit Trail & Live Sessions:**
 
 | Method | Endpoint | Role | Description |
 |---|---|---|---|
-| `GET` | `/api/transactions` | All | List all transactions |
-| `POST` | `/api/transactions/{id}/refund` | Admin + Cashier | Full refund |
-| `POST` | `/api/transactions/{id}/return` | Admin + Cashier | Partial return |
-| `POST` | `/api/transactions/{id}/void` | Admin + Cashier | Void transaction |
+| `GET` | `/api/activity-logs` | Admin | Paginated security audit trail with module, severity, and date filters |
+| `GET` | `/api/activity-logs/active-sessions` | Admin | List all active Sanctum tokens across devices and terminals |
+| `POST` | `/api/activity-logs/active-sessions/{id}/revoke` | Admin | Remotely terminate and force-logout an active terminal session |
+| `GET` | `/api/activity-logs/security-alerts` | Admin | High-severity security anomalies and rate limit lockouts |
+
+**Products & Inventory:**
+
+| Method | Endpoint | Role | Description |
+|---|---|---|---|
+| `GET` | `/api/products` | All | List all products with variants & dynamic UOM |
+| `POST` | `/api/products` | Admin / Authorized | Create a new product |
+| `PUT` | `/api/products/{id}` | Admin / Authorized | Update product details |
+| `DELETE` | `/api/products/{id}` | Admin / Authorized | Delete a product |
+| `POST` | `/api/products/restock` | Admin / Authorized | Restock inventory |
+| `POST` | `/api/products/{id}/damaged` | Admin / Authorized | Log damaged stock deduction |
+
+**POS (Checkout & Processing):**
+
+| Method | Endpoint | Role | Description |
+|---|---|---|---|
+| `GET` | `/api/pos/products` | All | Fetch POS-optimized product list with search indexing |
+| `POST` | `/api/pos/checkout` | All | Single-pass atomic checkout with automated stock deduction & SI numbering |
+
+**Transactions & Financial Operations:**
+
+| Method | Endpoint | Role | Description |
+|---|---|---|---|
+| `GET` | `/api/transactions` | All | List all transactions with advanced filtering |
+| `POST` | `/api/transactions/{id}/refund` | Admin / Cashier | Full refund with manager PIN verification |
+| `POST` | `/api/transactions/{id}/return` | Admin / Cashier | Itemized partial return with stock restock options |
+| `POST` | `/api/transactions/{id}/void` | Admin / Cashier | Void transaction with manager PIN approval |
 
 **System Health (Public):**
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/up` | Laravel 11+ built-in health check for uptime monitors |
+| `GET` | `/up` | Laravel built-in health check for uptime monitors |
 
-### RBAC (Role-Based Access Control) Matrix
+### 2-Layer Dynamic RBAC (Role-Based Access Control) Matrix
 
-| Feature | Admin | Cashier |
-|---|---|---|
-| POS Checkout | YES | YES |
-| View Products | YES | YES |
-| Manage Products (CRUD) | YES | NO |
-| View Transactions | YES | YES |
-| Refund / Void / Return | YES | YES |
-| Employee Management | YES | NO |
-| Reports & Analytics | YES | NO |
-| Settings Management | YES | NO |
-| Alert Rule Management | YES | NO |
-| Notifications | YES | YES |
+The system implements an enterprise **2-Layer Dynamic Permission Architecture**:
+- **Layer 1 (Module Visibility):** Controls whether a user can see navigation tabs and access module routes.
+- **Layer 2 (Granular Action Capabilities):** Controls specific operations within accessible modules: `can_view`, `can_create`, `can_edit`, `can_delete`.
+
+| Module | Admin (System) | Cashier (System) | Technical Operations (System) | Custom Roles |
+|---|---|---|---|---|
+| **Dashboard** | Full Access | No Access | No Access | Configurable |
+| **Product Management** | Full (CRUD) | View Only | View Only | Configurable (`V, C, E, D`) |
+| **Inventory** | Full (CRUD) | View Only | View Only | Configurable (`V, C, E, D`) |
+| **Reservations** | Full (CRUD) | Full (CRUD) | View Only | Configurable (`V, C, E, D`) |
+| **POS Interface** | Full Access | Full Access | No Access | Configurable |
+| **History Logs** | Full (Refund/Void) | View Only (PIN for Reversal) | View Only | Configurable |
+| **Sales Log** | Full Access | Own Sales Only | No Access | Configurable |
+| **Reports & Analytics** | Full Access | No Access | No Access | Configurable |
+| **Settings** | Full Access | Profile Only | No Access | Configurable |
+| **User Management** | Full Access | No Access | No Access | Configurable |
+| **System Status** | Full Access | No Access | Full Access | Configurable |
 
 ---
 
@@ -666,13 +740,15 @@ frontend/src/pages/Admin/<ModuleName>/
 | Module | Folder | Description |
 |---|---|---|
 | Dashboard | `Admin/Dashboard/` | KPI cards, sales chart, recent transactions |
-| Product Management | `Admin/ProductManagement/` | Full CRUD with variants, image upload |
-| Inventory | `Admin/Inventory/` | Stock overview, restock, damage logging |
-| Reservations | `Admin/Reservations/` | Create/fulfill/cancel pre-orders |
-| History Logs | `Admin/HistoryLogs/` | Full transaction history with filters |
-| Sales Log | `Admin/SalesLog/` | Daily cashier sales summary |
-| Reports | `Admin/Reports/` | Analytics: sales summary, product performance |
-| Settings | `Admin/Settings/` | Business settings (tax rate, store info) |
+| Product Management | `Admin/ProductManagement/` | Full CRUD with up to 3 variants, dynamic UOM, base image inheritance |
+| Inventory | `Admin/Inventory/` | Stock overview, restock, damage logging, UOM badges |
+| Reservations | `Admin/Reservations/` | 2-tab pre-order holds, Dual Collection Receipt tracking (`Deposit C.R.` + `Balance C.R.`) |
+| History Logs | `Admin/HistoryLogs/` | Full transaction history with filters, partial refund audit tracking |
+| Sales Log | `Admin/SalesLog/` | Daily cashier sales summary with dual Excel and TSV export |
+| Reports | `Admin/Reports/` | Analytics: interactive sales summary, product performance, dynamic UOM metrics |
+| User Management | `Admin/UserManagement/` | Unified hub: Roles & Permissions matrix, Staff roster, and Activity Audit Trail |
+| Settings | `Admin/Settings/` | Business settings (General, Products, SI Sequential Numbering, UOM configuration) |
+| System Status | `Admin/SystemStatus/` | Real-time cloud telemetry, uptime health monitor, Render quota tracking |
 
 ### Cashier Modules
 
@@ -1838,10 +1914,76 @@ Previously, logging into the **Admin** account in Tab 1 and the **Cashier** acco
 #### 5. Single-Use Staff Invitation & Credential Revelation Security (`staff_verification_tokens`)
 - **Single-Use Revelation:** Newly added staff receive a cryptographic 24-hour verification link via email.
 - **Encrypted Storage:** Password revealed only once upon access with instant invalidation (`viewed_at`), preventing credential exposure in plaintext databases.
-- **Transactional Backup Dispatch:** Supports optional backup credential dispatch via SMTP transactional email.
+- **Transactional Backup Dispatch:** Supports optional backup credential dispatch via Brevo REST API v3.
 
 ---
 
-*End of ZTG Heavy Parts Capstone Project Documentation v2.4*
+### SPRINT 17 — Dynamic Role-Based Access Control (RBAC), Unified User Management & Verification Flow
+**Date: August 2026**
+
+#### 1. Dynamic Roles & Permissions Architecture
+- **2-Layer Permission Matrix:** Engineered a granular access control system:
+  - **Layer 1 (Module Access):** Controls top-level navigation and route access (`dashboard`, `products`, `inventory`, `reservations`, `pos`, `history_logs`, `sales_log`, `reports`, `settings`, `user_management`, `system_status`).
+  - **Layer 2 (Action Capabilities):** Controls item-level capabilities: `can_view` (Read), `can_create` (Write), `can_edit` (Update), `can_delete` (Destroy/Void).
+- **Database Schema:** Created `roles`, `role_permissions`, and `user_permission_overrides` tables with cascade deletion.
+- **System Roles Protection:** Protected core system roles (`Admin`, `Cashier`, `Technical Operations`) from accidental deletion or renaming (`is_system = true`).
+- **User Permission Overrides:** Implemented user-specific overrides that take precedence over the base role for specialized staff duties.
+
+#### 2. Unified User Management Hub (`frontend/src/pages/Admin/UserManagement/`)
+- Consolidated role creation, permission matrix toggles, staff directory, and security audit trail under a clean, unified workspace.
+- **Role Assignment Workflow:** Streamlined modal with preloaded user selection, live search, and instantaneous role assignment without page reloads.
+- **Human-Friendly 403 Forbidden Handling (`AccessDeniedModal.jsx`):** Replaced harsh browser errors with a sleek, informative access denial modal explaining missing permissions.
+
+#### 3. Secure Staff Email Verification & Password Setup Flow
+- Integrated **Brevo (Sendinblue) REST API v3** for direct, zero-SMTP transactional email delivery.
+- Newly created employees receive a 24-hour verification link leading to a dedicated password creation page (`StaffVerification.jsx`), activating their account upon confirmation.
+
+---
+
+### SPRINT 18 — Dynamic Unit of Measure (UOM) System & 3-Variant Category Hierarchy Expansion
+**Date: August 2026**
+
+#### 1. Dynamic Unit of Measure (UOM) System
+- **Database Field:** Added `uom` column to the `products` table (default: `'Piece / PCS'`).
+- **Configurable UOM Dictionary:** Added customizable UOM settings (`Piece / PCS`, `Set / SET`, `Roll / RLL`, `Meter / MTR`, `Box / BOX`, `Pair / PR`, `Kilogram / KG`, etc.) in General Settings.
+- **Visual POS & Catalog Integration:** Added styled UOM pill badges across POS item cards, Product Management tables, Inventory stock sheets, and customer invoices.
+
+#### 2. 3-Variant Category Hierarchy & Instant In-Memory Caching
+- **3-Dimension Variants:** Expanded category configuration to support up to **3 simultaneous variant types** per category (e.g., `Size`, `Specification`, and `Material`).
+- **Validation & Seeding:** Updated `CategoryRequest` validation rules and seeded default variant types for heavy machinery parts.
+- **Zero-Flicker Caching & Sorting:** Implemented optimistic client-side caching in `SettingsContext` and persistent alphabetical sorting across frontend and backend, completely eliminating layout jumping.
+
+---
+
+### SPRINT 19 — Interactive Visual Analytics & Metric Switching in Reports
+**Date: August 2026**
+
+#### 1. Modern Interactive Analytics Engine
+- Upgraded the **Reports & Analytics** module (`Admin/Reports/`) with interactive SVG charting widgets.
+- **Dynamic Timeframe Switcher:** Seamlessly toggle between **Hourly**, **Daily**, **Monthly**, and **Yearly** views.
+- **Metric Toggles:** Dynamically switch chart series between **Total Gross Sales**, **Net Sales Revenue**, **Refunds / Returns**, and **Unit Volume Sold**.
+- **Dynamic UOM Aggregation:** Product performance reports aggregate and display sold quantities categorized by their specific unit of measure.
+
+---
+
+### SPRINT 20 — 3-Page Roller TablePagination, First-Time Visitor Branding & Senior Architecture Hardening
+**Date: August 2026**
+
+#### 1. 3-Page Roller TablePagination Standard
+- Developed a shared `<TablePagination />` component implementing a compact 3-page roller window with smart ellipsis (`...`), first/last jumps, and items-per-page selector (`10`, `25`, `50`, `100`).
+- Standardized across all 6 core data modules: **Product Management**, **Inventory**, **Reservations**, **History Logs**, **Sales Log**, and **Reports**.
+
+#### 2. First-Time Visitor Business Branding
+- Updated the Login page (`Login.jsx`) to fetch and display the official business logo, store title, and branch identity even before user authentication, ensuring a branded experience on initial visit.
+
+#### 3. Senior Architecture Patterns & Code Hardening
+- **Fail-Fast Guard Clauses:** Refactored all service methods to enforce validation checks at the entry point (<60 lines per method, max nesting depth ≤ 3).
+- **Single-Pass Cart Processing (`CartProcessor`, `CartItemDTO`):** Replaced multi-loop checkout processing with a single O(n) pass and bulk `createMany` inserts.
+- **Dark Mode Theme Polish:** End-to-end theme adaptation across security alert banners, audit trails, active sessions, and pagination controls.
+
+---
+
+*End of ZTG Heavy Parts Capstone Project Documentation v2.6*
 
 *Document updated: August 2026*
+

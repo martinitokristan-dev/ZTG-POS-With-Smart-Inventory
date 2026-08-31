@@ -7,10 +7,12 @@ use App\Enums\UserStatus;
 use App\Models\AlertRule;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Role;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\VariantOption;
 use App\Models\VariantType;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -25,6 +27,9 @@ class PhaseTwoTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Seed roles so dynamic role validation passes for all employee API tests
+        $this->seed(RolePermissionSeeder::class);
 
         // Seed basic settings
         Setting::create(['key' => 'business_name', 'value' => 'ZTG Heavy Parts']);
@@ -56,6 +61,7 @@ class PhaseTwoTest extends TestCase
             'email_verified_at' => now(),
         ]);
     }
+
 
     /* ----------------- Settings Tests ----------------- */
 
@@ -240,6 +246,9 @@ class PhaseTwoTest extends TestCase
 
     public function test_admin_can_create_employee()
     {
+        // Pre-create the Supervisor role since it is not part of the base seeder
+        Role::create(['name' => 'Supervisor', 'description' => 'Supervisor role', 'is_system' => false]);
+
         $response = $this->actingAs($this->admin)
             ->postJson('/api/employees', [
                 'full_name'    => 'John Smith',

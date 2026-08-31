@@ -62,6 +62,8 @@ export default function EmployeeModal({
     const emailError = getFieldError('email');
     const usernameError = getFieldError('username');
     const passwordError = getFieldError('password');
+    const roleError = getFieldError('role');
+    const generalError = employeeErrors?.general || null;
 
     return (
         <div className="modal-overlay" style={{ display: 'flex' }}>
@@ -76,6 +78,24 @@ export default function EmployeeModal({
                         </button>
                     </div>
                     <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                        {/* General server-side error banner */}
+                        {generalError && (
+                            <div style={{
+                                display: 'flex',
+                                gap: '10px',
+                                alignItems: 'flex-start',
+                                backgroundColor: '#FEF2F2',
+                                border: '1px solid #FECACA',
+                                borderRadius: '10px',
+                                padding: '12px 14px',
+                            }}>
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}>
+                                    <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                                </svg>
+                                <p style={{ margin: 0, fontSize: '12px', color: '#DC2626', fontWeight: '500' }}>{generalError}</p>
+                            </div>
+                        )}
 
                         {/* Info banner — only shown when creating a new staff */}
                         {!selectedEmployee && (
@@ -276,12 +296,25 @@ export default function EmployeeModal({
                             </label>
                             <IOSSelect
                                 value={employeeForm.role || availableRoles[0]?.value || 'Cashier'}
-                                onChange={(e) => setEmployeeForm({ ...employeeForm, role: e.target.value })}
+                                onChange={(e) => {
+                                    clearFieldError('role');
+                                    setEmployeeForm({ ...employeeForm, role: e.target.value });
+                                }}
                                 options={availableRoles}
+                                style={roleError ? { borderColor: '#EF4444' } : {}}
                             />
-                            <small style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '4px', display: 'block' }}>
-                                Each staff member must have exactly one role. This cannot be changed here after saving — use Manage Users to reassign.
-                            </small>
+                            {roleError ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px', color: '#DC2626', fontSize: '11.5px', fontWeight: '500' }}>
+                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                                        <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                                    </svg>
+                                    <span>{roleError}</span>
+                                </div>
+                            ) : (
+                                <small style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+                                    Each staff member must have exactly one role. This cannot be changed here after saving — use Manage Users to reassign.
+                                </small>
+                            )}
                         </div>
                     </div>
                     <div className="modal-footer" style={{ padding: '16px 20px', marginTop: '8px' }}>

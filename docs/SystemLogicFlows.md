@@ -12,16 +12,16 @@
 Use a **Layered Architecture** with thin controllers and thin services following Laravel best practices.
 
 ### Core Architecture Requirements:
-- **Thin Controllers:** Controllers should only receive the request, call a service/action, and return the response.
-- **Form Requests:** Use Form Request classes for all validation.
-- **Service Classes:** Place business logic inside Service classes. Keep each Service focused on a single responsibility. If a service grows too large, split it into smaller services or Actions.
-- **Eloquent Models:** Use Eloquent models only for data relationships and simple model logic. Do not put business logic here.
-- **Database Transactions:** Use DB transactions (`DB::transaction()`) for critical operations such as checkout, stock updates, and purchases.
-- **Events & Listeners:** Use Events and Listeners for side effects such as notifications, audit logs, and analytics.
-- **Jobs:** Use Jobs for long-running tasks.
-- **Domain-Driven Organization:** Organize the project by business domains (POS, Inventory, Products, Customers, Suppliers, Reports) instead of creating one large service folder.
-- **Principles:** Follow the SOLID principles and Separation of Concerns. Avoid fat controllers, fat services, duplicated code, and business logic inside controllers.
-- **Clean Code:** Generate clean, maintainable, production-ready Laravel code with clear folder organization and dependency injection.
+- **Thin Controllers:** Controllers only receive Form Requests, call a dedicated Service method, and return JSON responses. Target length: < 30 lines per method.
+- **Form Requests:** Use Form Request classes (`app/Http/Requests`) for all incoming parameter and body validation.
+- **Fail-Fast Guard Clauses:** Place all validation checks as guard clauses at the **top** of service methods before executing business logic, loops, or DB transactions. Keep maximum nesting depth ≤ 3 levels.
+- **Single-Pass Data Processing:** Never iterate over collections multiple times. Use dedicated processor classes and DTOs (e.g. `CartProcessor`, `CartItemDTO`) to validate, calculate, and prepare records in a single O(n) pass.
+- **Bulk Database Operations & N+1 Prevention:** Never call `Model::find()` inside loops. Use `whereIn()` and `Collection::keyBy('id')` for O(1) in-memory lookups, and use `createMany()` / bulk updates.
+- **Constants Classes:** Magic numbers and hardcoded strings are forbidden in service classes. Group them in `app/Services/Constants/` (e.g., `SecurityConstants`, `InvoiceConstants`, `StockConstants`) and `frontend/src/config/constants.js`.
+- **Database Transactions:** Wrap critical data-mutating operations (checkout, inventory updates, refunds, voids) in atomic database transactions (`DB::transaction()`).
+- **User & Profile Architecture (3NF):** Maintain strict separation between `users` (credentials, role, status, hashed PIN, email verification) and `user_profiles` (full name, phone, email, avatar). Always use the 1:1 `User hasOne UserProfile` relationship.
+- **Frontend Hook Decomposition:** When a React hook exceeds ~200 lines, decompose it into focused sub-hooks (e.g. `usePOS` decomposes into `usePOSProducts`, `usePOSCart`, `usePOSCustomer`) composed by a thin root orchestrator.
+- **Clean UI Standards:** Never use raw unicode emojis (`✋`, `ℹ️`, `⚠️`, `💡`, `🎉`) in production UI. Always use clean, professional inline vector SVGs with consistent stroke widths (`strokeWidth="2"`).
 
 ---
 
@@ -1467,28 +1467,40 @@ flowchart TD
 
 ```mermaid
 erDiagram
-    users ||--|| user_profiles : "has profile"
-    users ||--o{ staff_verification_tokens : "receives"
-    users ||--o{ activity_logs : "generates"
-    users ||--o{ personal_access_tokens : "issues"
-    users ||--o{ transactions : "cashier"
-    users ||--o{ transactions : "approver"
-    users ||--o{ reservations : "reserved_by"
-    users ||--o{ reservations : "fulfilled_by"
+    users ||--|| user_profiles : "has profile (user_id)"
+    users ||--o{ personal_access_tokens : "issues (tokenable_id)"
+    users ||--o{ staff_verification_tokens : "receives (user_id)"
+    users ||--o{ activity_logs : "generates (user_id)"
+    users ||--o{ user_permission_overrides : "has overrides (user_id)"
+    users ||--o{ transactions : "processes (cashier_id)"
+    users ||--o{ transactions : "approves (approver_id)"
+    users ||--o{ reservations : "books (reserved_by_id)"
+    users ||--o{ reservations : "fulfills (fulfilled_by_id)"
+    users ||--o{ report_logs : "generates (user_id)"
+    users ||--o{ notifications : "receives (user_id)"
 
-    categories ||--o{ products : "belongs_to"
+    roles ||--o{ role_permissions : "defines (role_id)"
+    roles ||--o{ users : "assigned to (role)"
 
-    products ||--o{ products : "parent_variant"
-    products ||--o{ transaction_items : "sold_in"
-    products ||--o{ reservation_items : "reserved_in"
-    products }o--o{ variant_options : "has_values"
+    checkers ||--o{ transactions : "verifies (checker_id)"
 
-    variant_types ||--o{ variant_options : "contains"
+    categories ||--o{ products : "categorizes (category_id)"
 
-    customers ||--o{ transactions : "bought_by"
-    customers ||--o{ reservations : "ordered_by"
+    products ||--o{ products : "has variants (parent_product_id)"
+    products ||--o{ product_variant_values : "has option values"
+    products ||--o{ transaction_items : "sold in"
+    products ||--o{ reservation_items : "reserved in"
+    products ||--o{ notifications : "alerts for"
+
+    variant_types ||--o{ variant_options : "defines"
+    variant_options ||--o{ product_variant_values : "assigned to"
+
+    customers ||--o{ transactions : "makes (customer_id)"
+    customers ||--o{ reservations : "books (customer_id)"
 
     transactions ||--o{ transaction_items : "contains"
+    transactions ||--o{ notifications : "triggers"
+
     reservations ||--o{ reservation_items : "contains"
 ```
 
@@ -1510,21 +1522,21 @@ flowchart TD
     end
 
     subgraph "Notification Types"
-        N1["🔴 Low Stock Alert"]
-        N2["💰 Sale Completed"]
-        N3["↩️ Refund / Return Processed"]
-        N4["❌ Transaction Voided"]
-        N5["📦 Inventory Restocked"]
-        N6["⚠️ Damaged Stock Logged"]
-        N7["📋 Reservation Deposit"]
-        N8["🛡️ Security & Anomaly Alert"]
+        N1["Low Stock Alert"]
+        N2["Sale Completed"]
+        N3["Refund / Return Processed"]
+        N4["Transaction Voided"]
+        N5["Inventory Restocked"]
+        N6["Damaged Stock Logged"]
+        N7["Reservation Deposit"]
+        N8["Security & Anomaly Alert"]
     end
 
     subgraph "Role-Based Delivery (Admin & Supervisor Only)"
         D1[Admin Topbar Bell Badge]
         D2[Admin Toast Bubble Popup]
         D3[Admin Chime Audio Alert]
-        D4["🚫 Cashier Interface Excluded (Principle of Least Privilege)"]
+        D4["Cashier Interface Excluded (Principle of Least Privilege)"]
     end
 
     E1 --> N1
@@ -1547,13 +1559,10 @@ flowchart TD
 
     D1 --> D2
     D1 --> D3
-    E5 --> N5
-    E6 --> N6
-    E7 --> N7
 
-    N1 & N2 & N3 & N4 & N5 & N6 & N7 --> D1
-    N1 & N2 & N3 & N4 & N5 & N6 & N7 --> D2
-    N1 & N2 & N3 & N4 & N5 & N6 & N7 --> D3
+    N1 & N2 & N3 & N4 & N5 & N6 & N7 & N8 --> D1
+    N1 & N2 & N3 & N4 & N5 & N6 & N7 & N8 --> D2
+    N1 & N2 & N3 & N4 & N5 & N6 & N7 & N8 --> D3
 ```
 
 ---
@@ -1562,67 +1571,167 @@ flowchart TD
 
 ```mermaid
 flowchart TB
-    subgraph "Configuration Layer"
-        SETTINGS["⚙️ Settings"]
-        CATEGORIES["📁 Categories"]
-        EMPLOYEES["👥 Employees"]
+    subgraph "Configuration & Security Layer"
+        SETTINGS["Settings & UOM"]
+        CATEGORIES["Categories (3 Variants)"]
+        ROLES_SEC["Roles & Permissions (RBAC)"]
+        EMPLOYEES["Users & Profiles (3NF)"]
     end
 
     subgraph "Product Layer"
-        PRODUCTS["📦 Products"]
+        PRODUCTS["Products & Variants (UOM)"]
     end
 
     subgraph "Transaction Layer"
-        POS["🛒 POS Checkout"]
-        REFUND["↩️ Refund/Return"]
-        VOID_OP["❌ Void"]
-        RESTOCK["📥 Restock"]
-        DAMAGED["⚠️ Damaged"]
+        POS["POS Checkout (Single-Pass)"]
+        REFUND["Refund/Return (Guard Clauses)"]
+        VOID_OP["Void (Manager PIN)"]
+        RESTOCK["Restock"]
+        DAMAGED["Damaged"]
     end
 
     subgraph "Reservation Layer"
-        RES_CREATE["📋 Create Reservation"]
-        RES_FULFILL["✅ Fulfill"]
-        RES_CANCEL["🚫 Cancel"]
+        RES_CREATE["Create Reservation (Deposit C.R.)"]
+        RES_FULFILL["Fulfill (Balance C.R.)"]
+        RES_CANCEL["Cancel"]
     end
 
-    subgraph "Reporting Layer"
-        DASHBOARD["📊 Dashboard"]
-        REPORTS["📈 Reports"]
-        SALESLOG["📄 Sales Log"]
-        NOTIF["🔔 Notifications"]
+    subgraph "Reporting & Audit Layer"
+        DASHBOARD["Dashboard"]
+        REPORTS["Interactive Reports"]
+        SALESLOG["Sales Log (Dual Export)"]
+        AUDIT_TRAIL["Activity Audit Trail"]
+        NOTIF["Notifications (Admin Isolated)"]
     end
 
-    SETTINGS -->|config values| POS
-    SETTINGS -->|tax rate| POS
-    CATEGORIES -->|product categories| PRODUCTS
-    EMPLOYEES -->|PIN auth| REFUND
-    EMPLOYEES -->|PIN auth| VOID_OP
-    EMPLOYEES -->|cashier info| POS
+    SETTINGS -->|config & prefixes| POS
+    CATEGORIES -->|3-variant dimensions| PRODUCTS
+    ROLES_SEC -->|effective permissions| EMPLOYEES
+    EMPLOYEES -->|cashier ID & PIN| POS
+    EMPLOYEES -->|PIN approval| REFUND
+    EMPLOYEES -->|PIN approval| VOID_OP
 
-    PRODUCTS -->|stock + price| POS
+    PRODUCTS -->|stock & price tier| POS
     PRODUCTS -->|stock check| RES_FULFILL
-    PRODUCTS -->|stock levels| NOTIF
+    PRODUCTS -->|low stock triggers| NOTIF
 
     POS -->|deduct stock| PRODUCTS
-    POS -->|create| TRANSACTIONS[(Transactions DB)]
+    POS -->|atomic insert| TRANSACTIONS[(Transactions DB)]
     REFUND -->|restore stock| PRODUCTS
-    REFUND -->|update status| TRANSACTIONS
+    REFUND -->|recalculate net sales| TRANSACTIONS
     VOID_OP -->|restore stock| PRODUCTS
-    VOID_OP -->|update status| TRANSACTIONS
+    VOID_OP -->|mark voided| TRANSACTIONS
     RESTOCK -->|add stock| PRODUCTS
     RESTOCK -->|log| TRANSACTIONS
-    DAMAGED -->|reduce stock| PRODUCTS
+    DAMAGED -->|deduct stock| PRODUCTS
     DAMAGED -->|log| TRANSACTIONS
 
-    RES_CREATE -->|log deposit| TRANSACTIONS
-    RES_FULFILL -->|deduct stock| PRODUCTS
-    RES_FULFILL -->|log completion| TRANSACTIONS
+    RES_CREATE -->|log deposit CR| TRANSACTIONS
+    RES_FULFILL -->|deduct stock & log balance CR| TRANSACTIONS
     RES_CANCEL -->|archive| ARCHIVES[(Archives DB)]
 
-    TRANSACTIONS -->|aggregate| DASHBOARD
-    TRANSACTIONS -->|aggregate| REPORTS
-    TRANSACTIONS -->|list| SALESLOG
-    TRANSACTIONS -->|trigger| NOTIF
-    PRODUCTS -->|low stock| NOTIF
+    TRANSACTIONS -->|real-time metrics| DASHBOARD
+    TRANSACTIONS -->|aggregate with UOM| REPORTS
+    TRANSACTIONS -->|list with dual export| SALESLOG
+    TRANSACTIONS -->|security & audit events| AUDIT_TRAIL
+    TRANSACTIONS -->|alerts| NOTIF
+```
+
+---
+
+## Visual 11: Dynamic 2-Layer RBAC Permission Resolution Flow
+
+```mermaid
+flowchart TD
+    REQ[User Requests Action / Route] --> AUTH{Is Authenticated via Sanctum?}
+    AUTH -->|No| R401[401 Unauthorized]
+    AUTH -->|Yes| CHECK_OVERRIDE{User Specific Override in user_permission_overrides?}
+    
+    CHECK_OVERRIDE -->|Yes| USE_OVERRIDE[Use Override Permissions: has_access, can_view, can_create, can_edit, can_delete]
+    CHECK_OVERRIDE -->|No| FETCH_ROLE[Fetch Assigned Role in roles table]
+    
+    FETCH_ROLE --> CHECK_SYSTEM{Is Admin System Role?}
+    CHECK_SYSTEM -->|Yes| GRANTED[Full Unrestricted Access Granted]
+    CHECK_SYSTEM -->|No| FETCH_ROLE_PERMS[Query role_permissions for target module]
+    
+    FETCH_ROLE_PERMS --> USE_ROLE_PERMS[Apply Role Permission Matrix]
+    USE_OVERRIDE --> EVAL_L1{Layer 1: has_access == true?}
+    USE_ROLE_PERMS --> EVAL_L1
+    
+    EVAL_L1 -->|No| BLOCK_403["403 Forbidden -> Display AccessDeniedModal"]
+    EVAL_L1 -->|Yes| EVAL_L2{Layer 2: Target Action Allowed? can_view / can_create / can_edit / can_delete}
+    
+    EVAL_L2 -->|No| BLOCK_ACTION["Action Denied (Button hidden/disabled + API 403)"]
+    EVAL_L2 -->|Yes| EXEC[Execute Request Successfully]
+```
+
+---
+
+## Visual 12: Single-Pass Cart Checkout Sequence
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Cashier
+    participant Frontend as POS Interface (usePOS)
+    participant Controller as CheckoutController
+    participant Processor as CartProcessor
+    participant DTO as CartItemDTO
+    participant DB as TiDB Database
+
+    Cashier->>Frontend: Click "Process Checkout"
+    Frontend->>Controller: POST /api/pos/checkout (cart, payment, SI mode)
+    Controller->>Processor: process(cartItems, productIds)
+    
+    Note over Processor,DB: Bulk Query 1: Fetch all products in one whereIn()
+    Processor->>DB: Product::whereIn('id', $productIds)
+    DB-->>Processor: Products Collection (keyBy 'id')
+    
+    Note over Processor,DTO: Single-Pass O(n) Loop: Validate stock, compute discounts, construct DTOs
+    loop Each Cart Item
+        Processor->>DTO: new CartItemDTO(item, product)
+        DTO-->>Processor: Validated Item DTO (new stock, price, line totals)
+    end
+
+    Processor->>DB: DB::transaction()
+    Note over Processor,DB: Bulk Query 2: Atomic createMany() for transaction_items
+    Processor->>DB: $transaction->items()->createMany(DTO items)
+    Note over Processor,DB: Bulk Stock Updates & SI Sequential Advance
+    Processor->>DB: Apply stock changes & increment SI counter with lockForUpdate()
+    DB-->>Controller: Transaction Committed Successfully
+    Controller-->>Frontend: 200 OK + Transaction & Receipt Payload
+    Frontend-->>Cashier: Display Checkout Confirmation Modal & Trigger Auto-Print
+```
+
+---
+
+## Visual 13: Staff Onboarding & Brevo Verification Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin
+    participant Frontend as User Management (EmployeesTab)
+    participant API as StaffController
+    participant Brevo as Brevo REST API v3
+    actor Staff as New Employee
+    participant VerifyUI as StaffVerification.jsx
+
+    Admin->>Frontend: Enter Name, Username, Role, and Email
+    Frontend->>API: POST /api/employees (profile + role assignment)
+    API->>API: Generate Cryptographic 64-char Token (24hr expiry)
+    API->>API: Save staff_verification_tokens record
+    API->>Brevo: POST https://api.brevo.com/v3/smtp/email (Custom Invitation Template)
+    Brevo-->>Staff: Deliver Verification Link: /verify-staff/{token}
+    API-->>Frontend: 201 Created (Staff record pending verification)
+    
+    Staff->>VerifyUI: Click Verification Link in Email
+    VerifyUI->>API: GET /api/staff-verification/{token}
+    API-->>VerifyUI: 200 OK (Valid token, returns username & email)
+    Staff->>VerifyUI: Type New Password & Confirm
+    VerifyUI->>API: POST /api/staff-verification/{token}/set-password
+    API->>API: Hash Password (Bcrypt) + Set email_verified_at = now()
+    API->>API: Delete used verification token
+    API-->>VerifyUI: 200 OK (Account Activated)
+    VerifyUI-->>Staff: Redirect to /login with Success Banner
 ```
