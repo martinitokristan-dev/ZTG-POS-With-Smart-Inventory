@@ -23,10 +23,23 @@ class CheckPermission
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        if (! $user->hasPermission($module, $action)) {
+        // Support multiple alternative modules (e.g. 'dashboard|reports')
+        $modules = preg_split('/[\|,]/', $module);
+        $hasAnyPermission = false;
+
+        foreach ($modules as $mod) {
+            $trimmedMod = trim($mod);
+            if (!empty($trimmedMod) && $user->hasPermission($trimmedMod, $action)) {
+                $hasAnyPermission = true;
+                break;
+            }
+        }
+
+        if (! $hasAnyPermission) {
+            $firstMod = trim($modules[0] ?? $module);
             return response()->json([
-                'message'    => $this->getFriendlyErrorMessage($module, $action),
-                'module'     => $module,
+                'message'    => $this->getFriendlyErrorMessage($firstMod, $action),
+                'module'     => $firstMod,
                 'action'     => $action,
                 'error_type' => 'permission_denied',
             ], 403);

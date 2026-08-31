@@ -19,10 +19,15 @@ export default function ProductsTable({
     onView, onEdit, onDamage, onDelete, onRestock, onToggleStatus,
     successMessage, setSuccessMessage,
     pagination,
+    permissions = {},
 }) {
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const showChineseNames = useDisplayChineseNames();
     const { track_warehouse_locations, enable_dual_pricing, price1_label, price2_label } = useSystemSettings();
+
+    const canEdit = permissions.canEdit ?? true;
+    const canDelete = permissions.canDelete ?? true;
+    const hasRowActions = canEdit || canDelete;
 
     // Close dropdowns on click outside
     useEffect(() => {
@@ -200,78 +205,106 @@ export default function ProductsTable({
                             </svg>
                         </button>
 
-                        {/* Three-dot Overflow Menu */}
-                        <div className="actions-dropdown-container">
-                            <button 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenDropdownId(openDropdownId === product.id ? null : product.id);
-                                }} 
-                                className="action-trigger-btn" 
-                                aria-label="More actions" 
-                                aria-haspopup="true" 
-                                aria-expanded={openDropdownId === product.id ? "true" : "false"} 
-                                data-tooltip="More actions"
-                            >
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                                    <circle cx="12" cy="5" r="2"></circle>
-                                    <circle cx="12" cy="12" r="2"></circle>
-                                    <circle cx="12" cy="19" r="2"></circle>
-                                </svg>
-                            </button>
-                            <div 
-                                className={`actions-dropdown-menu ${openDropdownId === product.id ? 'show' : ''}`} 
-                                role="menu"
-                                style={{
-                                    position: 'absolute',
-                                    right: 0,
-                                    ...(isBottomRow ? { bottom: 'calc(100% + 6px)', top: 'auto' } : { top: 'calc(100% + 6px)', bottom: 'auto' }),
-                                    zIndex: 9999,
-                                    background: 'var(--bg-card)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '8px',
-                                    boxShadow: 'var(--shadow-lg)',
-                                    padding: '6px',
-                                    minWidth: '160px',
-                                }}
-                            >
+                        {/* Three-dot Overflow Menu (Only shown if user has edit or delete permissions) */}
+                        {hasRowActions && (
+                            <div className="actions-dropdown-container">
                                 <button 
-                                    onClick={() => {
-                                        setOpenDropdownId(null);
-                                        onEdit(product);
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenDropdownId(openDropdownId === product.id ? null : product.id);
                                     }} 
-                                    className="actions-dropdown-item" 
-                                    role="menuitem"
+                                    className="action-trigger-btn" 
+                                    aria-label="More actions" 
+                                    aria-haspopup="true" 
+                                    aria-expanded={openDropdownId === product.id ? "true" : "false"} 
+                                    data-tooltip="More actions"
                                 >
-                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                        <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                        <circle cx="12" cy="5" r="2"></circle>
+                                        <circle cx="12" cy="12" r="2"></circle>
+                                        <circle cx="12" cy="19" r="2"></circle>
                                     </svg>
-                                    Edit Product
                                 </button>
-                                        <div className="actions-dropdown-divider" style={{ margin: '4px 0', borderTop: '1px solid #E2E8F0' }}></div>
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setOpenDropdownId(null);
-                                                onToggleStatus(product);
-                                            }} 
-                                            className={`actions-dropdown-item ${product.status === 'Disabled' ? 'enable' : 'disable'}`} 
-                                            role="menuitem"
-                                            style={{ color: product.status === 'Disabled' ? '#10B981' : '#EF4444' }}
-                                        >
-                                            {product.status === 'Disabled' ? (
-                                                <>
-                                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Enable Product
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg> Disable Product
-                                                </>
-                                            )}
-                                        </button>
+                                <div 
+                                    className={`actions-dropdown-menu ${openDropdownId === product.id ? 'show' : ''}`} 
+                                    role="menu"
+                                    style={{
+                                        position: 'absolute',
+                                        right: 0,
+                                        ...(isBottomRow ? { bottom: 'calc(100% + 6px)', top: 'auto' } : { top: 'calc(100% + 6px)', bottom: 'auto' }),
+                                        zIndex: 9999,
+                                        background: 'var(--bg-card)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '8px',
+                                        boxShadow: 'var(--shadow-lg)',
+                                        padding: '6px',
+                                        minWidth: '160px',
+                                    }}
+                                >
+                                    {canEdit && (
+                                        <>
+                                            <button 
+                                                onClick={() => {
+                                                    setOpenDropdownId(null);
+                                                    onEdit(product);
+                                                }} 
+                                                className="actions-dropdown-item" 
+                                                role="menuitem"
+                                            >
+                                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                </svg>
+                                                Edit Product
+                                            </button>
+                                            <div className="actions-dropdown-divider" style={{ margin: '4px 0', borderTop: '1px solid #E2E8F0' }}></div>
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setOpenDropdownId(null);
+                                                    onToggleStatus(product);
+                                                }} 
+                                                className={`actions-dropdown-item ${product.status === 'Disabled' ? 'enable' : 'disable'}`} 
+                                                role="menuitem"
+                                                style={{ color: product.status === 'Disabled' ? '#10B981' : '#EF4444' }}
+                                            >
+                                                {product.status === 'Disabled' ? (
+                                                    <>
+                                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Enable Product
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg> Disable Product
+                                                    </>
+                                                )}
+                                            </button>
+                                        </>
+                                    )}
+
+                                    {canDelete && (
+                                        <>
+                                            {canEdit && <div className="actions-dropdown-divider" style={{ margin: '4px 0', borderTop: '1px solid #E2E8F0' }}></div>}
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setOpenDropdownId(null);
+                                                    onDelete(product);
+                                                }} 
+                                                className="actions-dropdown-item" 
+                                                role="menuitem"
+                                                style={{ color: '#EF4444' }}
+                                            >
+                                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                </svg>
+                                                Delete Product
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </td>
             </tr>

@@ -113,7 +113,8 @@ export default function ProductFormModal({
     categories, variantOptions,
     handleAddressChange, handleImageUpload, uploadingImage = false, imageProgress = 0,
     errorMessage, selectedProduct,
-    isSubmitting = false
+    isSubmitting = false,
+    permissions = {}
 }) {
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -181,7 +182,11 @@ export default function ProductFormModal({
     if (!isOpen) return null;
 
     const isEdit = mode === 'edit';
-    const title = isEdit ? `Edit Product: ${selectedProduct?.name}` : 'Add New Product';
+    const canMutate = isEdit ? (permissions.canEdit !== false) : (permissions.canCreate !== false);
+    const isReadOnly = !canMutate;
+    const title = isReadOnly 
+        ? `Product Details: ${selectedProduct?.name || formData.name || 'Item'}` 
+        : (isEdit ? `Edit Product: ${selectedProduct?.name}` : 'Add New Product');
     const submitLabel = isEdit
         ? (isSubmitting ? 'Updating Product...' : 'Update Product')
         : (isSubmitting ? 'Adding Product...' : 'Add Product');
@@ -295,6 +300,25 @@ export default function ProductFormModal({
                     </div>
 
                     <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                        {isReadOnly && (
+                            <div style={{
+                                padding: '11px 14px',
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--border)',
+                                color: 'var(--text-secondary)',
+                                borderRadius: '8px',
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                marginBottom: '16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}>
+                                <span style={{ fontSize: '16px' }}>🔒</span>
+                                <span><strong>Read-Only View:</strong> You have permission to inspect this product's details, but not modify them.</span>
+                            </div>
+                        )}
+
                         {errorMessage && <div style={{ padding: '12px', background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', borderRadius: '6px', fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>{errorMessage}</div>}
 
                         <div className="form-group" style={{ marginBottom: '16px' }}>
@@ -651,20 +675,26 @@ export default function ProductFormModal({
                         </div>
                     </div>
 
-                    <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Fields marked with <span style={{ color: 'red' }}>*</span> are required.</div>
-                        <div className="modal-footer">
-                            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>Cancel</button>
-                            <button id="submitProductBtn" type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                                {isSubmitting ? (
-                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ width: '13px', height: '13px', borderWidth: '2px' }}></span>
-                                        {submitLabel}
-                                    </span>
-                                ) : (
-                                    submitLabel
-                                )}
+                    <div className="modal-footer" style={{ display: 'flex', justifyContent: isReadOnly ? 'flex-end' : 'space-between', alignItems: 'center' }}>
+                        {!isReadOnly && (
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Fields marked with <span style={{ color: 'red' }}>*</span> are required.</div>
+                        )}
+                        <div className="modal-footer" style={{ margin: 0, padding: 0, border: 'none' }}>
+                            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>
+                                {isReadOnly ? 'Close' : 'Cancel'}
                             </button>
+                            {!isReadOnly && (
+                                <button id="submitProductBtn" type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                                    {isSubmitting ? (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ width: '13px', height: '13px', borderWidth: '2px' }}></span>
+                                            {submitLabel}
+                                        </span>
+                                    ) : (
+                                        submitLabel
+                                    )}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </form>

@@ -9,9 +9,11 @@ import ReviewRestockModal from './modals/ReviewRestockModal';
 import LeaveRestockModal from './modals/LeaveRestockModal';
 import { flattenToSellableSKUs } from '../../../shared/utils/skuHelpers';
 import TablePagination from '../../../shared/components/TablePagination';
+import { useModulePermission } from '../../../shared/hooks/useModulePermission';
 
 function ProductManagement() {
     const pm = useProductManagement();
+    const permissions = useModulePermission('products');
 
     return (
         <div className="main-workspace-outer">
@@ -36,12 +38,16 @@ function ProductManagement() {
                     <div className="top-bar-actions">
                         {pm.viewMode === 'list' ? (
                             <>
-                                <button onClick={pm.switchToRestock} className="btn btn-secondary">
-                                    Restock
-                                </button>
-                                <button onClick={() => { pm.resetForm(); pm.setShowAddModal(true); }} className="btn btn-primary">
-                                    Add Product
-                                </button>
+                                {permissions.canCreate && (
+                                    <>
+                                        <button onClick={pm.switchToRestock} className="btn btn-secondary">
+                                            Restock
+                                        </button>
+                                        <button onClick={() => { pm.resetForm(); pm.setShowAddModal(true); }} className="btn btn-primary">
+                                            Add Product
+                                        </button>
+                                    </>
+                                )}
                             </>
                         ) : (
                             <button onClick={pm.handleExitRestockAttempt} className="btn btn-secondary">
@@ -72,10 +78,11 @@ function ProductManagement() {
                                 setSortOption={pm.setSortOption}
                                 DEFAULT_PLACEHOLDER_IMAGE={pm.DEFAULT_PLACEHOLDER_IMAGE}
                                 pagination={pm.pagination}
+                                permissions={permissions}
                                 onAddProduct={pm.openAdd}
                                 onBatchRestock={pm.switchToRestock}
                                 onView={pm.openView}
-                                onEdit={pm.openEdit}
+                                onEdit={permissions.canEdit ? pm.openEdit : pm.openView}
                                 onDamage={pm.openDamage}
                                 onDelete={pm.handleDeleteProduct}
                                 onRestock={(p) => { pm.switchToRestock(); pm.updateRestockQty(p.id, 1); }}
@@ -140,6 +147,7 @@ function ProductManagement() {
                 imageProgress={pm.imageProgress}
                 errorMessage={pm.errorMessage}
                 isSubmitting={pm.isSubmitting}
+                permissions={permissions}
             />
 
             {/* Edit Product */}
@@ -158,6 +166,7 @@ function ProductManagement() {
                 errorMessage={pm.errorMessage}
                 selectedProduct={pm.selectedProduct}
                 isSubmitting={pm.isSubmitting}
+                permissions={permissions}
             />
 
             {/* View Product */}

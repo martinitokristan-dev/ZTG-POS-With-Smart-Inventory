@@ -7,8 +7,10 @@ import CopyableText from '../../../../shared/components/CopyableText';
 
 export default function HistoryTable({ 
     loading, transactions, fmt, fmtDate, 
-    handleOpenRefund, handleOpenVoid, handleOpenView, handleOpenPay 
+    handleOpenRefund, handleOpenVoid, handleOpenView, handleOpenPay,
+    permissions = {},
 }) {
+    const canEdit = permissions.canEdit ?? true;
     const [openDropdownId, setOpenDropdownId] = useState(null);
     // Live logo URL — always current, never frozen per BIR spec
     const [logoUrl, setLogoUrl] = useState(null);
@@ -174,7 +176,7 @@ export default function HistoryTable({
                                                         background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px',
                                                         boxShadow: 'var(--shadow-lg)', padding: '6px', minWidth: '160px'
                                                     }}>
-                                                        {tx.status === 'Pending' && (
+                                                        {canEdit && tx.status === 'Pending' && (
                                                             <>
                                                                 <button style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--success)', borderRadius: '4px', fontWeight: '600' }} onClick={() => { handleOpenPay(tx); setOpenDropdownId(null); }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--success-light)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                                                                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -187,7 +189,7 @@ export default function HistoryTable({
                                                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                                                             Reprint SI
                                                         </button>
-                                                        {tx.status === 'Completed' && (
+                                                        {canEdit && tx.status === 'Completed' && (
                                                             <>
                                                                 <div style={{ margin: '4px 0', borderTop: '1px solid var(--border)' }}></div>
                                                                 <button style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)', borderRadius: '4px' }} onClick={() => { handleOpenVoid(tx); setOpenDropdownId(null); }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--danger-light)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>

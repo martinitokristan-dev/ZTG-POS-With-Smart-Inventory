@@ -8,9 +8,11 @@ import TransactionDetailsModal from './modals/TransactionDetailsModal';
 import PayModal from './modals/PayModal';
 import IOSSelect from '../../../shared/components/IOSSelect';
 import TablePagination from '../../../shared/components/TablePagination';
+import { useModulePermission } from '../../../shared/hooks/useModulePermission';
 
 export default function HistoryLogs() {
     const hl = useHistoryLogs();
+    const permissions = useModulePermission('history_logs');
 
     // Close dropdowns on external click
     useEffect(() => {
@@ -65,9 +67,11 @@ export default function HistoryLogs() {
                                     ]}
                                 />
                             </div>
-                            <button className="btn" style={{ background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.3)', fontWeight: '600', padding: '8px 16px', borderRadius: '6px', fontSize: '13px' }} onClick={() => hl.handleOpenRefund(null)}>
-                                Refund / Return
-                            </button>
+                            {permissions.canEdit && (
+                                <button className="btn" style={{ background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.3)', fontWeight: '600', padding: '8px 16px', borderRadius: '6px', fontSize: '13px' }} onClick={() => hl.handleOpenRefund(null)}>
+                                    Refund / Return
+                                </button>
+                            )}
                         </div>
 
                         <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
@@ -105,6 +109,7 @@ export default function HistoryLogs() {
                                 handleOpenVoid={hl.handleOpenVoid}
                                 handleOpenView={hl.handleOpenView}
                                 handleOpenPay={hl.handleOpenPay}
+                                permissions={permissions}
                             />
                             
                             {/* Standardized Pagination Controls */}

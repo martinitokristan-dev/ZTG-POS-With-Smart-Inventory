@@ -178,12 +178,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/daily-sales', [ReportController::class, 'dailySales'])->middleware('permission:sales_log,can_view');
     Route::get('/customer-log', [ReportController::class, 'customerLog'])->middleware('permission:pos,can_view');
 
-    // Admin Reports & Inventory summary
+    // Dashboard & Reports Analytics (Accessible by dashboard or reports view permission)
+    Route::get('/reports/sales-summary', [ReportController::class, 'salesSummary'])->middleware('permission:dashboard|reports,can_view');
+    Route::get('/reports/product-performance', [ReportController::class, 'productPerformance'])->middleware('permission:dashboard|reports,can_view');
+
+    // Full Reports Module (Generation Status, Finalizing, Refund/Void Analysis)
     Route::middleware('permission:reports,can_view')->group(function () {
         Route::get('/reports/generation-status', [ReportController::class, 'generationStatus']);
         Route::post('/reports/mark-generated', [ReportController::class, 'markGenerated']);
-        Route::get('/reports/sales-summary', [ReportController::class, 'salesSummary']);
-        Route::get('/reports/product-performance', [ReportController::class, 'productPerformance']);
         Route::get('/reports/refund-void-analysis', [ReportController::class, 'refundVoidAnalysis']);
     });
     Route::get('/inventory', [ReportController::class, 'inventory'])->middleware('permission:inventory,can_view');

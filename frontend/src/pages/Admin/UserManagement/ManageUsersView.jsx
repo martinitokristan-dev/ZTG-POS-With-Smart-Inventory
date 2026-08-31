@@ -16,7 +16,11 @@ export default function ManageUsersView({
     onResendVerification,
     onDeleteStaff,
     resendingId,
+    permissions = {},
 }) {
+    const canCreate = permissions.canCreate ?? true;
+    const canEdit = permissions.canEdit ?? true;
+    const canDelete = permissions.canDelete ?? true;
     const [currentPage, setCurrentPage] = React.useState(1);
     const [perPage, setPerPage] = React.useState(10);
     const [openDropdownId, setOpenDropdownId] = useState(null);
@@ -81,14 +85,16 @@ export default function ManageUsersView({
                         />
                     </div>
 
-                    {/* Register Staff Button */}
-                    <button
-                        type="button"
-                        onClick={onAddStaff}
-                        className="btn btn-primary"
-                    >
-                        <span>Register New Staff</span>
-                    </button>
+                    {/* Register Staff Button (Guarded by canCreate) */}
+                    {canCreate && (
+                        <button
+                            type="button"
+                            onClick={onAddStaff}
+                            className="btn btn-primary"
+                        >
+                            <span>Register New Staff</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -342,23 +348,25 @@ export default function ManageUsersView({
                                                                 </button>
 
                                                                 {/* 2. Edit Staff */}
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setOpenDropdownId(null);
-                                                                        onEditStaff(u);
-                                                                    }}
-                                                                    className="actions-dropdown-item"
-                                                                >
-                                                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                                        <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                                                    </svg>
-                                                                    <span>Edit Staff</span>
-                                                                </button>
+                                                                {canEdit && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setOpenDropdownId(null);
+                                                                            onEditStaff(u);
+                                                                        }}
+                                                                        className="actions-dropdown-item"
+                                                                    >
+                                                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                                            <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                                        </svg>
+                                                                        <span>Edit Staff</span>
+                                                                    </button>
+                                                                )}
 
                                                                 {/* 4. Resend Verification */}
-                                                                {!u.email_verified_at && !isDefaultAdmin && (
+                                                                {canEdit && !u.email_verified_at && !isDefaultAdmin && (
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => {
@@ -378,7 +386,7 @@ export default function ManageUsersView({
                                                                 )}
 
                                                                 {/* 5. Activate / Deactivate */}
-                                                                {!isDefaultAdmin && (
+                                                                {canEdit && !isDefaultAdmin && (
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => {
@@ -409,7 +417,7 @@ export default function ManageUsersView({
                                                                 )}
 
                                                                 {/* 6. Delete Staff */}
-                                                                {!isDefaultAdmin && (
+                                                                {canDelete && !isDefaultAdmin && (
                                                                     <>
                                                                         <div className="actions-dropdown-divider" style={{ margin: '4px 0', borderTop: '1px solid var(--border)' }} />
                                                                         <button

@@ -6,9 +6,11 @@ import FulfillOrderModal from './modals/FulfillOrderModal';
 import CancelReservationModal from './modals/CancelReservationModal';
 import SuccessModal from './modals/SuccessModal';
 import ReservationDetailsModal from './modals/ReservationDetailsModal';
+import { useModulePermission } from '../../../shared/hooks/useModulePermission';
 
 export default function Reservations() {
     const res = useReservations();
+    const permissions = useModulePermission('reservations');
     const [activeTab, setActiveTab] = useState('deposit'); // 'deposit' or 'completed'
 
     const handleTabSwitch = (tab) => {
@@ -70,9 +72,11 @@ export default function Reservations() {
                                 </>
                             )}
                         </button>
-                        <button className="btn btn-primary" onClick={() => { res.resetAddForm(); res.setShowAddModal(true); }}>
-                            New Reservation
-                        </button>
+                        {permissions.canCreate && (
+                            <button className="btn btn-primary" onClick={() => { res.resetAddForm(); res.setShowAddModal(true); }}>
+                                New Reservation
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -150,6 +154,7 @@ export default function Reservations() {
                         onReprintDepositCR={res.handleReprintDepositCR}
                         onReprintBalanceCR={res.handleReprintBalanceCR}
                         activeTab={activeTab}
+                        permissions={permissions}
                     />
                 </div>
             </div>

@@ -13,8 +13,10 @@ export default function ReservationsTable({
     page, setPage, pagination,
     fmt, fmtDate,
     openFulfill, openCancel, openDetails, onReprintCR, onReprintDepositCR, onReprintBalanceCR,
-    activeTab = 'deposit'
+    activeTab = 'deposit',
+    permissions = {},
 }) {
+    const canEdit = permissions.canEdit ?? true;
     return (
         <>
             {/* Filters */}
@@ -354,10 +356,10 @@ export default function ReservationsTable({
                                                             </svg>
                                                         </button>
                                                     )}
-                                                    {activeTab === 'deposit' && isPending && (
+                                                    {canEdit && activeTab === 'deposit' && isPending && (
                                                         <button className="btn btn-success btn-sm" onClick={() => openFulfill(r)}>Fulfill</button>
                                                     )}
-                                                    {activeTab === 'deposit' && isPending && (
+                                                    {canEdit && activeTab === 'deposit' && isPending && (
                                                         <button className="btn btn-danger-outline btn-sm" onClick={() => openCancel(r)}>Cancel</button>
                                                     )}
                                                 </div>

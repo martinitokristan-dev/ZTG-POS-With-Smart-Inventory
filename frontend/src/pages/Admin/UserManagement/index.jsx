@@ -10,9 +10,11 @@ import UserPermissionModal from './modals/UserPermissionModal';
 import UserViewModal from './modals/UserViewModal';
 import EmployeeModal from '../Settings/modals/EmployeeModal';
 import CheckerModal from '../Settings/modals/CheckerModal';
+import { useModulePermission } from '../../../shared/hooks/useModulePermission';
 
 export default function UserManagement() {
     const um = useUserManagement();
+    const permissions = useModulePermission('user_management');
 
     return (
         <>
@@ -41,6 +43,7 @@ export default function UserManagement() {
                             onAddChecker={um.openAddChecker}
                             onEditChecker={um.openEditChecker}
                             onToggleChecker={um.handleToggleChecker}
+                            permissions={permissions}
                         />
                     </div>
                 </>
@@ -124,6 +127,7 @@ export default function UserManagement() {
                                 onDeleteRole={um.handleDeleteRole}
                                 onViewUsers={um.openViewUsersModal}
                                 onCreateRole={um.openCreateRoleModal}
+                                permissions={permissions}
                             />
                         ) : (
                             <ManageUsersView
@@ -138,6 +142,7 @@ export default function UserManagement() {
                                 onResendVerification={um.handleResendVerification}
                                 onDeleteStaff={um.handleDeleteEmployee}
                                 resendingId={um.resendingId}
+                                permissions={permissions}
                             />
                         )}
                     </div>
@@ -162,7 +167,7 @@ export default function UserManagement() {
                     onClose={() => um.setShowRoleViewModal(false)}
                     role={um.selectedRoleForView}
                     modules={um.modules}
-                    onEdit={um.openEditRoleModal}
+                    onEdit={permissions.canEdit ? um.openEditRoleModal : null}
                 />
 
                 <RoleUsersModal
@@ -171,11 +176,12 @@ export default function UserManagement() {
                     role={um.selectedRoleForUsers}
                     users={um.assignedUsers}
                     loading={um.loadingUsers}
-                    onRemoveUser={um.handleRemoveUserFromRole}
+                    onRemoveUser={permissions.canEdit ? um.handleRemoveUserFromRole : null}
                     onAddStaffForRole={(roleName) => {
                         um.setShowUsersModal(false);
                         um.openAddEmployee(roleName);
                     }}
+                    permissions={permissions}
                 />
 
                 <UserViewModal
@@ -184,7 +190,7 @@ export default function UserManagement() {
                     user={um.selectedUserForView}
                     modules={um.modules}
                     roles={um.roles}
-                    onEdit={um.openEditEmployee}
+                    onEdit={permissions.canEdit ? um.openEditEmployee : null}
                 />
 
                 {/* Staff Create / Edit Modal */}

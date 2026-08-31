@@ -12,7 +12,10 @@ export default function CheckersView({
     onAddChecker,
     onEditChecker,
     onToggleChecker,
+    permissions = {},
 }) {
+    const canCreate = permissions.canCreate ?? true;
+    const canEdit = permissions.canEdit ?? true;
     const [currentPage, setCurrentPage] = React.useState(1);
     const [perPage, setPerPage] = React.useState(10);
     const [openDropdownId, setOpenDropdownId] = useState(null);
@@ -74,14 +77,16 @@ export default function CheckersView({
                         />
                     </div>
 
-                    {/* Add Checker Button */}
-                    <button
-                        type="button"
-                        onClick={onAddChecker}
-                        className="btn btn-primary"
-                    >
-                        <span>Add Checker</span>
-                    </button>
+                    {/* Add Checker Button (Guarded by canCreate) */}
+                    {canCreate && (
+                        <button
+                            type="button"
+                            onClick={onAddChecker}
+                            className="btn btn-primary"
+                        >
+                            <span>Add Checker</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -148,120 +153,122 @@ export default function CheckersView({
 
                                             {/* Actions */}
                                             <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                                                <div className="actions-cell-wrapper actions-collapse-compact">
-                                                    {/* Inline Action Buttons (Ample Space) */}
-                                                    <div className="actions-inline-group">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => onEditChecker(checker)}
-                                                            className="action-trigger-btn"
-                                                            data-tooltip="Edit Checker"
-                                                            aria-label="Edit Checker"
-                                                        >
-                                                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                                <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                                            </svg>
-                                                        </button>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => onToggleChecker(checker)}
-                                                            className="action-trigger-btn"
-                                                            data-tooltip={checker.status === 'Active' || !checker.status ? "Deactivate Checker" : "Activate Checker"}
-                                                            aria-label={checker.status === 'Active' || !checker.status ? "Deactivate Checker" : "Activate Checker"}
-                                                            style={{ color: checker.status === 'Active' || !checker.status ? '#DC2626' : '#16A34A' }}
-                                                        >
-                                                            {checker.status === 'Active' || !checker.status ? (
-                                                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                    <circle cx="12" cy="12" r="10"></circle>
-                                                                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
-                                                                </svg>
-                                                            ) : (
-                                                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                                                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                                                                </svg>
-                                                            )}
-                                                        </button>
-                                                    </div>
-
-                                                    {/* 3-Dots Dropdown (Transformed on Zoom) */}
-                                                    <div className="actions-dropdown-group actions-dropdown-container">
-                                                        <button
-                                                            type="button"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setOpenDropdownId(openDropdownId === checker.id ? null : checker.id);
-                                                            }}
-                                                            className="action-trigger-btn"
-                                                            aria-label="More actions"
-                                                            data-tooltip="More actions"
-                                                        >
-                                                            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
-                                                                <circle cx="12" cy="5" r="2"></circle>
-                                                                <circle cx="12" cy="12" r="2"></circle>
-                                                                <circle cx="12" cy="19" r="2"></circle>
-                                                            </svg>
-                                                        </button>
-
-                                                        {openDropdownId === checker.id && (
-                                                            <div
-                                                                className="actions-dropdown-menu show"
-                                                                style={{
-                                                                    position: 'absolute',
-                                                                    right: 0,
-                                                                    ...(isBottomRow ? { bottom: 'calc(100% + 6px)', top: 'auto' } : { top: 'calc(100% + 6px)', bottom: 'auto' }),
-                                                                    zIndex: 99999,
-                                                                    minWidth: '150px',
-                                                                }}
+                                                {canEdit ? (
+                                                    <div className="actions-cell-wrapper actions-collapse-compact">
+                                                        {/* Inline Action Buttons (Ample Space) */}
+                                                        <div className="actions-inline-group">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => onEditChecker(checker)}
+                                                                className="action-trigger-btn"
+                                                                data-tooltip="Edit Checker"
+                                                                aria-label="Edit Checker"
                                                             >
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setOpenDropdownId(null);
-                                                                        onEditChecker(checker);
-                                                                    }}
-                                                                    className="actions-dropdown-item"
-                                                                >
-                                                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                                        <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                                                    </svg>
-                                                                    <span>Edit Checker</span>
-                                                                </button>
+                                                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                                </svg>
+                                                            </button>
 
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setOpenDropdownId(null);
-                                                                        onToggleChecker(checker);
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => onToggleChecker(checker)}
+                                                                className="action-trigger-btn"
+                                                                data-tooltip={checker.status === 'Active' || !checker.status ? "Deactivate Checker" : "Activate Checker"}
+                                                                aria-label={checker.status === 'Active' || !checker.status ? "Deactivate Checker" : "Activate Checker"}
+                                                                style={{ color: checker.status === 'Active' || !checker.status ? '#DC2626' : '#16A34A' }}
+                                                            >
+                                                                {checker.status === 'Active' || !checker.status ? (
+                                                                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                        <circle cx="12" cy="12" r="10"></circle>
+                                                                        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                                                    </svg>
+                                                                ) : (
+                                                                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                                                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                                                    </svg>
+                                                                )}
+                                                            </button>
+                                                        </div>
+
+                                                        {/* 3-Dots Dropdown (Transformed on Zoom) */}
+                                                        <div className="actions-dropdown-group actions-dropdown-container">
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setOpenDropdownId(openDropdownId === checker.id ? null : checker.id);
+                                                                }}
+                                                                className="action-trigger-btn"
+                                                                aria-label="More actions"
+                                                                data-tooltip="More actions"
+                                                            >
+                                                                <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+                                                                    <circle cx="12" cy="5" r="2"></circle>
+                                                                    <circle cx="12" cy="12" r="2"></circle>
+                                                                    <circle cx="12" cy="19" r="2"></circle>
+                                                                </svg>
+                                                            </button>
+
+                                                            {openDropdownId === checker.id && (
+                                                                <div
+                                                                    className="actions-dropdown-menu show"
+                                                                    style={{
+                                                                        position: 'absolute',
+                                                                        right: 0,
+                                                                        ...(isBottomRow ? { bottom: 'calc(100% + 6px)', top: 'auto' } : { top: 'calc(100% + 6px)', bottom: 'auto' }),
+                                                                        zIndex: 99999,
+                                                                        minWidth: '150px',
                                                                     }}
-                                                                    className={`actions-dropdown-item ${checker.status === 'Active' || !checker.status ? 'disable' : 'enable'}`}
-                                                                    style={{ color: checker.status === 'Active' || !checker.status ? '#DC2626' : '#16A34A' }}
                                                                 >
-                                                                    {checker.status === 'Active' || !checker.status ? (
-                                                                        <>
-                                                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                                <circle cx="12" cy="12" r="10"></circle>
-                                                                                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
-                                                                            </svg>
-                                                                            <span>Deactivate</span>
-                                                                        </>
-                                                                    ) : (
-                                                                        <>
-                                                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                                                                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                                                                            </svg>
-                                                                            <span>Activate</span>
-                                                                        </>
-                                                                    )}
-                                                                </button>
-                                                            </div>
-                                                        )}
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setOpenDropdownId(null);
+                                                                            onEditChecker(checker);
+                                                                        }}
+                                                                        className="actions-dropdown-item"
+                                                                    >
+                                                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                                            <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                                        </svg>
+                                                                        <span>Edit Checker</span>
+                                                                    </button>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setOpenDropdownId(null);
+                                                                            onToggleChecker(checker);
+                                                                        }}
+                                                                        className={`actions-dropdown-item ${checker.status === 'Active' || !checker.status ? 'disable' : 'enable'}`}
+                                                                        style={{ color: checker.status === 'Active' || !checker.status ? '#DC2626' : '#16A34A' }}
+                                                                    >
+                                                                        {checker.status === 'Active' || !checker.status ? (
+                                                                            <>
+                                                                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                                    <circle cx="12" cy="12" r="10"></circle>
+                                                                                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                                                                </svg>
+                                                                                <span>Deactivate</span>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                                                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                                                                </svg>
+                                                                                <span>Activate</span>
+                                                                            </>
+                                                                        )}
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                ) : null}
                                             </td>
                                         </tr>
                                     );

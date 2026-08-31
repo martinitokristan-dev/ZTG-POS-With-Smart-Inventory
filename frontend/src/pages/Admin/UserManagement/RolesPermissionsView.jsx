@@ -13,7 +13,11 @@ export default function RolesPermissionsView({
     onDeleteRole,
     onViewUsers,
     onCreateRole,
+    permissions = {},
 }) {
+    const canCreate = permissions.canCreate ?? true;
+    const canEdit = permissions.canEdit ?? true;
+    const canDelete = permissions.canDelete ?? true;
     const [searchQuery, setSearchQuery] = React.useState('');
     const [currentPage, setCurrentPage] = React.useState(1);
     const [perPage, setPerPage] = React.useState(10);
@@ -76,14 +80,16 @@ export default function RolesPermissionsView({
                         />
                     </div>
 
-                    {/* Create Role Button */}
-                    <button
-                        type="button"
-                        onClick={onCreateRole}
-                        className="btn btn-primary"
-                    >
-                        <span>Create New Role</span>
-                    </button>
+                    {/* Create Role Button (Guarded by canCreate) */}
+                    {canCreate && (
+                        <button
+                            type="button"
+                            onClick={onCreateRole}
+                            className="btn btn-primary"
+                        >
+                            <span>Create New Role</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -339,7 +345,7 @@ export default function RolesPermissionsView({
                                                                     <span>Assigned Staff ({role.users_count || 0})</span>
                                                                 </button>
 
-                                                                {!isSuperAdmin && (
+                                                                {canEdit && !isSuperAdmin && (
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => {
@@ -356,7 +362,7 @@ export default function RolesPermissionsView({
                                                                     </button>
                                                                 )}
 
-                                                                {!role.is_system && (
+                                                                {canDelete && !role.is_system && (
                                                                     <>
                                                                         <div className="actions-dropdown-divider" style={{ margin: '4px 0', borderTop: '1px solid var(--border)' }} />
                                                                         <button
