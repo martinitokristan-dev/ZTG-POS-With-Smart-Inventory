@@ -334,7 +334,7 @@ Create an Entity Relationship Diagram for a POS and Inventory Management System 
 TABLES:
 - users (id PK, username UNIQUE, password, pin, role, status, remember_token, timestamps)
 - user_profiles (id PK, user_id FK->users UNIQUE ON DELETE CASCADE, full_name, phone_number, email UNIQUE, profile_photo, timestamps)
-- staff_verification_tokens (id PK, user_id FK->users ON DELETE CASCADE, token UNIQUE, encrypted_password TEXT, expires_at TIMESTAMP, viewed_at TIMESTAMP, backup_sent_at TIMESTAMP, timestamps)
+- staff_verification_tokens (id PK, user_id FK->users ON DELETE CASCADE, token UNIQUE, expires_at TIMESTAMP, timestamps)
 - activity_logs (id PK, user_id FK->users NULLABLE, action VARCHAR(60), module VARCHAR(40), description TEXT, ip_address VARCHAR(45), user_agent TEXT, device VARCHAR(100), status VARCHAR(30), severity VARCHAR(20), metadata JSON, timestamps)
 - personal_access_tokens (id PK, tokenable_type, tokenable_id, name, token UNIQUE, abilities, last_used_at, expires_at, timestamps)
 - password_reset_tokens (email PK, token, created_at)
