@@ -241,8 +241,10 @@ class UserManagementTest extends TestCase
         $this->assertFalse($this->techOps->hasPermission('pos', 'can_view'));
         $this->assertFalse($this->techOps->hasPermission('products', 'can_view'));
 
-        // Admin does not have system_status access (exclusive for Technical Operations)
+        // Admin does not have system_status access (exclusive for Technical Operations) or POS access (exclusive for Cashier)
         $this->assertFalse($this->admin->hasPermission('system_status', 'can_view'));
+        $this->assertFalse($this->admin->hasPermission('pos', 'can_view'));
+        $this->assertTrue($this->cashier->hasPermission('pos', 'can_view'));
 
         // Can access diagnostics endpoint as TechOps
         $response = $this->actingAs($this->techOps)->getJson('/api/system-health/diagnostics');
@@ -267,9 +269,13 @@ class UserManagementTest extends TestCase
         $actResponse = $this->actingAs($this->cashier)->getJson('/api/activity-logs');
         $actResponse->assertStatus(403);
 
-        // 4. Cashier cannot access Daily Sales Log because Cashier role lacks sales_log permission (403 Forbidden)
+        // 4. Cashier CAN access Daily Sales Log because Cashier role has sales_log permission (200 OK)
         $salesLogResponse = $this->actingAs($this->cashier)->getJson('/api/daily-sales');
-        $salesLogResponse->assertStatus(403);
+        $salesLogResponse->assertStatus(200);
+
+        // 4b. Cashier cannot update store settings (403 Forbidden)
+        $settingsResponse = $this->actingAs($this->cashier)->putJson('/api/settings', ['business_name' => 'Hacked']);
+        $settingsResponse->assertStatus(403);
 
         // 5. Technical Operations cannot access Roles API (403 Forbidden)
         $techRolesResponse = $this->actingAs($this->techOps)->getJson('/api/roles');
@@ -336,13 +342,27 @@ class UserManagementTest extends TestCase
     public function test_default_admin_cannot_be_reassigned_or_removed_from_admin_role(): void
     {
         $cashierRole = Role::where('name', 'Cashier')->firstOrFail();
+        $adminRole   = Role::where('name', 'Admin')->firstOrFail();
+        $techOpsRole = Role::where('name', 'Technical Operations')->firstOrFail();
 
+        // 1. Cannot reassign default admin
         $response = $this->actingAs($this->admin)->postJson("/api/roles/{$cashierRole->id}/assign-user", [
             'user_id' => $this->admin->id,
         ]);
-
         $response->assertStatus(422);
         $this->assertEquals('Admin', $this->admin->fresh()->role);
+
+        // 2. Cannot remove default admin
+        $removeAdminResponse = $this->actingAs($this->admin)->postJson("/api/roles/{$adminRole->id}/remove-user", [
+            'user_id' => $this->admin->id,
+        ]);
+        $removeAdminResponse->assertStatus(422);
+
+        // 3. Cannot remove default techops
+        $removeTechResponse = $this->actingAs($this->admin)->postJson("/api/roles/{$techOpsRole->id}/remove-user", [
+            'user_id' => $this->techOps->id,
+        ]);
+        $removeTechResponse->assertStatus(422);
     }
 
     public function test_admin_can_register_staff_with_any_dynamic_custom_role(): void

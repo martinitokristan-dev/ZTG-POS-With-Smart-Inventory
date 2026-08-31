@@ -260,10 +260,10 @@ class User extends Authenticatable
         $roleName = is_object($this->role) ? $this->role->value : (string) $this->role;
         $isAdmin = (strcasecmp($roleName, 'Admin') === 0 || strcasecmp($roleName, 'Administrator') === 0);
 
-        // System Administrator has permanent full access across all business modules.
-        // system_status is exclusively reserved for Technical Operations.
+        // System Administrator has permanent access across all management modules.
+        // system_status is reserved for Technical Operations, and pos is reserved for Cashier.
         if ($isAdmin) {
-            if ($module === 'system_status') {
+            if ($module === 'system_status' || $module === 'pos') {
                 return false;
             }
             return true;
@@ -286,7 +286,7 @@ class User extends Authenticatable
         if (! $role) {
             // Fallback default permissions for unseeded test environments
             if ($isAdmin) {
-                return $module !== 'system_status';
+                return $module !== 'system_status' && $module !== 'pos';
             }
             if (strcasecmp($roleName, 'Cashier') === 0) {
                 return in_array($module, ['pos', 'reservations', 'sales_log']);
@@ -335,10 +335,10 @@ class User extends Authenticatable
 
         $effective = [];
 
-        // System Administrator always gets permanent full access across all business modules
+        // System Administrator gets access across management modules (excluding system_status and pos)
         if ($isAdmin) {
             foreach ($modules as $mod) {
-                $hasAccess = ($mod !== 'system_status');
+                $hasAccess = ($mod !== 'system_status' && $mod !== 'pos');
                 $effective[$mod] = [
                     'has_access' => $hasAccess,
                     'can_view'   => $hasAccess,

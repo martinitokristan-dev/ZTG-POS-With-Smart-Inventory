@@ -18,8 +18,8 @@ export default function RoleUsersModal({
     if (!isOpen || !role) return null;
 
     const handleRemove = async (user) => {
-        if (user.username === 'admin') {
-            setRemoveError('The default system administrator cannot be removed from the Admin role.');
+        if (user.username === 'admin' || user.username === 'techops' || role.name === 'Technical Operations') {
+            setRemoveError('System administrator and Technical Operations accounts are protected and cannot be removed.');
             return;
         }
 
@@ -206,7 +206,7 @@ export default function RoleUsersModal({
                     ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
                             {users.map((u) => {
-                                const isDefaultAdmin = u.username === 'admin';
+                                const isProtectedUser = u.username === 'admin' || u.username === 'techops' || role.name === 'Technical Operations';
                                 const isWorking = actionLoadingId === u.id;
                                 return (
                                     <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card, #FFFFFF)', gap: '12px', flexWrap: 'wrap' }}>
@@ -226,8 +226,8 @@ export default function RoleUsersModal({
                                             <span style={{ fontSize: '11.5px', fontWeight: '600', padding: '3px 8px', borderRadius: '6px', backgroundColor: u.status === 'Active' ? '#DCFCE7' : '#F1F5F9', color: u.status === 'Active' ? '#166534' : '#64748B', border: u.status === 'Active' ? '1px solid #BBF7D0' : '1px solid var(--border)' }}>
                                                 {u.status || 'Active'}
                                             </span>
-                                            {isDefaultAdmin ? (
-                                                <span title="System administrator — cannot be removed" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: 'var(--text-muted)', padding: '5px 10px', borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)' }}>
+                                            {isProtectedUser ? (
+                                                <span title="System account — protected" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: 'var(--text-muted)', padding: '5px 10px', borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)' }}>
                                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
                                                     </svg>

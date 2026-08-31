@@ -323,25 +323,76 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
         }
     ];
 
+    // Cashier Navigation (Dedicated Cashier Daily Sales & Customer Log UI)
+    const cashierNavSections = [
+        {
+            title: 'Cashier',
+            items: [
+                { path: '/pos', label: 'Point of Sale (POS)', icon: (
+                    <svg style={{ width: 18, height: 18, stroke: 'currentColor', fill: 'none', strokeWidth: 2, flexShrink: 0 }} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                )},
+                { path: '/reservations', label: 'Order Based', icon: (
+                    <svg style={{ width: 18, height: 18, stroke: 'currentColor', fill: 'none', strokeWidth: 2, flexShrink: 0 }} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                )},
+            ]
+        },
+        {
+            title: 'Records',
+            items: [
+                { path: '/daily-sales', label: 'Sales Log', icon: (
+                    <svg style={{ width: 18, height: 18, stroke: 'currentColor', fill: 'none', strokeWidth: 2, flexShrink: 0 }} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                )},
+                { path: '/customer-log', label: 'Customer Log', icon: (
+                    <svg style={{ width: 18, height: 18, stroke: 'currentColor', fill: 'none', strokeWidth: 2, flexShrink: 0 }} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                )},
+            ]
+        },
+        {
+            title: 'Account',
+            items: [
+                { path: '/settings', label: 'My Account', icon: (
+                    <svg style={{ width: 18, height: 18, stroke: 'currentColor', fill: 'none', strokeWidth: 2, flexShrink: 0 }} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                )},
+            ]
+        }
+    ];
+
     const userPerms = user?.permissions || {};
     const isAdminUser = role === 'Admin' || role === 'Administrator';
+    const isCashierUser = role === 'Cashier';
     const isTechOpsUser = role === 'Technical Operations' || (typeof role === 'string' && role.toLowerCase().includes('tech'));
 
-    // Filter items dynamically based on active user permissions
-    const navSections = masterNavSections.map(sec => ({
-        ...sec,
-        items: sec.items.filter(item => {
-            // System Status is exclusively for Technical Operations or users with explicit system_status permission
-            if (item.moduleKey === 'system_status') {
-                return Boolean(isTechOpsUser || userPerms.system_status?.has_access);
-            }
-            if (isAdminUser) return true;
-            if (!item.moduleKey) return true;
-            if (item.moduleKey === 'settings') return true; // My Account / Settings is accessible to all authenticated users
-            const p = userPerms[item.moduleKey];
-            return Boolean(p && p.has_access);
-        })
-    })).filter(sec => sec.items.length > 0);
+    // Select navigation sections: dedicated UI for Cashier, filtered dynamic navigation for Admin and custom roles
+    const navSections = isCashierUser 
+        ? cashierNavSections 
+        : masterNavSections.map(sec => ({
+            ...sec,
+            items: sec.items.filter(item => {
+                // System Status is exclusively for Technical Operations or users with explicit system_status permission
+                if (item.moduleKey === 'system_status') {
+                    return Boolean(isTechOpsUser || userPerms.system_status?.has_access);
+                }
+                // Point of Sale (POS) is strictly for Cashier or roles with explicit pos access (excluded from Admin)
+                if (item.moduleKey === 'pos') {
+                    return !isAdminUser && Boolean(userPerms.pos?.has_access ?? isCashierUser);
+                }
+                if (isAdminUser) return true;
+                if (!item.moduleKey) return true;
+                if (item.moduleKey === 'settings') return true; // My Account / Settings is accessible to all authenticated users
+                const p = userPerms[item.moduleKey];
+                return Boolean(p && p.has_access);
+            })
+        })).filter(sec => sec.items.length > 0);
 
     return (
         <>

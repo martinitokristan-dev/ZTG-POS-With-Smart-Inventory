@@ -121,10 +121,12 @@ export default function RoleViewModal({
                             const isTechRole = role.name === 'Technical Operations' || (typeof role.name === 'string' && role.name.toLowerCase().includes('tech'));
                             const isAdminRole = role.name === 'Admin' || role.name === 'Administrator';
 
-                            // system_status is exclusively reserved for Technical Operations
+                            // system_status is exclusively reserved for Technical Operations, pos is exclusively for Cashier
                             let hasAccess = false;
                             if (modKey === 'system_status') {
                                 hasAccess = isTechRole || (!isAdminRole && Boolean(perm?.has_access));
+                            } else if (modKey === 'pos') {
+                                hasAccess = !isAdminRole && (role.name === 'Cashier' || Boolean(perm?.has_access));
                             } else if (isAdminRole) {
                                 hasAccess = true;
                             } else {
@@ -132,14 +134,14 @@ export default function RoleViewModal({
                             }
 
                             const isFullAccess =
-                                (isAdminRole && modKey !== 'system_status') ||
+                                (isAdminRole && modKey !== 'system_status' && modKey !== 'pos') ||
                                 (isTechRole && modKey === 'system_status') ||
                                 (role.name === 'Cashier' && ['pos', 'reservations', 'sales_log'].includes(modKey)) ||
                                 (perm && perm.can_view && perm.can_create && perm.can_edit && perm.can_delete);
 
                             const actions = [];
                             if (hasAccess) {
-                                if (isAdminRole && modKey !== 'system_status') {
+                                if (isAdminRole && modKey !== 'system_status' && modKey !== 'pos') {
                                     actions.push('Full Access');
                                 } else if (isTechRole && modKey === 'system_status') {
                                     actions.push('Full Access');
@@ -176,11 +178,15 @@ export default function RoleViewModal({
                                                 {actions.join(' • ')}
                                             </div>
                                         ) : (
-                                            modKey === 'system_status' && !hasAccess && (
+                                            modKey === 'system_status' && !hasAccess ? (
                                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                                                     Exclusive to Tech Ops
                                                 </div>
-                                            )
+                                            ) : modKey === 'pos' && !hasAccess ? (
+                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                    Exclusive to Cashier
+                                                </div>
+                                            ) : null
                                         )}
                                     </div>
 

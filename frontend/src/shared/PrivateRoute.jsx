@@ -70,6 +70,16 @@ function PrivateRoute({ children, allowedRoles, requiredModule, action = 'can_vi
         return children ?? <Outlet />;
     }
 
+    // 2. Special Guard: pos is strictly for Cashier / staff with explicit pos access (Admin blocked)
+    if (requiredModule === 'pos') {
+        const hasPosAccess = !isAdmin && Boolean(user.role === 'Cashier' || user.permissions?.pos?.has_access);
+        if (!hasPosAccess) {
+            console.warn(`[Access Denied 403] User '${user.username}' (${user.role}) is not authorized for Cashier [pos].`);
+            return <Navigate to="/unauthorized" replace />;
+        }
+        return children ?? <Outlet />;
+    }
+
     // 2. Role allowlist check (Non-Admin users with granular module permission are granted access)
     if (allowedRoles && allowedRoles.length > 0 && !isAdmin) {
         const normRole = (user.role || '').toLowerCase();

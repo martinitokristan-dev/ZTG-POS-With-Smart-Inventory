@@ -54,7 +54,7 @@ return new class extends Migration
         );
 
         foreach (array_keys(self::MODULES) as $module) {
-            $hasAccess = ($module !== 'system_status');
+            $hasAccess = ($module !== 'system_status' && $module !== 'pos');
             RolePermission::updateOrCreate(
                 ['role_id' => $adminRole->id, 'module' => $module],
                 [
@@ -79,6 +79,7 @@ return new class extends Migration
         $cashierAccess = [
             'pos'          => ['has_access' => true, 'can_view' => true, 'can_create' => true, 'can_edit' => true, 'can_delete' => false],
             'reservations' => ['has_access' => true, 'can_view' => true, 'can_create' => true, 'can_edit' => true, 'can_delete' => false],
+            'sales_log'    => ['has_access' => true, 'can_view' => true, 'can_create' => true, 'can_edit' => false, 'can_delete' => false],
         ];
 
         foreach (array_keys(self::MODULES) as $module) {

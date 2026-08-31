@@ -191,9 +191,9 @@ class RoleService
     {
         $user = User::findOrFail($userId);
 
-        if ($user->username === 'admin') {
+        if ($user->username === 'admin' || $user->username === 'techops') {
             throw ValidationException::withMessages([
-                'user' => 'The default system administrator cannot be removed from the Admin role.',
+                'user' => "The default {$user->username} account is protected and cannot be removed from its role.",
             ]);
         }
 
