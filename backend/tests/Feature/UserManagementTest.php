@@ -289,7 +289,11 @@ class UserManagementTest extends TestCase
         $cashierPosResponse = $this->actingAs($this->cashier)->getJson('/api/pos/products');
         $cashierPosResponse->assertStatus(200);
 
-        // 8. Admin has full access (200 OK)
+        // 7b. Admin is BLOCKED from POS terminal checkout because Admin has no pos permission (403 Forbidden)
+        $adminPosResponse = $this->actingAs($this->admin)->postJson('/api/pos/checkout', []);
+        $adminPosResponse->assertStatus(403);
+
+        // 8. Admin has access to management modules (200 OK)
         $adminRolesResponse = $this->actingAs($this->admin)->getJson('/api/roles');
         $adminRolesResponse->assertStatus(200);
 

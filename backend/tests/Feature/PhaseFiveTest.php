@@ -182,11 +182,11 @@ class PhaseFiveTest extends TestCase
 
     /* ─── Refund Tests ────────────────────────────────────── */
 
-    public function test_cashier_can_refund_selected_items_with_stock_restoration()
+    public function test_admin_can_refund_selected_items_with_stock_restoration()
     {
         $item = $this->completedTx->items->first();
 
-        $response = $this->actingAs($this->cashier)
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/transactions/{$this->completedTx->id}/refund", [
                 'items'         => [['item_id' => $item->id, 'qty' => 2]],
                 'reason'        => 'Item Damaged / Defective',
@@ -215,7 +215,7 @@ class PhaseFiveTest extends TestCase
     {
         $item = $this->completedTx->items->first();
 
-        $response = $this->actingAs($this->cashier)
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/transactions/{$this->completedTx->id}/refund", [
                 'items'         => [['item_id' => $item->id, 'qty' => 1]],
                 'reason'        => 'Item Damaged / Defective',
@@ -233,7 +233,7 @@ class PhaseFiveTest extends TestCase
     {
         $item = $this->completedTx->items->first();
 
-        $response = $this->actingAs($this->cashier)
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/transactions/{$this->completedTx->id}/refund", [
                 'items'         => [['item_id' => $item->id, 'qty' => 1]],
                 'reason'        => 'Customer Changed Mind',
@@ -256,7 +256,7 @@ class PhaseFiveTest extends TestCase
         $this->completedTx->update(['status' => 'Void']);
         $item = $this->completedTx->items->first();
 
-        $response = $this->actingAs($this->cashier)
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/transactions/{$this->completedTx->id}/refund", [
                 'items'         => [['item_id' => $item->id, 'qty' => 1]],
                 'reason'        => 'Other',
@@ -272,11 +272,11 @@ class PhaseFiveTest extends TestCase
 
     /* ─── Return Tests ────────────────────────────────────── */
 
-    public function test_cashier_can_process_a_return()
+    public function test_admin_can_process_a_return()
     {
         $item = $this->completedTx->items->first();
 
-        $response = $this->actingAs($this->cashier)
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/transactions/{$this->completedTx->id}/return", [
                 'items'         => [['item_id' => $item->id, 'qty' => 1]],
                 'reason'        => 'Wrong Item Given',
@@ -295,9 +295,9 @@ class PhaseFiveTest extends TestCase
 
     /* ─── Void Tests ──────────────────────────────────────── */
 
-    public function test_cashier_can_void_transaction_with_stock_restoration()
+    public function test_admin_can_void_transaction_with_stock_restoration()
     {
-        $response = $this->actingAs($this->cashier)
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/transactions/{$this->completedTx->id}/void", [
                 'void_reason'   => 'Wrong Transaction / Input Error',
                 'admin_id'      => $this->admin->id,
@@ -317,7 +317,7 @@ class PhaseFiveTest extends TestCase
 
     public function test_void_without_stock_restoration_leaves_stock_unchanged()
     {
-        $response = $this->actingAs($this->cashier)
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/transactions/{$this->completedTx->id}/void", [
                 'void_reason'   => 'Duplicate Entry',
                 'admin_id'      => $this->admin->id,
@@ -334,7 +334,7 @@ class PhaseFiveTest extends TestCase
 
     public function test_void_fails_with_wrong_admin_pin_and_logs_alert()
     {
-        $response = $this->actingAs($this->cashier)
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/transactions/{$this->completedTx->id}/void", [
                 'void_reason'   => 'Customer Cancelled Before Release',
                 'admin_id'      => $this->admin->id,
@@ -355,7 +355,7 @@ class PhaseFiveTest extends TestCase
     {
         $this->completedTx->update(['status' => 'Void']);
 
-        $response = $this->actingAs($this->cashier)
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/transactions/{$this->completedTx->id}/void", [
                 'void_reason'   => 'Duplicate Entry',
                 'admin_id'      => $this->admin->id,
@@ -379,7 +379,7 @@ class PhaseFiveTest extends TestCase
             'si_no'          => 'SI-2026-VOID1',
             'date'           => now(),
             'customer_id'    => $this->customer->id,
-            'cashier_id'     => $this->cashier->id,
+            'cashier_id'     => $this->admin->id,
             'total_qty'      => 1,
             'amount'         => 100.00,
             'amount_tendered'=> 100.00,
@@ -389,7 +389,7 @@ class PhaseFiveTest extends TestCase
         ]);
 
         // Attempt second void — should be blocked by daily limit
-        $response = $this->actingAs($this->cashier)
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/transactions/{$this->completedTx->id}/void", [
                 'void_reason'   => 'Duplicate Entry',
                 'admin_id'      => $this->admin->id,
@@ -403,7 +403,7 @@ class PhaseFiveTest extends TestCase
 
     /* ─── Pay Pending Order Tests ──────────────────────────── */
 
-    public function test_cashier_can_pay_pending_transaction_with_cheque()
+    public function test_admin_can_pay_pending_transaction_with_cheque()
     {
         $pendingTx = Transaction::create([
             'si_no'           => 'SI-2026-PENDING1',
@@ -418,7 +418,7 @@ class PhaseFiveTest extends TestCase
             'type'            => TransactionType::SALE->value,
         ]);
 
-        $response = $this->actingAs($this->cashier)
+        $response = $this->actingAs($this->admin)
             ->postJson("/api/transactions/{$pendingTx->id}/pay", [
                 'admin_id'        => $this->admin->id,
                 'admin_pin'       => '1234',
@@ -432,5 +432,32 @@ class PhaseFiveTest extends TestCase
             ->assertJsonPath('transaction.status', 'Completed')
             ->assertJsonPath('transaction.cheque_number', 'CHK-987654')
             ->assertJsonPath('transaction.payment_method', 'Cheque');
+    }
+
+    public function test_cashier_cannot_refund_return_void_or_pay_transaction()
+    {
+        // Cashier attempting refund -> 403
+        $this->actingAs($this->cashier)
+            ->postJson("/api/transactions/{$this->completedTx->id}/refund", [
+                'items' => [['item_id' => 1, 'qty' => 1]],
+            ])->assertStatus(403);
+
+        // Cashier attempting return -> 403
+        $this->actingAs($this->cashier)
+            ->postJson("/api/transactions/{$this->completedTx->id}/return", [
+                'items' => [['item_id' => 1, 'qty' => 1]],
+            ])->assertStatus(403);
+
+        // Cashier attempting void -> 403
+        $this->actingAs($this->cashier)
+            ->postJson("/api/transactions/{$this->completedTx->id}/void", [
+                'void_reason' => 'Test',
+            ])->assertStatus(403);
+
+        // Cashier attempting pay pending -> 403
+        $this->actingAs($this->cashier)
+            ->postJson("/api/transactions/{$this->completedTx->id}/pay", [
+                'payment_method' => 'Cash',
+            ])->assertStatus(403);
     }
 }

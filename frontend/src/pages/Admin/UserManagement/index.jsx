@@ -10,6 +10,7 @@ import UserPermissionModal from './modals/UserPermissionModal';
 import UserViewModal from './modals/UserViewModal';
 import EmployeeModal from '../Settings/modals/EmployeeModal';
 import CheckerModal from '../Settings/modals/CheckerModal';
+import ConfirmModal from '../../../shared/components/ConfirmModal';
 import { useModulePermission } from '../../../shared/hooks/useModulePermission';
 
 export default function UserManagement() {
@@ -214,6 +215,40 @@ export default function UserManagement() {
                     checkerForm={um.checkerForm}
                     setCheckerForm={um.setCheckerForm}
                     onSubmit={um.handleCheckerSubmit}
+                />
+
+                {/* Delete Role Confirmation Dialog */}
+                <ConfirmModal
+                    isOpen={Boolean(um.roleToDelete)}
+                    onClose={() => !um.deletingRoleId && um.setRoleToDelete(null)}
+                    onConfirm={um.confirmDeleteRole}
+                    title="Delete Role"
+                    message={
+                        <span>
+                            Are you sure you want to delete the role <strong>"{um.roleToDelete?.name}"</strong>? This action cannot be undone.
+                        </span>
+                    }
+                    confirmText="Delete Role"
+                    cancelText="Cancel"
+                    variant="danger"
+                    loading={Boolean(um.deletingRoleId)}
+                />
+
+                {/* Delete Staff Account Confirmation Dialog */}
+                <ConfirmModal
+                    isOpen={Boolean(um.employeeToDelete)}
+                    onClose={() => !um.deletingEmployeeId && um.setEmployeeToDelete(null)}
+                    onConfirm={um.confirmDeleteEmployee}
+                    title="Delete Staff Account"
+                    message={
+                        <span>
+                            Are you sure you want to permanently delete the account for <strong>"{um.employeeToDelete?.full_name || um.employeeToDelete?.username}"</strong> (@{um.employeeToDelete?.username})?
+                        </span>
+                    }
+                    confirmText="Delete Account"
+                    cancelText="Cancel"
+                    variant="danger"
+                    loading={Boolean(um.deletingEmployeeId)}
                 />
         </>
     );

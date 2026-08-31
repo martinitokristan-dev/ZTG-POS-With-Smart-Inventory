@@ -139,19 +139,22 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/activity-logs/users/{user_id}/force-logout', [ActivityLogController::class, 'forceLogoutUser'])->middleware('permission:history_logs,can_delete');
     });
 
+    // Checkers list (used by POS checkout, User Management checkers, and Settings)
+    Route::get('/checkers', [CheckerController::class, 'index'])->middleware('permission:pos|user_management|settings,can_view');
+
     // POS routes: guarded by pos permission
     Route::middleware('permission:pos,can_view')->group(function () {
-        Route::get('/checkers', [CheckerController::class, 'index']);
         Route::get('/pos/products', [PosController::class, 'products']);
         Route::post('/pos/checkout', [PosController::class, 'checkout'])->middleware('permission:pos,can_create');
     });
 
     // Transaction / History Log routes
-    // Read: all authenticated roles; Write (refund/void/pay): guarded by sales_log or pos permission
+    // Read: all authenticated roles; Write (refund/void/return/pay): strictly guarded by history_logs or sales_log permission (Admin / Supervisor)
+    // Cashier is checkout only (POS) and cannot refund, return, void, or pay
     Route::get('/transactions', [TransactionController::class, 'index']);
     Route::get('/transactions/{transaction}', [TransactionController::class, 'show']);
     Route::post('/transactions/verify-pin', [TransactionController::class, 'verifyPin']);
-    Route::middleware('permission:sales_log,can_edit')->group(function () {
+    Route::middleware('permission:history_logs|sales_log,can_edit')->group(function () {
         Route::post('/transactions/{transaction}/refund', [TransactionController::class, 'refund']);
         Route::post('/transactions/{transaction}/return', [TransactionController::class, 'return']);
         Route::post('/transactions/{transaction}/void', [TransactionController::class, 'void']);
@@ -176,7 +179,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Logs: guarded by specific module permissions
     Route::get('/daily-sales', [ReportController::class, 'dailySales'])->middleware('permission:sales_log,can_view');
-    Route::get('/customer-log', [ReportController::class, 'customerLog'])->middleware('permission:pos,can_view');
+    Route::get('/customer-log', [ReportController::class, 'customerLog'])->middleware('permission:pos|sales_log|reports,can_view');
 
     // Dashboard & Reports Analytics (Accessible by dashboard or reports view permission)
     Route::get('/reports/sales-summary', [ReportController::class, 'salesSummary'])->middleware('permission:dashboard|reports,can_view');

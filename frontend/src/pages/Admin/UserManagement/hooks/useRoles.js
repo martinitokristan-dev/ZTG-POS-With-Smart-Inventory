@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import api from '../../../../shared/api';
 import { showToast } from '../../../../utils/toast';
 
@@ -155,8 +155,10 @@ export function useRoles() {
         }
     };
 
-    const handleDeleteRole = async (role) => {
-        if (role.is_system) {
+    const [roleToDelete, setRoleToDelete] = useState(null);
+
+    const requestDeleteRole = (role) => {
+        if (role.is_system || ['admin', 'cashier', 'technical operations', 'tech operations'].includes(role.name?.toLowerCase())) {
             showToast('System roles cannot be deleted.', 'error');
             return;
         }
@@ -166,15 +168,17 @@ export function useRoles() {
             return;
         }
 
-        if (!window.confirm(`Are you sure you want to delete the role "${role.name}"? This action cannot be undone.`)) {
-            return;
-        }
+        setRoleToDelete(role);
+    };
 
-        setDeletingRoleId(role.id);
+    const confirmDeleteRole = async () => {
+        if (!roleToDelete) return;
+        setDeletingRoleId(roleToDelete.id);
         try {
-            await api.delete(`/roles/${role.id}`);
+            await api.delete(`/roles/${roleToDelete.id}`);
             fetchRoles();
-            showToast(`Role "${role.name}" deleted successfully.`, 'success');
+            showToast(`Role "${roleToDelete.name}" deleted successfully.`, 'success');
+            setRoleToDelete(null);
         } catch (err) {
             console.error('Failed to delete role:', err);
             showToast(err.response?.data?.message || 'Failed to delete role.', 'error');
@@ -182,6 +186,8 @@ export function useRoles() {
             setDeletingRoleId(null);
         }
     };
+
+    const handleDeleteRole = requestDeleteRole;
 
     const openViewUsersModal = async (role) => {
         setSelectedRoleForUsers(role);
@@ -270,6 +276,9 @@ export function useRoles() {
         openEditRoleModal,
         handleSaveRole,
         handleDeleteRole,
+        roleToDelete,
+        setRoleToDelete,
+        confirmDeleteRole,
         deletingRoleId,
         showUsersModal,
         setShowUsersModal,

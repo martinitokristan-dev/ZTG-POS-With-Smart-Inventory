@@ -241,7 +241,7 @@ class PhaseTwoTest extends TestCase
             ->getJson('/api/employees');
 
         $response->assertStatus(200)
-            ->assertJsonCount(2); // admin + cashier
+            ->assertJsonCount(\App\Models\User::count()); // admin + cashier + techops
     }
 
     public function test_admin_can_create_employee()

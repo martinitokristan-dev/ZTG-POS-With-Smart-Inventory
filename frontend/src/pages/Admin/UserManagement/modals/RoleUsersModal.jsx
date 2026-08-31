@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ConfirmModal from '../../../../shared/components/ConfirmModal';
 
 /**
  * RoleUsersModal — View staff assigned to a role and manage membership.
@@ -14,25 +15,28 @@ export default function RoleUsersModal({
 }) {
     const [actionLoadingId, setActionLoadingId] = useState(null);
     const [removeError, setRemoveError] = useState('');
+    const [userToRemove, setUserToRemove] = useState(null);
 
     if (!isOpen || !role) return null;
 
-    const handleRemove = async (user) => {
+    const handleRequestRemove = (user) => {
         if (user.username === 'admin' || user.username === 'techops' || role.name === 'Technical Operations') {
             setRemoveError('System administrator and Technical Operations accounts are protected and cannot be removed.');
             return;
         }
-
-        if (!window.confirm(`Remove @${user.username} from the "${role.name}" role? They will become unassigned until re-assigned from Manage Users.`)) {
-            return;
-        }
-
         setRemoveError('');
-        setActionLoadingId(user.id);
+        setUserToRemove(user);
+    };
+
+    const handleConfirmRemove = async () => {
+        if (!userToRemove) return;
+        setRemoveError('');
+        setActionLoadingId(userToRemove.id);
         try {
             if (onRemoveUser) {
-                await onRemoveUser(role.id, user.id, '');
+                await onRemoveUser(role.id, userToRemove.id, '');
             }
+            setUserToRemove(null);
         } catch (err) {
             setRemoveError(err.response?.data?.message || 'Failed to remove staff member.');
         } finally {
@@ -234,7 +238,7 @@ export default function RoleUsersModal({
                                                     Protected
                                                 </span>
                                             ) : onRemoveUser ? (
-                                                <button type="button" disabled={isWorking} onClick={() => handleRemove(u)} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '600', borderRadius: '6px', border: '1px solid #FEE2E2', backgroundColor: '#FEF2F2', color: '#DC2626', cursor: isWorking ? 'wait' : 'pointer', transition: 'all 0.15s ease', whiteSpace: 'nowrap' }}>
+                                                <button type="button" disabled={isWorking} onClick={() => handleRequestRemove(u)} style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '600', borderRadius: '6px', border: '1px solid #FEE2E2', backgroundColor: '#FEF2F2', color: '#DC2626', cursor: isWorking ? 'wait' : 'pointer', transition: 'all 0.15s ease', whiteSpace: 'nowrap' }}>
                                                     {isWorking ? 'Removing...' : 'Remove from Role'}
                                                 </button>
                                             ) : null}
@@ -276,6 +280,23 @@ export default function RoleUsersModal({
                     </div>
                 )}
             </div>
+
+            {/* Modern In-App Confirmation Modal */}
+            <ConfirmModal
+                isOpen={Boolean(userToRemove)}
+                onClose={() => !actionLoadingId && setUserToRemove(null)}
+                onConfirm={handleConfirmRemove}
+                title="Remove Staff from Role"
+                message={
+                    <span>
+                        Remove <strong>@{userToRemove?.username}</strong> ({userToRemove?.full_name || userToRemove?.name}) from the <strong>"{role.name}"</strong> role? They will become unassigned until re-assigned from Manage Users.
+                    </span>
+                }
+                confirmText="Remove from Role"
+                cancelText="Cancel"
+                variant="danger"
+                loading={Boolean(actionLoadingId)}
+            />
         </div>
     );
 }

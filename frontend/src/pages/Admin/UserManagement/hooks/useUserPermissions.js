@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import api from '../../../../shared/api';
 import { showToast } from '../../../../utils/toast';
 
@@ -160,26 +160,35 @@ export function useUserPermissions() {
         }
     };
 
-    const handleDeleteEmployee = async (emp) => {
+    const [employeeToDelete, setEmployeeToDelete] = useState(null);
+    const [deletingEmployeeId, setDeletingEmployeeId] = useState(null);
+
+    const requestDeleteEmployee = (emp) => {
         if (emp.id === 1 || emp.username === 'admin' || emp.employee_id === 'EMP-000') {
             showToast('Cannot delete the default administrator account.', 'error');
             return;
         }
+        setEmployeeToDelete(emp);
+    };
 
-        if (!window.confirm(`Are you sure you want to delete staff account "${emp.full_name || emp.username}"? This action cannot be undone.`)) {
-            return;
-        }
-
+    const confirmDeleteEmployee = async () => {
+        if (!employeeToDelete) return;
+        setDeletingEmployeeId(employeeToDelete.id);
         try {
-            await api.delete(`/employees/${emp.id}`);
-            setUsers((prev) => prev.filter((e) => e.id !== emp.id));
+            await api.delete(`/employees/${employeeToDelete.id}`);
+            setUsers((prev) => prev.filter((e) => e.id !== employeeToDelete.id));
             window.dispatchEvent(new Event('auth_user_updated'));
             showToast('Staff account deleted successfully.', 'success');
+            setEmployeeToDelete(null);
         } catch (err) {
             console.error('Failed to delete staff:', err);
             showToast(err.response?.data?.message || 'Failed to delete staff account.', 'error');
+        } finally {
+            setDeletingEmployeeId(null);
         }
     };
+
+    const handleDeleteEmployee = requestDeleteEmployee;
 
     // --- Custom Permissions Override Handlers ---
     const openUserOverrideModal = async (user) => {
@@ -343,5 +352,9 @@ export function useUserPermissions() {
         handleToggleEmployee,
         handleResendVerification,
         handleDeleteEmployee,
+        employeeToDelete,
+        setEmployeeToDelete,
+        confirmDeleteEmployee,
+        deletingEmployeeId,
     };
 }

@@ -289,7 +289,16 @@ class User extends Authenticatable
                 return $module !== 'system_status' && $module !== 'pos';
             }
             if (strcasecmp($roleName, 'Cashier') === 0) {
-                return in_array($module, ['pos', 'reservations', 'sales_log']);
+                if ($module === 'history_logs') {
+                    return false;
+                }
+                if ($module === 'sales_log') {
+                    return in_array($action, ['has_access', 'can_view']);
+                }
+                if ($module === 'pos' || $module === 'reservations') {
+                    return in_array($action, ['has_access', 'can_view', 'can_create']);
+                }
+                return false;
             }
             if (strcasecmp($roleName, 'Technical Operations') === 0 || strcasecmp($roleName, 'Supervisor') === 0) {
                 return $module === 'system_status';
