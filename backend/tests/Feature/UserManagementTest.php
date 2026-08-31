@@ -38,29 +38,33 @@ class UserManagementTest extends TestCase
             'email_verified_at' => now(),
         ]);
 
-        $this->cashier = User::create([
-            'full_name'         => 'Jane Cashier',
-            'phone_number'      => '09987654321',
-            'email'             => 'cashier@ztg.com',
-            'username'          => 'cashier',
-            'password'          => Hash::make('CashierPass123!'),
-            'pin'               => '5678',
-            'role'              => 'Cashier',
-            'status'            => UserStatus::ACTIVE,
-            'email_verified_at' => now(),
-        ]);
+        $this->cashier = User::firstOrCreate(
+            ['username' => 'cashier'],
+            [
+                'full_name'         => 'Jane Cashier',
+                'phone_number'      => '09987654321',
+                'email'             => 'cashier@ztg.com',
+                'password'          => Hash::make('CashierPass123!'),
+                'pin'               => '5678',
+                'role'              => 'Cashier',
+                'status'            => UserStatus::ACTIVE,
+                'email_verified_at' => now(),
+            ]
+        );
 
-        $this->techOps = User::create([
-            'full_name'         => 'Tech Specialist',
-            'phone_number'      => '09112233445',
-            'email'             => 'tech@ztg.com',
-            'username'          => 'techops',
-            'password'          => Hash::make('TechPass123!'),
-            'pin'               => '9999',
-            'role'              => 'Technical Operations',
-            'status'            => UserStatus::ACTIVE,
-            'email_verified_at' => now(),
-        ]);
+        $this->techOps = User::firstOrCreate(
+            ['username' => 'techops'],
+            [
+                'full_name'         => 'Tech Specialist',
+                'phone_number'      => '09112233445',
+                'email'             => 'tech@ztg.com',
+                'password'          => Hash::make('TechPass123!'),
+                'pin'               => '9999',
+                'role'              => 'Technical Operations',
+                'status'            => UserStatus::ACTIVE,
+                'email_verified_at' => now(),
+            ]
+        );
     }
 
     public function test_admin_can_list_roles_and_modules(): void

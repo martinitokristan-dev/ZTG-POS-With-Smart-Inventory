@@ -206,39 +206,43 @@ export default function RoleViewModal({
                 </div>
 
                 {/* Footer — Edit Role Permissions only shown for custom non-system roles */}
-                {onEdit && !role.is_system && (
-                    <div
-                        style={{
-                            padding: '14px 24px',
-                            borderTop: '1px solid var(--border)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'flex-end',
-                            gap: '10px',
-                        }}
-                    >
-                        <button
-                            type="button"
-                            onClick={() => {
-                                onClose();
-                                onEdit(role);
-                            }}
+                {(() => {
+                    const isSystemRole = Boolean(role.is_system) || ['admin', 'cashier', 'technical operations', 'tech operations'].includes(role.name?.toLowerCase());
+                    if (!onEdit || isSystemRole) return null;
+                    return (
+                        <div
                             style={{
-                                padding: '8px 18px',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                borderRadius: '8px',
-                                border: '1px solid #DBEAFE',
-                                backgroundColor: '#EFF6FF',
-                                color: '#2563EB',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease',
+                                padding: '14px 24px',
+                                borderTop: '1px solid var(--border)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'flex-end',
+                                gap: '10px',
                             }}
                         >
-                            Edit Role Permissions
-                        </button>
-                    </div>
-                )}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onClose();
+                                    onEdit(role);
+                                }}
+                                style={{
+                                    padding: '8px 18px',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    borderRadius: '8px',
+                                    border: '1px solid #DBEAFE',
+                                    backgroundColor: '#EFF6FF',
+                                    color: '#2563EB',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease',
+                                }}
+                            >
+                                Edit Role Permissions
+                            </button>
+                        </div>
+                    );
+                })()}
             </div>
         </div>
     );

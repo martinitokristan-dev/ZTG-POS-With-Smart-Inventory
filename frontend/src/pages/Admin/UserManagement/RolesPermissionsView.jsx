@@ -132,6 +132,7 @@ export default function RolesPermissionsView({
                                         });
                                     
                                     const isSuperAdmin = role.name === 'Admin';
+                                    const isSystemRole = Boolean(role.is_system) || ['admin', 'cashier', 'technical operations', 'tech operations'].includes(role.name?.toLowerCase());
                                     const isBottomRow = idx >= paginatedRoles.length - 2 && paginatedRoles.length > 2;
 
                                     return (
@@ -150,7 +151,7 @@ export default function RolesPermissionsView({
                                                     <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
                                                         {role.name}
                                                     </span>
-                                                    {role.is_system && (
+                                                    {isSystemRole && (
                                                         <span
                                                             style={{
                                                                 fontSize: '10.5px',
@@ -249,7 +250,7 @@ export default function RolesPermissionsView({
                                                         </button>
 
                                                         {/* 3. Edit Role (non-system custom roles only) */}
-                                                        {!role.is_system && (
+                                                        {!isSystemRole && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => onEditRole(role)}
@@ -265,7 +266,7 @@ export default function RolesPermissionsView({
                                                         )}
 
                                                         {/* 4. Delete Role (non-system only) */}
-                                                        {!role.is_system && (
+                                                        {!isSystemRole && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => onDeleteRole(role)}
@@ -345,7 +346,7 @@ export default function RolesPermissionsView({
                                                                     <span>Assigned Staff ({role.users_count || 0})</span>
                                                                 </button>
 
-                                                                {canEdit && !role.is_system && (
+                                                                {canEdit && !isSystemRole && (
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => {
@@ -362,7 +363,7 @@ export default function RolesPermissionsView({
                                                                     </button>
                                                                 )}
 
-                                                                {canDelete && !role.is_system && (
+                                                                {canDelete && !isSystemRole && (
                                                                     <>
                                                                         <div className="actions-dropdown-divider" style={{ margin: '4px 0', borderTop: '1px solid var(--border)' }} />
                                                                         <button
