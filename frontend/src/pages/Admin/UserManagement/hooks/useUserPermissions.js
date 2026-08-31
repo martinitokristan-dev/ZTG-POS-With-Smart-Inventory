@@ -1,5 +1,6 @@
 import React from 'react';
 import api from '../../../../shared/api';
+import { showToast } from '../../../../utils/toast';
 
 export function useUserPermissions() {
     const [users, setUsers] = React.useState([]);
@@ -140,8 +141,9 @@ export function useUserPermissions() {
             const newStatus = updated.status || (emp.status === 'Active' ? 'Inactive' : 'Active');
             setUsers((prev) => prev.map((e) => (e.id === emp.id ? { ...e, ...updated, status: newStatus } : e)));
             window.dispatchEvent(new Event('auth_user_updated'));
+            showToast(`Employee status set to ${newStatus}.`, 'success');
         } catch (err) {
-            alert(err.response?.data?.message || 'Failed to toggle employee status.');
+            showToast(err.response?.data?.message || 'Failed to toggle employee status.', 'error');
         }
     };
 
@@ -149,10 +151,10 @@ export function useUserPermissions() {
         setResendingId(emp.id);
         try {
             const res = await api.post(`/employees/${emp.id}/resend-verification`);
-            alert(res.data?.message || `Verification email re-sent to ${emp.email}`);
+            showToast(res.data?.message || `Verification email re-sent to ${emp.email}`, 'success');
         } catch (err) {
             console.error('Failed to resend verification:', err);
-            alert(err.response?.data?.message || 'Failed to resend verification email.');
+            showToast(err.response?.data?.message || 'Failed to resend verification email.', 'error');
         } finally {
             setResendingId(null);
         }
@@ -160,7 +162,7 @@ export function useUserPermissions() {
 
     const handleDeleteEmployee = async (emp) => {
         if (emp.id === 1 || emp.username === 'admin' || emp.employee_id === 'EMP-000') {
-            alert('Cannot delete the default administrator account.');
+            showToast('Cannot delete the default administrator account.', 'error');
             return;
         }
 
@@ -172,9 +174,10 @@ export function useUserPermissions() {
             await api.delete(`/employees/${emp.id}`);
             setUsers((prev) => prev.filter((e) => e.id !== emp.id));
             window.dispatchEvent(new Event('auth_user_updated'));
+            showToast('Staff account deleted successfully.', 'success');
         } catch (err) {
             console.error('Failed to delete staff:', err);
-            alert(err.response?.data?.message || 'Failed to delete staff account.');
+            showToast(err.response?.data?.message || 'Failed to delete staff account.', 'error');
         }
     };
 

@@ -87,7 +87,10 @@ class EmployeeController extends Controller
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         } catch (\Throwable $e) {
-            return response()->json(['message' => 'Failed to resend verification email. Please check mail server settings.'], 500);
+            \Illuminate\Support\Facades\Log::error("Failed to resend verification email for user {$employee->id}: " . $e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'message' => 'Failed to resend verification email: ' . $e->getMessage()
+            ], 500);
         }
 
         return response()->json([

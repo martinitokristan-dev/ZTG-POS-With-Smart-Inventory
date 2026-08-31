@@ -1,5 +1,6 @@
 import React from 'react';
 import api from '../../../../shared/api';
+import { showToast } from '../../../../utils/toast';
 
 /**
  * useCheckers — Manages Warehouse Checkers for PIN approvals / stock verification.
@@ -66,17 +67,19 @@ export function useCheckers() {
                 const res = await api.put(`/checkers/${selectedChecker.id}`, payload);
                 const updated = res.data.checker || res.data;
                 setCheckers((prev) => prev.map((c) => (c.id === selectedChecker.id ? updated : c)));
+                showToast('Checker updated successfully.', 'success');
             } else {
                 const res = await api.post('/checkers', payload);
                 const created = res.data.checker || res.data;
                 setCheckers((prev) => [created, ...prev]);
+                showToast('New checker added successfully.', 'success');
             }
 
             setShowCheckerModal(false);
             fetchCheckers();
         } catch (err) {
             console.error('Failed to save checker:', err);
-            alert(err.response?.data?.message || 'Failed to save checker.');
+            showToast(err.response?.data?.message || 'Failed to save checker.', 'error');
         } finally {
             setCheckerSubmitting(false);
         }
@@ -91,9 +94,10 @@ export function useCheckers() {
             });
             const updated = res.data.checker || res.data;
             setCheckers((prev) => prev.map((c) => (c.id === checker.id ? { ...c, ...updated, status: newStatus } : c)));
+            showToast(`Checker status set to ${newStatus}.`, 'success');
         } catch (err) {
             console.error('Failed to toggle checker:', err);
-            alert(err.response?.data?.message || 'Failed to update checker status.');
+            showToast(err.response?.data?.message || 'Failed to update checker status.', 'error');
         }
     };
 

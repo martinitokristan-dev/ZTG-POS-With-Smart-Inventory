@@ -1,5 +1,6 @@
 import React from 'react';
 import api from '../../../../shared/api';
+import { showToast } from '../../../../utils/toast';
 
 export function useRoles() {
     const [roles, setRoles] = React.useState([]);
@@ -156,12 +157,12 @@ export function useRoles() {
 
     const handleDeleteRole = async (role) => {
         if (role.is_system) {
-            alert('System roles cannot be deleted.');
+            showToast('System roles cannot be deleted.', 'error');
             return;
         }
 
         if (role.users_count > 0) {
-            alert(`Cannot delete role "${role.name}" because ${role.users_count} user(s) are assigned to it. Please reassign them first.`);
+            showToast(`Cannot delete role "${role.name}" because ${role.users_count} user(s) are assigned to it. Please reassign them first.`, 'error');
             return;
         }
 
@@ -173,9 +174,10 @@ export function useRoles() {
         try {
             await api.delete(`/roles/${role.id}`);
             fetchRoles();
+            showToast(`Role "${role.name}" deleted successfully.`, 'success');
         } catch (err) {
             console.error('Failed to delete role:', err);
-            alert(err.response?.data?.message || 'Failed to delete role.');
+            showToast(err.response?.data?.message || 'Failed to delete role.', 'error');
         } finally {
             setDeletingRoleId(null);
         }
