@@ -55,16 +55,6 @@ export default function DailySales() {
                                     ]}
                                 />
                             </div>
-                            <div style={{ width: '160px' }}>
-                                <IOSSelect
-                                    value={ds.cashierFilter}
-                                    onChange={(e) => ds.setCashierFilter(e.target.value)}
-                                    options={[
-                                        { value: 'All', label: 'All Cashiers' },
-                                        ...ds.cashiersList.map(name => ({ value: name, label: name }))
-                                    ]}
-                                />
-                            </div>
                         </div>
                     </div>
 

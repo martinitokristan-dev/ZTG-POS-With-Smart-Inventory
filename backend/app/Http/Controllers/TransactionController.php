@@ -25,9 +25,18 @@ class TransactionController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $transactions = $this->transactionService->getAll($request->only([
+        $filters = $request->only([
             'status', 'type', 'tx_type', 'cashier_id', 'date_from', 'date_to', 'search', 'payment_method', 'sort_by', 'sort_order'
-        ]));
+        ]);
+
+        // Security: If logged-in user is a Cashier, strictly isolate queries to their own cashier session/transactions
+        $user = $request->user();
+        $roleName = is_object($user?->role) ? ($user->role->value ?? (string)$user->role) : (string)($user?->role ?? '');
+        if (strcasecmp($roleName, 'Cashier') === 0) {
+            $filters['cashier_id'] = $user->id;
+        }
+
+        $transactions = $this->transactionService->getAll($filters);
 
         return response()->json($transactions);
     }

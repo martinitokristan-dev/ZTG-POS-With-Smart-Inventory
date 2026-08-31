@@ -9,27 +9,27 @@ const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
 const getTodayISO = () => new Date().toISOString().slice(0, 10);
 
 export default function useDailySales() {
-    // Filtering state (client-side search/time/cashier on top of paginated data)
+    const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
+    const currentUser = userStr ? JSON.parse(userStr) : null;
+    const isCashier = currentUser?.role === 'Cashier';
+    const cashierId = isCashier ? currentUser?.id : null;
+
+    // Filtering state (client-side search/time on top of paginated data)
     const [searchQuery, setSearchQuery] = useState('');
     const [timeFilter, setTimeFilter] = useState('Today');
-    const [cashierFilter, setCashierFilter] = useState('All');
 
-    /**
-     * Reuses the SAME usePaginatedCache infrastructure (module-level caches
-     * store, LRU eviction, TTL, invalidateCachePage) as Sales Log and History.
-     * The 'daily-sales' key is registered in usePaginatedCache.js alongside
-     * 'sales' and 'history' — no separate cache system.
-     *
-     * Backend filters: status=Completed,Paid,Refund,Return to avoid loading
-     * the full transaction table; date_from=today scopes to current day only.
-     */
+    const queryParams = {
+        status: 'Completed,Paid,Refund,Return,Pending',
+        date_from: getTodayISO()
+    };
+    if (cashierId) {
+        queryParams.cashier_id = cashierId;
+    }
+
     const { data: transactions, loading, page, setPage, pagination, refetch } = usePaginatedCache(
-        'daily-sales',
+        `daily-sales-${cashierId || 'all'}`,
         '/transactions',
-        {
-            status: 'Completed,Paid,Refund,Return,Pending',
-            date_from: getTodayISO()
-        }
+        queryParams
     );
 
     useEffect(() => {
@@ -43,11 +43,11 @@ export default function useDailySales() {
             if (['Admin', 'Supervisor', 'Cashier', 'Checker'].includes(userRole)) {
                 channel = echo.private('transactions')
                     .listen('.TransactionCreated', (e) => {
-                        invalidateCachePage('daily-sales', page);
+                        invalidateCachePage(`daily-sales-${cashierId || 'all'}`, page);
                         refetch();
                     })
                     .listen('.TransactionUpdated', (e) => {
-                        invalidateCachePage('daily-sales', page);
+                        invalidateCachePage(`daily-sales-${cashierId || 'all'}`, page);
                         refetch();
                     });
             }
@@ -58,7 +58,7 @@ export default function useDailySales() {
                 echo.leaveChannel('private-transactions');
             }
         };
-    }, [refetch, page]);
+    }, [refetch, page, cashierId]);
 
     // Exclude inventory/system/restock transactions, Voids, Pendings, and 100% fully refunded/returned transactions
     const EXCLUDED_STATUSES = new Set(['Restocked', 'Damaged', 'Security Alert', 'Void', 'Pending', 'Cancelled']);
@@ -66,6 +66,8 @@ export default function useDailySales() {
         const result = [];
         const saleTransactions = transactions.filter(t => {
             if (EXCLUDED_STATUSES.has(t.status)) return false;
+            // Strict security: if Cashier, strictly ensure the transaction cashier_id matches logged-in user
+            if (cashierId && t.cashier_id && Number(t.cashier_id) !== Number(cashierId)) return false;
             if ((t.status === 'Refund' || t.status === 'Return') && t.is_partial_refund !== true && Number(t.amount || 0) <= 0) {
                 return false;
             }
@@ -108,9 +110,9 @@ export default function useDailySales() {
             });
         });
         return result;
-    }, [transactions]);
+    }, [transactions, cashierId]);
 
-    // Client-side search filter on top of paginated results
+    // Client-side search and time filter on top of paginated results
     const filteredItems = useMemo(() => {
         let items = flattenedItems;
 
@@ -146,27 +148,8 @@ export default function useDailySales() {
             });
         }
 
-        // Cashier filter
-        if (cashierFilter !== 'All') {
-            items = items.filter(item =>
-                (item._txCashier || '').toLowerCase() === cashierFilter.toLowerCase()
-            );
-        }
-
         return items;
-    }, [flattenedItems, searchQuery, timeFilter, cashierFilter]);
-
-    // Parse unique cashiers from the loaded page transactions to populate filter dropdown without requiring Admin role
-    const cashiersList = useMemo(() => {
-        const names = new Set();
-        transactions.forEach(t => {
-            const cName = t.cashier?.full_name || t.cashier?.name;
-            if (cName) {
-                names.add(cName);
-            }
-        });
-        return Array.from(names).sort();
-    }, [transactions]);
+    }, [flattenedItems, searchQuery, timeFilter]);
 
     // Gross sales from unique Completed/Paid transactions in current page
     const grossSales = useMemo(() => {
@@ -187,8 +170,6 @@ export default function useDailySales() {
         items: filteredItems,
         searchQuery, setSearchQuery,
         timeFilter, setTimeFilter,
-        cashierFilter, setCashierFilter,
-        cashiersList,
         grossSales,
         page, setPage, pagination,
         fmt,
