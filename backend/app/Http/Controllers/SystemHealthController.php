@@ -49,23 +49,73 @@ class SystemHealthController extends Controller
             }
         }
 
-        // 2. Database Health Check & Latency
+        // 2. Database Health Check, Latency & TiDB 5 GiB Storage Telemetry
         $dbStart = microtime(true);
         $dbHealthy = false;
         $dbError = null;
         $tableCount = 0;
+        $dbSizeBytes = 0;
+        $dbDataBytes = 0;
+        $dbIndexBytes = 0;
+        $topTables = [];
 
         try {
             DB::select('SELECT 1');
             $dbLatencyMs = round((microtime(true) - $dbStart) * 1000, 2);
             $dbHealthy = true;
 
-            $tables = DB::select('SHOW TABLES');
-            $tableCount = count($tables);
+            $driver = config('database.default');
+            if ($driver === 'sqlite') {
+                $tables = DB::select("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
+                $tableCount = count($tables);
+                $dbSizeBytes = @filesize(config('database.connections.sqlite.database')) ?: 0;
+                $dbDataBytes = $dbSizeBytes;
+                $dbIndexBytes = 0;
+            } else {
+                $tables = DB::select('SHOW TABLES');
+                $tableCount = count($tables);
+
+                $sizeQuery = DB::select("
+                    SELECT 
+                        table_name,
+                        table_rows,
+                        data_length,
+                        index_length,
+                        (COALESCE(data_length, 0) + COALESCE(index_length, 0)) AS total_bytes
+                    FROM information_schema.TABLES 
+                    WHERE table_schema = DATABASE()
+                    ORDER BY total_bytes DESC
+                ");
+
+                foreach ($sizeQuery as $row) {
+                    $tBytes = (int) ($row->total_bytes ?? 0);
+                    $dBytes = (int) ($row->data_length ?? 0);
+                    $iBytes = (int) ($row->index_length ?? 0);
+                    $dbSizeBytes += $tBytes;
+                    $dbDataBytes += $dBytes;
+                    $dbIndexBytes += $iBytes;
+
+                    if (count($topTables) < 8 && $tBytes > 0) {
+                        $topTables[] = [
+                            'table_name'     => $row->table_name,
+                            'rows'           => (int) ($row->table_rows ?? 0),
+                            'data_bytes'     => $dBytes,
+                            'index_bytes'    => $iBytes,
+                            'total_bytes'    => $tBytes,
+                            'formatted_size' => $this->formatBytes($tBytes),
+                        ];
+                    }
+                }
+            }
         } catch (\Throwable $e) {
             $dbLatencyMs = round((microtime(true) - $dbStart) * 1000, 2);
             $dbError = $e->getMessage();
         }
+
+        $tidbLimitGb = 5.0;
+        $tidbLimitBytes = 5 * 1024 * 1024 * 1024; // 5 GiB = 5,368,709,120 bytes
+        $tidbUsedPercent = round(($dbSizeBytes / max(1, $tidbLimitBytes)) * 100, 3);
+        $tidbRemainingBytes = max(0, $tidbLimitBytes - $dbSizeBytes);
 
         // 3. Storage, Media & Disk Capacity
         $diskPath = storage_path();
@@ -298,6 +348,20 @@ class SystemHealthController extends Controller
                 'driver'        => config('database.default'),
                 'database_name' => config('database.connections.mysql.database'),
                 'table_count'   => $tableCount,
+                'storage'       => [
+                    'used_bytes'          => $dbSizeBytes,
+                    'data_bytes'          => $dbDataBytes,
+                    'index_bytes'         => $dbIndexBytes,
+                    'used_mb'             => round($dbSizeBytes / 1024 / 1024, 2),
+                    'used_formatted'      => $this->formatBytes($dbSizeBytes),
+                    'limit_gb'            => $tidbLimitGb,
+                    'limit_bytes'         => $tidbLimitBytes,
+                    'limit_formatted'     => '5 GiB',
+                    'remaining_bytes'     => $tidbRemainingBytes,
+                    'remaining_formatted' => $this->formatBytes($tidbRemainingBytes),
+                    'usage_percent'       => $tidbUsedPercent,
+                    'top_tables'          => $topTables,
+                ],
                 'error'         => $dbError,
             ],
             'storage' => [

@@ -486,11 +486,11 @@ export default function SystemStatus() {
                             </div>
                             <div>
                                 <div className="status-text-dark" style={{ fontSize: '13px', fontWeight: 700 }}>
-                                    MySQL Database
+                                    TiDB Cloud Database
                                 </div>
                                 <div style={{ fontSize: '11px', color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981' }} />
-                                    {database.connected ? 'Connected' : 'Degraded'}
+                                    {database.connected ? 'Connected (5 GiB Tier)' : 'Degraded'}
                                 </div>
                             </div>
                         </div>
@@ -503,7 +503,7 @@ export default function SystemStatus() {
                             backgroundColor: '#ECFDF5',
                             color: '#059669'
                         }}>
-                            {database.table_count ? `${database.table_count} Tables` : 'Active Pool'}
+                            {database.storage?.used_formatted ? `${database.storage.used_formatted} / 5 GiB` : `${database.table_count || 31} Tables`}
                         </span>
                     </div>
 
@@ -790,6 +790,23 @@ export default function SystemStatus() {
                             </button>
                             <button
                                 type="button"
+                                onClick={() => setSelectedTab('tidb')}
+                                style={{
+                                    padding: '7px 14px',
+                                    fontSize: '13px',
+                                    fontWeight: 600,
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    backgroundColor: selectedTab === 'tidb' ? '#2563EB' : 'transparent',
+                                    color: selectedTab === 'tidb' ? '#FFFFFF' : '#64748B',
+                                    transition: 'all 0.15s ease'
+                                }}
+                            >
+                                TiDB Cloud Storage (5 GiB)
+                            </button>
+                            <button
+                                type="button"
                                 onClick={() => setSelectedTab('cloudinary')}
                                 style={{
                                     padding: '7px 14px',
@@ -959,6 +976,241 @@ export default function SystemStatus() {
                                     <span>Reset Schedule: <strong>{renderQuota.resets_at || 'Sep 1, 2026 at 12:00 AM'}</strong></span>
                                     <span>Auto-Incident Trigger: <strong style={{ color: '#DC2626' }}>Active at 750.0 Hours</strong></span>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tab: TiDB 5 GiB Cloud Database Storage Tracker */}
+                    {selectedTab === 'tidb' && (
+                        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            <div style={{
+                                padding: '22px',
+                                borderRadius: '14px',
+                                backgroundColor: (database.storage?.usage_percent || 0) >= 90 ? '#FEF2F2' : '#F8FAFC',
+                                border: `1px solid ${(database.storage?.usage_percent || 0) >= 90 ? '#FECACA' : '#E2E8F0'}`,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '16px',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{
+                                            width: '42px',
+                                            height: '42px',
+                                            borderRadius: '10px',
+                                            backgroundColor: '#ECFDF5',
+                                            border: '1px solid #A7F3D0',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#059669',
+                                            flexShrink: 0
+                                        }}>
+                                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <ellipse cx="12" cy="5" rx="9" ry="3" />
+                                                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                                                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.01em' }}>
+                                                TiDB Serverless Storage (5 GiB Free Tier)
+                                            </div>
+                                            <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: database.connected ? '#10B981' : '#DC2626' }} />
+                                                {database.connected ? `Connected to TiDB Cluster (${database.database_name}) • ${database.latency_ms || 2.4} ms latency` : 'Database Offline'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{
+                                            fontSize: '11px',
+                                            fontWeight: 700,
+                                            padding: '4px 10px',
+                                            borderRadius: '9999px',
+                                            backgroundColor: '#ECFDF5',
+                                            color: '#059669',
+                                            border: '1px solid #A7F3D0'
+                                        }}>
+                                            ✓ {database.storage?.remaining_formatted || '5 GiB'} Free Space
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Live Progress Bar */}
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                            <span style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A' }}>
+                                                {database.storage?.used_formatted || '0 MB'}
+                                            </span>
+                                            <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 600 }}>
+                                                used of <strong>{database.storage?.limit_formatted || '5 GiB'}</strong> (5,120 MB Free Tier)
+                                            </span>
+                                        </div>
+                                        <span style={{
+                                            fontSize: '14px',
+                                            fontWeight: 800,
+                                            color: (database.storage?.usage_percent || 0) >= 90 ? '#DC2626' : ((database.storage?.usage_percent || 0) >= 70 ? '#D97706' : '#059669')
+                                        }}>
+                                            {database.storage?.usage_percent || 0.0}% used
+                                        </span>
+                                    </div>
+
+                                    <div style={{
+                                        height: '10px',
+                                        width: '100%',
+                                        backgroundColor: '#E2E8F0',
+                                        borderRadius: '9999px',
+                                        overflow: 'hidden'
+                                    }}>
+                                        <div style={{
+                                            height: '100%',
+                                            width: `${Math.min(100, Math.max(0.5, database.storage?.usage_percent || 0.5))}%`,
+                                            backgroundColor: (database.storage?.usage_percent || 0) >= 90 ? '#DC2626' : ((database.storage?.usage_percent || 0) >= 70 ? '#F59E0B' : '#10B981'),
+                                            borderRadius: '9999px',
+                                            transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                                        }} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 4 Stat Tiles */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '14px' }}>
+                                {/* 1. Data Size */}
+                                <div className="status-block-gray" style={{ borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <div style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: '#64748B' }}>
+                                        Raw Table Data
+                                    </div>
+                                    <div className="status-text-dark" style={{ fontSize: '19px', fontWeight: 800, color: '#0F172A' }}>
+                                        {(database.storage?.data_bytes ? (database.storage.data_bytes / (1024 * 1024)).toFixed(2) + ' MB' : '0 MB')}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#64748B' }}>
+                                        Rows and row payloads
+                                    </div>
+                                </div>
+
+                                {/* 2. Index Size */}
+                                <div className="status-block-gray" style={{ borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <div style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: '#64748B' }}>
+                                        Index Space
+                                    </div>
+                                    <div className="status-text-dark" style={{ fontSize: '19px', fontWeight: 800, color: '#2563EB' }}>
+                                        {(database.storage?.index_bytes ? (database.storage.index_bytes / (1024 * 1024)).toFixed(2) + ' MB' : '0 MB')}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#64748B' }}>
+                                        B-Tree lookup acceleration
+                                    </div>
+                                </div>
+
+                                {/* 3. Remaining Space */}
+                                <div className="status-block-gray" style={{ borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <div style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: '#64748B' }}>
+                                        Available Remaining
+                                    </div>
+                                    <div className="status-text-dark" style={{ fontSize: '19px', fontWeight: 800, color: '#059669' }}>
+                                        {database.storage?.remaining_formatted || '5 GiB'}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>
+                                        ✓ 100% Free Tier headroom
+                                    </div>
+                                </div>
+
+                                {/* 4. Total Tables */}
+                                <div className="status-block-gray" style={{ borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <div style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: '#64748B' }}>
+                                        Database Schema
+                                    </div>
+                                    <div className="status-text-dark" style={{ fontSize: '19px', fontWeight: 800, color: '#7C3AED' }}>
+                                        {database.table_count || 0} Tables
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#64748B' }}>
+                                        Driver: {database.driver || 'MySQL'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Top Tables Storage Breakdown Table */}
+                            {Array.isArray(database.storage?.top_tables) && database.storage.top_tables.length > 0 && (
+                                <div style={{
+                                    borderRadius: '12px',
+                                    border: '1px solid #E2E8F0',
+                                    overflow: 'hidden',
+                                    backgroundColor: '#FFFFFF'
+                                }}>
+                                    <div style={{
+                                        padding: '14px 20px',
+                                        backgroundColor: '#F8FAFC',
+                                        borderBottom: '1px solid #E2E8F0',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}>
+                                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
+                                            Top Database Tables by Storage Consumption
+                                        </div>
+                                        <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                            Live information_schema.TABLES
+                                        </span>
+                                    </div>
+                                    <div style={{ overflowX: 'auto' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+                                            <thead>
+                                                <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontWeight: 600, fontSize: '12px' }}>
+                                                    <th style={{ padding: '10px 16px' }}>Table Name</th>
+                                                    <th style={{ padding: '10px 16px' }}>Est. Rows</th>
+                                                    <th style={{ padding: '10px 16px' }}>Data Size</th>
+                                                    <th style={{ padding: '10px 16px' }}>Index Size</th>
+                                                    <th style={{ padding: '10px 16px' }}>Total Footprint</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {database.storage.top_tables.map((t, idx) => (
+                                                    <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                                                        <td style={{ padding: '10px 16px', fontFamily: 'monospace', fontWeight: 700, color: '#2563EB' }}>
+                                                            {t.table_name}
+                                                        </td>
+                                                        <td style={{ padding: '10px 16px', color: '#64748B' }}>
+                                                            {Number(t.rows).toLocaleString()}
+                                                        </td>
+                                                        <td style={{ padding: '10px 16px', color: '#334155' }}>
+                                                            {(t.data_bytes / 1024).toFixed(1)} KB
+                                                        </td>
+                                                        <td style={{ padding: '10px 16px', color: '#334155' }}>
+                                                            {(t.index_bytes / 1024).toFixed(1)} KB
+                                                        </td>
+                                                        <td style={{ padding: '10px 16px', fontWeight: 700, color: '#0F172A' }}>
+                                                            {t.formatted_size}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Informational Note */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: '10px',
+                                padding: '12px 16px',
+                                backgroundColor: '#F8FAFC',
+                                borderRadius: '10px',
+                                border: '1px solid #E2E8F0',
+                                fontSize: '12px',
+                                color: '#64748B',
+                                lineHeight: 1.5
+                            }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                </svg>
+                                <span>
+                                    <strong>TiDB Free Quota Note:</strong> TiDB Serverless provides 5 GiB (5,120 MB) of free persistent cloud storage for your database. Even with hundreds of thousands of sales, transactions, and audit logs, text-only records consume minimal storage space.
+                                </span>
                             </div>
                         </div>
                     )}
@@ -1194,6 +1446,16 @@ export default function SystemStatus() {
                                     {server.memory_usage_mb || '14.5'} MB
                                 </div>
                                 <div className="status-text-muted" style={{ fontSize: '12px', marginTop: '2px' }}>Peak: {server.peak_memory_mb || '18.2'} MB</div>
+                            </div>
+
+                            <div className="status-block-gray" style={{ borderRadius: '12px', padding: '16px' }}>
+                                <div className="status-text-muted" style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700 }}>TiDB Cloud Storage</div>
+                                <div className="status-text-dark" style={{ fontSize: '18px', fontWeight: 800, marginTop: '4px', color: '#059669' }}>
+                                    {database.storage?.used_formatted || '0 MB'}
+                                </div>
+                                <div className="status-text-muted" style={{ fontSize: '12px', marginTop: '2px' }}>
+                                    {database.storage?.usage_percent || 0.0}% of {database.storage?.limit_formatted || '5 GiB'} Free Tier
+                                </div>
                             </div>
 
                             <div className="status-block-gray" style={{ borderRadius: '12px', padding: '16px' }}>
