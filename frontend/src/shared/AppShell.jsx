@@ -62,7 +62,10 @@ export default function AppShell() {
             return null;
         }
     })();
-    const isAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'Supervisor';
+    const showNotifications = currentUser?.role === 'Admin' || 
+        currentUser?.role === 'Administrator' || 
+        currentUser?.role === 'Supervisor' ||
+        Boolean(currentUser?.permissions?.dashboard?.has_access || currentUser?.permissions?.system_status?.has_access);
 
     return (
         <div className="app-container" style={{ flexDirection: isMobile ? 'column' : 'row' }}>
@@ -127,7 +130,7 @@ export default function AppShell() {
                     </div>
                     <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
                         <ThemeToggleButton />
-                        {isAdmin && <NotificationsDropdown />}
+                        {showNotifications && <NotificationsDropdown />}
                     </div>
                 </header>
             )}
@@ -153,7 +156,7 @@ export default function AppShell() {
                     gap: '10px'
                 }}>
                     <ThemeToggleButton />
-                    {isAdmin && <NotificationsDropdown />}
+                    {showNotifications && <NotificationsDropdown />}
                 </div>
             )}
 

@@ -63,76 +63,80 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/products/{product}', [ProductController::class, 'show']);
 
-    // Admin-only management routes
-    Route::middleware('role:Admin')->group(function () {
-        // Roles & Permissions Management (Admin only)
+    // User Management & Access Control (Guarded by user_management permission)
+    Route::middleware('permission:user_management,can_view')->group(function () {
+        // Roles & Permissions
         Route::get('/roles', [RoleController::class, 'index']);
         Route::get('/roles/modules', [RoleController::class, 'modules']);
-        Route::post('/roles', [RoleController::class, 'store']);
         Route::get('/roles/{role}', [RoleController::class, 'show']);
-        Route::put('/roles/{role}', [RoleController::class, 'update']);
-        Route::delete('/roles/{role}', [RoleController::class, 'destroy']);
         Route::get('/roles/{role}/users', [RoleController::class, 'users']);
-        Route::post('/roles/{role}/assign-user', [RoleController::class, 'assignUser']);
-        Route::post('/roles/{role}/remove-user', [RoleController::class, 'removeUser']);
-
-        // User Permission Overrides (Admin only)
         Route::get('/users/{user}/permissions', [UserPermissionController::class, 'show']);
-        Route::put('/users/{user}/permissions', [UserPermissionController::class, 'update']);
-        Route::delete('/users/{user}/permissions', [UserPermissionController::class, 'reset']);
 
-        // General Settings update
+        Route::post('/roles', [RoleController::class, 'store'])->middleware('permission:user_management,can_create');
+        Route::put('/roles/{role}', [RoleController::class, 'update'])->middleware('permission:user_management,can_edit');
+        Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->middleware('permission:user_management,can_delete');
+        Route::post('/roles/{role}/assign-user', [RoleController::class, 'assignUser'])->middleware('permission:user_management,can_edit');
+        Route::post('/roles/{role}/remove-user', [RoleController::class, 'removeUser'])->middleware('permission:user_management,can_edit');
+        Route::put('/users/{user}/permissions', [UserPermissionController::class, 'update'])->middleware('permission:user_management,can_edit');
+        Route::delete('/users/{user}/permissions', [UserPermissionController::class, 'reset'])->middleware('permission:user_management,can_edit');
+
+        // Employees & Checkers
+        Route::get('/employees', [EmployeeController::class, 'index']);
+        Route::post('/employees', [EmployeeController::class, 'store'])->middleware('permission:user_management,can_create');
+        Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:user_management,can_edit');
+        Route::patch('/employees/{employee}/toggle', [EmployeeController::class, 'toggle'])->middleware('permission:user_management,can_edit');
+        Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])->middleware('permission:user_management,can_delete');
+        Route::post('/employees/{employee}/resend-verification', [EmployeeController::class, 'resendVerification'])->middleware('permission:user_management,can_edit');
+
+        Route::post('/checkers', [CheckerController::class, 'store'])->middleware('permission:user_management,can_create');
+        Route::put('/checkers/{checker}', [CheckerController::class, 'update'])->middleware('permission:user_management,can_edit');
+    });
+
+    // System Settings & Branding mutations
+    Route::middleware('permission:settings,can_edit')->group(function () {
         Route::put('/settings', [SettingController::class, 'update']);
-        // Business logo — Admin-only (different from per-user avatar scoping)
         Route::post('/settings/logo', [SettingLogoController::class, 'upload']);
         Route::delete('/settings/logo', [SettingLogoController::class, 'remove']);
 
-        // Category mutations
-        Route::post('/categories', [CategoryController::class, 'store']);
-        Route::put('/categories/{category}', [CategoryController::class, 'update']);
-        Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
-
-        // Variant type and option mutations
-        Route::post('/variants', [VariantController::class, 'storeType']);
-        Route::put('/variants/{variant_type}', [VariantController::class, 'updateType']);
-        Route::delete('/variants/{variant_type}', [VariantController::class, 'destroyType']);
-        Route::post('/variants/{variant_type}/options', [VariantController::class, 'storeOption']);
-        Route::put('/variant-options/{variant_option}', [VariantController::class, 'updateOption']);
-        Route::delete('/variant-options/{variant_option}', [VariantController::class, 'destroyOption']);
-
-        // Employee Management
-        Route::get('/employees', [EmployeeController::class, 'index']);
-        Route::post('/employees', [EmployeeController::class, 'store']);
-        Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
-        Route::patch('/employees/{employee}/toggle', [EmployeeController::class, 'toggle']);
-        Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
-        Route::post('/employees/{employee}/resend-verification', [EmployeeController::class, 'resendVerification']);
-
-        // Checker Management
-        Route::post('/checkers', [CheckerController::class, 'store']);
-        Route::put('/checkers/{checker}', [CheckerController::class, 'update']);
-
-        // Alert Rules
         Route::get('/alert-rules', [AlertRuleController::class, 'index']);
         Route::post('/alert-rules', [AlertRuleController::class, 'store']);
         Route::put('/alert-rules/{alert_rule}', [AlertRuleController::class, 'update']);
         Route::delete('/alert-rules/{alert_rule}', [AlertRuleController::class, 'destroy']);
         Route::patch('/alert-rules/{alert_rule}/toggle', [AlertRuleController::class, 'toggle']);
+    });
 
-        // Products: write/mutation routes (Admin only)
+    // Product & Catalog mutations (Guarded by products permissions)
+    Route::middleware('permission:products,can_create')->group(function () {
         Route::post('/products', [ProductController::class, 'store']);
-        Route::put('/products/{product}', [ProductController::class, 'update']);
-        Route::delete('/products/{product}', [ProductController::class, 'destroy']);
         Route::post('/products/restock', [ProductController::class, 'restock']);
-        Route::post('/products/{product}/damaged', [ProductController::class, 'logDamaged']);
         Route::post('/products/upload-image', [ProductController::class, 'uploadImage']);
+        Route::post('/categories', [CategoryController::class, 'store']);
+        Route::post('/variants', [VariantController::class, 'storeType']);
+        Route::post('/variants/{variant_type}/options', [VariantController::class, 'storeOption']);
+    });
 
-        // Activity Logs & Active User Sessions (Admin only)
+    Route::middleware('permission:products,can_edit')->group(function () {
+        Route::put('/products/{product}', [ProductController::class, 'update']);
+        Route::post('/products/{product}/damaged', [ProductController::class, 'logDamaged']);
+        Route::put('/categories/{category}', [CategoryController::class, 'update']);
+        Route::put('/variants/{variant_type}', [VariantController::class, 'updateType']);
+        Route::put('/variant-options/{variant_option}', [VariantController::class, 'updateOption']);
+    });
+
+    Route::middleware('permission:products,can_delete')->group(function () {
+        Route::delete('/products/{product}', [ProductController::class, 'destroy']);
+        Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+        Route::delete('/variants/{variant_type}', [VariantController::class, 'destroyType']);
+        Route::delete('/variant-options/{variant_option}', [VariantController::class, 'destroyOption']);
+    });
+
+    // Activity Logs & Active User Sessions (Guarded by history_logs permission)
+    Route::middleware('permission:history_logs,can_view')->group(function () {
         Route::get('/activity-logs', [ActivityLogController::class, 'index']);
         Route::get('/activity-logs/summary', [ActivityLogController::class, 'summary']);
         Route::get('/activity-logs/active-sessions', [ActivityLogController::class, 'activeSessions']);
-        Route::post('/activity-logs/active-sessions/{token_id}/revoke', [ActivityLogController::class, 'revokeSession']);
-        Route::post('/activity-logs/users/{user_id}/force-logout', [ActivityLogController::class, 'forceLogoutUser']);
+        Route::post('/activity-logs/active-sessions/{token_id}/revoke', [ActivityLogController::class, 'revokeSession'])->middleware('permission:history_logs,can_delete');
+        Route::post('/activity-logs/users/{user_id}/force-logout', [ActivityLogController::class, 'forceLogoutUser'])->middleware('permission:history_logs,can_delete');
     });
 
     // POS routes: guarded by pos permission
@@ -143,11 +147,11 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Transaction / History Log routes
-    // Read: all authenticated roles; Write (refund/void): Admin + Cashier
+    // Read: all authenticated roles; Write (refund/void/pay): guarded by sales_log or pos permission
     Route::get('/transactions', [TransactionController::class, 'index']);
     Route::get('/transactions/{transaction}', [TransactionController::class, 'show']);
     Route::post('/transactions/verify-pin', [TransactionController::class, 'verifyPin']);
-    Route::middleware('role:Admin,Cashier')->group(function () {
+    Route::middleware('permission:sales_log,can_edit')->group(function () {
         Route::post('/transactions/{transaction}/refund', [TransactionController::class, 'refund']);
         Route::post('/transactions/{transaction}/return', [TransactionController::class, 'return']);
         Route::post('/transactions/{transaction}/void', [TransactionController::class, 'void']);
