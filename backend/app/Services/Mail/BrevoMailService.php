@@ -25,7 +25,7 @@ class BrevoMailService
      */
     public function sendPasswordReset(User $user, string $token, int $expiryMinutes = 60): bool
     {
-        $apiKey = config('services.brevo.api_key');
+        $apiKey = trim(preg_replace('/\s+/', '', (string) config('services.brevo.api_key', '')));
         $mailable = new ResetPasswordMail($user, $token, $expiryMinutes);
 
         if (!empty($apiKey) && !app()->environment('testing')) {
@@ -45,7 +45,7 @@ class BrevoMailService
      */
     public function sendStaffVerification(User $user, string $token, int $expiryHours = 48): bool
     {
-        $apiKey = config('services.brevo.api_key');
+        $apiKey = trim(preg_replace('/\s+/', '', (string) config('services.brevo.api_key', '')));
         $mailable = new StaffVerificationMail($user, $token, $expiryHours);
 
         if (!empty($apiKey) && !app()->environment('testing')) {
@@ -66,8 +66,8 @@ class BrevoMailService
     protected function sendViaBrevoApi(string $toEmail, string $toName, string $subject, string $htmlContent, string $apiKey): bool
     {
         $businessName = $this->getBusinessName();
-        $senderEmail = config('services.brevo.sender_email', 'no-reply@ztgparts.com');
-        $senderName  = config('services.brevo.sender_name', $businessName);
+        $senderEmail = trim(preg_replace('/\s+/', '', (string) config('services.brevo.sender_email', 'no-reply@ztgparts.com')));
+        $senderName  = trim((string) config('services.brevo.sender_name', $businessName));
 
         $payload = [
             'sender' => [
