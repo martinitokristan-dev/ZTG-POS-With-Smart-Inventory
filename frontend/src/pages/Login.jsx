@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../shared/api';
 import { applyGlobalTheme } from '../shared/hooks/useTheme';
+import { getFirstPermittedRoute } from '../shared/PrivateRoute';
 
 const fixImageUrl = (url) => {
     if (!url) return null;
@@ -105,18 +106,9 @@ function Login() {
             sessionStorage.setItem('auth_user', JSON.stringify(user)); localStorage.removeItem('auth_user');
             window.dispatchEvent(new Event('auth_user_updated'));
 
-            // Auto-redirect user based on their assigned role
-            if (user.role === 'Admin' || user.role === 'Supervisor') {
-                navigate('/dashboard');
-            } else if (user.role === 'Cashier') {
-                navigate('/pos');
-            } else if (user.role === 'Technical Operations') {
-                navigate('/system-status');
-            } else if (user.role === 'Checker') {
-                navigate('/inventory');
-            } else {
-                navigate('/dashboard');
-            }
+            // Dynamically redirect user to their primary permitted module
+            const targetRoute = getFirstPermittedRoute(user);
+            navigate(targetRoute);
         } catch (err) {
             console.error(err);
             if (err.response?.data?.code === 'EMAIL_NOT_VERIFIED') {

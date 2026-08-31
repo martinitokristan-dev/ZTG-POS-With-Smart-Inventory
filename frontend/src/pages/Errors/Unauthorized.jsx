@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getFirstPermittedRoute } from '../../shared/PrivateRoute';
 
 /**
  * Unauthorized (403 Forbidden) — Big rectangular layout with large, bold text number.
@@ -12,25 +13,20 @@ export default function Unauthorized() {
         return stored ? JSON.parse(stored) : null;
     }, []);
 
-    const userRole = authUser?.role || 'User';
-
-    const getReturnDestination = () => {
-        if (userRole === 'Cashier') {
-            return { label: 'Back to POS', path: '/pos' };
-        }
-        if (userRole === 'Technical Operations' || userRole === 'Supervisor') {
-            return { label: 'Back to System Status', path: '/system-status' };
-        }
-        if (userRole === 'Checker') {
-            return { label: 'Back to Inventory', path: '/inventory' };
-        }
-        if (userRole === 'Admin' || userRole === 'Administrator') {
-            return { label: 'Back to Dashboard', path: '/dashboard' };
-        }
-        return { label: 'Back to Dashboard', path: '/dashboard' };
-    };
-
-    const destination = getReturnDestination();
+    const destination = React.useMemo(() => {
+        const path = getFirstPermittedRoute(authUser);
+        let label = 'Back to Home';
+        if (path === '/dashboard') label = 'Back to Dashboard';
+        else if (path === '/system-status') label = 'Back to System Status';
+        else if (path === '/pos') label = 'Back to POS';
+        else if (path === '/inventory') label = 'Back to Inventory';
+        else if (path === '/product-management') label = 'Back to Products';
+        else if (path === '/reservations') label = 'Back to Order Based';
+        else if (path === '/sales-log' || path === '/daily-sales') label = 'Back to Sales Log';
+        else if (path === '/reports') label = 'Back to Reports';
+        else if (path === '/settings') label = 'Back to Settings';
+        return { label, path };
+    }, [authUser]);
 
     const handleGoBack = () => {
         navigate(destination.path);

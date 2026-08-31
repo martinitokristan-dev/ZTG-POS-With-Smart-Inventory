@@ -41,8 +41,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::get('/user/permissions', [UserPermissionController::class, 'me']);
 
-    // System health diagnostics (Admin & Technical Operations)
-    Route::middleware('role:Admin,Technical Operations')->group(function () {
+    // System health diagnostics (Admin & Technical Operations / users with system_status permission)
+    Route::middleware('permission:system_status,can_view')->group(function () {
         Route::get('/system-health/diagnostics', [SystemHealthController::class, 'diagnostics']);
     });
 

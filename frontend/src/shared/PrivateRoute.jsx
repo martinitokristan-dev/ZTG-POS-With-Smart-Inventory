@@ -2,12 +2,45 @@ import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
 /**
+ * Helper: Determine default permitted landing page based on role and granular module permissions.
+ */
+export const getFirstPermittedRoute = (user) => {
+    if (!user) return '/login';
+    const role = user.role || '';
+    if (role === 'Admin' || role === 'Administrator') return '/dashboard';
+
+    const perms = user.permissions || {};
+    
+    // Check modules in prioritized sequence
+    if (perms.dashboard?.has_access) return '/dashboard';
+    if (perms.system_status?.has_access) return '/system-status';
+    if (perms.pos?.has_access) return '/pos';
+    if (perms.inventory?.has_access) return '/inventory';
+    if (perms.products?.has_access) return '/product-management';
+    if (perms.reservations?.has_access) return '/reservations';
+    if (perms.sales_log?.has_access) return '/sales-log';
+    if (perms.reports?.has_access) return '/reports';
+    if (perms.history_logs?.has_access) return '/history-logs';
+    if (perms.user_management?.has_access) return '/user-management';
+    if (perms.settings?.has_access) return '/settings';
+
+    // Role-based fallbacks for standard system roles
+    const normRole = role.toLowerCase();
+    if (normRole === 'cashier') return '/pos';
+    if (normRole.includes('tech') || normRole === 'technical operations') return '/system-status';
+    if (normRole === 'checker') return '/inventory';
+    if (normRole === 'supervisor') return '/dashboard';
+
+    return '/settings';
+};
+
+/**
  * PrivateRoute — Guards routes based on:
  * 1. Authentication token & user session presence.
- * 2. Role allowlist (`allowedRoles`).
- * 3. Granular Module Permission (`requiredModule` & `action`).
+ * 2. Granular Module Permission (`requiredModule` & `action`).
+ * 3. Role allowlist (`allowedRoles`), with bypass if user possesses dynamic module permission.
  *
- * If unauthorized, immediately redirects the user to their default permitted landing page.
+ * If unauthorized, immediately redirects the user to 403 / unpermitted landing page.
  */
 function PrivateRoute({ children, allowedRoles, requiredModule, action = 'can_view' }) {
     const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
@@ -26,18 +59,19 @@ function PrivateRoute({ children, allowedRoles, requiredModule, action = 'can_vi
 
     const isAdmin = user.role === 'Admin' || user.role === 'Administrator';
 
-    // Helper: Determine fallback landing page for unauthorized redirection
-    const getFallbackRoute = () => {
-        if (isAdmin) return '/dashboard';
-        if (user.role === 'Cashier') return '/pos';
-        if (user.role === 'Technical Operations' || user.role === 'Supervisor') return '/system-status';
-        if (user.role === 'Checker') return '/inventory';
-        return '/login';
-    };
+    // 1. Role allowlist check (Non-Admin users with granular module permission are granted access)
+    if (allowedRoles && allowedRoles.length > 0 && !isAdmin) {
+        const normRole = (user.role || '').toLowerCase();
+        const matchesRole = allowedRoles.some(r => {
+            const nr = r.toLowerCase();
+            return nr === normRole || (nr.includes('tech') && normRole.includes('tech'));
+        });
 
-    // 1. Role allowlist check
-    if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-        return <Navigate to="/unauthorized" replace />;
+        const hasModuleAccess = requiredModule ? Boolean(user.permissions?.[requiredModule]?.has_access) : false;
+
+        if (!matchesRole && !hasModuleAccess) {
+            return <Navigate to="/unauthorized" replace />;
+        }
     }
 
     // 2. Granular Module Permission check (Non-Admin users checked against permissions matrix)
