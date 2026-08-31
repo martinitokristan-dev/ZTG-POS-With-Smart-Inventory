@@ -64,98 +64,103 @@ function App() {
                              */}
                             <Route element={<PrivateRoute><AppShell /></PrivateRoute>}>
 
-                                {/* Admin + Supervisor */}
+                                {/* Dashboard */}
                                 <Route path="/dashboard" element={
-                                    <PrivateRoute allowedRoles={['Admin', 'Supervisor']} requiredModule="dashboard">
+                                    <PrivateRoute requiredModule="dashboard">
                                         <Dashboard />
                                     </PrivateRoute>
                                 } />
 
-                                {/* Admin only */}
+                                {/* User Management */}
                                 <Route path="/user-management" element={
-                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="user_management">
+                                    <PrivateRoute requiredModule="user_management">
                                         <UserManagement />
                                     </PrivateRoute>
                                 } />
                                 <Route path="/user-management/roles" element={
-                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="user_management">
+                                    <PrivateRoute requiredModule="user_management">
                                         <UserManagement />
                                     </PrivateRoute>
                                 } />
                                 <Route path="/user-management/checkers" element={
-                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="user_management">
+                                    <PrivateRoute requiredModule="user_management">
                                         <UserManagement />
                                     </PrivateRoute>
                                 } />
 
+                                {/* Product Management */}
                                 <Route path="/product-management" element={
-                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="products">
+                                    <PrivateRoute requiredModule="products">
                                         <ProductManagement />
                                     </PrivateRoute>
                                 } />
 
+                                {/* Inventory */}
                                 <Route path="/inventory" element={
-                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="inventory">
+                                    <PrivateRoute requiredModule="inventory">
                                         <Inventory />
                                     </PrivateRoute>
                                 } />
 
+                                {/* History Logs */}
                                 <Route path="/history-logs" element={
-                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="history_logs">
+                                    <PrivateRoute requiredModule="history_logs">
                                         <HistoryLogs />
                                     </PrivateRoute>
                                 } />
 
                                 <Route path="/activity-logs" element={<Navigate to="/settings?tab=activity" replace />} />
 
+                                {/* Sales Log */}
                                 <Route path="/sales-log" element={
-                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="sales_log">
+                                    <PrivateRoute requiredModule="sales_log">
                                         <SalesLog />
                                     </PrivateRoute>
                                 } />
 
+                                {/* Reports */}
                                 <Route path="/reports" element={
-                                    <PrivateRoute allowedRoles={['Admin']} requiredModule="reports">
+                                    <PrivateRoute requiredModule="reports">
                                         <Reports />
                                     </PrivateRoute>
                                 } />
 
-                                {/* Admin + Cashier */}
+                                {/* Order-Based / Reservations */}
                                 <Route path="/reservations" element={
-                                    <PrivateRoute allowedRoles={['Admin', 'Cashier']} requiredModule="reservations">
+                                    <PrivateRoute requiredModule="reservations">
                                         <Reservations />
                                     </PrivateRoute>
                                 } />
 
-                                {/* All authenticated roles */}
+                                {/* System Settings (Available to all authenticated users) */}
                                 <Route path="/settings" element={
-                                    <PrivateRoute allowedRoles={['Admin', 'Cashier', 'Technical Operations', 'Supervisor']}>
+                                    <PrivateRoute>
                                         <Settings />
                                     </PrivateRoute>
                                 } />
 
-                                {/* System Status (Admin & Technical Operations) */}
+                                {/* System Status (Diagnostics) */}
                                 <Route path="/system-status" element={
-                                    <PrivateRoute allowedRoles={['Admin', 'Technical Operations']} requiredModule="system_status">
+                                    <PrivateRoute requiredModule="system_status">
                                         <SystemStatus />
                                     </PrivateRoute>
                                 } />
 
-                                {/* Cashier only / POS */}
+                                {/* Point of Sale (POS) */}
                                 <Route path="/pos" element={
-                                    <PrivateRoute allowedRoles={['Admin', 'Cashier']} requiredModule="pos">
+                                    <PrivateRoute requiredModule="pos">
                                         <POS />
                                     </PrivateRoute>
                                 } />
 
                                 <Route path="/daily-sales" element={
-                                    <PrivateRoute allowedRoles={['Cashier', 'Admin']} requiredModule="sales_log">
+                                    <PrivateRoute requiredModule="sales_log">
                                         <DailySales />
                                     </PrivateRoute>
                                 } />
 
                                 <Route path="/customer-log" element={
-                                    <PrivateRoute allowedRoles={['Cashier', 'Admin']} requiredModule="pos">
+                                    <PrivateRoute requiredModule="pos">
                                         <CustomerLog />
                                     </PrivateRoute>
                                 } />
