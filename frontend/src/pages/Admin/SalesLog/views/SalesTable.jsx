@@ -3,6 +3,7 @@ import LoadingSpinner from '../../../../shared/components/LoadingSpinner';
 import StatusBadge from '../../../../shared/components/StatusBadge';
 import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
+import { getItemDiscountAmount } from '../../../../shared/utils/clientExcelExporter';
 
 export default function SalesTable({ loading, items, fmt, fmtDate }) {
     if (loading) return <LoadingSpinner text="Loading sales data..." minHeight="200px" />;
@@ -41,8 +42,7 @@ export default function SalesTable({ loading, items, fmt, fmtDate }) {
                             const qty = Number(item.qty || 1);
                             const rawPrice = Number(item.original_price || item.price || 0);
                             const unitPrice = rawPrice > 0 ? rawPrice : (Number(item._txAmount || 0) / Math.max(1, qty));
-                            const itemDisc = Number(item.discount || item.item_discount || 0);
-                            const discountVal = itemDisc > 0 ? itemDisc : Number(item._txDiscountAmount || 0);
+                            const discountVal = getItemDiscountAmount(item, item._rawTx || item.tx);
                             const grossRow = qty * unitPrice;
                             const netRowAmount = Math.max(0, grossRow - discountVal);
 

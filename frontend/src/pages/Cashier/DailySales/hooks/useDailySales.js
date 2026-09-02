@@ -143,7 +143,8 @@ export default function useDailySales() {
                     _txChecker: t.checker?.name || '—',
                     _txPayment: t.payment_method || '—',
                     _txStatus: 'Completed',
-                    _txId: t.id
+                    _txId: t.id,
+                    _rawTx: t
                 });
             });
         });

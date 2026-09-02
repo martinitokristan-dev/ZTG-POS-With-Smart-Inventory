@@ -166,7 +166,8 @@ export default function useSalesLog() {
                 _txStatus: 'Completed',
                 _txAmount: t.amount,
                 _txDiscountAmount: t.discount_amount,
-                _txId: t.id
+                _txId: t.id,
+                _rawTx: t
             });
         });
     });
