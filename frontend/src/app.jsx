@@ -7,6 +7,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import SetPassword from './pages/Auth/SetPassword';
 import Unauthorized from './pages/Errors/Unauthorized';
+import Forbidden from './pages/Errors/Forbidden';
 import PrivateRoute from './shared/PrivateRoute';
 import AppShell from './shared/AppShell';
 
@@ -54,8 +55,10 @@ function App() {
                             <Route path="/forgot-password" element={<ForgotPassword />} />
                             <Route path="/reset-password" element={<ResetPassword />} />
                             <Route path="/set-password" element={<SetPassword />} />
+                            <Route path="/forbidden" element={<Forbidden />} />
+                            <Route path="/403" element={<Forbidden />} />
                             <Route path="/unauthorized" element={<Unauthorized />} />
-                            <Route path="/403" element={<Unauthorized />} />
+                            <Route path="/401" element={<Unauthorized />} />
 
                             {/*
                              * All authenticated routes share AppShell as a

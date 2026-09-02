@@ -65,7 +65,7 @@ function PrivateRoute({ children, allowedRoles, requiredModule, action = 'can_vi
         const hasStatusAccess = Boolean(isTechOps || user.permissions?.system_status?.has_access);
         if (!hasStatusAccess) {
             console.warn(`[Access Denied 403] User '${user.username}' (${user.role}) lacks Technical Operations access to [system_status].`);
-            return <Navigate to="/unauthorized" replace />;
+            return <Navigate to="/forbidden" replace />;
         }
         return children ?? <Outlet />;
     }
@@ -75,7 +75,7 @@ function PrivateRoute({ children, allowedRoles, requiredModule, action = 'can_vi
         const hasPosAccess = !isAdmin && Boolean(user.role === 'Cashier' || user.permissions?.pos?.has_access);
         if (!hasPosAccess) {
             console.warn(`[Access Denied 403] User '${user.username}' (${user.role}) is not authorized for Cashier [pos].`);
-            return <Navigate to="/unauthorized" replace />;
+            return <Navigate to="/forbidden" replace />;
         }
         return children ?? <Outlet />;
     }
@@ -91,7 +91,7 @@ function PrivateRoute({ children, allowedRoles, requiredModule, action = 'can_vi
         const hasModuleAccess = requiredModule ? Boolean(user.permissions?.[requiredModule]?.has_access) : false;
 
         if (!matchesRole && !hasModuleAccess) {
-            return <Navigate to="/unauthorized" replace />;
+            return <Navigate to="/forbidden" replace />;
         }
     }
 
@@ -106,7 +106,7 @@ function PrivateRoute({ children, allowedRoles, requiredModule, action = 'can_vi
 
         if (!hasAccess || !hasAction) {
             console.warn(`[Access Denied 403] User '${user.username}' (${user.role}) lacks permission for [${requiredModule}:${action}].`);
-            return <Navigate to="/unauthorized" replace />;
+            return <Navigate to="/forbidden" replace />;
         }
     }
 

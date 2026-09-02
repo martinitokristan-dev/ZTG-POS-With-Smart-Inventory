@@ -1,13 +1,39 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getFirstPermittedRoute } from '../../shared/PrivateRoute';
 
 /**
- * Unauthorized (401 Unauthorized) — User is unauthenticated or session expired.
+ * Forbidden (403 No Permission)
+ * Displays when the user is authenticated but lacks required role permissions to access a resource.
  */
-export default function Unauthorized() {
+export default function Forbidden() {
     const navigate = useNavigate();
 
-    const handleGoToLogin = () => {
+    const authUser = React.useMemo(() => {
+        const stored = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
+        return stored ? JSON.parse(stored) : null;
+    }, []);
+
+    const destination = React.useMemo(() => {
+        const path = getFirstPermittedRoute(authUser);
+        let label = 'Back to Home';
+        if (path === '/dashboard') label = 'Back to Dashboard';
+        else if (path === '/system-status') label = 'Back to System Status';
+        else if (path === '/pos') label = 'Back to POS';
+        else if (path === '/inventory') label = 'Back to Inventory';
+        else if (path === '/product-management') label = 'Back to Products';
+        else if (path === '/reservations') label = 'Back to Order Based';
+        else if (path === '/sales-log' || path === '/daily-sales') label = 'Back to Sales Log';
+        else if (path === '/reports') label = 'Back to Reports';
+        else if (path === '/settings') label = 'Back to Settings';
+        return { label, path };
+    }, [authUser]);
+
+    const handleGoBack = () => {
+        navigate(destination.path);
+    };
+
+    const handleSwitchAccount = () => {
         sessionStorage.clear();
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
@@ -45,19 +71,19 @@ export default function Unauthorized() {
                     boxSizing: 'border-box',
                 }}
             >
-                {/* Big Bold 401 Typography */}
+                {/* Big Bold 403 Typography */}
                 <div
                     style={{
                         fontSize: '84px',
                         fontWeight: '900',
                         lineHeight: '1',
                         letterSpacing: '-0.04em',
-                        color: '#EA580C',
+                        color: '#DC2626',
                         marginBottom: '12px',
                         userSelect: 'none',
                     }}
                 >
-                    401
+                    403
                 </div>
 
                 {/* Status Badge */}
@@ -68,9 +94,9 @@ export default function Unauthorized() {
                         gap: '6px',
                         padding: '4px 12px',
                         borderRadius: '9999px',
-                        backgroundColor: '#FFF7ED',
-                        border: '1px solid #FFEDD5',
-                        color: '#C2410C',
+                        backgroundColor: '#FEF2F2',
+                        border: '1px solid #FEE2E2',
+                        color: '#B91C1C',
                         fontSize: '12px',
                         fontWeight: '700',
                         textTransform: 'uppercase',
@@ -79,10 +105,10 @@ export default function Unauthorized() {
                     }}
                 >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
                     </svg>
-                    <span>Authentication Required</span>
+                    <span>No Permission</span>
                 </div>
 
                 {/* Title */}
@@ -95,7 +121,7 @@ export default function Unauthorized() {
                         letterSpacing: '-0.02em',
                     }}
                 >
-                    401 Unauthorized — Please Sign In
+                    403 Forbidden — Access Denied
                 </h1>
 
                 {/* Subtitle / Description */}
@@ -108,10 +134,10 @@ export default function Unauthorized() {
                         maxWidth: '580px',
                     }}
                 >
-                    You must be signed in to access this page. Your session may have expired or you are not authorized without logging in. Please sign in with your credentials to continue.
+                    You do not have permission to access this resource. Your account is authenticated, but your assigned role lacks the required permissions. If you need access, please contact your system administrator.
                 </p>
 
-                {/* Actions Container */}
+                {/* Actions Container - Horizontal Row */}
                 <div
                     style={{
                         display: 'flex',
@@ -122,15 +148,16 @@ export default function Unauthorized() {
                         flexWrap: 'wrap',
                     }}
                 >
+                    {/* Return to origin page/module */}
                     <button
                         type="button"
-                        onClick={handleGoToLogin}
+                        onClick={handleGoBack}
                         style={{
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             gap: '8px',
-                            padding: '10px 24px',
+                            padding: '10px 22px',
                             height: '42px',
                             fontSize: '14px',
                             fontWeight: '600',
@@ -156,11 +183,56 @@ export default function Unauthorized() {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                         >
-                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                            <polyline points="10 17 15 12 10 7" />
-                            <line x1="15" y1="12" x2="3" y2="12" />
+                            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                            <polyline points="9 22 9 12 15 12 15 22" />
                         </svg>
-                        <span>Sign In to Your Account</span>
+                        <span>{destination.label}</span>
+                    </button>
+
+                    {/* Switch account */}
+                    <button
+                        type="button"
+                        onClick={handleSwitchAccount}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            padding: '10px 22px',
+                            height: '42px',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border, #E2E8F0)',
+                            backgroundColor: 'var(--bg-card, #FFFFFF)',
+                            color: 'var(--text-primary, #1E293B)',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--bg-secondary, #F1F5F9)';
+                            e.currentTarget.style.borderColor = '#CBD5E1';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--bg-card, #FFFFFF)';
+                            e.currentTarget.style.borderColor = 'var(--border, #E2E8F0)';
+                        }}
+                    >
+                        <svg
+                            width="15"
+                            height="15"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <rect x="2" y="4" width="20" height="16" rx="2" />
+                            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                        </svg>
+                        <span>Sign in with a different account</span>
                     </button>
                 </div>
             </div>

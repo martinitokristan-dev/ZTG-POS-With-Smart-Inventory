@@ -25,7 +25,7 @@ class RoleMiddleware
         $userRole = is_object($user->role) ? $user->role->value : $user->role;
 
         if (! in_array($userRole, $roles)) {
-            return response()->json(['message' => 'Unauthorized access. Insufficient permissions.'], 403);
+            return response()->json(['message' => 'Access forbidden. Insufficient permissions.'], 403);
         }
 
         return $next($request);

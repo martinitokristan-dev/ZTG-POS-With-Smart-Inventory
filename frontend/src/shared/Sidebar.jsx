@@ -211,6 +211,8 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
             console.error('Logout error: ', e);
         } finally {
             clearEntireCache();
+            sessionStorage.removeItem('auth_token');
+            sessionStorage.removeItem('auth_user');
             localStorage.removeItem('auth_token');
             localStorage.removeItem('auth_user');
             window.dispatchEvent(new Event('auth_user_updated'));
