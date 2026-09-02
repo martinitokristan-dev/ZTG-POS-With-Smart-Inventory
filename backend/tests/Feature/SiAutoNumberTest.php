@@ -236,4 +236,80 @@ class SiAutoNumberTest extends TestCase
         $this->assertEquals('000002', $res->json('transaction.si_no'));
         $this->assertEquals('000003', Setting::where('key', 'si_counter_si')->value('value'));
     }
+
+    public function test_si_dr_and_cr_can_all_share_number_000001_without_collision(): void
+    {
+        Setting::updateOrCreate(['key' => 'si_numbering_mode'], ['value' => 'auto']);
+        Setting::updateOrCreate(['key' => 'si_counter_si'], ['value' => '000001']);
+        Setting::updateOrCreate(['key' => 'si_counter_dr'], ['value' => '000001']);
+        Setting::updateOrCreate(['key' => 'si_counter_cr'], ['value' => '000001']);
+        Setting::updateOrCreate(['key' => 'si_auto_digits'], ['value' => '6']);
+
+        // S.I. gets 000001
+        $resSi = $this->actingAs($this->cashier)->postJson(
+            '/api/pos/checkout',
+            $this->getCheckoutPayload('S.I.', null)
+        );
+        $resSi->assertStatus(201);
+        $this->assertEquals('000001', $resSi->json('transaction.si_no'));
+
+        // D.R. gets 000001 without colliding with S.I. 000001
+        $resDr = $this->actingAs($this->cashier)->postJson(
+            '/api/pos/checkout',
+            $this->getCheckoutPayload('D.R.', null)
+        );
+        $resDr->assertStatus(201);
+        $this->assertEquals('000001', $resDr->json('transaction.si_no'));
+
+        // C.R. gets 000001 without colliding with S.I. or D.R.
+        $resCr = $this->actingAs($this->cashier)->postJson(
+            '/api/pos/checkout',
+            $this->getCheckoutPayload('C.R.', null)
+        );
+        $resCr->assertStatus(201);
+        $this->assertEquals('000001', $resCr->json('transaction.si_no'));
+
+        // All counters have independently advanced to 000002
+        $this->assertEquals('000002', Setting::where('key', 'si_counter_si')->value('value'));
+        $this->assertEquals('000002', Setting::where('key', 'si_counter_dr')->value('value'));
+        $this->assertEquals('000002', Setting::where('key', 'si_counter_cr')->value('value'));
+    }
+
+    public function test_auto_mode_continues_after_manual_transactions_and_preview_syncs(): void
+    {
+        // 1. Start in manual mode
+        Setting::updateOrCreate(['key' => 'si_numbering_mode'], ['value' => 'manual']);
+        Setting::updateOrCreate(['key' => 'si_counter_si'], ['value' => '000001']);
+        Setting::updateOrCreate(['key' => 'si_auto_digits'], ['value' => '6']);
+
+        // Cashier enters manual SI 000001 and 000002
+        $m1 = $this->actingAs($this->cashier)->postJson(
+            '/api/pos/checkout',
+            $this->getCheckoutPayload('S.I.', '000001')
+        );
+        $m1->assertStatus(201);
+
+        $m2 = $this->actingAs($this->cashier)->postJson(
+            '/api/pos/checkout',
+            $this->getCheckoutPayload('S.I.', '000002')
+        );
+        $m2->assertStatus(201);
+
+        // 2. Admin turns auto mode ON
+        Setting::updateOrCreate(['key' => 'si_numbering_mode'], ['value' => 'auto']);
+
+        // 3. Check preview endpoint — it must automatically detect 000001 & 000002 are taken and return 000003
+        $prev = $this->actingAs($this->cashier)->getJson('/api/settings/si-preview');
+        $prev->assertStatus(200);
+        $this->assertEquals('000003', $prev->json('next')['S.I.']);
+
+        // 4. Next auto checkout proceeds smoothly to 000003
+        $autoTx = $this->actingAs($this->cashier)->postJson(
+            '/api/pos/checkout',
+            $this->getCheckoutPayload('S.I.', null)
+        );
+        $autoTx->assertStatus(201);
+        $this->assertEquals('000003', $autoTx->json('transaction.si_no'));
+        $this->assertEquals('000004', Setting::where('key', 'si_counter_si')->value('value'));
+    }
 }

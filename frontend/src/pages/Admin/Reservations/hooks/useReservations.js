@@ -93,6 +93,37 @@ export default function useReservations() {
 
     /* ── Cancel form state ── */
     const [cancelReason, setCancelReason] = useState('');
+
+    /* ── SI / CR Numbering Preview State ── */
+    const [siNumberingMode, setSiNumberingMode] = useState('manual');
+    const [nextNumbers, setNextNumbers] = useState({});
+
+    const fetchSiPreview = async () => {
+        try {
+            const res = await api.get('/settings/si-preview');
+            const mode = res.data?.mode || 'manual';
+            const next = res.data?.next || {};
+            setSiNumberingMode(mode);
+            setNextNumbers(next);
+            return { mode, next };
+        } catch {
+            setSiNumberingMode('manual');
+            setNextNumbers({});
+            return { mode: 'manual', next: {} };
+        }
+    };
+
+    useEffect(() => {
+        if (showAddModal) {
+            fetchSiPreview().then(({ mode, next }) => {
+                if (mode === 'auto') {
+                    setDepositCrNo(next['C.R.'] || '');
+                } else {
+                    setDepositCrNo('');
+                }
+            });
+        }
+    }, [showAddModal]);
     const [cancelLoading, setCancelLoading] = useState(false);
 
     /* ──────────────────────────────────────────────── */
@@ -308,6 +339,7 @@ export default function useReservations() {
         }
         setAddLoading(true);
         try {
+            const isAutoCr = siNumberingMode === 'auto' && (!depositCrNo.trim() || depositCrNo.trim() === (nextNumbers['C.R.'] || ''));
             const payload = {
                 customer_name: custName,
                 customer_phone: custPhone,
@@ -320,7 +352,7 @@ export default function useReservations() {
                 payment_method: paymentMethod,
                 cheque_number: paymentMethod === 'Cheque' ? custChequeNumber.trim() : null,
                 deposit_amount: depositAmt,
-                deposit_cr_no: depositCrNo.trim() || null,
+                deposit_cr_no: isAutoCr ? null : (depositCrNo.trim() || null),
                 items: cartItems.map(c => ({
                     product_id: c.product_id || null,
                     item_name: c.item_name || c.name || 'Order Item',
@@ -352,7 +384,6 @@ export default function useReservations() {
     /* ──────────────────────────────────────────────── */
     const openFulfill = (r) => {
         setSelected(r);
-        setFfSiNo('');
         setFfPaymentMethod('Cash');
         setFfChequeNumber('');
         const due = Math.max(0, Number(r?.total || 0) - Number(r?.deposit || 0));
@@ -361,6 +392,13 @@ export default function useReservations() {
         setFfNotes('');
         setFfError('');
         setShowFulfillModal(true);
+        fetchSiPreview().then(({ mode, next }) => {
+            if (mode === 'auto') {
+                setFfSiNo(next['C.R.'] || '');
+            } else {
+                setFfSiNo('');
+            }
+        });
     };
 
     const handleFulfill = async () => {
@@ -370,7 +408,7 @@ export default function useReservations() {
         if (balanceDue > 0 && (ffAmountReceived === '' || amountRec < balanceDue)) {
             setFfError(`Please enter the amount received (minimum ${fmt(balanceDue)}).`); return;
         }
-        if (!ffSiNo.trim()) {
+        if (siNumberingMode === 'manual' && !ffSiNo.trim()) {
             setFfError(`Please enter the physical Collection Receipt No. from your paper booklet.`); return;
         }
         if (ffPaymentMethod === 'Cheque' && !ffChequeNumber.trim()) {
@@ -378,19 +416,20 @@ export default function useReservations() {
         }
         setFfLoading(true);
         try {
+            const isAutoCr = siNumberingMode === 'auto' && (!ffSiNo.trim() || ffSiNo.trim() === (nextNumbers[ffDocType || 'C.R.'] || ''));
             const res = await api.post(`/reservations/${selected.id}/fulfill`, {
                 balance_payment: balanceDue <= 0 ? 0 : amountRec,
                 payment_method: ffPaymentMethod,
                 cheque_number: ffPaymentMethod === 'Cheque' ? ffChequeNumber.trim() : null,
-                doc_type: 'C.R.',
-                si_no: ffSiNo.trim(),
+                doc_type: ffDocType || 'C.R.',
+                si_no: isAutoCr ? null : (ffSiNo.trim() || null),
                 notes: ffNotes,
             });
             const fulfilledRes = res.data.reservation;
             setSuccessData({
                 ...fulfilledRes,
-                si_no: ffSiNo.trim(),
-                doc_type: 'C.R.',
+                si_no: fulfilledRes.si_no || ffSiNo.trim(),
+                doc_type: fulfilledRes.doc_type || ffDocType || 'C.R.',
                 balance_payment: balanceDue <= 0 ? 0 : amountRec,
                 payment_method: ffPaymentMethod,
                 cheque_number: ffPaymentMethod === 'Cheque' ? ffChequeNumber.trim() : null
@@ -585,6 +624,9 @@ export default function useReservations() {
         openFulfill, handleFulfill, handleReprintCR, handleReprintDepositCR, handleReprintBalanceCR, ffBalanceDue, ffChange,
 
         // Cancel Modal State & Handlers
-        cancelReason, setCancelReason, cancelLoading, openCancel, handleCancel
+        cancelReason, setCancelReason, cancelLoading, openCancel, handleCancel,
+
+        // Numbering Mode
+        siNumberingMode, nextNumbers
     };
 }

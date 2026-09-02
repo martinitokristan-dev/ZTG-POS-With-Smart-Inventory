@@ -12,6 +12,7 @@ use App\Models\Reservation;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Services\Products\ProductService;
+use App\Services\POS\CheckoutService;
 use App\Events\InventoryUpdated;
 use App\Events\TransactionCreated;
 use App\Events\TransactionUpdated;
@@ -25,10 +26,14 @@ use Illuminate\Validation\ValidationException;
 class ReservationService
 {
     protected ProductService $productService;
+    protected CheckoutService $checkoutService;
 
-    public function __construct(ProductService $productService)
-    {
+    public function __construct(
+        ProductService $productService,
+        CheckoutService $checkoutService
+    ) {
         $this->productService = $productService;
+        $this->checkoutService = $checkoutService;
     }
 
     /**
@@ -220,6 +225,10 @@ class ReservationService
             $chequeNo = $data['cheque_number'] ?? null;
             $resPaymentMethod = $data['payment_method'];
 
+            $depositCrNo = !empty($data['deposit_amount']) && $data['deposit_amount'] > 0
+                ? $this->checkoutService->resolveSiNo($data['deposit_cr_no'] ?? null, 'C.R.')
+                : ($data['deposit_cr_no'] ?? null);
+
             // 5. Save reservation
             $reservation = Reservation::create([
                 'order_no' => $orderNo,
@@ -233,7 +242,7 @@ class ReservationService
                 'cheque_number' => $chequeNo,
                 'payment_type' => $data['payment_type'],
                 'deposit' => $data['deposit_amount'],
-                'deposit_cr_no' => $data['deposit_cr_no'] ?? null,
+                'deposit_cr_no' => $depositCrNo,
                 'total' => $total,
                 'date' => now(),
                 'pickup_date' => $data['pickup_date'] ?? null,
@@ -340,12 +349,15 @@ class ReservationService
             }
 
             // 4. Mark reservation as Completed and set date_get, doc_type, si_no
+            $docType = $data['doc_type'] ?? 'C.R.';
+            $finalSiNo = $this->checkoutService->resolveSiNo($data['si_no'] ?? null, $docType);
+
             $reservation->update([
                 'status' => ReservationStatus::COMPLETED->value,
                 'fulfilled_by_id' => $fulfilledById,
                 'date_get' => now(),
-                'doc_type' => $data['doc_type'] ?? 'C.R.',
-                'si_no' => $data['si_no'] ?? null,
+                'doc_type' => $docType,
+                'si_no' => $finalSiNo,
             ]);
 
             return $reservation->fresh(['customer', 'reservedBy', 'fulfilledBy', 'items.product']);

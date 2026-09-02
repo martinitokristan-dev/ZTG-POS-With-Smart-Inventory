@@ -11,7 +11,8 @@ export default function FulfillOrderModal({
     ffNotes, setFfNotes,
     ffError, ffLoading,
     ffBalanceDue, ffChange,
-    userName, fmt, fmtDate
+    userName, fmt, fmtDate,
+    siNumberingMode, nextNumbers
 }) {
     if (!isOpen || !selected) return null;
 
@@ -209,16 +210,28 @@ export default function FulfillOrderModal({
                                 </div>
                                 <div className="form-group" style={{ marginBottom: '12px' }}>
                                     <label className="form-label" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
-                                        {ffBalanceDue > 0 ? 'Balance Collection Receipt No. (C.R. No.)' : 'Collection Receipt No. (C.R. No.)'} <span style={{ color: 'var(--danger)' }}>*</span>
+                                        {ffBalanceDue > 0 ? 'Balance Collection Receipt No. (C.R. No.)' : 'Collection Receipt No. (C.R. No.)'} {siNumberingMode === 'manual' ? (
+                                            <span style={{ color: 'var(--danger)' }}>*</span>
+                                        ) : (
+                                            <span style={{ color: '#10B981', fontSize: '11px', fontWeight: 600 }}> (Auto)</span>
+                                        )}
                                     </label>
                                     <input 
                                         type="text" 
                                         className="form-control" 
-                                        required 
-                                        placeholder={ffBalanceDue > 0 ? "e.g. CR-00499 from physical booklet" : "e.g. CR-00340 or booklet number"}
+                                        readOnly={siNumberingMode === 'auto'}
+                                        required={siNumberingMode === 'manual'}
+                                        placeholder={siNumberingMode === 'auto' ? '000001 (Auto-Generated)' : (ffBalanceDue > 0 ? "e.g. CR-00499 from physical booklet" : "e.g. CR-00340 or booklet number")}
                                         value={ffSiNo} 
                                         onChange={(e) => setFfSiNo(e.target.value)} 
-                                        style={{ fontSize: '13px', fontWeight: 600 }} 
+                                        style={{ 
+                                            fontSize: '13px', 
+                                            fontWeight: 600,
+                                            border: siNumberingMode === 'auto' && ffSiNo ? '1.5px solid #10B981' : '1px solid var(--border)',
+                                            backgroundColor: siNumberingMode === 'auto' ? '#F0FDF4' : '#FFFFFF',
+                                            color: siNumberingMode === 'auto' ? '#047857' : 'var(--text-primary)',
+                                            cursor: siNumberingMode === 'auto' ? 'not-allowed' : 'text'
+                                        }} 
                                     />
                                 </div>
                                 <div className="form-group" style={{ marginBottom: '12px' }}>

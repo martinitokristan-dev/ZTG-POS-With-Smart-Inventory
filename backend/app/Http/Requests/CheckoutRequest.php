@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CheckoutRequest extends FormRequest
 {
@@ -32,7 +33,12 @@ class CheckoutRequest extends FormRequest
             'discount_rate'          => 'nullable|numeric|min:0|max:100',
 
             // Document & payment
-            'si_no'                  => 'nullable|string|max:50|unique:transactions,si_no',
+            'si_no'                  => [
+                'nullable',
+                'string',
+                'max:50',
+                Rule::unique('transactions', 'si_no')->where('doc_type', $this->input('doc_type'))
+            ],
             'payment_method'         => 'required|string',
             'cheque_number'          => 'required_if:payment_method,Cheque|nullable|string|max:100',
             'doc_type'               => 'required|string|in:S.I.,D.R.,C.R.',

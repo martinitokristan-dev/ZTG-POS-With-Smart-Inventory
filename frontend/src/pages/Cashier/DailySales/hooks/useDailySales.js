@@ -18,19 +18,57 @@ export default function useDailySales() {
     const [searchQuery, setSearchQuery] = useState('');
     const [timeFilter, setTimeFilter] = useState('Today');
 
-    const queryParams = {
-        status: 'Completed,Paid,Refund,Return,Pending',
-        date_from: getTodayISO()
+    const formatLocalDate = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     };
-    if (cashierId) {
-        queryParams.cashier_id = cashierId;
-    }
+
+    const queryParams = useMemo(() => {
+        let date_from = '';
+        let date_to = '';
+        const now = new Date();
+
+        if (timeFilter === 'Today') {
+            const todayStr = formatLocalDate(now);
+            date_from = todayStr;
+            date_to = todayStr;
+        } else if (timeFilter === 'This Week') {
+            const dayOfWeek = now.getDay();
+            const sunday = new Date(now);
+            sunday.setDate(now.getDate() - dayOfWeek);
+            date_from = formatLocalDate(sunday);
+            date_to = formatLocalDate(now);
+        } else if (timeFilter === 'This Month') {
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+            date_from = formatLocalDate(firstDay);
+            date_to = formatLocalDate(now);
+        }
+        // If timeFilter === 'All', date_from & date_to remain empty, fetching all lifetime records
+
+        const params = {
+            status: 'Completed,Paid,Refund,Return,Pending',
+            timeframe: timeFilter,
+        };
+
+        if (date_from) params.date_from = date_from;
+        if (date_to) params.date_to = date_to;
+        if (cashierId) params.cashier_id = cashierId;
+
+        return params;
+    }, [timeFilter, cashierId]);
 
     const { data: transactions, loading, page, setPage, pagination, refetch } = usePaginatedCache(
-        `daily-sales-${cashierId || 'all'}`,
+        `daily-sales-${cashierId || 'all'}-${timeFilter}`,
         '/transactions',
         queryParams
     );
+
+    const handleTimeFilterChange = (val) => {
+        setTimeFilter(val);
+        setPage(1);
+    };
 
     useEffect(() => {
         const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
@@ -128,28 +166,8 @@ export default function useDailySales() {
             );
         }
 
-        // Time filter (applies to the already date_from=today scoped data)
-        if (timeFilter !== 'All') {
-            const now = new Date();
-            items = items.filter(item => {
-                const txDate = new Date(item._txDate);
-                if (isNaN(txDate)) return true;
-                if (timeFilter === 'Today') {
-                    return txDate.toDateString() === now.toDateString();
-                }
-                if (timeFilter === 'This Week') {
-                    const diff = Math.ceil(Math.abs(now - txDate) / (1000 * 60 * 60 * 24));
-                    return diff <= 7;
-                }
-                if (timeFilter === 'This Month') {
-                    return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
-                }
-                return true;
-            });
-        }
-
         return items;
-    }, [flattenedItems, searchQuery, timeFilter]);
+    }, [flattenedItems, searchQuery]);
 
     // Gross sales from unique Completed/Paid transactions in current page
     const grossSales = useMemo(() => {
@@ -169,7 +187,7 @@ export default function useDailySales() {
         loading,
         items: filteredItems,
         searchQuery, setSearchQuery,
-        timeFilter, setTimeFilter,
+        timeFilter, setTimeFilter: handleTimeFilterChange,
         grossSales,
         page, setPage, pagination,
         fmt,

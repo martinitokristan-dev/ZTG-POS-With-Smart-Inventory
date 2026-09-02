@@ -193,6 +193,8 @@ export default function Reservations() {
                 depositAmt={res.depositAmt}
                 balance={res.balance}
                 fmt={res.fmt}
+                siNumberingMode={res.siNumberingMode}
+                nextNumbers={res.nextNumbers}
             />
 
             <FulfillOrderModal
@@ -213,6 +215,8 @@ export default function Reservations() {
                 userName={res.userName}
                 fmt={res.fmt}
                 fmtDate={res.fmtDate}
+                siNumberingMode={res.siNumberingMode}
+                nextNumbers={res.nextNumbers}
             />
 
             <CancelReservationModal

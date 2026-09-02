@@ -161,9 +161,10 @@ export default function CheckoutModal({
 
         setIsProcessing(true);
         try {
+            const isAutoSeries = siNumberingMode === 'auto' && (!siNo.trim() || siNo.trim() === (nextNumbers[docType] || ''));
             const payload = {
                 doc_type: docType,
-                si_no: siNo.trim() || null,
+                si_no: isAutoSeries ? null : (siNo.trim() || null),
                 payment: paymentData
             };
 
@@ -687,23 +688,30 @@ export default function CheckoutModal({
                             </div>
                             <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>
-                                    {docType === 'D.R.' ? 'Delivery Receipt No.' : docType === 'C.R.' ? 'Collection Receipt No.' : 'Sales Invoice No.'} {siNumberingMode === 'manual' && <span style={{ color: 'var(--danger, #EF4444)' }}>*</span>}
+                                    {docType === 'D.R.' ? 'Delivery Receipt No.' : docType === 'C.R.' ? 'Collection Receipt No.' : 'Sales Invoice No.'} {siNumberingMode === 'manual' ? (
+                                        <span style={{ color: 'var(--danger, #EF4444)' }}>*</span>
+                                    ) : (
+                                        <span style={{ color: '#10B981', fontSize: '10px', fontWeight: 600 }}> (Auto)</span>
+                                    )}
                                 </label>
                                 <input 
                                     type="text" 
                                     className="form-control form-control-sm" 
-                                    placeholder={siNumberingMode === 'auto' ? 'e.g. 000001 (Auto)' : (docType === 'D.R.' ? 'e.g. DR-00120' : docType === 'C.R.' ? 'e.g. CR-00340' : 'e.g. 004501')} 
+                                    placeholder={siNumberingMode === 'auto' ? '000001 (Auto)' : (docType === 'D.R.' ? 'e.g. DR-00120' : docType === 'C.R.' ? 'e.g. CR-00340' : 'e.g. 004501')} 
                                     style={{ 
                                         fontSize: '13px', 
                                         fontWeight: '700', 
                                         letterSpacing: '0.5px',
                                         border: siNumberingMode === 'auto' && siNo ? '1.5px solid #10B981' : '1px solid var(--border)',
-                                        backgroundColor: siNumberingMode === 'auto' && siNo ? '#F0FDF4' : '#FFFFFF'
+                                        backgroundColor: siNumberingMode === 'auto' ? '#F0FDF4' : '#FFFFFF',
+                                        color: siNumberingMode === 'auto' ? '#047857' : 'var(--text-primary)',
+                                        cursor: siNumberingMode === 'auto' ? 'not-allowed' : 'text'
                                     }} 
                                     value={siNo} 
                                     onChange={e => setSiNo(e.target.value)} 
+                                    readOnly={siNumberingMode === 'auto'}
                                     required={siNumberingMode === 'manual'} 
-                                    autoFocus 
+                                    autoFocus={siNumberingMode === 'manual'} 
                                 />
                             </div>
                         </div>

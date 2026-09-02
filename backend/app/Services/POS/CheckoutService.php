@@ -209,14 +209,14 @@ class CheckoutService
      */
     public function resolveSiNo(?string $provided, string $docType): string
     {
-        // Branch 1: cashier explicitly provided a number — honour it, no counter change.
+        // Branch 1: cashier explicitly provided a number — honour it as a custom override, no counter change.
         if (!empty(trim((string) $provided))) {
             return trim($provided);
         }
 
         $mode = Setting::where('key', 'si_numbering_mode')->value('value') ?? 'manual';
 
-        // Branch 3: manual mode with no cashier input → random fallback (for tests / edge cases)
+        // Branch 3: manual mode with no cashier input → random fallback (for automated tests / edge cases)
         if ($mode !== 'auto') {
             return $this->generateSiNo($docType);
         }
@@ -230,8 +230,8 @@ class CheckoutService
         $counterRow = Setting::where('key', $counterKey)->lockForUpdate()->first();
         $current    = (int) ($counterRow?->value ?? 1);
 
-        // Ensure uniqueness — skip any number already in the transactions table
-        while (Transaction::where('si_no', str_pad($current, $digits, '0', STR_PAD_LEFT))->exists()) {
+        // Ensure uniqueness for this specific doc_type series — skip any number already in transactions
+        while (Transaction::where('doc_type', $docType)->where('si_no', str_pad($current, $digits, '0', STR_PAD_LEFT))->exists()) {
             $current++;
         }
 
@@ -263,8 +263,8 @@ class CheckoutService
             STR_PAD_LEFT
         );
 
-        // Ensure uniqueness
-        while (Transaction::where('si_no', $candidate)->exists()) {
+        // Ensure uniqueness for this doc_type
+        while (Transaction::where('doc_type', $docType)->where('si_no', $candidate)->exists()) {
             $candidate = str_pad(
                 rand(1, InvoiceConstants::SI_RANDOM_SUFFIX_MAX),
                 InvoiceConstants::SI_PADDING_LENGTH,

@@ -2,6 +2,7 @@ import React from 'react';
 import useDailySales from './hooks/useDailySales';
 import MySalesTable from './views/MySalesTable';
 import IOSSelect from '../../../shared/components/IOSSelect';
+import TablePagination from '../../../shared/components/TablePagination';
 
 export default function DailySales() {
     const ds = useDailySales();
@@ -59,6 +60,17 @@ export default function DailySales() {
                     </div>
 
                     <MySalesTable items={ds.items} loading={ds.loading} fmt={ds.fmt} fmtDate={ds.fmtDate} />
+
+                    {/* Standardized System Pagination Card */}
+                    {!ds.loading && (ds.pagination?.total > 0 || ds.items.length > 0) && (
+                        <TablePagination
+                            currentPage={ds.page}
+                            totalItems={ds.pagination?.total || ds.items.length}
+                            perPage={ds.pagination?.per_page || 20}
+                            onPageChange={(newPage) => ds.setPage(newPage)}
+                            label="sales records"
+                        />
+                    )}
 
                 </div>
             </div>

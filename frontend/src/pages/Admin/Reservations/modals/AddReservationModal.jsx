@@ -12,7 +12,8 @@ export default function AddReservationModal({
     depositCrNo, setDepositCrNo,
     cartItems, productSearch, suggestions, addError, addLoading,
     handleProductSearch, addToCart, addCustomItemToCart, removeFromCart, updateQty, updateCartItemPriceTier,
-    subtotal, tax, total, depositAmt, balance, fmt
+    subtotal, tax, total, depositAmt, balance, fmt,
+    siNumberingMode, nextNumbers
 }) {
     const [customName, setCustomName] = useState('');
     const [customPartNo, setCustomPartNo] = useState('');
@@ -337,16 +338,28 @@ export default function AddReservationModal({
                                 )}
                                 <div className="form-group" style={{ marginBottom: '12px' }}>
                                     <label className="form-label" style={{ fontSize: '12px', fontWeight: 500 }}>
-                                        Deposit Collection Receipt No. (C.R. No.) <span style={{ color: 'var(--danger)' }}>*</span>
+                                        Deposit Collection Receipt No. (C.R. No.) {siNumberingMode === 'manual' ? (
+                                            <span style={{ color: 'var(--danger)' }}>*</span>
+                                        ) : (
+                                            <span style={{ color: '#10B981', fontSize: '11px', fontWeight: 600 }}> (Auto)</span>
+                                        )}
                                     </label>
                                     <input 
                                         type="text" 
                                         className="form-control" 
-                                        required 
-                                        placeholder="e.g. CR-00451 from physical booklet" 
+                                        readOnly={siNumberingMode === 'auto'}
+                                        required={siNumberingMode === 'manual'}
+                                        placeholder={siNumberingMode === 'auto' ? '000001 (Auto-Generated)' : 'e.g. CR-00451 from physical booklet'} 
                                         value={depositCrNo || ''} 
                                         onChange={(e) => setDepositCrNo(e.target.value)} 
-                                        style={{ fontSize: '13px', fontWeight: 600 }} 
+                                        style={{ 
+                                            fontSize: '13px', 
+                                            fontWeight: 600,
+                                            border: siNumberingMode === 'auto' && depositCrNo ? '1.5px solid #10B981' : '1px solid var(--border)',
+                                            backgroundColor: siNumberingMode === 'auto' ? '#F0FDF4' : '#FFFFFF',
+                                            color: siNumberingMode === 'auto' ? '#047857' : 'var(--text-primary)',
+                                            cursor: siNumberingMode === 'auto' ? 'not-allowed' : 'text'
+                                        }} 
                                     />
                                 </div>
                                 <div className="form-group" style={{ marginBottom: 0 }}>

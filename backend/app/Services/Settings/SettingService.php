@@ -3,6 +3,7 @@
 namespace App\Services\Settings;
 
 use App\Models\Setting;
+use App\Models\Transaction;
 
 class SettingService
 {
@@ -33,7 +34,8 @@ class SettingService
 
     /**
      * Return the current next SI number for each doc type without advancing any counter.
-     * This is a pure read — safe to call multiple times without side effects.
+     * Ensures candidate numbers do not collide with existing transactions for each doc_type,
+     * syncing the counter if manual transactions had already consumed the series.
      *
      * Response shape:
      * {
@@ -49,13 +51,37 @@ class SettingService
         $mode   = $rows->get('si_numbering_mode', 'manual');
         $digits = (int) $rows->get('si_auto_digits', 6);
 
+        $docCounters = [
+            'S.I.' => 'si_counter_si',
+            'D.R.' => 'si_counter_dr',
+            'C.R.' => 'si_counter_cr',
+        ];
+
+        $next = [];
+        foreach ($docCounters as $docType => $counterKey) {
+            $val = (int) ($rows->get($counterKey, '1') ?: 1);
+            $formatted = str_pad($val, $digits, '0', STR_PAD_LEFT);
+
+            // Ensure preview skips any numbers that already exist for this doc_type
+            while (Transaction::where('doc_type', $docType)->where('si_no', $formatted)->exists()) {
+                $val++;
+                $formatted = str_pad($val, $digits, '0', STR_PAD_LEFT);
+            }
+
+            // If the counter was behind existing manual/auto transactions, sync setting
+            if ($val !== (int) ($rows->get($counterKey, '1') ?: 1)) {
+                Setting::where('key', $counterKey)->update([
+                    'value'      => $formatted,
+                    'updated_at' => now(),
+                ]);
+            }
+
+            $next[$docType] = $formatted;
+        }
+
         return [
             'mode' => $mode,
-            'next' => [
-                'S.I.' => str_pad($rows->get('si_counter_si', '1'), $digits, '0', STR_PAD_LEFT),
-                'D.R.' => str_pad($rows->get('si_counter_dr', '1'), $digits, '0', STR_PAD_LEFT),
-                'C.R.' => str_pad($rows->get('si_counter_cr', '1'), $digits, '0', STR_PAD_LEFT),
-            ],
+            'next' => $next,
         ];
     }
 
