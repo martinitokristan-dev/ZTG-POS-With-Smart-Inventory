@@ -41,4 +41,9 @@ return [
         'sender_name'  => env('BREVO_SENDER_NAME', env('MAIL_FROM_NAME', 'ZTG Heavy Parts')),
     ],
 
+    'email_verifier' => [
+        'api_key' => env('EMAIL_VERIFIER_API_KEY'),
+        'timeout' => env('EMAIL_VERIFIER_TIMEOUT', 6),
+    ],
+
 ];

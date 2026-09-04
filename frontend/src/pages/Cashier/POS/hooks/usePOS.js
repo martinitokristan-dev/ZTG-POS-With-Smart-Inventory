@@ -109,6 +109,7 @@ export default function usePOS() {
         cartTotals: cartHook.cartTotals,
         orderDiscountType: cartHook.orderDiscountType,
         setOrderDiscountType: cartHook.setOrderDiscountType,
+        isOrderDiscountActive: cartHook.isOrderDiscountActive,
         orderDiscountVal: cartHook.orderDiscountVal,
         setOrderDiscountVal: cartHook.setOrderDiscountVal,
         posError: cartHook.posError,

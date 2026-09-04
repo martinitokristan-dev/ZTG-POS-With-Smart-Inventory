@@ -17,9 +17,22 @@ use App\Events\TransactionCreated;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use App\Services\Constants\StockConstants;
 use App\Services\Constants\InvoiceConstants;
+use App\Services\Transactions\TransactionService;
 
 class ProductService
 {
+    protected ?TransactionService $transactionService = null;
+
+    public function __construct(?TransactionService $transactionService = null)
+    {
+        $this->transactionService = $transactionService;
+    }
+
+    protected function getTransactionService(): TransactionService
+    {
+        return $this->transactionService ??= app(TransactionService::class);
+    }
+
     /**
      * Calculate product status based on stock level.
      * Never overrides a manually 'Disabled' status.
@@ -50,13 +63,16 @@ class ProductService
      */
     public function getAll(array $filters = [])
     {
-        $query = Product::with(['category', 'variantOptions.type', 'variants' => function($q) use ($filters) {
-            $q->with(['variantOptions.type', 'parent']);
+        $query = Product::with(['category', 'brand', 'variantOptions.type', 'variants' => function($q) use ($filters) {
+            $q->with(['variantOptions.type', 'parent', 'brand']);
             if (!empty($filters['search'])) {
                 $q->where(function ($sub) use ($filters) {
                     $sub->where('name', 'like', '%' . $filters['search'] . '%')
                       ->orWhere('part_no', 'like', '%' . $filters['search'] . '%')
-                      ->orWhere('chinese_name', 'like', '%' . $filters['search'] . '%');
+                      ->orWhere('chinese_name', 'like', '%' . $filters['search'] . '%')
+                      ->orWhereHas('brand', function ($b) use ($filters) {
+                          $b->where('name', 'like', '%' . $filters['search'] . '%');
+                      });
                 });
             }
             if (!empty($filters['status']) && $filters['status'] !== 'All') {
@@ -80,16 +96,26 @@ class ProductService
                 $q->where('name', 'like', '%' . $filters['search'] . '%')
                   ->orWhere('part_no', 'like', '%' . $filters['search'] . '%')
                   ->orWhere('chinese_name', 'like', '%' . $filters['search'] . '%')
+                  ->orWhereHas('brand', function ($b) use ($filters) {
+                      $b->where('name', 'like', '%' . $filters['search'] . '%');
+                  })
                   ->orWhereHas('variants', function ($sub) use ($filters) {
                       $sub->where('name', 'like', '%' . $filters['search'] . '%')
                           ->orWhere('part_no', 'like', '%' . $filters['search'] . '%')
-                          ->orWhere('chinese_name', 'like', '%' . $filters['search'] . '%');
+                          ->orWhere('chinese_name', 'like', '%' . $filters['search'] . '%')
+                          ->orWhereHas('brand', function ($b) use ($filters) {
+                              $b->where('name', 'like', '%' . $filters['search'] . '%');
+                          });
                   });
             });
         }
 
         if (!empty($filters['category_id'])) {
             $query->where('category_id', $filters['category_id']);
+        }
+
+        if (!empty($filters['brand_id'])) {
+            $query->where('brand_id', $filters['brand_id']);
         }
 
         if (!empty($filters['status']) && $filters['status'] !== 'All') {
@@ -142,8 +168,8 @@ class ProductService
             ->whereColumn('transaction_items.product_id', 'products.id')
             ->where('transactions.status', 'Completed');
 
-        return Product::with(['category', 'variants' => function($q) use ($salesSubquery) {
-                $q->with(['variantOptions.type', 'parent'])->select('products.*')->selectSub(clone $salesSubquery, 'sales_count');
+        return Product::with(['category', 'brand', 'variants' => function($q) use ($salesSubquery) {
+                $q->with(['variantOptions.type', 'parent', 'brand'])->select('products.*')->selectSub(clone $salesSubquery, 'sales_count');
             }])
             ->select('products.*')
             ->selectSub(clone $salesSubquery, 'sales_count')
@@ -167,6 +193,7 @@ class ProductService
                 'chinese_name'      => $data['chinese_name'] ?? null,
                 'part_no'           => $data['part_no'] ?? null,
                 'category_id'       => $data['category_id'],
+                'brand_id'          => $data['brand_id'] ?? null,
                 'uom'               => $data['uom'] ?? StockConstants::DEFAULT_UOM,
                 'address'           => $data['address'] ?? null,
                 'stock'             => $data['stock'],
@@ -192,6 +219,7 @@ class ProductService
                         'chinese_name'      => $variantData['chinese_name'] ?? null,
                         'part_no'           => $variantData['part_no'] ?? null,
                         'category_id'       => $data['category_id'],
+                        'brand_id'          => $variantData['brand_id'] ?? ($data['brand_id'] ?? null),
                         'uom'               => $variantData['uom'] ?? ($data['uom'] ?? StockConstants::DEFAULT_UOM),
                         'address'           => $data['address'] ?? null,
                         'stock'             => $variantData['stock'],
@@ -257,6 +285,7 @@ class ProductService
                     'chinese_name' => $data['chinese_name'] ?? null,
                     'part_no'      => $data['part_no'] ?? null,
                     'category_id'  => $data['category_id'],
+                    'brand_id'     => array_key_exists('brand_id', $data) ? $data['brand_id'] : $product->brand_id,
                     'uom'          => $data['uom'] ?? StockConstants::DEFAULT_UOM,
                     'address'      => $data['address'] ?? null,
                     'stock'        => $data['stock'],
@@ -318,6 +347,7 @@ class ProductService
                             'chinese_name'      => array_key_exists('chinese_name', $variantData) ? $variantData['chinese_name'] : ($variant ? $variant->chinese_name : null),
                             'part_no'           => $variantData['part_no'] ?? null,
                             'category_id'       => $data['category_id'],
+                            'brand_id'          => $variantData['brand_id'] ?? (array_key_exists('brand_id', $data) ? $data['brand_id'] : $product->brand_id),
                             'uom'               => $variantData['uom'] ?? ($data['uom'] ?? StockConstants::DEFAULT_UOM),
                             'address'           => $data['address'] ?? null,
                             'stock'             => $variantData['stock'],
@@ -413,9 +443,23 @@ class ProductService
     /**
      * Commit a batch restock: increase each product's stock,
      * recalculate statuses, and log one Restocked transaction.
+     * Requires Admin Password or Approval PIN verification.
+     *
+     * @param array $restockData Array of ['product_id' => int, 'qty' => int]
+     * @param int $userId Authenticated user ID committing restock
+     * @param string $pin Admin password or PIN authorizing restock
+     * @return Transaction
+     * @throws ValidationException
      */
-    public function restock(array $restockData, int $userId): Transaction
+    public function restock(array $restockData, int $userId, string $pin): Transaction
     {
+        $contextMsg = "for inventory restock by user ID: {$userId}";
+        if (!$this->getTransactionService()->verifyPin($userId, $pin, $contextMsg)) {
+            throw ValidationException::withMessages([
+                'approval_pin' => ['Invalid admin password or PIN. The failed attempt has been logged.'],
+            ]);
+        }
+
         $transaction = DB::transaction(function () use ($restockData, $userId) {
             $totalQty = 0;
             $restockEntries = [];

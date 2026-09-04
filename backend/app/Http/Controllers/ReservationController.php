@@ -88,4 +88,21 @@ class ReservationController extends Controller
             'reservation' => $cancelled,
         ]);
     }
+
+    /**
+     * Update reservation status (e.g. Order Received, Ready for Pickup).
+     */
+    public function updateStatus(Request $request, Reservation $reservation): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => 'required|string|in:Order Received,Pending',
+        ]);
+
+        $updated = $this->reservationService->updateStatus($reservation, $validated['status']);
+
+        return response()->json([
+            'message'     => "Reservation status updated to {$validated['status']}.",
+            'reservation' => $updated,
+        ]);
+    }
 }

@@ -608,36 +608,175 @@ export default function CheckoutModal({
                                         </div>
                                         
                                         {/* Per-Item Discount Input */}
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px dashed #E2E8F0' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                    🏷️ Item Discount:
-                                                </span>
-                                                {itemDisc > 0 && (
-                                                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#2563EB', backgroundColor: '#EFF6FF', padding: '2px 6px', borderRadius: '4px', border: '1px solid #BFDBFE' }}>
-                                                        - {fmt(itemDisc)} off line
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                                    <span style={{ position: 'absolute', left: '8px', fontSize: '11px', fontWeight: '700', color: '#94A3B8' }}>₱</span>
-                                                    <input 
-                                                        type="number"
-                                                        step="0.01"
-                                                        min="0"
-                                                        placeholder="0.00"
-                                                        value={item.item_discount || ''}
-                                                        onChange={e => setItemDiscount(item.id, item.priceTier || 'price1', e.target.value)}
-                                                        style={{ width: '100px', fontSize: '11px', padding: '3px 8px 3px 20px', height: '28px', borderRadius: '6px', border: itemDisc > 0 ? '1px solid #3B82F6' : '1px solid #CBD5E1', textAlign: 'right', fontWeight: '700', color: 'var(--text-primary)', backgroundColor: itemDisc > 0 ? '#F0F9FF' : '#FFFFFF' }}
-                                                    />
-                                                </div>
-                                                {itemDisc > 0 && (
-                                                    <button type="button" onClick={() => setItemDiscount(item.id, item.priceTier || 'price1', 0)} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '11px', fontWeight: '700', cursor: 'pointer', padding: '2px 4px' }}>
-                                                        Clear
-                                                    </button>
-                                                )}
-                                            </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px dashed #E2E8F0', flexWrap: 'wrap' }}>
+                                            {(() => {
+                                                const itemDiscType = item.item_discount_type || 'peso';
+                                                const effectiveRate = origLineTotal > 0 && itemDisc > 0 ? ((itemDisc / origLineTotal) * 100) : 0;
+                                                const isIntegerRate = Math.abs(effectiveRate - Math.round(effectiveRate)) < 0.001;
+                                                const rateStr = effectiveRate > 0 ? `${isIntegerRate ? Math.round(effectiveRate) : effectiveRate.toFixed(2)}%` : '';
+
+                                                return (
+                                                    <>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                                            <span style={{ fontSize: '11px', fontWeight: '700', color: (orderDiscountType !== 'None') ? '#94A3B8' : '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                🏷️ Item Discount:
+                                                            </span>
+                                                            {orderDiscountType !== 'None' ? (
+                                                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748B', backgroundColor: '#F1F5F9', padding: '2px 6px', borderRadius: '4px', border: '1px solid #E2E8F0', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                                                    <span>🔒</span> Disabled (Order Discount Active)
+                                                                </span>
+                                                            ) : (
+                                                                itemDisc > 0 && (
+                                                                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#2563EB', backgroundColor: '#EFF6FF', padding: '2px 6px', borderRadius: '4px', border: '1px solid #BFDBFE' }}>
+                                                                        - {fmt(itemDisc)} {rateStr ? `(${rateStr})` : ''} off line
+                                                                    </span>
+                                                                )
+                                                            )}
+                                                        </div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            {/* Dropdown Selector for Discount Type */}
+                                                            <select
+                                                                value={itemDiscType}
+                                                                disabled={orderDiscountType !== 'None'}
+                                                                onChange={(e) => {
+                                                                    const newType = e.target.value;
+                                                                    if (newType === itemDiscType) return;
+                                                                    if (newType === 'percent') {
+                                                                        const val = (itemDisc > 0 && origLineTotal > 0)
+                                                                            ? Math.min(100, Math.round((itemDisc / origLineTotal) * 100))
+                                                                            : '';
+                                                                        setItemDiscount(item.id, item.priceTier || 'price1', val, 'percent');
+                                                                    } else if (newType === 'peso') {
+                                                                        const val = itemDisc > 0 ? itemDisc : '';
+                                                                        setItemDiscount(item.id, item.priceTier || 'price1', val, 'peso');
+                                                                    }
+                                                                }}
+                                                                style={{
+                                                                    minWidth: '82px',
+                                                                    width: '82px',
+                                                                    height: '30px',
+                                                                    borderRadius: '6px',
+                                                                    border: (orderDiscountType !== 'None') ? '1px solid #E2E8F0' : (itemDisc > 0 ? '1.5px solid #3B82F6' : '1px solid #CBD5E1'),
+                                                                    backgroundColor: (orderDiscountType !== 'None') ? '#F1F5F9' : (itemDisc > 0 ? '#EFF6FF' : '#FFFFFF'),
+                                                                    color: (orderDiscountType !== 'None') ? '#94A3B8' : '#1E293B',
+                                                                    fontSize: '11px',
+                                                                    fontWeight: '700',
+                                                                    padding: '0 22px 0 9px',
+                                                                    cursor: (orderDiscountType !== 'None') ? 'not-allowed' : 'pointer',
+                                                                    outline: 'none',
+                                                                    appearance: 'none',
+                                                                    WebkitAppearance: 'none',
+                                                                    MozAppearance: 'none',
+                                                                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                                                                    backgroundRepeat: 'no-repeat',
+                                                                    backgroundPosition: 'right 7px center',
+                                                                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+                                                                    transition: 'all 0.15s ease'
+                                                                }}
+                                                                title="Select Discount Type"
+                                                            >
+                                                                <option value="peso">Peso</option>
+                                                                <option value="percent">Percent</option>
+                                                            </select>
+
+                                                            {/* Amount Input with Symbol Adornment */}
+                                                            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                                                {itemDiscType === 'peso' && (
+                                                                    <span style={{ 
+                                                                        position: 'absolute', 
+                                                                        left: '8px', 
+                                                                        fontSize: '11px', 
+                                                                        fontWeight: '700', 
+                                                                        color: (orderDiscountType !== 'None') ? '#CBD5E1' : '#64748B',
+                                                                        pointerEvents: 'none'
+                                                                    }}>
+                                                                        ₱
+                                                                    </span>
+                                                                )}
+                                                                <input 
+                                                                    type="number"
+                                                                    step={itemDiscType === 'percent' ? "1" : "0.01"}
+                                                                    min="0"
+                                                                    max={itemDiscType === 'percent' ? "100" : undefined}
+                                                                    placeholder={itemDiscType === 'percent' ? "0" : "0.00"}
+                                                                    disabled={orderDiscountType !== 'None'}
+                                                                    value={(orderDiscountType !== 'None') ? '' : (item.item_discount_val !== undefined ? item.item_discount_val : (item.item_discount || ''))}
+                                                                    onChange={e => {
+                                                                        let val = e.target.value;
+                                                                        if (itemDiscType === 'percent') {
+                                                                            val = val.replace(/[^0-9]/g, '');
+                                                                            if (val !== '' && parseInt(val, 10) > 100) val = '100';
+                                                                        }
+                                                                        setItemDiscount(item.id, item.priceTier || 'price1', val, itemDiscType);
+                                                                    }}
+                                                                    onKeyDown={(e) => {
+                                                                        if (itemDiscType === 'percent' && ['.', ',', 'e', 'E', '+', '-'].includes(e.key)) {
+                                                                            e.preventDefault();
+                                                                        }
+                                                                    }}
+                                                                    title={(orderDiscountType !== 'None') ? "Item discounts are disabled when an order-wide discount is applied." : ""}
+                                                                    style={{ 
+                                                                        width: itemDiscType === 'percent' ? '65px' : '85px', 
+                                                                        height: '30px', 
+                                                                        fontSize: '11px', 
+                                                                        padding: itemDiscType === 'peso' ? '0 8px 0 20px' : '0 20px 0 8px', 
+                                                                        borderRadius: '6px', 
+                                                                        border: (orderDiscountType !== 'None') ? '1px solid #E2E8F0' : (itemDisc > 0 ? '1.5px solid #3B82F6' : '1px solid #CBD5E1'), 
+                                                                        textAlign: 'right', 
+                                                                        fontWeight: '700', 
+                                                                        color: (orderDiscountType !== 'None') ? '#94A3B8' : '#0F172A', 
+                                                                        backgroundColor: (orderDiscountType !== 'None') ? '#F1F5F9' : (itemDisc > 0 ? '#EFF6FF' : '#FFFFFF'),
+                                                                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+                                                                        outline: 'none',
+                                                                        cursor: (orderDiscountType !== 'None') ? 'not-allowed' : 'text',
+                                                                        transition: 'all 0.15s ease'
+                                                                    }}
+                                                                />
+                                                                {itemDiscType === 'percent' && (
+                                                                    <span style={{ 
+                                                                        position: 'absolute', 
+                                                                        right: '8px', 
+                                                                        fontSize: '11px', 
+                                                                        fontWeight: '700', 
+                                                                        color: (orderDiscountType !== 'None') ? '#CBD5E1' : '#64748B',
+                                                                        pointerEvents: 'none'
+                                                                    }}>
+                                                                        %
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Clear Button */}
+                                                            {orderDiscountType === 'None' && itemDisc > 0 && (
+                                                                <button 
+                                                                    type="button" 
+                                                                    onClick={() => setItemDiscount(item.id, item.priceTier || 'price1', 0, itemDiscType)} 
+                                                                    style={{ 
+                                                                        height: '30px',
+                                                                        padding: '0 8px',
+                                                                        borderRadius: '6px',
+                                                                        background: '#FEF2F2', 
+                                                                        border: '1px solid #FECACA', 
+                                                                        color: '#EF4444', 
+                                                                        fontSize: '10px', 
+                                                                        fontWeight: '700', 
+                                                                        cursor: 'pointer', 
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '2px',
+                                                                        transition: 'all 0.15s ease'
+                                                                    }}
+                                                                    title="Remove item discount"
+                                                                    onMouseEnter={e => e.currentTarget.style.background = '#FEE2E2'}
+                                                                    onMouseLeave={e => e.currentTarget.style.background = '#FEF2F2'}
+                                                                >
+                                                                    ✕ Clear
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 );
@@ -791,13 +930,25 @@ export default function CheckoutModal({
                                 <div style={{ marginTop: '4px' }}>
                                     <input 
                                         type="number"
-                                        step="0.01"
+                                        step={orderDiscountType === 'CustomPercent' ? "1" : "0.01"}
                                         min="0"
+                                        max={orderDiscountType === 'CustomPercent' ? "100" : undefined}
                                         className="form-control form-control-sm"
                                         placeholder={orderDiscountType === 'CustomAmount' ? '0.00' : '0'}
                                         value={orderDiscountVal}
-                                        onChange={e => setOrderDiscountVal(e.target.value)}
+                                        onChange={e => {
+                                            let val = e.target.value;
+                                            if (orderDiscountType === 'CustomPercent') {
+                                                val = val.replace(/[^0-9]/g, '');
+                                                if (val !== '' && parseInt(val, 10) > 100) val = '100';
+                                            }
+                                            setOrderDiscountVal(val);
+                                        }}
                                         onKeyDown={(e) => {
+                                            if (orderDiscountType === 'CustomPercent' && ['.', ',', 'e', 'E', '+', '-'].includes(e.key)) {
+                                                e.preventDefault();
+                                                return;
+                                            }
                                             if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
                                                 e.preventDefault();
                                             }
@@ -805,7 +956,9 @@ export default function CheckoutModal({
                                         style={{ fontSize: '12px', fontWeight: '700' }}
                                     />
                                     <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '500', marginTop: '4px', display: 'block' }}>
-                                        {orderDiscountType === 'CustomAmount' ? 'Enter discount amount in pesos (₱)' : 'Enter discount percentage (%)'}
+                                        {orderDiscountType === 'CustomAmount' 
+                                            ? 'Enter discount amount in pesos (₱)' 
+                                            : 'Enter whole number percentage (e.g. 5, 10, 15%) — decimals like .05 are not accepted'}
                                     </span>
                                 </div>
                             )}

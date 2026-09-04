@@ -58,7 +58,17 @@ export function usePOSCart() {
                     triggerError(`Cannot exceed available stock (${item.stock} available).`);
                     return item;
                 }
-                return { ...item, qty: newQty };
+
+                const origPrice = item.priceTier === 'price2' ? parseFloat(item.price2 || 0) : parseFloat(item.price1 || 0);
+                const newLineGross = origPrice * newQty;
+                let newDisc = item.item_discount || 0;
+                if (item.item_discount_type === 'percent' && item.item_discount_rate > 0) {
+                    newDisc = Math.round((newLineGross * (item.item_discount_rate / 100)) * 100) / 100;
+                } else if (newDisc > newLineGross) {
+                    newDisc = newLineGross;
+                }
+
+                return { ...item, qty: newQty, item_discount: newDisc };
             }
             return item;
         }).filter(Boolean));
@@ -85,9 +95,27 @@ export function usePOSCart() {
                 if (otherItemsQty + parsed > item.stock) {
                     triggerError(`Cannot exceed available stock (${item.stock} available).`);
                     const maxAllowed = Math.max(1, item.stock - otherItemsQty);
-                    return { ...item, qty: maxAllowed };
+                    const origPrice = item.priceTier === 'price2' ? parseFloat(item.price2 || 0) : parseFloat(item.price1 || 0);
+                    const newLineGross = origPrice * maxAllowed;
+                    let newDisc = item.item_discount || 0;
+                    if (item.item_discount_type === 'percent' && item.item_discount_rate > 0) {
+                        newDisc = Math.round((newLineGross * (item.item_discount_rate / 100)) * 100) / 100;
+                    } else if (newDisc > newLineGross) {
+                        newDisc = newLineGross;
+                    }
+                    return { ...item, qty: maxAllowed, item_discount: newDisc };
                 }
-                return { ...item, qty: parsed };
+
+                const origPrice = item.priceTier === 'price2' ? parseFloat(item.price2 || 0) : parseFloat(item.price1 || 0);
+                const newLineGross = origPrice * parsed;
+                let newDisc = item.item_discount || 0;
+                if (item.item_discount_type === 'percent' && item.item_discount_rate > 0) {
+                    newDisc = Math.round((newLineGross * (item.item_discount_rate / 100)) * 100) / 100;
+                } else if (newDisc > newLineGross) {
+                    newDisc = newLineGross;
+                }
+
+                return { ...item, qty: parsed, item_discount: newDisc };
             }
             return item;
         }));
@@ -128,11 +156,79 @@ export function usePOSCart() {
         });
     };
 
-    const setItemDiscount = (productId, priceTier, discountVal) => {
-        const parsed = parseFloat(discountVal) || 0;
+    const handleSetOrderDiscountType = (type) => {
+        setOrderDiscountType(type);
+        if (type !== 'None') {
+            // Clear any per-item discounts to prevent double-discounting
+            setCart(prev => prev.map(item => ({ 
+                ...item, 
+                item_discount: 0,
+                item_discount_type: 'peso',
+                item_discount_val: '',
+                item_discount_rate: 0
+            })));
+        }
+    };
+
+    const setItemDiscount = (productId, priceTier, discountVal, discountType = 'peso') => {
+        if (orderDiscountType !== 'None') return; // Mutually exclusive: disabled when order discount is active
+
         setCart(prev => prev.map(item => {
             if (item.id == productId && (item.priceTier || 'price1') === priceTier) {
-                return { ...item, item_discount: Math.max(0, parsed) };
+                const origPrice = item.priceTier === 'price2' ? parseFloat(item.price2 || 0) : parseFloat(item.price1 || 0);
+                const lineGross = origPrice * (item.qty || 1);
+
+                if (discountType === 'percent') {
+                    if (discountVal === '' || discountVal === null || discountVal === undefined) {
+                        return { 
+                            ...item, 
+                            item_discount: 0, 
+                            item_discount_type: 'percent', 
+                            item_discount_val: '', 
+                            item_discount_rate: 0 
+                        };
+                    }
+                    const rawRate = parseInt(String(discountVal).replace(/[^0-9]/g, ''), 10);
+                    if (isNaN(rawRate) || rawRate <= 0) {
+                        return { 
+                            ...item, 
+                            item_discount: 0, 
+                            item_discount_type: 'percent', 
+                            item_discount_val: (discountVal === 0 || discountVal === '0') ? '0' : '', 
+                            item_discount_rate: 0 
+                        };
+                    }
+                    const clampedRate = Math.min(100, Math.max(0, rawRate));
+                    const calculatedPeso = Math.round((lineGross * (clampedRate / 100)) * 100) / 100;
+                    return { 
+                        ...item, 
+                        item_discount: calculatedPeso, 
+                        item_discount_type: 'percent', 
+                        item_discount_val: String(clampedRate), 
+                        item_discount_rate: clampedRate 
+                    };
+                } else {
+                    // Fixed Peso (default)
+                    const rawAmt = parseFloat(discountVal);
+                    if (isNaN(rawAmt) || rawAmt <= 0) {
+                        return { 
+                            ...item, 
+                            item_discount: 0, 
+                            item_discount_type: 'peso', 
+                            item_discount_val: discountVal === '' ? '' : 0, 
+                            item_discount_rate: 0 
+                        };
+                    }
+                    const clampedAmt = Math.min(lineGross, Math.max(0, rawAmt));
+                    const rate = lineGross > 0 ? ((clampedAmt / lineGross) * 100) : 0;
+                    return { 
+                        ...item, 
+                        item_discount: clampedAmt, 
+                        item_discount_type: 'peso', 
+                        item_discount_val: discountVal, 
+                        item_discount_rate: rate 
+                    };
+                }
             }
             return item;
         }));
@@ -164,7 +260,7 @@ export function usePOSCart() {
         const val = parseFloat(orderDiscountVal || 0);
 
         if (orderDiscountType === 'CustomPercent') {
-            discountRate = Math.min(100, Math.max(0, val));
+            discountRate = Math.min(100, Math.max(0, parseInt(orderDiscountVal || 0, 10)));
             orderDiscountAmount = Math.round((afterItemDiscounts * (discountRate / 100)) * 100) / 100;
         } else if (orderDiscountType === 'CustomAmount') {
             orderDiscountAmount = Math.min(afterItemDiscounts, Math.max(0, val));
@@ -207,7 +303,8 @@ export function usePOSCart() {
         clearCart,
         cartTotals,
         orderDiscountType,
-        setOrderDiscountType,
+        setOrderDiscountType: handleSetOrderDiscountType,
+        isOrderDiscountActive: orderDiscountType !== 'None',
         orderDiscountVal,
         setOrderDiscountVal,
         posError,

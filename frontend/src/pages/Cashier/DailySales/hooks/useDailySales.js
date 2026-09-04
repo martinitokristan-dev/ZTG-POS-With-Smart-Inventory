@@ -131,11 +131,13 @@ export default function useDailySales() {
 
                 const resolvedName = item.product?.name || item.name || 'Unknown Product';
                 const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
+                const resolvedBrand = item.product?.brand || item.brand || item.product?.parent?.brand;
                 result.push({
                     ...item,
                     qty: netQty,
                     name: resolvedName,
                     part_no: resolvedPartNo,
+                    brand: resolvedBrand,
                     _txDate: t.date || t.created_at,
                     _txReceipt: t.si_no || t.receipt_number,
                     _txCustomer: t.customer?.name || 'Guest',

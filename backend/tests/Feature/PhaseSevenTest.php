@@ -441,6 +441,9 @@ class PhaseSevenTest extends TestCase
         $createRes->assertStatus(201);
         $reservationId = $createRes->json('reservation.id');
 
+        // Mark as Order Received from China before fulfilling
+        \App\Models\Reservation::where('id', $reservationId)->update(['status' => \App\Enums\ReservationStatus::ORDER_RECEIVED->value]);
+
         // Fulfill reservation with 500 balance payment
         $fulfillData = [
             'doc_type'        => 'S.I.',
@@ -481,6 +484,9 @@ class PhaseSevenTest extends TestCase
         $createRes = $this->actingAs($this->cashier)->postJson('/api/reservations', $resData);
         $createRes->assertStatus(201);
         $reservationId = $createRes->json('reservation.id');
+
+        // Mark as Order Received from China before fulfilling
+        \App\Models\Reservation::where('id', $reservationId)->update(['status' => \App\Enums\ReservationStatus::ORDER_RECEIVED->value]);
 
         // Fulfill reservation
         $fulfillData = [

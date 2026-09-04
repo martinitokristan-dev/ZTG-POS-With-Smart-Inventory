@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import LoadingSpinner from '../../../shared/components/LoadingSpinner';
 import StatusBadge from '../../../shared/components/StatusBadge';
 import IOSSelect from '../../../shared/components/IOSSelect';
@@ -13,10 +13,32 @@ export default function ReservationsTable({
     page, setPage, pagination,
     fmt, fmtDate,
     openFulfill, openCancel, openDetails, onReprintCR, onReprintDepositCR, onReprintBalanceCR,
+    onUpdateStatus,
     activeTab = 'deposit',
     permissions = {},
 }) {
     const canEdit = permissions.canEdit ?? true;
+    const [openDropdownId, setOpenDropdownId] = useState(null);
+    const [dropdownPos, setDropdownPos] = useState(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (!e.target.closest('.actions-dropdown-container') && !e.target.closest('.actions-dropdown-menu')) {
+                setOpenDropdownId(null);
+                setDropdownPos(null);
+            }
+        };
+        const handleScroll = () => {
+            setOpenDropdownId(null);
+            setDropdownPos(null);
+        };
+        document.addEventListener('click', handleClickOutside);
+        window.addEventListener('scroll', handleScroll, true);
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+            window.removeEventListener('scroll', handleScroll, true);
+        };
+    }, []);
     return (
         <>
             {/* Filters */}
@@ -67,6 +89,7 @@ export default function ReservationsTable({
                                 <th style={{ textAlign: 'right' }}>Deposit</th>
                                 <th style={{ textAlign: 'right' }}>Payment</th>
                                 {activeTab === 'completed' && <th style={{ textAlign: 'left' }}>Date Get</th>}
+                                <th style={{ textAlign: 'center' }}>Status</th>
                                 <th style={{ textAlign: 'center' }}>Actions</th>
                             </tr>
                         </thead>
@@ -75,7 +98,7 @@ export default function ReservationsTable({
                                 const displayList = reservations.filter(r => {
                                     const rawStatus = (r.status?.value || r.status || '').toLowerCase();
                                     if (activeTab === 'deposit') {
-                                        return rawStatus === 'pending';
+                                        return rawStatus !== 'completed' && rawStatus !== 'cancelled';
                                     } else {
                                         return rawStatus === 'completed';
                                     }
@@ -102,7 +125,7 @@ export default function ReservationsTable({
                                 if (loading) {
                                     return (
                                         <tr>
-                                            <td colSpan={activeTab === 'completed' ? 12 : 11} style={{ padding: '32px' }}>
+                                            <td colSpan={activeTab === 'completed' ? 13 : 12} style={{ padding: '32px' }}>
                                                 <LoadingSpinner text={activeTab === 'deposit' ? "Loading orders in China..." : "Loading claimed & paid orders..."} minHeight="100px" />
                                             </td>
                                         </tr>
@@ -112,14 +135,14 @@ export default function ReservationsTable({
                                 if (displayList.length === 0) {
                                     return (
                                         <tr>
-                                            <td colSpan={activeTab === 'completed' ? 12 : 11} style={{ textAlign: 'center', padding: '32px', color: 'var(--table-text-muted)', fontSize: '14px' }}>
+                                            <td colSpan={activeTab === 'completed' ? 13 : 12} style={{ textAlign: 'center', padding: '32px', color: 'var(--table-text-muted)', fontSize: '14px' }}>
                                                 {activeTab === 'deposit' ? 'No pending orders in China found.' : 'No claimed & paid orders found.'}
                                             </td>
                                         </tr>
                                     );
                                 }
 
-                                return displayList.map(r => {
+                                return displayList.map((r, index) => {
                                     const rawStatus = (r.status?.value || r.status || '').toLowerCase();
                                     const isPending = rawStatus === 'pending';
                                     const isCancelled = rawStatus === 'cancelled';
@@ -313,56 +336,211 @@ export default function ReservationsTable({
                                                     {r.date_get ? fmtDate(r.date_get) : fmtDate(r.updated_at)}
                                                 </td>
                                             )}
-                                            <td style={{ textAlign: 'center' }}>
-                                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
-                                                    <button 
-                                                        className="action-trigger-btn" 
-                                                        aria-label="View Details" 
-                                                        data-tooltip="View Details" 
-                                                        onClick={() => openDetails && openDetails(r)}
-                                                    >
-                                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                                            <circle cx="12" cy="12" r="3"></circle>
-                                                        </svg>
-                                                    </button>
-                                                    {(activeTab === 'completed' || !isPending) && (
-                                                        <button 
-                                                            className="action-trigger-btn" 
-                                                            aria-label="Reprint Final Collection Receipt" 
-                                                            data-tooltip="Reprint Final C.R." 
-                                                            onClick={() => onReprintBalanceCR ? onReprintBalanceCR(r) : (onReprintCR && onReprintCR(r))}
-                                                            style={{ color: '#059669' }}
-                                                        >
-                                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                                                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                                                                <rect x="6" y="14" width="12" height="8"></rect>
-                                                            </svg>
-                                                        </button>
-                                                    )}
-                                                    {activeTab === 'deposit' && isPending && (
-                                                        <button 
-                                                            className="action-trigger-btn" 
-                                                            aria-label="Reprint Deposit Collection Receipt" 
-                                                            data-tooltip="Reprint Deposit C.R." 
-                                                            onClick={() => onReprintDepositCR ? onReprintDepositCR(r) : (onReprintCR && onReprintCR(r))}
-                                                            style={{ color: '#059669' }}
-                                                        >
-                                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                                                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                                                                <rect x="6" y="14" width="12" height="8"></rect>
-                                                            </svg>
-                                                        </button>
-                                                    )}
-                                                    {canEdit && activeTab === 'deposit' && isPending && (
-                                                        <button className="btn btn-success btn-sm" onClick={() => openFulfill(r)}>Fulfill</button>
-                                                    )}
-                                                    {canEdit && activeTab === 'deposit' && isPending && (
-                                                        <button className="btn btn-danger-outline btn-sm" onClick={() => openCancel(r)}>Cancel</button>
-                                                    )}
-                                                </div>
+
+                                            {/* Status Column */}
+                                            <td style={{ textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                                <StatusBadge status={(() => {
+                                                    const s = r.status?.value || r.status || '';
+                                                    if (activeTab === 'completed' || s.toLowerCase() === 'completed') return 'Fulfilled';
+                                                    if (s.toLowerCase() === 'order received') return 'Order Received';
+                                                    return 'Pending';
+                                                })()} />
+                                            </td>
+
+                                            {/* Actions Column with 3-Dots Dropdown */}
+                                            <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                                                {(() => {
+                                                    const isBottomRow = displayList.length <= 2 || index >= displayList.length - 2;
+                                                    return (
+                                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+                                                            {/* 1-Click Quick View Details Button */}
+                                                            <button 
+                                                                className="action-trigger-btn" 
+                                                                aria-label="View Details" 
+                                                                data-tooltip="View Details" 
+                                                                onClick={() => {
+                                                                    setOpenDropdownId(null);
+                                                                    setDropdownPos(null);
+                                                                    openDetails && openDetails(r);
+                                                                }}
+                                                            >
+                                                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                                    <circle cx="12" cy="12" r="3"></circle>
+                                                                </svg>
+                                                            </button>
+
+                                                            {/* 3-Dots Dropdown Menu */}
+                                                            <div className="actions-dropdown-container" style={{ position: 'relative' }}>
+                                                                <button 
+                                                                    type="button"
+                                                                    className="action-trigger-btn" 
+                                                                    data-tooltip="Actions"
+                                                                    aria-label="Actions"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (openDropdownId === r.id) {
+                                                                            setOpenDropdownId(null);
+                                                                            setDropdownPos(null);
+                                                                        } else {
+                                                                            const rect = e.currentTarget.getBoundingClientRect();
+                                                                            setOpenDropdownId(r.id);
+                                                                            setDropdownPos({
+                                                                                isBottom: isBottomRow,
+                                                                                bottom: window.innerHeight - rect.top + 6,
+                                                                                top: rect.bottom + 6,
+                                                                                right: window.innerWidth - rect.right,
+                                                                            });
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                                                        <circle cx="12" cy="5" r="2"></circle>
+                                                                        <circle cx="12" cy="12" r="2"></circle>
+                                                                        <circle cx="12" cy="19" r="2"></circle>
+                                                                    </svg>
+                                                                </button>
+
+                                                                {openDropdownId === r.id && (
+                                                                    <div 
+                                                                        className="actions-dropdown-menu show"
+                                                                        style={{
+                                                                            position: 'fixed', 
+                                                                            right: dropdownPos ? `${dropdownPos.right}px` : '16px',
+                                                                            ...(isBottomRow 
+                                                                                ? { bottom: dropdownPos ? `${dropdownPos.bottom}px` : 'calc(100% + 6px)', top: 'auto' } 
+                                                                                : { top: dropdownPos ? `${dropdownPos.top}px` : 'calc(100% + 6px)', bottom: 'auto' }
+                                                                            ),
+                                                                            zIndex: 99999,
+                                                                            background: 'var(--bg-card, #FFFFFF)', 
+                                                                            border: '1px solid var(--border)', 
+                                                                            borderRadius: '8px',
+                                                                            boxShadow: 'var(--shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.1))', 
+                                                                            padding: '6px', 
+                                                                            minWidth: '175px'
+                                                                        }}
+                                                                    >
+                                                                        {/* Mark as Order Received (if currently Pending) */}
+                                                                        {canEdit && activeTab === 'deposit' && (rawStatus === 'pending' || !rawStatus) && (
+                                                                            <button 
+                                                                                type="button"
+                                                                                className="actions-dropdown-item"
+                                                                                style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: '#D97706', borderRadius: '4px', fontWeight: '600' }}
+                                                                                onClick={() => {
+                                                                                    setOpenDropdownId(null);
+                                                                                    setDropdownPos(null);
+                                                                                    onUpdateStatus && onUpdateStatus(r.id, 'Order Received');
+                                                                                }}
+                                                                                onMouseOver={e => e.currentTarget.style.backgroundColor = '#FEF3C7'}
+                                                                                onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                                            >
+                                                                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                                                                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                                                                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                                                                                </svg>
+                                                                                <span>Order Received</span>
+                                                                            </button>
+                                                                        )}
+
+                                                                        {/* Fulfill Order (ONLY visible when item has been received from China) */}
+                                                                        {canEdit && activeTab === 'deposit' && rawStatus === 'order received' && (
+                                                                            <button 
+                                                                                type="button"
+                                                                                className="actions-dropdown-item"
+                                                                                style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--success, #16A34A)', borderRadius: '4px', fontWeight: '600' }}
+                                                                                onClick={() => {
+                                                                                    setOpenDropdownId(null);
+                                                                                    setDropdownPos(null);
+                                                                                    openFulfill && openFulfill(r);
+                                                                                }}
+                                                                                onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--success-light, #DCFCE7)'}
+                                                                                onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                                            >
+                                                                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                                                                </svg>
+                                                                                <span>Fulfill Order</span>
+                                                                            </button>
+                                                                        )}
+
+                                                                        {/* Reprint Final Collection Receipt (Completed) */}
+                                                                        {(activeTab === 'completed' || isCompleted) && (
+                                                                            <button 
+                                                                                type="button"
+                                                                                className="actions-dropdown-item"
+                                                                                style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: '#059669', borderRadius: '4px' }}
+                                                                                onClick={() => {
+                                                                                    setOpenDropdownId(null);
+                                                                                    setDropdownPos(null);
+                                                                                    onReprintBalanceCR ? onReprintBalanceCR(r) : (onReprintCR && onReprintCR(r));
+                                                                                }}
+                                                                                onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-secondary, #F1F5F9)'}
+                                                                                onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                                            >
+                                                                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                                                                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                                                                    <rect x="6" y="14" width="12" height="8"></rect>
+                                                                                </svg>
+                                                                                <span>Reprint Final C.R.</span>
+                                                                            </button>
+                                                                        )}
+
+                                                                        {/* Reprint Deposit Collection Receipt (Active Deposit) */}
+                                                                        {activeTab === 'deposit' && (
+                                                                            <button 
+                                                                                type="button"
+                                                                                className="actions-dropdown-item"
+                                                                                style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: '#059669', borderRadius: '4px' }}
+                                                                                onClick={() => {
+                                                                                    setOpenDropdownId(null);
+                                                                                    setDropdownPos(null);
+                                                                                    onReprintDepositCR ? onReprintDepositCR(r) : (onReprintCR && onReprintCR(r));
+                                                                                }}
+                                                                                onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-secondary, #F1F5F9)'}
+                                                                                onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                                            >
+                                                                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                                                                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                                                                    <rect x="6" y="14" width="12" height="8"></rect>
+                                                                                </svg>
+                                                                                <span>Reprint Deposit C.R.</span>
+                                                                            </button>
+                                                                        )}
+
+                                                                        {/* Cancel Order */}
+                                                                        {canEdit && activeTab === 'deposit' && (rawStatus !== 'completed' && rawStatus !== 'cancelled') && (
+                                                                            <>
+                                                                                <div style={{ margin: '4px 0', borderTop: '1px solid var(--border)' }}></div>
+                                                                                <button 
+                                                                                    type="button"
+                                                                                    className="actions-dropdown-item disable"
+                                                                                    style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: '#DC2626', borderRadius: '4px' }}
+                                                                                    onClick={() => {
+                                                                                        setOpenDropdownId(null);
+                                                                                        setDropdownPos(null);
+                                                                                        openCancel && openCancel(r);
+                                                                                    }}
+                                                                                    onMouseOver={e => e.currentTarget.style.backgroundColor = '#FEE2E2'}
+                                                                                    onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                                                >
+                                                                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                                        <circle cx="12" cy="12" r="10"></circle>
+                                                                                        <line x1="15" y1="9" x2="9" y2="15"></line>
+                                                                                        <line x1="9" y1="9" x2="15" y2="15"></line>
+                                                                                    </svg>
+                                                                                    <span>Cancel Order</span>
+                                                                                </button>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
                                             </td>
                                         </tr>
                                     );

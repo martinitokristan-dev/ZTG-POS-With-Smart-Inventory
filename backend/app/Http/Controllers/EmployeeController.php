@@ -65,18 +65,6 @@ class EmployeeController extends Controller
     }
 
     /**
-     * Remove the specified employee from storage.
-     */
-    public function destroy(User $employee): JsonResponse
-    {
-        $this->employeeService->deleteEmployee($employee);
-
-        return response()->json([
-            'message' => 'Employee deleted successfully.',
-        ]);
-    }
-
-    /**
      * Resend the staff verification email (admin action).
      * Generates a fresh token + temp password and re-locks the account until verified.
      */

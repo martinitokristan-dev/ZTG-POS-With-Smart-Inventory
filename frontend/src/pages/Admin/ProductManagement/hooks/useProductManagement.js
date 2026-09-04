@@ -17,6 +17,7 @@ const DEFAULT_FORM = {
     chinese_name: '',
     part_no: '',
     category_id: '',
+    brand_id: '',
     uom: 'Piece / PCS',
     address: '',
     stock: 0,
@@ -41,6 +42,7 @@ export default function useProductManagement() {
     // Seed from module cache so revisits are instant (no loading flash)
     const [products, setProducts] = useState(_cachedProductList);
     const [categories, setCategories] = useState([]);
+    const [brands, setBrands] = useState([]);
     const [variantOptions, setVariantOptions] = useState([]);
     // Only show loading spinner on first visit (when module cache is empty)
     const [loading, setLoading] = useState(false);
@@ -81,8 +83,17 @@ export default function useProductManagement() {
     const [formData, setFormData] = useState({ ...DEFAULT_FORM });
     const [damageQty, setDamageQty] = useState(1);
     const [damageReason, setDamageReason] = useState('');
+    const [restockApprovalPin, setRestockApprovalPin] = useState('');
+    const [showRestockApprovalPin, setShowRestockApprovalPin] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+
+    useEffect(() => {
+        if (!showReviewRestockModal) {
+            setRestockApprovalPin('');
+            setShowRestockApprovalPin(false);
+        }
+    }, [showReviewRestockModal]);
 
     // ── API Calls ────────────────────────────────────────────────
     const loadProducts = async () => {
@@ -155,14 +166,26 @@ export default function useProductManagement() {
         }
     };
 
-    useEffect(() => { loadCategories(); loadVariantOptions(); }, []);
+    const loadBrands = async () => {
+        try {
+            const res = await api.get('/brands');
+            setBrands(res.data || []);
+        } catch (e) {
+            console.error('Failed to load brands:', e);
+        }
+    };
+
+    useEffect(() => { loadCategories(); loadBrands(); loadVariantOptions(); }, []);
     useEffect(() => {
         setPage(1);
     }, [search, categoryId, statusFilter, viewMode, restockSearch, restockCategory]);
 
     useEffect(() => {
-        loadCategories();
-    }, []);
+        if (showAddModal || showEditModal) {
+            loadBrands();
+            loadCategories();
+        }
+    }, [showAddModal, showEditModal]);
 
     useEffect(() => {
         loadProducts();
@@ -392,37 +415,49 @@ export default function useProductManagement() {
 
     const handleConfirmRestock = async () => {
         if (isSubmitting) return;
-        setIsSubmitting(true);
-        try {
-            setErrorMessage('');
-            const payload = Object.entries(restockQuantities)
-                .filter(([, qty]) => qty > 0)
-                .map(([id, qty]) => ({ product_id: parseInt(id), qty }));
-            if (payload.length === 0) return;
-            
-            // Optimistic update
-            const rollbacks = [];
-            payload.forEach(item => {
-                const prod = products.find(p => p.id === item.product_id);
-                if (prod) {
-                    const { commit, rollback } = optimisticUpdateProduct(prod.id, { stock: prod.stock + item.qty });
-                    rollbacks.push(rollback);
-                }
-            });
 
-            await api.post('/products/restock', { restocks: payload });
+        if (!restockApprovalPin?.trim()) {
+            setErrorMessage('Please enter the Admin Password or Approval PIN.');
+            return;
+        }
+
+        const payload = Object.entries(restockQuantities)
+            .filter(([, qty]) => qty > 0)
+            .map(([id, qty]) => ({ product_id: parseInt(id), qty }));
+        if (payload.length === 0) return;
+
+        setIsSubmitting(true);
+        setErrorMessage('');
+        
+        // Optimistic update
+        const rollbacks = [];
+        payload.forEach(item => {
+            const prod = products.find(p => p.id === item.product_id);
+            if (prod) {
+                const { commit, rollback } = optimisticUpdateProduct(prod.id, { stock: prod.stock + item.qty });
+                rollbacks.push(rollback);
+            }
+        });
+
+        try {
+            await api.post('/products/restock', {
+                restocks: payload,
+                approval_pin: restockApprovalPin.trim(),
+            });
             
             resetDashboardCache();
             resetReportsCache();
             localStorage.removeItem('ztg_restock_draft');
             setSuccessMessage(`Restocked ${restockUnitsCount} units across ${restockItemsCount} items successfully!`);
             setShowReviewRestockModal(false);
+            setRestockApprovalPin('');
+            setShowRestockApprovalPin(false);
             switchToProductsList();
             refetchProducts(); // Silent background refetch
         } catch (error) {
             // Rollback all
             rollbacks.forEach(r => r());
-            setErrorMessage(error.response?.data?.message || 'Error occurred while saving restock order.');
+            setErrorMessage(extractValidationErrorMessage(error, 'Error occurred while saving restock order.'));
         } finally {
             setIsSubmitting(false);
         }
@@ -547,6 +582,7 @@ export default function useProductManagement() {
                 chinese_name: product.chinese_name,
                 part_no: product.part_no,
                 category_id: product.category_id,
+                brand_id: product.brand_id || null,
                 address: product.address,
                 stock: product.stock,
                 alert_limit: product.alert_limit || 5,
@@ -611,6 +647,8 @@ export default function useProductManagement() {
     };
 
     const openEdit = (product) => {
+        loadBrands();
+        loadCategories();
         let targetProduct = product;
         if (product.parent_product_id) {
             const parent = products.find(p => p.id === product.parent_product_id);
@@ -624,6 +662,7 @@ export default function useProductManagement() {
             chinese_name: targetProduct.chinese_name || '',
             part_no: targetProduct.part_no, 
             category_id: targetProduct.category_id,
+            brand_id: targetProduct.brand_id ? String(targetProduct.brand_id) : (targetProduct.brand?.id ? String(targetProduct.brand.id) : ''),
             uom: targetProduct.uom || 'Piece / PCS',
             address: targetProduct.address || '',
             stock: targetProduct.stock, 
@@ -701,6 +740,8 @@ export default function useProductManagement() {
         formData, setFormData,
         damageQty, setDamageQty,
         damageReason, setDamageReason,
+        restockApprovalPin, setRestockApprovalPin,
+        showRestockApprovalPin, setShowRestockApprovalPin,
         errorMessage, setErrorMessage,
         successMessage, setSuccessMessage,
         resetForm,
@@ -708,6 +749,7 @@ export default function useProductManagement() {
         handleAddProduct, handleEditProduct, handleDamageSubmit, handleDeleteProduct, handleToggleStatus,
         handleAddressChange, handleImageUpload, uploadingImage, imageProgress,
         openEdit, openDamage, openView,
+        brands, loadBrands,
     };
 }
 

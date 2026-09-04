@@ -141,7 +141,6 @@ export default function UserManagement() {
                                 onEditStaff={um.openEditEmployee}
                                 onToggleStaff={um.handleToggleEmployee}
                                 onResendVerification={um.handleResendVerification}
-                                onDeleteStaff={um.handleDeleteEmployee}
                                 resendingId={um.resendingId}
                                 permissions={permissions}
                             />
@@ -232,23 +231,6 @@ export default function UserManagement() {
                     cancelText="Cancel"
                     variant="danger"
                     loading={Boolean(um.deletingRoleId)}
-                />
-
-                {/* Delete Staff Account Confirmation Dialog */}
-                <ConfirmModal
-                    isOpen={Boolean(um.employeeToDelete)}
-                    onClose={() => !um.deletingEmployeeId && um.setEmployeeToDelete(null)}
-                    onConfirm={um.confirmDeleteEmployee}
-                    title="Delete Staff Account"
-                    message={
-                        <span>
-                            Are you sure you want to permanently delete the account for <strong>"{um.employeeToDelete?.full_name || um.employeeToDelete?.username}"</strong> (@{um.employeeToDelete?.username})?
-                        </span>
-                    }
-                    confirmText="Delete Account"
-                    cancelText="Cancel"
-                    variant="danger"
-                    loading={Boolean(um.deletingEmployeeId)}
                 />
         </>
     );

@@ -157,7 +157,7 @@ export default function ProductGrid({
                                                 />
                                                 <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                                                     <div style={{ fontSize: '15px', overflow: 'hidden' }}>
-                                                        <FormattedProductName name={p.name} blockVariant={true} />
+                                                        <FormattedProductName name={p.name} brand={p.brand || p.parent_product?.brand} blockVariant={true} />
                                                     </div>
                                                     {showChineseNames && p.chinese_name && <div style={{ fontSize: '12px', color: 'var(--table-text-secondary)', fontWeight: '500', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.chinese_name}</div>}
                                                 </div>

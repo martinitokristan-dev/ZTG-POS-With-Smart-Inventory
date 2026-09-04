@@ -193,12 +193,12 @@ class StaffVerificationTest extends TestCase
             ]);
     }
 
-    public function test_admin_can_delete_staff_member()
+    public function test_staff_deletion_endpoint_is_disabled_and_unavailable()
     {
         $user = User::create([
-            'full_name' => 'To Be Deleted',
-            'email'     => 'delete_me@ztg.com',
-            'username'  => 'todelete',
+            'full_name' => 'To Be Kept',
+            'email'     => 'keep_me@ztg.com',
+            'username'  => 'tokeep',
             'password'  => Hash::make('Pass*1234'),
             'role'      => UserRole::CASHIER,
             'status'    => UserStatus::ACTIVE,
@@ -206,18 +206,8 @@ class StaffVerificationTest extends TestCase
 
         $response = $this->actingAs($this->admin)->deleteJson("/api/employees/{$user->id}");
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'message' => 'Employee deleted successfully.',
-            ]);
-
-        $this->assertNull(User::find($user->id));
-    }
-
-    public function test_admin_cannot_delete_default_admin()
-    {
-        $response = $this->actingAs($this->admin)->deleteJson("/api/employees/{$this->admin->id}");
-
-        $response->assertStatus(422);
+        // Endpoint is permanently decommissioned in favor of deactivation
+        $this->assertContains($response->status(), [404, 405]);
+        $this->assertNotNull(User::find($user->id));
     }
 }

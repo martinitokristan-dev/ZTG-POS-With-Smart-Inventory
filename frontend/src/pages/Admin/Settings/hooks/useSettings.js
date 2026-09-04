@@ -170,6 +170,15 @@ export default function useSettings() {
     const [categoryName, setCategoryName] = useState('');
     const [categoryVariants, setCategoryVariants] = useState([]);
 
+    // Brands state
+    const [brands, setBrands] = useState([]);
+    const [showBrandModal, setShowBrandModal] = useState(false);
+    const [selectedBrand, setSelectedBrand] = useState(null);
+    const [brandName, setBrandName] = useState('');
+    const [brandDescription, setBrandDescription] = useState('');
+    const [brandStatus, setBrandStatus] = useState('Active');
+    const [brandSubmitting, setBrandSubmitting] = useState(false);
+
     // Variants options
     const [variantTypes, setVariantTypes] = useState([]);
     const [newOptionValue, setNewOptionValue] = useState('');
@@ -200,8 +209,6 @@ export default function useSettings() {
     const [employees, setEmployees] = useState([]);
     const [showEmployeeModal, setShowEmployeeModal] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
-    const [showDeleteEmployeeModal, setShowDeleteEmployeeModal] = useState(false);
-    const [employeeToDelete, setEmployeeToDelete] = useState(null);
     const [employeeErrors, setEmployeeErrors] = useState({});
     const [employeeForm, setEmployeeForm] = useState({
         full_name: '',
@@ -363,8 +370,18 @@ export default function useSettings() {
         }
     };
 
+    const loadBrands = async () => {
+        try {
+            const data = await fetchSettingData('brands', '/brands');
+            setBrands(data || []);
+        } catch (e) {
+            console.error('Failed to load brands:', e);
+        }
+    };
+
     useEffect(() => {
         loadSettingsData();
+        loadBrands();
     }, []);
 
     // ------------------------------------------------------------------------
@@ -799,6 +816,80 @@ export default function useSettings() {
         }
     };
 
+    // ------------------------------------------------------------------------
+    // BRANDS CRUD HANDLERS
+    // ------------------------------------------------------------------------
+    const handleBrandSubmit = async (e) => {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        if (brandSubmitting) return;
+        const name = brandName.trim();
+        if (!name) {
+            showToast('Brand name is required.', 'error');
+            return;
+        }
+
+        setBrandSubmitting(true);
+        try {
+            const payload = {
+                name,
+                description: brandDescription ? brandDescription.trim() : null,
+                status: brandStatus || 'Active'
+            };
+
+            if (selectedBrand) {
+                const res = await api.put(`/brands/${selectedBrand.id}`, payload);
+                const updated = res.data?.brand || res.data;
+                setBrands(prev => prev.map(b => b.id === selectedBrand.id ? updated : b));
+                showToast('Brand updated successfully!', 'success');
+            } else {
+                const res = await api.post('/brands', payload);
+                const newBrand = res.data?.brand || res.data;
+                setBrands(prev => [...prev, newBrand]);
+                showToast('New brand added successfully!', 'success');
+            }
+            resetSettingsCache('brands');
+            setShowBrandModal(false);
+            setBrandName('');
+            setBrandDescription('');
+            setBrandStatus('Active');
+            setSelectedBrand(null);
+            loadBrands();
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Failed to save brand.', 'error');
+        } finally {
+            setBrandSubmitting(false);
+        }
+    };
+
+    const handleDeleteBrand = async (brand) => {
+        if (!window.confirm(`Are you sure you want to delete brand "${brand.name}"?`)) return;
+        try {
+            await api.delete(`/brands/${brand.id}`);
+            setBrands(prev => prev.filter(b => b.id !== brand.id));
+            resetSettingsCache('brands');
+            showToast('Brand deleted successfully.', 'success');
+            loadBrands();
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Failed to delete brand.', 'error');
+        }
+    };
+
+    const openAddBrand = () => {
+        setSelectedBrand(null);
+        setBrandName('');
+        setBrandDescription('');
+        setBrandStatus('Active');
+        setShowBrandModal(true);
+    };
+
+    const openEditBrand = (brand) => {
+        setSelectedBrand(brand);
+        setBrandName(brand.name || '');
+        setBrandDescription(brand.description || '');
+        setBrandStatus(brand.status || 'Active');
+        setShowBrandModal(true);
+    };
+
     const getOptionsForType = (typeName) => {
         const found = variantTypes.find(v => v.name?.toLowerCase() === typeName?.toLowerCase());
         return found ? found.options || [] : [];
@@ -1168,32 +1259,6 @@ export default function useSettings() {
         }
     };
 
-    const openDeleteEmployeeModal = (emp) => {
-        if (emp.id === 1 || emp.username === 'admin' || emp.employee_id === 'EMP-000') {
-            showToast('Cannot delete the default administrator account.', 'error');
-            return;
-        }
-        setEmployeeToDelete(emp);
-        setShowDeleteEmployeeModal(true);
-    };
-
-    const handleConfirmDeleteEmployee = async (emp) => {
-        const target = emp || employeeToDelete;
-        if (!target) return;
-
-        try {
-            await api.delete(`/employees/${target.id}`);
-            setEmployees(prev => prev.filter(e => e.id !== target.id));
-            resetSettingsCache('employees');
-            showToast('Staff member permanently deleted.', 'success');
-            setShowDeleteEmployeeModal(false);
-            setEmployeeToDelete(null);
-        } catch (err) {
-            showToast(err.response?.data?.message || 'Failed to delete staff member.', 'error');
-            throw err;
-        }
-    };
-
     // ------------------------------------------------------------------------
     // TAB 5 EXTRA: RESEND VERIFICATION
     // ------------------------------------------------------------------------
@@ -1287,6 +1352,9 @@ export default function useSettings() {
         handleCategorySubmit, handleDeleteCategory, handleAddVariantOption, handleUpdateVariantOption, handleDeleteVariantOption, getOptionsForType,
         uomList, newUomValue, setNewUomValue, editingUomIndex, setEditingUomIndex, editUomValue, setEditUomValue,
         handleAddUom, handleUpdateUom, handleDeleteUom,
+        brands, showBrandModal, setShowBrandModal, selectedBrand, setSelectedBrand,
+        brandName, setBrandName, brandDescription, setBrandDescription, brandStatus, setBrandStatus,
+        brandSubmitting, handleBrandSubmit, handleDeleteBrand, openAddBrand, openEditBrand,
 
         // Tab 4: Alert Rules
         alertRules, showRuleModal, setShowRuleModal, ruleForm, setRuleForm,
@@ -1294,10 +1362,8 @@ export default function useSettings() {
 
         // Tab 5: Employees
         employees, showEmployeeModal, setShowEmployeeModal, employeeForm, setEmployeeForm, selectedEmployee, setSelectedEmployee,
-        showDeleteEmployeeModal, setShowDeleteEmployeeModal, employeeToDelete, setEmployeeToDelete,
         employeeErrors, setEmployeeErrors,
-        handleEmployeeSubmit, openEditEmployee, handleToggleEmployee, handleDeleteEmployee: openDeleteEmployeeModal,
-        openDeleteEmployeeModal, handleConfirmDeleteEmployee, openAddEmployee, handleResendVerification,
+        handleEmployeeSubmit, openEditEmployee, handleToggleEmployee, openAddEmployee, handleResendVerification,
 
         // Tab 6: Checkers
         checkers, showCheckerModal, setShowCheckerModal, checkerForm, setCheckerForm, selectedChecker, setSelectedChecker,

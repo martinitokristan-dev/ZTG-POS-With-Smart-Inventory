@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\BrandController;
 use App\Http\Controllers\VariantController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ProfileController;
@@ -57,6 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // SI numbering preview — read-only, no counter increment. Cashier calls this on checkout open.
     Route::get('/settings/si-preview', [SettingController::class, 'siPreview']);
     Route::get('/categories', [CategoryController::class, 'index']);
+    Route::get('/brands', [BrandController::class, 'index']);
     Route::get('/variants', [VariantController::class, 'index']);
 
     // Products: read routes (all authenticated roles)
@@ -85,7 +87,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/employees', [EmployeeController::class, 'store'])->middleware('permission:user_management,can_create');
         Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->middleware('permission:user_management,can_edit');
         Route::patch('/employees/{employee}/toggle', [EmployeeController::class, 'toggle'])->middleware('permission:user_management,can_edit');
-        Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])->middleware('permission:user_management,can_delete');
         Route::post('/employees/{employee}/resend-verification', [EmployeeController::class, 'resendVerification'])->middleware('permission:user_management,can_edit');
 
         Route::post('/checkers', [CheckerController::class, 'store'])->middleware('permission:user_management,can_create');
@@ -111,6 +112,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/products/restock', [ProductController::class, 'restock']);
         Route::post('/products/upload-image', [ProductController::class, 'uploadImage']);
         Route::post('/categories', [CategoryController::class, 'store']);
+        Route::post('/brands', [BrandController::class, 'store']);
         Route::post('/variants', [VariantController::class, 'storeType']);
         Route::post('/variants/{variant_type}/options', [VariantController::class, 'storeOption']);
     });
@@ -119,6 +121,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/products/{product}', [ProductController::class, 'update']);
         Route::post('/products/{product}/damaged', [ProductController::class, 'logDamaged']);
         Route::put('/categories/{category}', [CategoryController::class, 'update']);
+        Route::put('/brands/{brand}', [BrandController::class, 'update']);
         Route::put('/variants/{variant_type}', [VariantController::class, 'updateType']);
         Route::put('/variant-options/{variant_option}', [VariantController::class, 'updateOption']);
     });
@@ -126,6 +129,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:products,can_delete')->group(function () {
         Route::delete('/products/{product}', [ProductController::class, 'destroy']);
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+        Route::delete('/brands/{brand}', [BrandController::class, 'destroy']);
         Route::delete('/variants/{variant_type}', [VariantController::class, 'destroyType']);
         Route::delete('/variant-options/{variant_option}', [VariantController::class, 'destroyOption']);
     });
@@ -168,6 +172,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/reservations', [ReservationController::class, 'store'])->middleware('permission:reservations,can_create');
         Route::post('/reservations/{reservation}/fulfill', [ReservationController::class, 'fulfill'])->middleware('permission:reservations,can_edit');
         Route::post('/reservations/{reservation}/cancel', [ReservationController::class, 'cancel'])->middleware('permission:reservations,can_edit');
+        Route::patch('/reservations/{reservation}/status', [ReservationController::class, 'updateStatus'])->middleware('permission:reservations,can_edit');
     });
 
 

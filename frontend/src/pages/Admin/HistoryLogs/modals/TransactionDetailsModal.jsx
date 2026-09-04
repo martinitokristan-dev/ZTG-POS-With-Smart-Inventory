@@ -1,7 +1,7 @@
 import React from 'react';
 import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
-import { getItemDiscountAmount } from '../../../../shared/utils/clientExcelExporter';
+import { calculateItemDiscountBreakdown } from '../../../../shared/utils/discountCalculator';
 
 export default function TransactionDetailsModal({ isOpen, onClose, transaction, fmtDate, fmt }) {
     if (!isOpen || !transaction) return null;
@@ -71,18 +71,11 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
             ? Number(item.net_qty ?? Math.max(0, rawQty - refundedQty))
             : rawQty;
 
-        let origPrice = Number(item.original_price || item.price || 0);
-        let itemDisc = getItemDiscountAmount(item, tx);
-
-        // Fallback for older regular sale records where price was saved as net price instead of orig price
-        if (item.original_price && Number(item.original_price) > Number(item.price) && itemDisc === 0) {
-            origPrice = Number(item.original_price);
-            itemDisc = origPrice - Number(item.price);
-        }
-
+        const breakdown = calculateItemDiscountBreakdown(item, tx);
+        const origPrice = breakdown.unitPrice;
         const lineGross = rawQty * origPrice;
-        const lineDisc = itemDisc;
-        const itemOriginalTotal = Math.max(0, lineGross - lineDisc);
+        const lineDisc = breakdown.totalDiscount;
+        const itemOriginalTotal = breakdown.discountedPrice;
         const lineNet = isPartialRefund 
             ? Math.max(0, (displayRemainingQty * origPrice) - lineDisc)
             : itemOriginalTotal;
@@ -97,7 +90,10 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
             netRemainingQty: displayRemainingQty,
             refundedQty,
             unitPrice: origPrice,
-            itemDisc,
+            lineGross,
+            itemDisc: lineDisc,
+            formattedRate: breakdown.formattedRate,
+            discountRate: breakdown.discountRate,
             itemOriginalTotal,
             lineNet
         };
@@ -117,29 +113,48 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
 
     const netSalesRemaining = Number(tx.amount || 0);
 
+    const totalQty = processedItems.reduce((sum, item) => sum + Number(item.qty || 0), 0);
+    const totalLineGross = grossSubtotal;
+    const totalLineDiscount = itemDiscountsTotal;
+    const totalLineNet = processedItems.reduce((sum, item) => sum + Number(item.lineNet || 0), 0);
+    const totalRefundedQty = processedItems.reduce((sum, item) => sum + Number(item.refundedQty || 0), 0);
+
     if (status !== 'Restocked' && status !== 'Damaged' && processedItems.length > 0) {
         itemsBlock = (
             <div className="audit-detail-section" style={{ marginTop: '14px' }}>
                 <span className="audit-detail-section-title" style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', marginBottom: '8px', display: 'block', letterSpacing: '0.5px' }}>Items Purchased</span>
-                <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflowX: 'hidden', overflowY: 'auto', background: 'var(--bg-card)', maxHeight: '280px' }}>
+                <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflowX: 'auto', overflowY: 'auto', background: 'var(--bg-card)', maxHeight: '280px' }}>
                     <table className="modal-table data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', tableLayout: 'fixed' }}>
                         <thead style={{ background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)', fontSize: '12px', color: 'var(--table-text-secondary)' }}>
                             <tr>
-                                <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', width: hasRefundOrReturn ? '120px' : '140px' }}>Part No.</th>
-                                <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', width: hasRefundOrReturn ? '210px' : '260px' }}>Product</th>
-                                <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'center', width: '50px' }}>Qty</th>
-                                <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'right', width: '90px' }}>Price</th>
-                                <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'right', width: '90px' }}>Discounted</th>
+                                <th style={{ padding: '10px 12px', fontWeight: '700', letterSpacing: '0.04em', verticalAlign: 'bottom', width: hasRefundOrReturn ? '95px' : '105px' }}>PART NO.</th>
+                                <th style={{ padding: '10px 12px', fontWeight: '700', letterSpacing: '0.04em', verticalAlign: 'bottom' }}>PRODUCT</th>
+                                <th style={{ padding: '10px 6px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'center', verticalAlign: 'bottom', width: '45px' }}>QTY</th>
+                                <th style={{ padding: '10px 8px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'right', verticalAlign: 'bottom', width: '75px' }}>PRICE</th>
+                                <th style={{ padding: '10px 8px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'right', verticalAlign: 'bottom', width: '85px' }}>SALES</th>
+                                <th style={{ padding: '10px 8px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'center', verticalAlign: 'bottom', width: '85px', lineHeight: '1.25' }}>
+                                    <span style={{ display: 'block' }}>DISCOUNT</span>
+                                    <span style={{ display: 'block' }}>%</span>
+                                </th>
+                                <th style={{ padding: '10px 8px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'right', verticalAlign: 'bottom', width: hasRefundOrReturn ? '100px' : '110px' }}>DISCOUNT</th>
                                 {hasRefundOrReturn && (
-                                    <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'center', width: '125px' }}>{refundReturnColumnHeader}</th>
+                                    <th style={{ padding: '10px 10px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'center', verticalAlign: 'bottom', width: '95px', lineHeight: '1.25' }}>
+                                        {refundReturnColumnHeader.toUpperCase().split(' ').map((word, wIdx) => (
+                                            <span key={wIdx} style={{ display: 'block' }}>{word}</span>
+                                        ))}
+                                    </th>
                                 )}
-                                <th style={{ padding: '10px 12px', fontWeight: '600', letterSpacing: '0.02em', textAlign: 'right', width: hasRefundOrReturn ? '100px' : '130px' }}>Total</th>
+                                <th style={{ padding: '10px 12px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'right', verticalAlign: 'bottom', width: hasRefundOrReturn ? '115px' : '125px', lineHeight: '1.25' }}>
+                                    <span style={{ display: 'block' }}>NET</span>
+                                    <span style={{ display: 'block' }}>SALES</span>
+                                </th>
                             </tr>
                         </thead>
                         <tbody style={{ fontSize: '14px' }}>
                              {processedItems.map((item, index) => {
                                 const partNo = item.product?.part_no || item.part_no || '—';
                                 const name = item.product?.name || item.name || 'Unknown Part';
+                                const brandVal = item.product?.brand || item.brand || item.product?.parent?.brand;
                                 const itemDiscTotal = item.itemDisc;
                                 const refundedQty = item.refundedQty;
 
@@ -149,19 +164,25 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                             <CopyableText text={partNo} label="Part No." codeStyle={{ fontSize: '14px', fontWeight: '600' }} />
                                         </td>
                                         <td style={{ padding: '10px 12px', color: 'var(--table-text-primary)', overflow: 'hidden' }}>
-                                            <div style={{ fontSize: '14px', overflow: 'hidden' }}><FormattedProductName name={name} /></div>
+                                            <div style={{ fontSize: '14px', overflow: 'hidden' }}><FormattedProductName name={name} brand={brandVal} /></div>
                                         </td>
-                                        <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
+                                        <td style={{ padding: '10px 6px', textAlign: 'center', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
                                             {item.qty}
                                         </td>
-                                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--table-text-secondary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
+                                        <td style={{ padding: '10px 8px', textAlign: 'right', color: 'var(--table-text-secondary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                                             {fmt(item.unitPrice)}
                                         </td>
-                                        <td style={{ padding: '10px 12px', textAlign: 'right', color: itemDiscTotal > 0 ? '#2563EB' : 'var(--table-text-muted)', fontWeight: itemDiscTotal > 0 ? '600' : '500', fontVariantNumeric: 'tabular-nums' }}>
+                                        <td style={{ padding: '10px 8px', textAlign: 'right', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                            {fmt(item.lineGross)}
+                                        </td>
+                                        <td style={{ padding: '10px 8px', textAlign: 'center', color: item.discountRate > 0 ? '#2563EB' : 'var(--table-text-muted)', fontWeight: item.discountRate > 0 ? '600' : '500', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                            {item.formattedRate}
+                                        </td>
+                                        <td style={{ padding: '10px 8px', textAlign: 'right', color: itemDiscTotal > 0 ? '#2563EB' : 'var(--table-text-muted)', fontWeight: itemDiscTotal > 0 ? '600' : '500', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                                             {itemDiscTotal > 0 ? `-${fmt(itemDiscTotal)}` : fmt(0)}
                                         </td>
                                         {hasRefundOrReturn && (
-                                            <td style={{ padding: '10px 12px', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+                                            <td style={{ padding: '10px 10px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                                                 {refundedQty > 0 || isFullRefund || isVoid ? (
                                                     <span className={`status-badge ${isVoid ? 'status-void' : (isReturnAction ? 'status-return' : 'status-refund')}`} style={{ textTransform: 'none' }}>
                                                         {refundedQty > 0 ? `${refundedQty} pcs` : `${item.qty || 1} pcs`}
@@ -171,13 +192,39 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                                 )}
                                             </td>
                                         )}
-                                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
+                                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                                             {fmt(item.lineNet)}
                                         </td>
                                     </tr>
                                 );
                             })}
                         </tbody>
+                        <tfoot style={{ borderTop: '2px solid var(--table-border)', fontSize: '13px', fontWeight: '700', background: 'var(--table-header-bg)' }}>
+                            <tr>
+                                <td colSpan={2} style={{ padding: '12px 12px', fontWeight: '800', color: 'var(--table-text-primary)', letterSpacing: '0.04em' }}>
+                                    TOTAL
+                                </td>
+                                <td style={{ padding: '12px 6px', textAlign: 'center', fontWeight: '800', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                    {totalQty}
+                                </td>
+                                <td style={{ padding: '12px 8px' }}></td>
+                                <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '800', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                    {fmt(totalLineGross)}
+                                </td>
+                                <td style={{ padding: '12px 8px' }}></td>
+                                <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '800', color: totalLineDiscount > 0 ? '#2563EB' : 'var(--table-text-muted)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                    {totalLineDiscount > 0 ? `-${fmt(totalLineDiscount)}` : fmt(0)}
+                                </td>
+                                {hasRefundOrReturn && (
+                                    <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '800', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                        {totalRefundedQty > 0 ? `${totalRefundedQty} pcs` : '—'}
+                                    </td>
+                                )}
+                                <td style={{ padding: '12px 12px', textAlign: 'right', fontWeight: '800', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                    {fmt(totalLineNet)}
+                                </td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -204,7 +251,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
 
     return (
         <div className="modal-overlay" style={{ zIndex: 999 }}>
-            <div className="modal-card audit-detail-card" style={{ maxWidth: '880px', width: '95%', background: 'var(--bg-card)', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' }}>
+            <div className="modal-card audit-detail-card" style={{ maxWidth: '960px', width: '95%', background: 'var(--bg-card)', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' }}>
                 <div className="modal-header audit-detail-header" style={{ padding: '18px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                         <h3 className="modal-title" style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>{title}</h3>
@@ -234,9 +281,9 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 {auditDetailRow('Date & Time', fmtDate(tx.date || tx.created_at))}
                                 {auditDetailRow('Customer', tx.customer_name || tx.customer?.name || 'Walk-in')}
                                 {auditDetailRow('Served By', tx.checker?.name || tx.cashier?.full_name || tx.cashier?.name || '—')}
-                                {auditDetailRow('Original Total', fmt(totalOriginalAmount))}
+                                {auditDetailRow('Gross Sales', fmt(totalOriginalAmount))}
                                 {auditDetailRow('Voided Amount', `-${fmt(totalRefundedAmount)}`, { color: '#DC2626', fontWeight: '700' })}
-                                {auditDetailRow('Net Amount', fmt(0), { color: 'var(--text-primary)', fontWeight: '700' })}
+                                {auditDetailRow('Net Sales', fmt(0), { color: 'var(--text-primary)', fontWeight: '700' })}
                                 {auditDetailRow('Processed By', tx.approver?.full_name || tx.approver?.name || '—')}
                                 {auditDetailRow('Reason', reason)}
                                 {auditDetailRow('OR Number', tx.or_no || 'N/A')}
@@ -250,7 +297,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 {auditDetailRow('Customer', tx.customer_name || tx.customer?.name || 'Walk-in')}
                                 {auditDetailRow('Payment Method', (tx.payment_method || '—').replace(/\s*\([^)]*\)/g, '').trim())}
                                 {chequeNo && auditDetailRow('Cheque Number', chequeNo)}
-                                {auditDetailRow('Product Value (Full)', fmt(totalOriginalAmount))}
+                                {auditDetailRow('Gross Sales', fmt(totalOriginalAmount))}
                                 {totalDiscounts > 0 && auditDetailRow(`Total Discounts${discountTypeLabel}`, `-${fmt(totalDiscounts)}`, { color: '#2563EB', fontWeight: '700' })}
                                 {auditDetailRow(status === 'Deposit' ? 'Deposit Amount Collected' : 'Payment Collected', fmt(tx.amount || tx.total), { color: 'var(--text-primary)', fontWeight: '700' })}
                                 {auditDetailRow('Served By', tx.checker?.name || tx.cashier?.full_name || tx.cashier?.name || '—')}
@@ -269,19 +316,19 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 
                                 {isPartialRefund ? (
                                     <>
-                                        {auditDetailRow('Original Total', fmt(totalOriginalAmount))}
+                                        {auditDetailRow('Gross Sales', fmt(totalOriginalAmount))}
                                         {auditDetailRow(isReturnAction ? 'Returned Amount' : 'Refunded Amount', `-${fmt(totalRefundedAmount)}`, { color: '#DC2626', fontWeight: '700' })}
                                         {auditDetailRow('Net Sales Remaining', fmt(netSalesRemaining), { color: 'var(--text-primary)', fontWeight: '700', fontSize: '14px' })}
                                     </>
                                 ) : isFullRefund ? (
                                     <>
-                                        {auditDetailRow('Original Total', fmt(totalOriginalAmount))}
+                                        {auditDetailRow('Gross Sales', fmt(totalOriginalAmount))}
                                         {auditDetailRow(isReturnAction ? 'Returned Amount' : 'Refunded Amount', `-${fmt(totalRefundedAmount)}`, { color: '#DC2626', fontWeight: '700' })}
                                         {auditDetailRow('Net Sales Remaining', fmt(0), { color: 'var(--text-primary)', fontWeight: '700', fontSize: '14px' })}
                                     </>
                                 ) : (
                                     <>
-                                        {grossSubtotal > 0 && auditDetailRow('Subtotal (Gross)', fmt(grossSubtotal))}
+                                        {grossSubtotal > 0 && auditDetailRow('Gross Sales', fmt(grossSubtotal))}
                                         {totalDiscounts > 0 && (
                                             (itemDiscountsTotal > 0 && orderDiscountAmt > 0 && itemDiscountsTotal !== orderDiscountAmt) ? (
                                                 <>
@@ -293,7 +340,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                                 auditDetailRow(`Discount${discountTypeLabel}`, `-${fmt(Math.max(itemDiscountsTotal, orderDiscountAmt))}`, { color: '#2563EB', fontWeight: '700' })
                                             )
                                         )}
-                                        {auditDetailRow('Net Amount Paid', fmt(tx.amount || tx.total), { color: 'var(--text-primary)', fontWeight: '700', fontSize: '14px' })}
+                                        {auditDetailRow('Net Sales', fmt(tx.amount || tx.total), { color: 'var(--text-primary)', fontWeight: '700', fontSize: '14px' })}
                                     </>
                                 )}
 

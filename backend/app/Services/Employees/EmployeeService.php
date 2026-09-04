@@ -110,40 +110,6 @@ class EmployeeService
     }
 
     /**
-     * Permanently delete an employee from database.
-     */
-    public function deleteEmployee(User $employee): bool
-    {
-        if ($employee->id === 1 || $employee->username === 'admin' || $employee->employee_id === 'EMP-000') {
-            throw ValidationException::withMessages([
-                'employee' => ['Cannot delete the default administrator (admin).'],
-            ]);
-        }
-
-        if (auth()->id() && (int) auth()->id() === (int) $employee->id) {
-            throw ValidationException::withMessages([
-                'employee' => ['You cannot delete your own account while logged in.'],
-            ]);
-        }
-
-        // Check if cashier has sales/approval records attached to preserve financial auditing
-        $hasTransactions = \App\Models\Transaction::where('cashier_id', $employee->id)
-            ->orWhere('approver_id', $employee->id)
-            ->exists();
-
-        if ($hasTransactions) {
-            throw ValidationException::withMessages([
-                'employee' => ['Cannot delete this staff member because they have existing sales transaction records in the system. Please set their status to Inactive instead to disable their account access while preserving financial history.'],
-            ]);
-        }
-
-        // Revoke all active tokens prior to deletion
-        $employee->tokens()->delete();
-
-        return $employee->delete();
-    }
-
-    /**
      * Revoke any existing verification tokens for the employee and issue a fresh one,
      * then resend the staff activation email. Used by admin when staff misses the original email.
      */

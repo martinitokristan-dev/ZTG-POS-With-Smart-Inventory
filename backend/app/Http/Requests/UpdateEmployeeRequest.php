@@ -20,7 +20,13 @@ class UpdateEmployeeRequest extends FormRequest
         return [
             'full_name'    => 'required|string|max:100',
             'phone_number' => ['nullable', 'string', 'regex:/^09\d{9}$/'],
-            'email'        => ['required', 'email', 'max:255', \Illuminate\Validation\Rule::unique('user_profiles', 'email')->ignore($userId, 'user_id')],
+            'email'        => [
+                'required',
+                app()->environment('testing') ? 'email:rfc' : 'email:rfc,dns',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('user_profiles', 'email')->ignore($userId, 'user_id'),
+                new \App\Rules\NotDisposableEmail(),
+            ],
             'username'     => 'required|string|max:50|unique:users,username,' . $userId,
             'password'     => ['nullable', 'string', 'min:6', 'regex:/[A-Z]/', 'regex:/[\W_]/'],
             'pin'          => 'nullable|string|max:50',

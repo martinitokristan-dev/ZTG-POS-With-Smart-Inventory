@@ -110,7 +110,7 @@ export default function ProductFormModal({
     isOpen, mode,
     onClose, onSubmit,
     formData, setFormData,
-    categories, variantOptions,
+    categories, brands = [], variantOptions,
     handleAddressChange, handleImageUpload, uploadingImage = false, imageProgress = 0,
     errorMessage, selectedProduct,
     isSubmitting = false,
@@ -132,6 +132,25 @@ export default function ProductFormModal({
 
     const [isTranslating, setIsTranslating] = useState(false);
     const [lastAutoTranslation, setLastAutoTranslation] = useState('');
+    const [availableBrands, setAvailableBrands] = useState(brands || []);
+
+    useEffect(() => {
+        if (Array.isArray(brands) && brands.length > 0) {
+            setAvailableBrands(brands);
+        }
+    }, [brands]);
+
+    useEffect(() => {
+        if (isOpen) {
+            api.get('/brands')
+                .then(res => {
+                    if (Array.isArray(res.data)) {
+                        setAvailableBrands(res.data);
+                    }
+                })
+                .catch(err => console.error('Failed to load brands in ProductFormModal:', err));
+        }
+    }, [isOpen]);
 
     // Debounced real-time automatic translation for main product name
     useEffect(() => {
@@ -334,17 +353,6 @@ export default function ProductFormModal({
                                 <input type="text" className="form-control" placeholder="e.g. TRK-003 or leave blank" value={formData.part_no} onChange={(e) => setFormData({ ...formData, part_no: e.target.value })} />
                             </div>
                             <div className="form-group">
-                                <label className="form-label">Category <span style={{ color: 'red' }}>*</span></label>
-                                <IOSSelect
-                                    value={formData.category_id}
-                                    placeholder="Select Category"
-                                    options={categories.map(c => ({ value: String(c.id), label: c.name }))}
-                                    onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                        <div className="grid-2">
-                            <div className="form-group">
                                 <label className="form-label">English Name (Optional)</label>
                                 <input
                                     type="text"
@@ -354,42 +362,67 @@ export default function ProductFormModal({
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 />
                             </div>
+                        </div>
+
+                        <div className="grid-2">
                             <div className="form-group">
-                                <label className="form-label" htmlFor="chineseName">Chinese Name (Optional)</label>
-                                <div style={{ position: 'relative' }}>
-                                    <input
-                                        type="text"
-                                        id="chineseName"
-                                        className="form-control"
-                                        placeholder="e.g. 履带链节总成 or leave blank"
-                                        value={formData.chinese_name}
-                                        onChange={(e) => setFormData({ ...formData, chinese_name: e.target.value })}
-                                        style={{ paddingRight: '115px' }}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={triggerTranslation}
-                                        disabled={isTranslating}
-                                        style={{
-                                            position: 'absolute',
-                                            right: '8px',
-                                            top: '50%',
-                                            transform: 'translateY(-50%)',
-                                            background: 'var(--bg-secondary, #F1F5F9)',
-                                            border: '1px solid var(--border, #CBD5E1)',
-                                            borderRadius: '6px',
-                                            color: isTranslating ? 'var(--text-secondary, #64748B)' : 'var(--primary, #2563EB)',
-                                            fontSize: '11px',
-                                            fontWeight: 600,
-                                            padding: '4px 8px',
-                                            cursor: isTranslating ? 'not-allowed' : 'pointer',
-                                            outline: 'none',
-                                            transition: 'all 0.15s ease'
-                                        }}
-                                    >
-                                        {isTranslating ? 'Translating...' : 'Auto-Translate'}
-                                    </button>
-                                </div>
+                                <label className="form-label">Category <span style={{ color: 'red' }}>*</span></label>
+                                <IOSSelect
+                                    value={formData.category_id}
+                                    placeholder="Select Category"
+                                    options={categories.map(c => ({ value: String(c.id), label: c.name }))}
+                                    onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Brand (Optional)</label>
+                                <IOSSelect
+                                    value={formData.brand_id ? String(formData.brand_id) : ''}
+                                    placeholder="Select Brand (Optional)"
+                                    options={[
+                                        { value: '', label: 'None / Generic' },
+                                        ...(availableBrands || []).map(b => ({ value: String(b.id), label: b.name }))
+                                    ]}
+                                    onChange={(e) => setFormData({ ...formData, brand_id: e.target.value || null })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="chineseName">Chinese Name (Optional)</label>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type="text"
+                                    id="chineseName"
+                                    className="form-control"
+                                    placeholder="e.g. 履带链节总成 or leave blank"
+                                    value={formData.chinese_name}
+                                    onChange={(e) => setFormData({ ...formData, chinese_name: e.target.value })}
+                                    style={{ paddingRight: '115px' }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={triggerTranslation}
+                                    disabled={isTranslating}
+                                    style={{
+                                        position: 'absolute',
+                                        right: '8px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        background: 'var(--bg-secondary, #F1F5F9)',
+                                        border: '1px solid var(--border, #CBD5E1)',
+                                        borderRadius: '6px',
+                                        color: isTranslating ? 'var(--text-secondary, #64748B)' : 'var(--primary, #2563EB)',
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        padding: '4px 8px',
+                                        cursor: isTranslating ? 'not-allowed' : 'pointer',
+                                        outline: 'none',
+                                        transition: 'all 0.15s ease'
+                                    }}
+                                >
+                                    {isTranslating ? 'Translating...' : 'Auto-Translate'}
+                                </button>
                             </div>
                         </div>
 

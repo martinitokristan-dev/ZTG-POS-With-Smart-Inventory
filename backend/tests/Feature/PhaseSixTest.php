@@ -263,6 +263,7 @@ class PhaseSixTest extends TestCase
     public function test_cashier_can_fulfill_reservation()
     {
         $reservation = $this->makePendingReservation();
+        $reservation->update(['status' => ReservationStatus::ORDER_RECEIVED->value]);
 
         $response = $this->actingAs($this->cashier)
             ->postJson("/api/reservations/{$reservation->id}/fulfill", [
@@ -294,6 +295,7 @@ class PhaseSixTest extends TestCase
     public function test_fulfill_blocks_if_insufficient_stock_at_commit_time()
     {
         $reservation = $this->makePendingReservation();
+        $reservation->update(['status' => ReservationStatus::ORDER_RECEIVED->value]);
 
         // Drain stock before fulfillment
         $this->productA->update(['stock' => 1]);
@@ -312,6 +314,7 @@ class PhaseSixTest extends TestCase
     public function test_fulfill_fails_if_balance_payment_is_insufficient()
     {
         $reservation = $this->makePendingReservation();
+        $reservation->update(['status' => ReservationStatus::ORDER_RECEIVED->value]);
 
         $response = $this->actingAs($this->cashier)
             ->postJson("/api/reservations/{$reservation->id}/fulfill", [
@@ -324,10 +327,9 @@ class PhaseSixTest extends TestCase
             ->assertJsonValidationErrors('balance_payment');
     }
 
-    public function test_fulfill_fails_if_reservation_is_not_pending()
+    public function test_fulfill_fails_if_reservation_is_pending_and_not_order_received()
     {
-        $reservation = $this->makePendingReservation();
-        $reservation->update(['status' => 'Cancelled']);
+        $reservation = $this->makePendingReservation(); // Remains 'Pending'
 
         $response = $this->actingAs($this->cashier)
             ->postJson("/api/reservations/{$reservation->id}/fulfill", [
@@ -338,6 +340,7 @@ class PhaseSixTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors('reservation');
+        $this->assertStringContainsString('item has not been received from China', $response->json('errors.reservation.0'));
     }
 
     /* ─── Cancel Reservation Tests ────────────────────────── */
@@ -400,5 +403,42 @@ class PhaseSixTest extends TestCase
             ->getJson('/api/reservations?status=Completed&date_filter=this_year');
         $responseYear->assertStatus(200);
         $this->assertEquals(2, count($responseYear->json('data')));
+    }
+
+    public function test_admin_can_update_reservation_status_to_order_received_and_fulfill()
+    {
+        $reservation = $this->makePendingReservation();
+
+        // 1. Admin updates status to 'Order Received'
+        $statusResponse = $this->actingAs($this->admin)
+            ->patchJson("/api/reservations/{$reservation->id}/status", [
+                'status' => 'Order Received',
+            ]);
+
+        $statusResponse->assertStatus(200)
+            ->assertJsonPath('reservation.status', 'Order Received');
+
+        $this->assertDatabaseHas('reservations', [
+            'id' => $reservation->id,
+            'status' => 'Order Received',
+        ]);
+
+        // 2. Admin fulfills the reservation directly from Order Received status
+        $fulfillResponse = $this->actingAs($this->admin)
+            ->postJson("/api/reservations/{$reservation->id}/fulfill", [
+                'balance_payment' => 2925.00,
+                'si_no'           => 'SI-2026-999',
+                'doc_type'        => 'S.I.',
+                'payment_method'  => 'Cash',
+                'amount_received' => 2925.00,
+            ]);
+
+        $fulfillResponse->assertStatus(200)
+            ->assertJsonPath('reservation.status', 'Completed');
+
+        $this->assertDatabaseHas('reservations', [
+            'id' => $reservation->id,
+            'status' => 'Completed',
+        ]);
     }
 }

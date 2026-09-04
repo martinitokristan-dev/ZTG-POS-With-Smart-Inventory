@@ -18,7 +18,13 @@ class UpdateProfileRequest extends FormRequest
         return [
             'full_name'    => 'required|string|max:100',
             'phone_number' => ['nullable', 'string', 'regex:/^09\d{9}$/'],
-            'email'        => ['nullable', 'email', 'max:255', \Illuminate\Validation\Rule::unique('user_profiles', 'email')->ignore($myId, 'user_id')],
+            'email'        => [
+                'nullable',
+                app()->environment('testing') ? 'email:rfc' : 'email:rfc,dns',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('user_profiles', 'email')->ignore($myId, 'user_id'),
+                new \App\Rules\NotDisposableEmail(),
+            ],
             'username'     => 'required|string|max:50|unique:users,username,' . $myId,
             'pin'          => 'nullable|string|max:50',
         ];

@@ -2366,10 +2366,18 @@ tr:hover td {
 [data-tooltip] {
     position: relative;
 }
+[data-tooltip]:hover {
+    position: relative;
+    z-index: 10000 !important;
+}
+tr:hover {
+    position: relative;
+    z-index: 50;
+}
 [data-tooltip]::before {
     content: attr(data-tooltip);
     position: absolute;
-    bottom: 125%;
+    bottom: calc(100% + 8px);
     left: 50%;
     transform: translate(-50%, 4px) scale(0.95);
     background: #0F172A;
@@ -2383,13 +2391,13 @@ tr:hover td {
     visibility: hidden;
     pointer-events: none;
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.15);
+    z-index: 999999 !important;
 }
 [data-tooltip]::after {
     content: '';
     position: absolute;
-    bottom: 115%;
+    bottom: calc(100% + 2px);
     left: 50%;
     transform: translate(-50%, 4px) scale(0.95);
     border-width: 5px;
@@ -2399,13 +2407,47 @@ tr:hover td {
     visibility: hidden;
     pointer-events: none;
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 1000;
+    z-index: 999999 !important;
 }
 [data-tooltip]:hover::before,
 [data-tooltip]:hover::after {
     opacity: 1;
     visibility: visible;
     transform: translate(-50%, 0) scale(1);
+}
+
+/* Right-aligned tooltips for end-of-row buttons so they never clip or glitch on container boundaries */
+[data-tooltip-align="right"]::before,
+.actions-inline-group > [data-tooltip]:last-child::before,
+.actions-inline-group > :last-child[data-tooltip]::before,
+td:last-child .actions-inline-group > [data-tooltip]:last-child::before,
+td:last-child [data-tooltip]:last-child::before {
+    left: auto !important;
+    right: 0 !important;
+    transform: translate(0, 4px) scale(0.95) !important;
+}
+[data-tooltip-align="right"]:hover::before,
+.actions-inline-group > [data-tooltip]:last-child:hover::before,
+.actions-inline-group > :last-child[data-tooltip]:hover::before,
+td:last-child .actions-inline-group > [data-tooltip]:last-child:hover::before,
+td:last-child [data-tooltip]:last-child:hover::before {
+    transform: translate(0, 0) scale(1) !important;
+}
+[data-tooltip-align="right"]::after,
+.actions-inline-group > [data-tooltip]:last-child::after,
+.actions-inline-group > :last-child[data-tooltip]::after,
+td:last-child .actions-inline-group > [data-tooltip]:last-child::after,
+td:last-child [data-tooltip]:last-child::after {
+    left: auto !important;
+    right: 11px !important;
+    transform: translate(0, 4px) scale(0.95) !important;
+}
+[data-tooltip-align="right"]:hover::after,
+.actions-inline-group > [data-tooltip]:last-child:hover::after,
+.actions-inline-group > :last-child[data-tooltip]:hover::after,
+td:last-child .actions-inline-group > [data-tooltip]:last-child:hover::after,
+td:last-child [data-tooltip]:last-child:hover::after {
+    transform: translate(0, 0) scale(1) !important;
 }
 
 /* Dropdown item tooltips positioning offset */

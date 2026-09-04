@@ -14,13 +14,11 @@ export default function ManageUsersView({
     onEditStaff,
     onToggleStaff,
     onResendVerification,
-    onDeleteStaff,
     resendingId,
     permissions = {},
 }) {
     const canCreate = permissions.canCreate ?? true;
     const canEdit = permissions.canEdit ?? true;
-    const canDelete = permissions.canDelete ?? true;
     const [currentPage, setCurrentPage] = React.useState(1);
     const [perPage, setPerPage] = React.useState(10);
     const [openDropdownId, setOpenDropdownId] = useState(null);
@@ -109,7 +107,7 @@ export default function ManageUsersView({
                                 <th style={{ padding: '12px 16px', fontWeight: '600', width: '16%' }}>Phone Number</th>
                                 <th style={{ padding: '12px 16px', fontWeight: '600', width: '16%' }}>Assigned Role</th>
                                 <th style={{ padding: '12px 16px', fontWeight: '600', width: '14%' }}>Status</th>
-                                <th style={{ padding: '12px 16px', fontWeight: '600', width: '10%', textAlign: 'right' }}>Actions</th>
+                                <th style={{ padding: '12px 16px', fontWeight: '600', width: '12%', minWidth: '130px', textAlign: 'right' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -207,7 +205,7 @@ export default function ManageUsersView({
                                             </td>
 
                                             {/* Actions */}
-                                            <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                                            <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                                                 <div className="actions-cell-wrapper actions-collapse-wide">
                                                     {/* Inline Action Buttons (Visible when ample space) */}
                                                     <div className="actions-inline-group">
@@ -266,6 +264,7 @@ export default function ManageUsersView({
                                                                 onClick={() => onToggleStaff(u)}
                                                                 className="action-trigger-btn"
                                                                 data-tooltip={u.status === 'Active' ? "Deactivate Staff" : "Activate Staff"}
+                                                                data-tooltip-align="right"
                                                                 aria-label={u.status === 'Active' ? "Deactivate Staff" : "Activate Staff"}
                                                                 style={{ color: u.status === 'Active' ? '#DC2626' : '#16A34A' }}
                                                             >
@@ -280,23 +279,6 @@ export default function ManageUsersView({
                                                                         <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                                                     </svg>
                                                                 )}
-                                                            </button>
-                                                        )}
-
-                                                        {/* 6. Delete Staff (non-default admin) */}
-                                                        {!isDefaultAdmin && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => onDeleteStaff(u)}
-                                                                className="action-trigger-btn"
-                                                                data-tooltip="Delete Staff"
-                                                                aria-label="Delete Staff"
-                                                                style={{ color: '#DC2626' }}
-                                                            >
-                                                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                    <polyline points="3 6 5 6 21 6"></polyline>
-                                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                                </svg>
                                                             </button>
                                                         )}
                                                     </div>
@@ -414,27 +396,6 @@ export default function ManageUsersView({
                                                                             </>
                                                                         )}
                                                                     </button>
-                                                                )}
-
-                                                                {/* 6. Delete Staff */}
-                                                                {canDelete && !isDefaultAdmin && (
-                                                                    <>
-                                                                        <div className="actions-dropdown-divider" style={{ margin: '4px 0', borderTop: '1px solid var(--border)' }} />
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => {
-                                                                                setOpenDropdownId(null);
-                                                                                onDeleteStaff(u);
-                                                                            }}
-                                                                            className="actions-dropdown-item disable"
-                                                                        >
-                                                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                                <polyline points="3 6 5 6 21 6"></polyline>
-                                                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                                            </svg>
-                                                                            <span>Delete Staff</span>
-                                                                        </button>
-                                                                    </>
                                                                 )}
                                                             </div>
                                                         )}

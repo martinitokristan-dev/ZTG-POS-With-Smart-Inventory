@@ -3,7 +3,7 @@ import LoadingSpinner from '../../../../shared/components/LoadingSpinner';
 import StatusBadge from '../../../../shared/components/StatusBadge';
 import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
-import { getItemDiscountAmount } from '../../../../shared/utils/clientExcelExporter';
+import { calculateItemDiscountBreakdown } from '../../../../shared/utils/discountCalculator';
 
 export default function MySalesTable({ loading, items, fmt, fmtDate }) {
     if (loading) return <LoadingSpinner text="Loading sales data..." minHeight="200px" />;
@@ -23,53 +23,63 @@ export default function MySalesTable({ loading, items, fmt, fmtDate }) {
             </div>
             <div style={{ overflowX: 'auto' }}>
                 <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead style={{ borderBottom: '2px solid var(--table-border)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B', background: 'var(--table-header-bg)' }}>
+                    <thead style={{ borderBottom: '2px solid var(--table-border)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B', background: 'var(--table-header-bg)', whiteSpace: 'nowrap' }}>
                         <tr>
-                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Date</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>S.I./C.R./D.R.</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Part No.</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '600', maxWidth: '140px' }}>Product</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'center' }}>Qty</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right' }}>Price</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right' }}>Amount</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Customer</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Payment</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right' }}>Discounted</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Served By</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '600' }}>Status</th>
+                            <th style={{ padding: '10px 12px', fontWeight: '600' }}>Date</th>
+                            <th style={{ padding: '10px 12px', fontWeight: '600' }}>S.I./C.R./D.R.</th>
+                            <th style={{ padding: '10px 12px', fontWeight: '600' }}>Part No.</th>
+                            <th style={{ padding: '10px 14px', fontWeight: '600' }}>Product</th>
+                            <th style={{ padding: '10px 8px', fontWeight: '600', textAlign: 'center' }}>Qty</th>
+                            <th style={{ padding: '10px 10px', fontWeight: '600', textAlign: 'right' }}>Price</th>
+                            <th style={{ padding: '10px 10px', fontWeight: '600', textAlign: 'right' }}>Sales</th>
+                            <th style={{ padding: '10px 12px', fontWeight: '600' }}>Customer</th>
+                            <th style={{ padding: '10px 10px', fontWeight: '600' }}>Payment</th>
+                            <th style={{ padding: '10px 8px', fontWeight: '600', textAlign: 'center' }}>Discount %</th>
+                            <th style={{ padding: '10px 10px', fontWeight: '600', textAlign: 'right' }}>Discount</th>
+                            <th style={{ padding: '10px 10px', fontWeight: '600' }}>Served By</th>
+                            <th style={{ padding: '10px 12px', fontWeight: '600' }}>Status</th>
                         </tr>
                     </thead>
-                    <tbody style={{ fontSize: '15px' }}>
+                    <tbody style={{ fontSize: '14.5px' }}>
                         {items.map((item, i) => {
                             const amountColor = 'var(--success, #16A34A)';
-                            const amountPrefix = '';
-
                             const qty = Number(item.qty || 1);
-                            const unitPrice = Number(item.original_price || item.price || 0);
-                            const discountVal = getItemDiscountAmount(item, item._rawTx || item.tx);
-                            const grossRow = qty * unitPrice;
-                            const netRowAmount = Math.max(0, grossRow - discountVal);
+                            const breakdown = calculateItemDiscountBreakdown(item, item._rawTx || item.tx);
+                            const unitPrice = breakdown.unitPrice;
+                            const discountVal = breakdown.totalDiscount;
+                            const netRowAmount = breakdown.discountedPrice;
+
+                            const fullDate = fmtDate(item._txDate) || '';
+                            const [displayDate, ...timeParts] = fullDate.split(', ');
+                            const displayTime = timeParts.join(', ');
+                            const brandVal = item.product?.brand || item.brand || item.product?.brand?.name;
 
                             return (
-                                <tr key={i} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '48px' }}>
-                                    <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '500' }}>{fmtDate(item._txDate)}</td>
-                                    <td style={{ padding: '12px 16px', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
-                                        <CopyableText text={item._txReceipt} label="S.I./C.R./D.R." codeStyle={{ fontSize: '15px', color: 'var(--table-text-primary)', fontWeight: '600' }} />
+                                <tr key={i} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '44px', whiteSpace: 'nowrap' }}>
+                                    <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
+                                        <span style={{ display: 'block', color: 'var(--table-text-primary)', fontSize: '14px', fontWeight: '500' }}>{displayDate}</span>
+                                        {displayTime && <span style={{ display: 'block', fontSize: '12px', color: 'var(--table-text-secondary)', fontWeight: '500' }}>{displayTime}</span>}
                                     </td>
-                                    <td style={{ padding: '12px 16px', color: 'var(--table-text-primary)', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.part_no || item.partNo || 'N/A'}</td>
-                                    <td style={{ padding: '12px 16px', maxWidth: '140px', overflow: 'hidden' }}>
-                                        <FormattedProductName name={item.name} blockVariant={true} />
+                                    <td style={{ padding: '8px 12px', fontSize: '14px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
+                                        <CopyableText text={item._txReceipt} label="S.I./C.R./D.R." codeStyle={{ fontSize: '14px', color: 'var(--table-text-primary)', fontWeight: '600' }} />
                                     </td>
-                                    <td style={{ padding: '12px 16px', color: 'var(--table-text-primary)', textAlign: 'center', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{qty}</td>
-                                    <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', textAlign: 'right', fontSize: '15px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{fmt(unitPrice)}</td>
-                                    <td style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right', color: amountColor, fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>{amountPrefix}{fmt(netRowAmount)}</td>
-                                    <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '500', whiteSpace: 'normal' }}>{item._txCustomer}</td>
-                                    <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '500' }}>{item._txPayment}</td>
-                                    <td style={{ padding: '12px 16px', textAlign: 'right', color: discountVal > 0 ? '#2563EB' : 'var(--table-text-muted)', fontWeight: discountVal > 0 ? '600' : '500', fontSize: '15px', fontVariantNumeric: 'tabular-nums' }}>
+                                    <td style={{ padding: '8px 12px', color: 'var(--table-text-primary)', fontSize: '14px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{item.part_no || item.partNo || 'N/A'}</td>
+                                    <td style={{ padding: '8px 14px', maxWidth: '220px', overflow: 'hidden' }}>
+                                        <FormattedProductName name={item.name} brand={brandVal} blockVariant={true} />
+                                    </td>
+                                    <td style={{ padding: '8px 8px', color: 'var(--table-text-primary)', textAlign: 'center', fontSize: '14px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{qty}</td>
+                                    <td style={{ padding: '8px 10px', color: 'var(--table-text-secondary)', textAlign: 'right', fontSize: '14px', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{fmt(unitPrice)}</td>
+                                    <td style={{ padding: '8px 10px', fontWeight: '600', textAlign: 'right', color: amountColor, fontSize: '14px', fontVariantNumeric: 'tabular-nums' }}>{fmt(netRowAmount)}</td>
+                                    <td style={{ padding: '8px 12px', color: 'var(--table-text-secondary)', fontSize: '14px', fontWeight: '500', whiteSpace: 'normal' }}>{item._txCustomer}</td>
+                                    <td style={{ padding: '8px 10px', color: 'var(--table-text-secondary)', fontSize: '14px', fontWeight: '500' }}>{item._txPayment}</td>
+                                    <td style={{ padding: '8px 8px', textAlign: 'center', color: breakdown.discountRate > 0 ? '#2563EB' : 'var(--table-text-muted)', fontWeight: breakdown.discountRate > 0 ? '600' : '500', fontSize: '14px', fontVariantNumeric: 'tabular-nums' }}>
+                                        {breakdown.formattedRate}
+                                    </td>
+                                    <td style={{ padding: '8px 10px', textAlign: 'right', color: discountVal > 0 ? '#2563EB' : 'var(--table-text-muted)', fontWeight: discountVal > 0 ? '600' : '500', fontSize: '14px', fontVariantNumeric: 'tabular-nums' }}>
                                         {discountVal > 0 ? `-${fmt(discountVal)}` : fmt(0)}
                                     </td>
-                                    <td style={{ padding: '12px 16px', color: 'var(--table-text-secondary)', fontSize: '15px', fontWeight: '500' }}>{(item._txChecker || '—').split(' ')[0]}</td>
-                                    <td style={{ padding: '12px 16px' }}><StatusBadge status={item._txStatus === 'Refund' || item._txStatus === 'Return' ? 'Completed' : item._txStatus} /></td>
+                                    <td style={{ padding: '8px 10px', color: 'var(--table-text-secondary)', fontSize: '14px', fontWeight: '500' }}>{(item._txChecker || '—').split(' ')[0]}</td>
+                                    <td style={{ padding: '8px 12px' }}><StatusBadge status={item._txStatus === 'Refund' || item._txStatus === 'Return' ? 'Completed' : item._txStatus} /></td>
                                 </tr>
                             );
                         })}

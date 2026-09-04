@@ -101,7 +101,8 @@ class ProductController extends Controller
     {
         $transaction = $this->productService->restock(
             $request->validated()['restocks'],
-            $request->user()->id
+            $request->user()->id,
+            $request->validated()['approval_pin']
         );
 
         return response()->json([

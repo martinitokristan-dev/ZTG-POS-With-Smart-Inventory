@@ -5,11 +5,11 @@ import GeneralTab from './tabs/GeneralTab';
 import ProductsTab from './tabs/ProductsTab';
 import ActivityLogs from '../ActivityLogs/index.jsx';
 import CategoryModal from './modals/CategoryModal';
+import BrandModal from './modals/BrandModal';
 import EmployeeModal from './modals/EmployeeModal';
 import PasswordModal from './modals/PasswordModal';
 import CheckerModal from './modals/CheckerModal';
 import ConfirmSaveModal from './modals/ConfirmSaveModal';
-import DeleteEmployeeModal from './modals/DeleteEmployeeModal';
 import LoadingSpinner from '../../../shared/components/LoadingSpinner';
 
 export default function SettingsView() {
@@ -29,13 +29,15 @@ export default function SettingsView() {
         newOptionValue, setNewOptionValue,
         uomList, newUomValue, setNewUomValue, editingUomIndex, setEditingUomIndex, editUomValue, setEditUomValue,
         handleAddUom, handleUpdateUom, handleDeleteUom,
+        brands, showBrandModal, setShowBrandModal, selectedBrand, setSelectedBrand,
+        brandName, setBrandName, brandDescription, setBrandDescription, brandStatus, setBrandStatus,
+        brandSubmitting, handleBrandSubmit, handleDeleteBrand, openAddBrand, openEditBrand,
         alertRules, showRuleModal, setShowRuleModal, ruleForm, setRuleForm,
         employees, showEmployeeModal, setShowEmployeeModal, employeeForm, setEmployeeForm, selectedEmployee, setSelectedEmployee,
-        showDeleteEmployeeModal, setShowDeleteEmployeeModal, employeeToDelete, setEmployeeToDelete,
         employeeErrors, setEmployeeErrors,
         handleProfileSubmit, handlePasswordSubmit, handleCategorySubmit, handleDeleteCategory, handleAddVariantOption, handleUpdateVariantOption, handleDeleteVariantOption, getOptionsForType,
         handleRuleSubmit, handleToggleRule, handleDeleteRule,
-        handleEmployeeSubmit, openEditEmployee, handleToggleEmployee, handleDeleteEmployee, handleConfirmDeleteEmployee, openAddEmployee, handleResendVerification,
+        handleEmployeeSubmit, openEditEmployee, handleToggleEmployee, openAddEmployee, handleResendVerification,
         checkers, showCheckerModal, setShowCheckerModal, checkerForm, setCheckerForm, selectedChecker, setSelectedChecker, handleCheckerSubmit, openEditChecker, openAddChecker,
         profileSubmitting, passwordSubmitting, employeeSubmitting
     } = useSettings();
@@ -403,6 +405,10 @@ export default function SettingsView() {
                                             handleAddUom={handleAddUom}
                                             handleUpdateUom={handleUpdateUom}
                                             handleDeleteUom={handleDeleteUom}
+                                            brands={brands}
+                                            openAddBrand={openAddBrand}
+                                            openEditBrand={openEditBrand}
+                                            handleDeleteBrand={handleDeleteBrand}
                                             alertRules={alertRules}
                                             showRuleModal={showRuleModal}
                                             setShowRuleModal={setShowRuleModal}
@@ -441,6 +447,20 @@ export default function SettingsView() {
                 getOptionsForType={getOptionsForType}
             />
 
+            <BrandModal
+                isOpen={showBrandModal}
+                onClose={() => setShowBrandModal(false)}
+                brandName={brandName}
+                setBrandName={setBrandName}
+                brandDescription={brandDescription}
+                setBrandDescription={setBrandDescription}
+                brandStatus={brandStatus}
+                setBrandStatus={setBrandStatus}
+                onSubmit={handleBrandSubmit}
+                selectedBrand={selectedBrand}
+                submitting={brandSubmitting}
+            />
+
             <EmployeeModal
                 isOpen={showEmployeeModal}
                 onClose={() => setShowEmployeeModal(false)}
@@ -475,16 +495,6 @@ export default function SettingsView() {
                 isOpen={showConfirmSaveModal}
                 onConfirm={handleConfirmSaveBulkSettings}
                 onCancel={handleCancelSaveBulkSettings}
-            />
-
-            <DeleteEmployeeModal
-                isOpen={showDeleteEmployeeModal}
-                onClose={() => {
-                    setShowDeleteEmployeeModal(false);
-                    setEmployeeToDelete(null);
-                }}
-                employee={employeeToDelete}
-                onConfirm={handleConfirmDeleteEmployee}
             />
         </>
     );

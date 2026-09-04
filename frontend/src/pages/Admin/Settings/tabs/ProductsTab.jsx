@@ -5,7 +5,8 @@ export default function ProductsTab({
     categories, setSelectedCategory, setCategoryName, setShowCategoryModal, handleDeleteCategory, setCategoryVariants,
     newOptionValue, setNewOptionValue, handleAddVariantOption, handleDeleteVariantOption, getOptionsForType,
     handleSaveBulkSettings, handleUpdateVariantOption,
-    uomList, newUomValue, setNewUomValue, handleAddUom, handleUpdateUom, handleDeleteUom
+    uomList, newUomValue, setNewUomValue, handleAddUom, handleUpdateUom, handleDeleteUom,
+    brands = [], openAddBrand, openEditBrand, handleDeleteBrand
 }) {
     return (
         <div className="prod-tabs-layout">
@@ -14,6 +15,7 @@ export default function ProductsTab({
                 {[
                     { id: 'info', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>, label: 'Product Info' },
                     { id: 'categories', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>, label: 'Categories' },
+                    { id: 'brands', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>, label: 'Brands' },
                     { id: 'sizes', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7h18M3 12h12M3 17h6"/></svg>, label: 'Size Options' },
                     { id: 'quality', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>, label: 'Quality' },
                     { id: 'colors', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 010 18"/></svg>, label: 'Color Options' },
@@ -100,6 +102,54 @@ export default function ProductsTab({
                                         <div className="cat-card-actions">
                                             <button className="btn btn-secondary btn-sm" onClick={() => { setSelectedCategory(c); setCategoryName(c.name); setCategoryVariants(c.variants || []); setShowCategoryModal(true); }}>Edit</button>
                                             <button className="btn btn-danger btn-sm" style={{ background: 'transparent', color: '#DC2626', borderColor: '#fca5a5' }} onClick={() => handleDeleteCategory(c)}>Remove</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PANEL: Brands */}
+                    {activeSubTab === 'brands' && (
+                        <div className="prod-vtab-panel active">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+                                <div style={{ flex: 1 }}>
+                                    <h4 style={{ margin: '0 0 3px', fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>Product Brands</h4>
+                                    <p className="panel-desc" style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>Manage brand names (e.g. HOWO, WEICHAI, Cummins). Brands are optional when creating or editing products.</p>
+                                </div>
+                                <button className="btn btn-primary btn-sm" style={{ flexShrink: 0 }} onClick={openAddBrand}>
+                                    <svg viewBox="0 0 24 24" style={{ width: '13px', height: '13px', fill: 'none', stroke: 'currentColor', strokeWidth: '2.5', verticalAlign: 'middle', marginRight: '4px' }}><path d="M12 5v14M5 12h14"/></svg>
+                                    Add Brand
+                                </button>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {(!brands || brands.length === 0) ? (
+                                    <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
+                                        No product brands created yet. Click "+ Add Brand" to create one.
+                                    </div>
+                                ) : brands.map(b => (
+                                    <div key={b.id} className="cat-card">
+                                        <div className="cat-card-info">
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>{b.name}</span>
+                                                <span style={{ 
+                                                    fontSize: '11px', 
+                                                    fontWeight: '700', 
+                                                    padding: '2px 8px', 
+                                                    borderRadius: '9999px',
+                                                    background: b.status === 'Active' ? '#DCFCE7' : '#F1F5F9',
+                                                    color: b.status === 'Active' ? '#15803D' : '#64748B'
+                                                }}>
+                                                    {b.status || 'Active'}
+                                                </span>
+                                            </div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                                {b.description || 'No description'}
+                                            </div>
+                                        </div>
+                                        <div className="cat-card-actions">
+                                            <button className="btn btn-secondary btn-sm" onClick={() => openEditBrand(b)}>Edit</button>
+                                            <button className="btn btn-danger btn-sm" style={{ background: 'transparent', color: '#DC2626', borderColor: '#fca5a5' }} onClick={() => handleDeleteBrand(b)}>Remove</button>
                                         </div>
                                     </div>
                                 ))}

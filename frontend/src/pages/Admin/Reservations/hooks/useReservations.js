@@ -579,6 +579,27 @@ export default function useReservations() {
     };
 
     /* ──────────────────────────────────────────────── */
+    /* UPDATE STATUS (e.g. Ready for Pickup)             */
+    /* ──────────────────────────────────────────────── */
+    const handleUpdateStatus = async (reservationId, newStatus) => {
+        try {
+            await api.patch(`/reservations/${reservationId}/status`, { status: newStatus });
+            setReservations(prev => prev.map(r => {
+                if (r.id === reservationId) {
+                    return { ...r, status: newStatus };
+                }
+                return r;
+            }));
+            resetReservationsCache();
+            showToast(`✓ Order status updated to "${newStatus}"!`);
+        } catch (err) {
+            console.error('Failed to update status:', err);
+            const msg = err.response?.data?.message || 'Failed to update order status.';
+            showToast(msg, 'error');
+        }
+    };
+
+    /* ──────────────────────────────────────────────── */
     /* FULFILL modal balance due calculation             */
     /* ──────────────────────────────────────────────── */
     const ffBalanceDue = selected ? (Number(selected.total || 0) - Number(selected.deposit || 0)) : 0;
@@ -586,7 +607,7 @@ export default function useReservations() {
 
     return {
         // Data & Session
-        reservations, loading, userName, handleCopyToClipboard, copiedCount,
+        reservations, loading, userName, handleCopyToClipboard, copiedCount, handleUpdateStatus,
         
         // Formating
         fmt, fmtDate,

@@ -140,7 +140,8 @@ function ProductManagement() {
                 onSubmit={pm.handleAddProduct}
                 formData={pm.formData} setFormData={pm.setFormData}
                 categories={pm.categories}
-                  variantOptions={pm.variantOptions}
+                brands={pm.brands}
+                variantOptions={pm.variantOptions}
                 handleAddressChange={pm.handleAddressChange}
                 handleImageUpload={pm.handleImageUpload}
                 uploadingImage={pm.uploadingImage}
@@ -158,7 +159,8 @@ function ProductManagement() {
                 onSubmit={pm.handleEditProduct}
                 formData={pm.formData} setFormData={pm.setFormData}
                 categories={pm.categories}
-                  variantOptions={pm.variantOptions}
+                brands={pm.brands}
+                variantOptions={pm.variantOptions}
                 handleAddressChange={pm.handleAddressChange}
                 handleImageUpload={pm.handleImageUpload}
                 uploadingImage={pm.uploadingImage}
@@ -202,6 +204,10 @@ function ProductManagement() {
                 restockVerifiedBy={pm.restockVerifiedBy}
                 restockDate={pm.restockDate}
                 restockTime={pm.restockTime}
+                restockApprovalPin={pm.restockApprovalPin}
+                setRestockApprovalPin={pm.setRestockApprovalPin}
+                showRestockApprovalPin={pm.showRestockApprovalPin}
+                setShowRestockApprovalPin={pm.setShowRestockApprovalPin}
                 errorMessage={pm.errorMessage}
                 DEFAULT_PLACEHOLDER_IMAGE={pm.DEFAULT_PLACEHOLDER_IMAGE}
                 isSubmitting={pm.isSubmitting}

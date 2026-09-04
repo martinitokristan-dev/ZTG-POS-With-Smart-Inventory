@@ -34,6 +34,10 @@ export default function ViewProductModal({ isOpen, onClose, product, categories 
                 <div className="modal-body p-6 flex flex-col gap-4 text-[14px] text-slate-800 overflow-y-auto" style={{ maxHeight: '650px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px 20px', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '18px', marginBottom: '4px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Part No. (Base)</span>
+                            <CopyableText text={product.part_no} label="Part No." codeStyle={{ fontSize: '15px' }} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>English Name</span>
                             <span style={{ fontWeight: '600', color: '#1E293B', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>{product.name}</span>
                         </div>
@@ -46,12 +50,12 @@ export default function ViewProductModal({ isOpen, onClose, product, categories 
                             <span style={{ fontWeight: '500', color: '#334155', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>{categoryName}</span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Warehouse Location</span>
-                            <span style={{ fontWeight: '500', color: '#334155', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>{product.address || 'N/A'}</span>
+                            <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Brand</span>
+                            <span style={{ fontWeight: '500', color: '#334155', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>{product.brand?.name || 'None / Generic'}</span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Part No. (Base)</span>
-                            <CopyableText text={product.part_no} label="Part No." codeStyle={{ fontSize: '15px' }} />
+                            <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Warehouse Location</span>
+                            <span style={{ fontWeight: '500', color: '#334155', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>{product.address || 'N/A'}</span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</span>

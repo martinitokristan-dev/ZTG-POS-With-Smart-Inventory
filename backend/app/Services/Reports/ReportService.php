@@ -220,7 +220,7 @@ class ReportService
         }
 
         // Transactions list for the sales report table (Excluding inventory restocks, system logs, and unpaid pending orders)
-        $transactionsQuery = Transaction::with(['items.product.parent', 'items.product.variantOptions', 'customer', 'cashier', 'checker'])
+        $transactionsQuery = Transaction::with(['items.product.brand', 'items.product.parent.brand', 'items.product.variantOptions', 'customer', 'cashier', 'checker'])
             ->whereIn('status', ['Completed', 'Deposit', 'Paid', 'Refund', 'Return', 'Void'])
             ->whereNotIn('type', ['system', 'restock']);
 
@@ -635,8 +635,9 @@ class ReportService
         // 2. Query products with filters
         $query = Product::with([
             'category',
+            'brand',
             'variants' => function ($q) use ($salesSubquery, $filters) {
-                $q->with('variantOptions.type')->select('products.*');
+                $q->with(['brand', 'variantOptions.type'])->select('products.*');
                 if (isset($filters['paginate']) && $filters['paginate']) {
                     $q->selectSub(clone $salesSubquery, 'sales_count');
                 }

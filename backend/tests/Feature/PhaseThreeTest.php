@@ -394,6 +394,7 @@ class PhaseThreeTest extends TestCase
 
         $response = $this->actingAs($this->admin)
             ->postJson('/api/products/restock', [
+                'approval_pin' => '1234',
                 'restocks' => [
                     ['product_id' => $product1->id, 'qty' => 20],
                     ['product_id' => $product2->id, 'qty' => 15],
@@ -417,6 +418,7 @@ class PhaseThreeTest extends TestCase
 
         $response = $this->actingAs($this->admin)
             ->postJson('/api/products/restock', [
+                'approval_pin' => 'password',
                 'restocks' => [
                     ['product_id' => $product->id, 'qty' => 50],
                 ],
@@ -424,6 +426,75 @@ class PhaseThreeTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('products', ['id' => $product->id, 'stock' => 50, 'status' => 'Active']);
+    }
+
+    public function test_restock_requires_admin_pin_or_password()
+    {
+        $product = $this->makeProduct(['part_no' => 'RST-REQ', 'stock' => 5]);
+
+        $response = $this->actingAs($this->admin)
+            ->postJson('/api/products/restock', [
+                'restocks' => [
+                    ['product_id' => $product->id, 'qty' => 10],
+                ],
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['approval_pin']);
+    }
+
+    public function test_restock_fails_with_invalid_admin_pin_or_password()
+    {
+        $product = $this->makeProduct(['part_no' => 'RST-FAIL', 'stock' => 5]);
+
+        $response = $this->actingAs($this->admin)
+            ->postJson('/api/products/restock', [
+                'approval_pin' => 'wrong-pin',
+                'restocks' => [
+                    ['product_id' => $product->id, 'qty' => 10],
+                ],
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['approval_pin']);
+
+        // Stock should not be modified
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'stock' => 5]);
+
+        // Security alert transaction should be logged
+        $this->assertDatabaseHas('transactions', [
+            'status' => 'Security Alert',
+            'type'   => 'system',
+        ]);
+    }
+
+    public function test_restock_succeeds_with_valid_admin_pin_or_password()
+    {
+        $product = $this->makeProduct(['part_no' => 'RST-OK', 'stock' => 10]);
+
+        // Test with PIN
+        $response = $this->actingAs($this->admin)
+            ->postJson('/api/products/restock', [
+                'approval_pin' => '1234',
+                'restocks' => [
+                    ['product_id' => $product->id, 'qty' => 5],
+                ],
+            ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'stock' => 15]);
+
+        // Test with Password
+        $response2 = $this->actingAs($this->admin)
+            ->postJson('/api/products/restock', [
+                'approval_pin' => 'password',
+                'restocks' => [
+                    ['product_id' => $product->id, 'qty' => 5],
+                ],
+            ]);
+
+        $response2->assertStatus(200);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'stock' => 20]);
     }
 
     /* ─── Damaged Stock Tests ─────────────────────────────── */

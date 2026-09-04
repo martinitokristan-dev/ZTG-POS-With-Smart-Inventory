@@ -6,6 +6,8 @@ export default function ReviewRestockModal({
     products, restockQuantities,
     restockItemsCount, restockUnitsCount,
     restockVerifiedBy, restockDate, restockTime,
+    restockApprovalPin, setRestockApprovalPin,
+    showRestockApprovalPin, setShowRestockApprovalPin,
     errorMessage,
     DEFAULT_PLACEHOLDER_IMAGE,
     isSubmitting = false,
@@ -123,6 +125,74 @@ export default function ReviewRestockModal({
                             </div>
                         </div>
                     </div>
+
+                    {/* Admin Password / Approval PIN Authorization */}
+                    <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+                            <label style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#2563EB' }}>
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                </svg>
+                                Admin Password / Approval PIN <span style={{ color: 'var(--danger)' }}>*</span>
+                            </label>
+                            <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>Required to authorize inventory updates</span>
+                        </div>
+                        <div style={{ position: 'relative', width: '100%' }}>
+                            <input
+                                type={showRestockApprovalPin ? 'text' : 'password'}
+                                className="form-control"
+                                placeholder="Enter admin password or PIN to authorize restock"
+                                value={restockApprovalPin || ''}
+                                onChange={(e) => setRestockApprovalPin(e.target.value)}
+                                disabled={isSubmitting}
+                                style={{
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '8px',
+                                    padding: '10px 40px 10px 14px',
+                                    fontSize: '13.5px',
+                                    width: '100%',
+                                    backgroundColor: 'var(--bg-card)',
+                                    color: 'var(--text-primary)',
+                                    boxSizing: 'border-box',
+                                    outline: 'none',
+                                    transition: 'border-color 0.2s',
+                                }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowRestockApprovalPin(!showRestockApprovalPin)}
+                                disabled={isSubmitting}
+                                aria-label={showRestockApprovalPin ? 'Hide PIN' : 'Show PIN'}
+                                style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                    color: 'var(--text-muted, #94A3B8)',
+                                    padding: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                {showRestockApprovalPin ? (
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                        <line x1="1" y1="1" x2="23" y2="23" />
+                                    </svg>
+                                ) : (
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                )}
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Footer */}
@@ -138,18 +208,20 @@ export default function ReviewRestockModal({
                     <button 
                         type="button" 
                         onClick={onConfirm} 
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || !restockApprovalPin?.trim()}
                         style={{ 
-                            background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', 
+                            background: (isSubmitting || !restockApprovalPin?.trim()) 
+                                ? '#9CA3AF' 
+                                : 'linear-gradient(135deg, #059669 0%, #047857 100%)', 
                             color: '#FFFFFF', 
                             border: 'none', 
                             padding: '9.5px 22px', 
                             borderRadius: '8px', 
                             fontSize: '13.5px', 
                             fontWeight: '700', 
-                            cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                            opacity: isSubmitting ? 0.7 : 1,
-                            boxShadow: '0 4px 12px rgba(5,150,105,0.25)',
+                            cursor: (isSubmitting || !restockApprovalPin?.trim()) ? 'not-allowed' : 'pointer',
+                            opacity: (isSubmitting || !restockApprovalPin?.trim()) ? 0.7 : 1,
+                            boxShadow: (isSubmitting || !restockApprovalPin?.trim()) ? 'none' : '0 4px 12px rgba(5,150,105,0.25)',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '8px'

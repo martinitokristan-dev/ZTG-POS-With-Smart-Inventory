@@ -57,6 +57,7 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                             <FormattedProductName
                                 name={item.name || parentProduct?.name || '—'}
                                 variantOption={variantOptionText}
+                                brand={item.brand || parentProduct?.brand}
                                 blockVariant={true}
                                 style={{ fontSize: '15px' }}
                             />
@@ -66,6 +67,7 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                         <>
                             <FormattedProductName
                                 name={item.name || '—'}
+                                brand={item.brand}
                                 blockVariant={false}
                                 style={{ fontSize: '15px' }}
                             />

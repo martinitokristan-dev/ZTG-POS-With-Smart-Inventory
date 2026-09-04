@@ -19,6 +19,7 @@ class Product extends Model
         'chinese_name',
         'part_no',
         'category_id',
+        'brand_id',
         'uom',
         'address',
         'stock',
@@ -64,6 +65,11 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class);
     }
 
     public function parent(): BelongsTo

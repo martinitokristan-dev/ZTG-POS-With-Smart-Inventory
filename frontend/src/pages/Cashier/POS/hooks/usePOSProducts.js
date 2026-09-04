@@ -94,6 +94,7 @@ export function usePOSProducts() {
                         ...v,
                         name: vName,
                         category: p.category,
+                        brand: v.brand || p.brand,
                         parent_product_name: p.name,
                         chinese_name: v.chinese_name || p.chinese_name
                     });

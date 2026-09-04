@@ -44,7 +44,14 @@ class ReservationService
         $query = Reservation::with(['customer', 'reservedBy', 'fulfilledBy', 'items.product.parent', 'items.product.variantOptions']);
 
         if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
+            if ($filters['status'] === 'Pending' || $filters['status'] === ReservationStatus::PENDING->value) {
+                $query->whereIn('status', [
+                    ReservationStatus::PENDING->value,
+                    ReservationStatus::ORDER_RECEIVED->value,
+                ]);
+            } else {
+                $query->where('status', $filters['status']);
+            }
         }
 
         if (!empty($filters['status']) && $filters['status'] === 'Completed') {
@@ -281,9 +288,9 @@ class ReservationService
             ? $reservation->status->value
             : $reservation->status;
 
-        if ($currentStatus !== ReservationStatus::PENDING->value) {
+        if ($currentStatus !== ReservationStatus::ORDER_RECEIVED->value) {
             throw ValidationException::withMessages([
-                'reservation' => ['Only pending reservations can be fulfilled.'],
+                'reservation' => ['This order cannot be fulfilled yet because the item has not been received from China. Please mark the order as Order Received first.'],
             ]);
         }
 
@@ -383,9 +390,9 @@ class ReservationService
             ? $reservation->status->value
             : $reservation->status;
 
-        if ($currentStatus !== ReservationStatus::PENDING->value) {
+        if (!in_array($currentStatus, [ReservationStatus::PENDING->value, ReservationStatus::ORDER_RECEIVED->value])) {
             throw ValidationException::withMessages([
-                'reservation' => ['Only pending reservations can be cancelled.'],
+                'reservation' => ['Only active reservations can be cancelled.'],
             ]);
         }
 
@@ -410,6 +417,31 @@ class ReservationService
         event(new ReservationUpdated($cancelled));
 
         return $cancelled;
+    }
+
+    /**
+     * Update reservation status (e.g. from Order Received to Ready for Pickup).
+     */
+    public function updateStatus(Reservation $reservation, string $newStatus): Reservation
+    {
+        $currentStatus = is_object($reservation->status)
+            ? $reservation->status->value
+            : $reservation->status;
+
+        if (in_array($currentStatus, [ReservationStatus::COMPLETED->value, ReservationStatus::CANCELLED->value])) {
+            throw ValidationException::withMessages([
+                'reservation' => ['Completed or cancelled reservations cannot change status.'],
+            ]);
+        }
+
+        $reservation->update([
+            'status' => $newStatus,
+        ]);
+
+        $fresh = $reservation->fresh(['customer', 'reservedBy', 'fulfilledBy', 'items.product.parent', 'items.product.variantOptions']);
+        event(new ReservationUpdated($fresh));
+
+        return $fresh;
     }
 
     /**

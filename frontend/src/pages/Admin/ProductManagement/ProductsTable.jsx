@@ -110,12 +110,14 @@ export default function ProductsTable({
                                 <FormattedProductName
                                     name={product.name || parentProduct?.name || '—'}
                                     variantOption={varLabel}
+                                    brand={product.brand || parentProduct?.brand}
                                     blockVariant={true}
                                     style={{ fontSize: '15px' }}
                                 />
                             ) : (
                                 <FormattedProductName
                                     name={product.name || '—'}
+                                    brand={product.brand}
                                     blockVariant={false}
                                     style={{ fontSize: '15px' }}
                                 />

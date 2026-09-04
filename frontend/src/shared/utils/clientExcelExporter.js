@@ -42,66 +42,8 @@ const formatPaymentMethod = (pm) => {
   return raw.replace(/\s*\([^)]*\)/g, '').trim() || 'CASH';
 };
 
-export const getItemDiscountAmount = (item, txInput) => {
-  if (!item && !txInput) return 0;
-  const tx = txInput || (item && item.tx) || {};
-  if (!item) return Number(tx.discount_amount || tx.discount || tx.discount_val || 0);
-  
-  // 1. Direct item-level discount (total discount for this line item)
-  const itemDiscVal = Number(item.discount || item.item_discount || 0);
-  if (itemDiscVal > 0) {
-    return itemDiscVal;
-  }
-
-  // 2. Order-wide discount from transaction (discount_amount, discount_val, or discount)
-  const orderDisc = Number(tx.discount_amount || tx.discount || tx.discount_val || 0);
-  if (orderDisc > 0) {
-    const isPartialRefund = tx.is_partial_refund === true;
-    const txItems = Array.isArray(tx.items) && tx.items.length > 0 ? tx.items : [];
-    
-    const activeItems = isPartialRefund
-      ? txItems.filter(it => Number(it.net_qty ?? Math.max(0, (it.qty || 0) - (it.refunded_qty || 0))) > 0)
-      : txItems;
-
-    if (activeItems.length <= 1) {
-      if (isPartialRefund && activeItems.length === 1) {
-        const uPrice = Number(activeItems[0].original_price || activeItems[0].price || 0);
-        const itemQty = Number(activeItems[0].net_qty ?? Math.max(0, (activeItems[0].qty || 0) - (activeItems[0].refunded_qty || 0)));
-        const gross = itemQty * uPrice;
-        const effDisc = Math.max(0, gross - Number(tx.amount || 0));
-        return effDisc > 0 ? effDisc : orderDisc;
-      }
-      return orderDisc;
-    }
-
-    // Calculate raw subtotal of active items in transaction
-    const activeRawSubtotal = activeItems.reduce((sum, it) => {
-      const uPrice = Number(it.original_price || it.price || 0);
-      const q = isPartialRefund
-        ? Number(it.net_qty ?? Math.max(0, (it.qty || 0) - (it.refunded_qty || 0)))
-        : Number(it.qty || 1);
-      return sum + (q * uPrice);
-    }, 0);
-
-    if (activeRawSubtotal > 0) {
-      const uPrice = Number(item.original_price || item.price || 0);
-      const itemQty = isPartialRefund
-        ? Number(item.net_qty ?? Math.max(0, (item.qty || 0) - (item.refunded_qty || 0)))
-        : Number(item.qty || 1);
-      const itemSubtotal = itemQty * uPrice;
-
-      if (isPartialRefund) {
-        const effectiveActiveDiscount = Math.max(0, activeRawSubtotal - Number(tx.amount || 0));
-        return (itemSubtotal / activeRawSubtotal) * (effectiveActiveDiscount > 0 ? effectiveActiveDiscount : orderDisc);
-      }
-
-      return (itemSubtotal / activeRawSubtotal) * orderDisc;
-    }
-    return orderDisc / activeItems.length;
-  }
-
-  return 0;
-};
+export { calculateItemDiscountBreakdown, getItemDiscountAmount, formatDiscountRate } from './discountCalculator';
+import { calculateItemDiscountBreakdown } from './discountCalculator';
 
 const writeClipboardRichSales = async (htmlRows, tsvRows) => {
   const fullHtml = `
@@ -153,7 +95,7 @@ const writeClipboardRichSales = async (htmlRows, tsvRows) => {
  * Clipboard Exporter: Headerless Rich TSV & HTML Clipboard Copy
  * Copies pure data rows directly to clipboard for direct Excel paste (Ctrl+V)
  * with BOLD font on every column data exactly matching the client's reference sheet:
- * DATE | QTY | PART NUMBER | PART NAME | PRICE | SALES | CUSTOMER NAME | PAYMENT | DISCOUNTED | S.I./C.R./D.R. | SERVE BY
+ * DATE | QTY | PART NUMBER | PART NAME | PRICE | SALES | CUSTOMER NAME | PAYMENT | DISCOUNT RATE | DISCOUNT | S.I./C.R./D.R. | SERVE BY
  */
 export const copySalesToClipboard = async (transactionsItems = []) => {
   if (transactionsItems.length === 0) {
@@ -169,17 +111,21 @@ export const copySalesToClipboard = async (transactionsItems = []) => {
     const isPartialRefund = tx.is_partial_refund === true;
     const isDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void') && !isPartialRefund;
     let resolvedName = item.product?.name || item.name || 'Unknown Product';
+    const brandName = item.product?.brand?.name || item.brand?.name || (typeof item.brand === 'string' ? item.brand : null) || (typeof item.product?.brand === 'string' ? item.product?.brand : null) || item.product?.parent?.brand?.name;
+    if (brandName && !resolvedName.toLowerCase().includes(`- ${String(brandName).toLowerCase()}`) && !resolvedName.toLowerCase().includes(`[${String(brandName).toLowerCase()}]`)) {
+        resolvedName = `${resolvedName} - ${brandName}`;
+    }
     const variantOpt = item.variant_option || item.variant || item.variant_name || item.variantOption;
     if (variantOpt && !resolvedName.toLowerCase().includes(String(variantOpt).toLowerCase())) {
         resolvedName = `${resolvedName} (${variantOpt})`;
     }
     const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
     const qty = Number(item.displayQty ?? item.qty ?? 1);
-    const rawPrice = Number(item.original_price || item.price || 0);
-    const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, qty));
-    const discountVal = getItemDiscountAmount(item, tx);
-    const grossSalesAmount = qty * unitPrice;
-    const netSalesAmount = Math.max(0, grossSalesAmount - discountVal);
+    const breakdown = calculateItemDiscountBreakdown(item, tx);
+    const unitPrice = breakdown.unitPrice;
+    const discountVal = breakdown.totalDiscount;
+    const formattedRate = breakdown.formattedRate !== '—' ? breakdown.formattedRate : '';
+    const netSalesAmount = breakdown.discountedPrice;
     const finalSalesAmount = isDeduction ? -netSalesAmount : netSalesAmount;
 
     const dateVal = formatDate(tx.date || tx.created_at);
@@ -195,7 +141,7 @@ export const copySalesToClipboard = async (transactionsItems = []) => {
     const formattedFinalSales = finalSalesAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const formattedDiscount = discountVal > 0 ? discountVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
 
-    // 11 Columns matching the client's reference sheet with BOLD on every cell
+    // 12 Columns matching the client's reference format with BOLD on every cell
     htmlRows += `
       <tr style="height: 24px;">
         <td style="${bStyle} text-align: center; mso-number-format:'Short Date';">${escapeHtml(dateVal)}</td>
@@ -206,6 +152,7 @@ export const copySalesToClipboard = async (transactionsItems = []) => {
         <td style="${bStyle} text-align: right; mso-number-format:'#,##0.00';">${formattedFinalSales}</td>
         <td style="${bStyle} text-align: center; mso-number-format:'General';">${escapeHtml(customerVal)}</td>
         <td style="${bStyle} text-align: center; ${paymentStyle} mso-number-format:'General';">${escapeHtml(paymentVal)}</td>
+        <td style="${bStyle} text-align: center; mso-number-format:'General';">${formattedRate}</td>
         <td style="${bStyle} text-align: right; mso-number-format:'#,##0.00';">${formattedDiscount}</td>
         <td style="${bStyle} text-align: center; mso-number-format:'General';">${escapeHtml(siDrVal)}</td>
         <td style="${bStyle} text-align: center; mso-number-format:'General';">${escapeHtml(serveByVal)}</td>
@@ -220,6 +167,7 @@ export const copySalesToClipboard = async (transactionsItems = []) => {
       formattedFinalSales,
       customerVal,
       paymentVal,
+      formattedRate,
       formattedDiscount,
       siDrVal,
       serveByVal
@@ -266,17 +214,21 @@ export const exportSalesToExcel = (transactionsItems = [], options = {}) => {
     const isPartialRefund = tx.is_partial_refund === true;
     const isDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void') && !isPartialRefund;
     let resolvedName = item.product?.name || item.name || 'Unknown Product';
+    const brandName = item.product?.brand?.name || item.brand?.name || (typeof item.brand === 'string' ? item.brand : null) || (typeof item.product?.brand === 'string' ? item.product?.brand : null) || item.product?.parent?.brand?.name;
+    if (brandName && !resolvedName.toLowerCase().includes(`- ${String(brandName).toLowerCase()}`) && !resolvedName.toLowerCase().includes(`[${String(brandName).toLowerCase()}]`)) {
+        resolvedName = `${resolvedName} - ${brandName}`;
+    }
     const variantOpt = item.variant_option || item.variant || item.variant_name || item.variantOption;
     if (variantOpt && !resolvedName.toLowerCase().includes(String(variantOpt).toLowerCase())) {
         resolvedName = `${resolvedName} (${variantOpt})`;
     }
     const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
     const qty = Number(item.displayQty ?? item.qty ?? 1);
-    const rawPrice = Number(item.original_price || item.price || 0);
-    const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, qty));
-    const discountVal = getItemDiscountAmount(item, tx);
-    const grossSalesAmount = qty * unitPrice;
-    const netSalesAmount = Math.max(0, grossSalesAmount - discountVal);
+    const breakdown = calculateItemDiscountBreakdown(item, tx);
+    const unitPrice = breakdown.unitPrice;
+    const discountVal = breakdown.totalDiscount;
+    const formattedRate = breakdown.formattedRate !== '—' ? breakdown.formattedRate : '';
+    const netSalesAmount = breakdown.discountedPrice;
     const finalSalesAmount = isDeduction ? -netSalesAmount : netSalesAmount;
 
     const dateVal = formatDate(tx.date || tx.created_at);
@@ -298,6 +250,7 @@ export const exportSalesToExcel = (transactionsItems = [], options = {}) => {
         <td style="${cellStyle} text-align: right; mso-number-format:'#,##0.00';">${finalSalesAmount.toFixed(2)}</td>
         <td style="${cellStyle} text-align: left; mso-number-format:'\\@';">${escapeHtml(customerVal)}</td>
         <td style="${cellStyle} text-align: center; ${paymentStyle} mso-number-format:'\\@';">${escapeHtml(paymentVal)}</td>
+        <td style="${cellStyle} text-align: center; mso-number-format:'\\@';">${formattedRate}</td>
         <td style="${cellStyle} text-align: right; mso-number-format:'#,##0.00';">${discountVal > 0 ? discountVal.toFixed(2) : ''}</td>
         <td style="${cellStyle} text-align: center; mso-number-format:'\\@';">${escapeHtml(siDrVal)}</td>
         <td style="${cellStyle} text-align: center; mso-number-format:'\\@';">${escapeHtml(serveByVal)}</td>
@@ -333,7 +286,7 @@ export const exportSalesToExcel = (transactionsItems = [], options = {}) => {
       <table>
         <thead>
           <tr>
-            <th colspan="11" class="banner">DAILY SALES ${escapeHtml(monthYearLabel)}</th>
+            <th colspan="12" class="banner">DAILY SALES ${escapeHtml(monthYearLabel)}</th>
           </tr>
           <tr>
             <th style="min-width: 90px;">DATE</th>
@@ -344,7 +297,8 @@ export const exportSalesToExcel = (transactionsItems = [], options = {}) => {
             <th style="min-width: 110px;">SALES</th>
             <th style="min-width: 180px;">CUSTOMER NAME</th>
             <th style="min-width: 90px;">PAYMENT</th>
-            <th style="min-width: 110px;">DISCOUNTED</th>
+            <th style="min-width: 90px;">DISCOUNT %</th>
+            <th style="min-width: 100px;">DISCOUNT</th>
             <th style="min-width: 110px;">S.I./C.I./D.R.</th>
             <th style="min-width: 100px;">SERVE BY</th>
           </tr>

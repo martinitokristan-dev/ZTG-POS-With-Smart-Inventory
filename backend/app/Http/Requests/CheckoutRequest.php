@@ -20,7 +20,7 @@ class CheckoutRequest extends FormRequest
             'cart.*.product_id'      => 'required|exists:products,id',
             'cart.*.qty'             => 'required|integer|min:1',
             'cart.*.price_tier'      => 'required|string|in:price1,price2',
-            'cart.*.item_discount'   => 'nullable|numeric|min:0|max:999999',
+            'cart.*.item_discount'   => 'nullable|numeric|min:0|max:999999999.99',
 
             // Customer & Checker info
             'customer_name'          => 'required|string|max:100',
@@ -28,9 +28,21 @@ class CheckoutRequest extends FormRequest
             'checker_id'             => 'nullable|exists:checkers,id',
 
             // Discount info
-            'discount_amount'        => 'nullable|numeric|min:0|max:999999',
+            'discount_amount'        => 'nullable|numeric|min:0|max:999999999.99',
             'discount_type'          => 'nullable|string|max:50',
-            'discount_rate'          => 'nullable|numeric|min:0|max:100',
+            'discount_rate'          => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:100',
+                function ($attribute, $value, $fail) {
+                    if ($this->input('discount_type') === 'CustomPercent' && $value !== null) {
+                        if (floor((float)$value) != (float)$value) {
+                            $fail('The percentage discount must be a whole number (e.g. 5, 10, 15). Decimals like .05 are not accepted.');
+                        }
+                    }
+                },
+            ],
 
             // Document & payment
             'si_no'                  => [

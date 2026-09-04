@@ -7,7 +7,7 @@ import ReactDOM from 'react-dom';
  * Displays single-line ellipsis truncation with an instant, beautifully styled
  * floating tooltip on hover when text overflows.
  */
-export default function FormattedProductName({ name, variantOption, blockVariant = false, style = {}, className = '' }) {
+export default function FormattedProductName({ name, variantOption, brand, blockVariant = false, style = {}, className = '' }) {
     const [tooltipState, setTooltipState] = useState(null);
 
     if (!name) return <span style={style} className={className}>—</span>;
@@ -15,6 +15,7 @@ export default function FormattedProductName({ name, variantOption, blockVariant
     const rawName = String(name).trim();
     let baseName = rawName;
     let cleanVar = variantOption ? String(variantOption).trim() : null;
+    const brandText = brand ? (typeof brand === 'object' ? brand.name : String(brand).trim()) : null;
 
     if (!cleanVar) {
         const match = rawName.match(/^(.*?)\s*\((.*?)\)$/);
@@ -27,7 +28,17 @@ export default function FormattedProductName({ name, variantOption, blockVariant
         baseName = rawName.replace(new RegExp(`\\s*\\(${escaped}\\)`, 'i'), '').trim();
     }
 
-    const fullDisplayName = cleanVar ? `${baseName} (${cleanVar})` : rawName;
+    // Format brand as plain black text preceded by a dash: e.g. "Pump - HOWO"
+    let displayName = baseName;
+    if (brandText) {
+        const lowerBase = baseName.toLowerCase();
+        const lowerBrand = brandText.toLowerCase();
+        if (!lowerBase.includes(`- ${lowerBrand}`) && !lowerBase.includes(`[${lowerBrand}]`)) {
+            displayName = `${baseName} - ${brandText}`;
+        }
+    }
+
+    const fullDisplayName = `${displayName}${cleanVar ? ` (${cleanVar})` : ''}`;
 
     const handleMouseEnter = (e) => {
         const el = e.currentTarget;
@@ -112,8 +123,8 @@ export default function FormattedProductName({ name, variantOption, blockVariant
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
                     >
-                        <span style={{ display: 'block', fontWeight: '600', color: 'var(--table-text-primary)', ...ellipsisStyle }}>
-                            {baseName}
+                        <span style={{ display: 'block', fontWeight: '600', color: 'var(--table-text-primary, #0f172a)', ...ellipsisStyle }}>
+                            {displayName}
                         </span>
                         <span style={{ display: 'block', color: '#3B82F6', fontWeight: '500', fontSize: '11px', marginTop: '2px', ...ellipsisStyle }}>
                             ({cleanVar})
@@ -131,7 +142,10 @@ export default function FormattedProductName({ name, variantOption, blockVariant
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
                 >
-                    {baseName} <span style={{ color: '#3B82F6', fontWeight: '500' }}>({cleanVar})</span>
+                    <span style={{ color: 'var(--table-text-primary, #0f172a)' }}>
+                        {displayName}
+                    </span>{' '}
+                    <span style={{ color: '#3B82F6', fontWeight: '500' }}>({cleanVar})</span>
                 </span>
                 {floatingTooltip}
             </>
@@ -146,7 +160,9 @@ export default function FormattedProductName({ name, variantOption, blockVariant
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
             >
-                {rawName}
+                <span style={{ color: 'var(--table-text-primary, #0f172a)' }}>
+                    {displayName}
+                </span>
             </span>
             {floatingTooltip}
         </>

@@ -26,9 +26,10 @@ class PosController extends Controller
     {
         $query = Product::with([
             'category',
+            'brand',
             'variantOptions.type',
             'variants' => function ($q) {
-                $q->with('variantOptions.type')->where('status', '!=', 'Disabled');
+                $q->with(['variantOptions.type', 'brand'])->where('status', '!=', 'Disabled');
             }
         ])
             ->where('status', '!=', 'Disabled');

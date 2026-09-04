@@ -153,6 +153,7 @@ export default function Reservations() {
                         onReprintCR={res.handleReprintCR}
                         onReprintDepositCR={res.handleReprintDepositCR}
                         onReprintBalanceCR={res.handleReprintBalanceCR}
+                        onUpdateStatus={res.handleUpdateStatus}
                         activeTab={activeTab}
                         permissions={permissions}
                     />

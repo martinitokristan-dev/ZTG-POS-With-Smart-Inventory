@@ -160,36 +160,6 @@ export function useUserPermissions() {
         }
     };
 
-    const [employeeToDelete, setEmployeeToDelete] = useState(null);
-    const [deletingEmployeeId, setDeletingEmployeeId] = useState(null);
-
-    const requestDeleteEmployee = (emp) => {
-        if (emp.id === 1 || emp.username === 'admin' || emp.employee_id === 'EMP-000') {
-            showToast('Cannot delete the default administrator account.', 'error');
-            return;
-        }
-        setEmployeeToDelete(emp);
-    };
-
-    const confirmDeleteEmployee = async () => {
-        if (!employeeToDelete) return;
-        setDeletingEmployeeId(employeeToDelete.id);
-        try {
-            await api.delete(`/employees/${employeeToDelete.id}`);
-            setUsers((prev) => prev.filter((e) => e.id !== employeeToDelete.id));
-            window.dispatchEvent(new Event('auth_user_updated'));
-            showToast('Staff account deleted successfully.', 'success');
-            setEmployeeToDelete(null);
-        } catch (err) {
-            console.error('Failed to delete staff:', err);
-            showToast(err.response?.data?.message || 'Failed to delete staff account.', 'error');
-        } finally {
-            setDeletingEmployeeId(null);
-        }
-    };
-
-    const handleDeleteEmployee = requestDeleteEmployee;
-
     // --- Custom Permissions Override Handlers ---
     const openUserOverrideModal = async (user) => {
         setSelectedUser(user);
@@ -351,10 +321,5 @@ export function useUserPermissions() {
         handleEmployeeSubmit,
         handleToggleEmployee,
         handleResendVerification,
-        handleDeleteEmployee,
-        employeeToDelete,
-        setEmployeeToDelete,
-        confirmDeleteEmployee,
-        deletingEmployeeId,
     };
 }

@@ -19,10 +19,11 @@ export default function ViewProductModal({
                     <div style={{ background: 'var(--primary-light)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '8px', padding: '18px', marginBottom: '16px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px 20px' }}>
                             {[
+                                { label: 'Part No. (Base)', value: selectedProduct.part_no, mono: true },
                                 { label: 'English Name', value: selectedProduct.name },
                                 { label: 'Chinese Name', value: selectedProduct.chinese_name || 'N/A' },
-                                { label: 'Part No. (Base)', value: selectedProduct.part_no, mono: true },
                                 { label: 'Category', value: selectedProduct.category?.name || 'Unassigned' },
+                                { label: 'Brand', value: selectedProduct.brand?.name || 'None / Generic' },
                                 { label: 'Warehouse Location', value: selectedProduct.address || 'N/A' },
                                 { label: 'Status', value: selectedProduct.status || 'Active' },
                                 { label: 'Stock Level', value: `${selectedProduct.stock} ${selectedProduct.uom ? selectedProduct.uom.replace(/^.*\/\s*/, '') : 'units'} (Alert ≤ ${selectedProduct.alert_limit || 5})` },
