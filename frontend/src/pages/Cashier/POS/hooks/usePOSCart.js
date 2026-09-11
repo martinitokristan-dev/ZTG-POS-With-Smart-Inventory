@@ -264,10 +264,18 @@ export function usePOSCart() {
             orderDiscountAmount = Math.round((afterItemDiscounts * (discountRate / 100)) * 100) / 100;
         } else if (orderDiscountType === 'CustomAmount') {
             orderDiscountAmount = Math.min(afterItemDiscounts, Math.max(0, val));
+            discountRate = afterItemDiscounts > 0 ? Math.round((orderDiscountAmount / afterItemDiscounts) * 100) : 0;
         } else if (orderDiscountType === 'Senior' || orderDiscountType === 'PWD') {
             discountRate = 20;
             orderDiscountAmount = Math.round((afterItemDiscounts * 0.20) * 100) / 100;
         }
+
+        const totalDiscounts = itemDiscountsTotal + orderDiscountAmount;
+        const overallDiscountRate = rawSubtotal > 0 && totalDiscounts > 0
+            ? Math.round((totalDiscounts / rawSubtotal) * 100)
+            : discountRate;
+
+        const effectiveDiscountRate = discountRate > 0 ? discountRate : overallDiscountRate;
 
         const netPayable = Math.max(0, afterItemDiscounts - orderDiscountAmount);
 
@@ -284,7 +292,8 @@ export function usePOSCart() {
             afterItemDiscounts,
             orderDiscountAmount,
             orderDiscountType,
-            discountRate,
+            discountRate: effectiveDiscountRate,
+            overallDiscountRate,
             subtotal: preVatSubtotal,
             tax: tax,
             total: netPayable

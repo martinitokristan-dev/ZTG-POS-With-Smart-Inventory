@@ -1,7 +1,7 @@
 import React from 'react';
 import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
-import { calculateItemDiscountBreakdown } from '../../../../shared/utils/discountCalculator';
+import { calculateItemDiscountBreakdown, formatDiscountRate } from '../../../../shared/utils/discountCalculator';
 
 export default function TransactionDetailsModal({ isOpen, onClose, transaction, fmtDate, fmt }) {
     if (!isOpen || !transaction) return null;
@@ -94,14 +94,41 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
             itemDisc: lineDisc,
             formattedRate: breakdown.formattedRate,
             discountRate: breakdown.discountRate,
+            directItemDiscount: breakdown.directItemDiscount,
             itemOriginalTotal,
             lineNet
         };
     });
 
     const orderDiscountAmt = Number(tx.discount_amount || 0);
-    const totalDiscounts = itemDiscountsTotal + orderDiscountAmt;
-    const discountTypeLabel = tx.discount_type ? ` (${tx.discount_type})` : '';
+    const directItemDiscTotal = processedItems.reduce((sum, item) => sum + Number(item.directItemDiscount || 0), 0);
+    // itemDiscountsTotal is the sum of breakdown.totalDiscount (which already accounts for prorated order discounts)
+    // If there are items, totalLineDiscount is itemDiscountsTotal; fallback to orderDiscountAmt if no items
+    const totalDiscounts = processedItems.length > 0 ? itemDiscountsTotal : orderDiscountAmt;
+
+    const totalLineGross = grossSubtotal > 0 ? grossSubtotal : Number(tx.original_amount || tx.amount || 0);
+    const totalLineDiscount = totalDiscounts;
+
+    const overallDiscountRate = totalLineGross > 0 && totalLineDiscount > 0
+        ? ((totalLineDiscount / totalLineGross) * 100)
+        : (Number(tx.discount_rate) > 0 ? Number(tx.discount_rate) : 0);
+    const formattedOverallRate = formatDiscountRate(overallDiscountRate);
+
+    let discountTypeLabel = '';
+    if (tx.discount_type === 'Senior') {
+        discountTypeLabel = ' (Senior 20%)';
+    } else if (tx.discount_type === 'PWD') {
+        discountTypeLabel = ' (PWD 20%)';
+    } else if (tx.discount_type === 'CustomPercent') {
+        const rateStr = tx.discount_rate ? formatDiscountRate(Number(tx.discount_rate)) : formattedOverallRate;
+        discountTypeLabel = ` (Custom ${rateStr})`;
+    } else if (tx.discount_type === 'CustomAmount') {
+        discountTypeLabel = overallDiscountRate > 0 ? ` (Custom ₱, ${formattedOverallRate})` : ' (Custom ₱)';
+    } else if (tx.discount_type) {
+        discountTypeLabel = overallDiscountRate > 0 ? ` (${tx.discount_type} ${formattedOverallRate})` : ` (${tx.discount_type})`;
+    } else if (overallDiscountRate > 0) {
+        discountTypeLabel = ` (${formattedOverallRate})`;
+    }
 
     const totalOriginalAmount = (tx.original_amount != null && Number(tx.original_amount) > 0) 
         ? Number(tx.original_amount) 
@@ -114,8 +141,6 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
     const netSalesRemaining = Number(tx.amount || 0);
 
     const totalQty = processedItems.reduce((sum, item) => sum + Number(item.qty || 0), 0);
-    const totalLineGross = grossSubtotal;
-    const totalLineDiscount = itemDiscountsTotal;
     const totalLineNet = processedItems.reduce((sum, item) => sum + Number(item.lineNet || 0), 0);
     const totalRefundedQty = processedItems.reduce((sum, item) => sum + Number(item.refundedQty || 0), 0);
 
@@ -211,7 +236,9 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '800', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                                     {fmt(totalLineGross)}
                                 </td>
-                                <td style={{ padding: '12px 8px' }}></td>
+                                <td style={{ padding: '12px 8px', textAlign: 'center', fontWeight: '800', color: totalLineDiscount > 0 ? '#2563EB' : 'var(--table-text-muted)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                    {formattedOverallRate}
+                                </td>
                                 <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '800', color: totalLineDiscount > 0 ? '#2563EB' : 'var(--table-text-muted)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                                     {totalLineDiscount > 0 ? `-${fmt(totalLineDiscount)}` : fmt(0)}
                                 </td>
@@ -330,14 +357,14 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                     <>
                                         {grossSubtotal > 0 && auditDetailRow('Gross Sales', fmt(grossSubtotal))}
                                         {totalDiscounts > 0 && (
-                                            (itemDiscountsTotal > 0 && orderDiscountAmt > 0 && itemDiscountsTotal !== orderDiscountAmt) ? (
+                                            (directItemDiscTotal > 0 && orderDiscountAmt > 0) ? (
                                                 <>
-                                                    {auditDetailRow('Item Discounts', `-${fmt(itemDiscountsTotal)}`, { color: '#2563EB', fontWeight: '700' })}
+                                                    {auditDetailRow('Item Discounts', `-${fmt(directItemDiscTotal)}`, { color: '#2563EB', fontWeight: '700' })}
                                                     {auditDetailRow(`Order Discount${discountTypeLabel}`, `-${fmt(orderDiscountAmt)}`, { color: '#2563EB', fontWeight: '700' })}
-                                                    {auditDetailRow('Total Discounts', `-${fmt(itemDiscountsTotal + orderDiscountAmt)}`, { color: '#2563EB', fontWeight: '700' })}
+                                                    {auditDetailRow('Total Discounts', `-${fmt(totalDiscounts)}`, { color: '#2563EB', fontWeight: '700' })}
                                                 </>
                                             ) : (
-                                                auditDetailRow(`Discount${discountTypeLabel}`, `-${fmt(Math.max(itemDiscountsTotal, orderDiscountAmt))}`, { color: '#2563EB', fontWeight: '700' })
+                                                auditDetailRow(`Discount${discountTypeLabel}`, `-${fmt(totalDiscounts)}`, { color: '#2563EB', fontWeight: '700' })
                                             )
                                         )}
                                         {auditDetailRow('Net Sales', fmt(tx.amount || tx.total), { color: 'var(--text-primary)', fontWeight: '700', fontSize: '14px' })}

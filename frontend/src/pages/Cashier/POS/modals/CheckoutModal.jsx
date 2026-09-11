@@ -420,7 +420,17 @@ export default function CheckoutModal({
                                                 <span style={{ fontWeight: '600', color: '#1E293B' }}>₱{subtotalVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                             </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2563EB', fontWeight: '600' }}>
-                                                <span>Discount {completedTx.discount_type ? `(${completedTx.discount_type})` : ''}</span>
+                                                <span>Discount {(() => {
+                                                    const rate = Number(completedTx.discount_rate || 0);
+                                                    const calculatedRate = subtotalVal > 0 ? Math.round((discountAmount / subtotalVal) * 100) : 0;
+                                                    const finalRate = rate > 0 ? rate : calculatedRate;
+                                                    if (completedTx.discount_type === 'Senior') return '(Senior 20%)';
+                                                    if (completedTx.discount_type === 'PWD') return '(PWD 20%)';
+                                                    if (completedTx.discount_type === 'CustomPercent') return `(Custom ${finalRate}%)`;
+                                                    if (completedTx.discount_type === 'CustomAmount') return `(Custom ₱${finalRate > 0 ? `, ${finalRate}%` : ''})`;
+                                                    if (finalRate > 0) return `(${finalRate}%)`;
+                                                    return completedTx.discount_type ? `(${completedTx.discount_type})` : '';
+                                                })()}</span>
                                                 <span>-₱{discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                             </div>
                                         </>
@@ -799,7 +809,13 @@ export default function CheckoutModal({
 
                             {(cartTotals.orderDiscountAmount || 0) > 0 && (
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#16A34A' }}>
-                                    <span>Order Discount ({orderDiscountType})</span>
+                                    <span>Order Discount {(() => {
+                                        if (orderDiscountType === 'CustomPercent') return `(${cartTotals.discountRate}%)`;
+                                        if (orderDiscountType === 'CustomAmount') return `(Custom ₱${orderDiscountVal ? `, ${cartTotals.discountRate}%` : ''})`;
+                                        if (orderDiscountType === 'Senior') return '(Senior 20%)';
+                                        if (orderDiscountType === 'PWD') return '(PWD 20%)';
+                                        return `(${orderDiscountType})`;
+                                    })()}</span>
                                     <span style={{ fontWeight: '700' }}>-{fmt(cartTotals.orderDiscountAmount)}</span>
                                 </div>
                             )}

@@ -98,6 +98,10 @@ class CheckoutService
                 default                                   => (float) ($data['amount_tendered'] ?? $grandTotal),
             };
 
+            $effectiveDiscountRate = !empty($data['discount_rate'])
+                ? (float) $data['discount_rate']
+                : ($subtotal > 0 && $orderDiscount > 0 ? round(($orderDiscount / $subtotal) * 100, 2) : 0);
+
             // 10. Create Transaction record with frozen business snapshot & discounts
             $transaction = Transaction::create([
                 'si_no'             => $siNo,
@@ -111,7 +115,7 @@ class CheckoutService
                 'refunded_amount'   => 0,             // Will be populated on Refund/Return/Void
                 'discount_amount'   => $orderDiscount,
                 'discount_type'     => $data['discount_type'] ?? null,
-                'discount_rate'     => $data['discount_rate'] ?? 0,
+                'discount_rate'     => $effectiveDiscountRate,
                 'amount_tendered'   => $amountTendered,
                 'payment_method'    => $paymentMethodStr,
                 'cheque_number'     => $data['cheque_number'] ?? null,
@@ -144,6 +148,11 @@ class CheckoutService
         if ($totalDiscount > 0) {
             $rawType = $transaction->discount_type;
             $rate = (float) $transaction->discount_rate;
+            if ($rate <= 0) {
+                $gross = (float)$transaction->amount + $totalDiscount;
+                $rate = $gross > 0 ? round(($totalDiscount / $gross) * 100, 2) : 0;
+            }
+            $rateStr = $rate > 0 ? ($rate == (int)$rate ? (int)$rate : $rate) . '%' : '';
 
             $formalType = '';
             if ($rawType === 'Senior') {
@@ -151,13 +160,13 @@ class CheckoutService
             } elseif ($rawType === 'PWD') {
                 $formalType = 'PWD Discount (20%)';
             } elseif ($rawType === 'CustomPercent') {
-                $formalType = $rate > 0 ? "Custom {$rate}% Discount" : "Custom Percentage Discount";
+                $formalType = $rateStr ? "Custom {$rateStr} Discount" : "Custom Percentage Discount";
             } elseif ($rawType === 'CustomAmount') {
-                $formalType = 'Custom Fixed Discount';
+                $formalType = $rateStr ? "Custom Fixed Discount ({$rateStr})" : "Custom Fixed Discount";
             } elseif ($itemDiscountsTotal > 0 && !$rawType) {
-                $formalType = 'Item-Level Special Discount';
+                $formalType = $rateStr ? "Item-Level Discount ({$rateStr})" : 'Item-Level Special Discount';
             } elseif ($rawType) {
-                $formalType = "{$rawType} Discount";
+                $formalType = $rateStr ? "{$rawType} Discount ({$rateStr})" : "{$rawType} Discount";
             }
 
             $discDetail = $formalType ? " ({$formalType})" : "";
