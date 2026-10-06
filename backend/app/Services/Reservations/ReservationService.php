@@ -175,7 +175,9 @@ class ReservationService
             );
 
             // 2. Bulk load products (SINGLE QUERY instead of N queries)
+            //    Variant options + parent are eager-loaded for the line snapshots below.
             $products = Product::whereIn('id', $productIds)
+                ->with(['variantOptions', 'parent'])
                 ->get()
                 ->keyBy('id');
 
@@ -259,11 +261,15 @@ class ReservationService
             ]);
 
             // 6. Save reservation items
+            //    Inventory lines freeze the product's name / variant label at reservation time.
             foreach ($data['items'] as $item) {
+                $product = !empty($item['product_id']) ? $products->get($item['product_id']) : null;
+
                 $reservation->items()->create([
                     'product_id' => $item['product_id'] ?? null,
-                    'item_name' => $item['item_name'] ?? null,
-                    'part_no' => $item['part_no'] ?? null,
+                    'item_name' => $item['item_name'] ?? $product?->snapshotName(),
+                    'variant_label' => $product?->variantLabel(),
+                    'part_no' => $item['part_no'] ?? $product?->part_no,
                     'engine_plate_number' => $item['engine_plate_number'] ?? $data['engine_plate_number'] ?? null,
                     'qty' => $item['qty'],
                     'price' => $item['price'],

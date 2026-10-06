@@ -3,6 +3,7 @@
 namespace App\Services\POS\DTOs;
 
 use App\Models\Product;
+use App\Services\Constants\StockConstants;
 
 /**
  * CartItemDTO — Data Transfer Object for a single POS cart line item.
@@ -79,10 +80,14 @@ class CartItemDTO
     /**
      * Serialize this DTO into an array suitable for TransactionItem::create() / createMany().
      *
+     * Name, part no, variant label and unit are frozen here so sale history
+     * stays accurate even if the product or its variant options change later.
+     *
      * @return array{
      *   product_id: int,
      *   item_name: string|null,
      *   part_no: string|null,
+     *   variant_label: string|null,
      *   qty: int,
      *   price: float,
      *   original_price: float,
@@ -95,14 +100,15 @@ class CartItemDTO
     {
         return [
             'product_id'     => $this->productId,
-            'item_name'      => $this->product->name,
+            'item_name'      => $this->product->snapshotName(),
             'part_no'        => $this->product->part_no,
+            'variant_label'  => $this->product->variantLabel(),
             'qty'            => $this->qty,
             'price'          => $this->unitPrice,
             'original_price' => $this->unitPrice,
             'discount'       => $this->itemDiscount,
             'price_tier'     => $this->priceTier,
-            'unit'           => 'pc',
+            'unit'           => $this->product->uom ?: StockConstants::DEFAULT_UOM,
         ];
     }
 }

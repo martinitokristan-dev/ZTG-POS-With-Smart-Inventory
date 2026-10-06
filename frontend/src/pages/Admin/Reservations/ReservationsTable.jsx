@@ -4,6 +4,7 @@ import StatusBadge from '../../../shared/components/StatusBadge';
 import IOSSelect from '../../../shared/components/IOSSelect';
 import FormattedProductName from '../../../shared/components/FormattedProductName';
 import TablePagination from '../../../shared/components/TablePagination';
+import { getLineItemName } from '../../../shared/utils/lineItemDisplay';
 
 export default function ReservationsTable({
     reservations, loading,
@@ -187,7 +188,7 @@ export default function ReservationsTable({
                                                             const isDash = pNo === '—';
                                                             const isMatch = queryStr && !isDash && (
                                                                 pNo.toLowerCase().includes(queryStr) ||
-                                                                (it.item_name || it.product?.name || '').toLowerCase().includes(queryStr)
+                                                                getLineItemName(it, '').toLowerCase().includes(queryStr)
                                                             );
                                                             return (
                                                                 <div key={iIdx} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -225,7 +226,7 @@ export default function ReservationsTable({
                                                 {itemsList.length > 1 ? (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxWidth: '100%', overflow: 'hidden' }}>
                                                         {itemsList.map((it, iIdx) => {
-                                                            const pName = it.product?.name || it.item_name || it.name || '—';
+                                                            const pName = getLineItemName(it, '—');
                                                             const isMatch = queryStr && (
                                                                 pName.toLowerCase().includes(queryStr) ||
                                                                 (it.part_no || it.product?.part_no || '').toLowerCase().includes(queryStr)
@@ -244,7 +245,7 @@ export default function ReservationsTable({
                                                     </div>
                                                 ) : (
                                                     <div style={{ maxWidth: '100%', overflow: 'hidden' }}>
-                                                        <FormattedProductName name={itemsList[0]?.product?.name || itemsList[0]?.item_name || r.product_name || '—'} blockVariant={true} />
+                                                        <FormattedProductName name={getLineItemName(itemsList[0], r.product_name || '—')} blockVariant={true} />
                                                     </div>
                                                 )}
                                             </td>

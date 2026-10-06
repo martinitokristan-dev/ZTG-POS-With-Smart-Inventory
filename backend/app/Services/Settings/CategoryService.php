@@ -9,12 +9,15 @@ use Illuminate\Validation\ValidationException;
 
 class CategoryService
 {
+    /** Virtual attributes added to category responses (derived from the linked variant types). */
+    private const VARIANT_FIELDS = ['variants', 'variant_type_ids'];
+
     /**
      * Get all categories.
      */
     public function getAll(): Collection
     {
-        return Category::orderBy('name')->get();
+        return Category::with('variantTypes')->orderBy('name')->get()->append(self::VARIANT_FIELDS);
     }
 
     /**
@@ -45,13 +48,14 @@ class CategoryService
             ->pluck('id');
 
         if ($topCategoryIds->isEmpty()) {
-            return Category::take($limit)->get();
+            return Category::with('variantTypes')->take($limit)->get()->append(self::VARIANT_FIELDS);
         }
 
         $idOrderMap = array_flip($topCategoryIds->toArray());
 
-        return Category::whereIn('id', $topCategoryIds)
+        return Category::with('variantTypes')->whereIn('id', $topCategoryIds)
             ->get()
+            ->append(self::VARIANT_FIELDS)
             ->sortBy(fn($cat) => $idOrderMap[$cat->id] ?? 999)
             ->values();
     }
@@ -61,7 +65,7 @@ class CategoryService
      */
     public function createCategory(array $data): Category
     {
-        return Category::create($data);
+        return DB::transaction(fn () => $this->withVariantData(Category::create($data)));
     }
 
     /**
@@ -69,8 +73,16 @@ class CategoryService
      */
     public function updateCategory(Category $category, array $data): Category
     {
-        $category->update($data);
-        return $category;
+        return DB::transaction(function () use ($category, $data) {
+            $category->update($data);
+            return $this->withVariantData($category);
+        });
+    }
+
+    // Load the linked variant types and expose them as ariants (names) and ariant_type_ids.
+    private function withVariantData(Category $category): Category
+    {
+        return $category->load('variantTypes')->append(self::VARIANT_FIELDS);
     }
 
     /**

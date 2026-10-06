@@ -17,6 +17,7 @@ class ReservationItem extends Model
         'product_id',
         'part_no',
         'item_name',
+        'variant_label', // Frozen at reservation time
         'engine_plate_number',
         'qty',
         'price',

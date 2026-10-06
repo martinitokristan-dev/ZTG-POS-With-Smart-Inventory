@@ -247,24 +247,22 @@ class ProductService
     /**
      * Update an existing product's details.
      * Recalculates status unless Disabled.
+     *
+     * When the payload has a `variants` key, the variant family is synced to it: entries with an
+     * `id` are updated in place, entries without one are created, and existing variants that are
+     * not listed are deleted. When the key is absent, variants are left alone and only follow the
+     * parent's Disabled / re-enabled status.
+     *
+     * @param Product $product The product being edited.
+     * @param array   $data    Validated request data.
+     * @return Product The refreshed product with category, variants and variant options.
+     * @throws ValidationException When variant part numbers clash or variants cannot be modified.
      */
     public function updateProduct(Product $product, array $data): Product
     {
-        // 1. Check for duplicates inside the payload itself
-        // Note: This is an intentional redundant safeguard in case this service method is ever called from paths bypassing UpdateProductRequest.
-        if (isset($data['variants']) && is_array($data['variants'])) {
-            $partNos = array_filter(array_column($data['variants'], 'part_no'));
-            if (count($partNos) !== count(array_unique($partNos))) {
-                throw ValidationException::withMessages([
-                    'variants' => ['Duplicate part numbers detected within the variants payload.'],
-                ]);
-            }
-            if (!empty($data['part_no']) && in_array($data['part_no'], $partNos)) {
-                throw ValidationException::withMessages([
-                    'variants' => ["A variant cannot have the same part number as the parent product ('{$data['part_no']}')."],
-                ]);
-            }
-        }
+        // Guard clauses first: nothing is written (or removed from cloud storage) if these fail.
+        $this->assertVariantIdsBelongToProduct($product, $data);
+        $this->assertVariantPartNosAreValid($data);
 
         try {
             return DB::transaction(function () use ($product, $data) {
@@ -272,6 +270,12 @@ class ProductService
                 $status = $data['status'] === 'Disabled'
                     ? 'Disabled'
                     : $this->calculateStatus($data['stock'], $alertLimit, $data['status']);
+
+                // Captured BEFORE the update: whether the parent is / was Disabled decides what happens to variants.
+                $parentState = [
+                    'disabled'     => $status === 'Disabled',
+                    'was_disabled' => $this->isDisabledStatus($product->status),
+                ];
 
                 // Delete old Cloudinary image if it's being replaced or removed
                 $newImage = $data['image'] ?? null;
@@ -286,7 +290,10 @@ class ProductService
                     'part_no'      => $data['part_no'] ?? null,
                     'category_id'  => $data['category_id'],
                     'brand_id'     => array_key_exists('brand_id', $data) ? $data['brand_id'] : $product->brand_id,
-                    'uom'          => $data['uom'] ?? StockConstants::DEFAULT_UOM,
+                    // The row Enable / Disable button sends no `uom`: keep the current unit instead of resetting it.
+                    'uom'          => array_key_exists('uom', $data)
+                        ? ($data['uom'] ?? StockConstants::DEFAULT_UOM)
+                        : ($product->uom ?: StockConstants::DEFAULT_UOM),
                     'address'      => $data['address'] ?? null,
                     'stock'        => $data['stock'],
                     'alert_limit'  => $alertLimit,
@@ -299,93 +306,11 @@ class ProductService
                     'damaged'      => $data['damaged'] ?? 0,
                 ]);
 
-                // Cascade status to child variants if 'variants' is NOT explicitly in payload (e.g. status toggle)
-                if (!array_key_exists('variants', $data) && $product->parent_product_id === null) {
-                    if ($status === 'Disabled') {
-                        // Cascade Disabled to all child variants
-                        Product::where('parent_product_id', $product->id)->update(['status' => 'Disabled']);
-                    } elseif ($status !== 'Disabled') {
-                        // Parent re-enabled: recalculate status for each child variant based on their stock
-                        $childVariants = Product::where('parent_product_id', $product->id)->get();
-                        foreach ($childVariants as $variant) {
-                            $variantStatus = $this->calculateStatus($variant->stock, $variant->alert_limit);
-                            $variant->update(['status' => $variantStatus]);
-                        }
-                    }
-                }
-
-                // Update/create variants (only if 'variants' key is explicitly passed in payload)
-                if (array_key_exists('variants', $data) && is_array($data['variants'])) {
-                    $payloadVariantIds = [];
-                    foreach ($data['variants'] as $variantData) {
-                        $variantAlertLimit = $variantData['alert_limit'] ?? $alertLimit;
-                        $variantStatus = ($variantData['status'] ?? 'Active') === 'Disabled' 
-                            ? 'Disabled'
-                            : $this->calculateStatus($variantData['stock'], $variantAlertLimit, $variantData['status'] ?? 'Active');
-
-                        // Check for duplicate part_no manually to exclude own ID if provided
-                        if (!empty($variantData['part_no'])) {
-                            $partNoQuery = Product::where('part_no', $variantData['part_no']);
-                            if (!empty($variantData['id'])) {
-                                $partNoQuery->where('id', '!=', $variantData['id']);
-                            }
-                            if ($partNoQuery->exists()) {
-                                throw ValidationException::withMessages([
-                                    'variants' => ["The part number '{$variantData['part_no']}' is already in use by another product."],
-                                ]);
-                            }
-                        }
-
-                        $variant = null;
-                        if (!empty($variantData['id'])) {
-                            $variant = Product::findOrFail($variantData['id']);
-                        }
-
-                        $variantFields = [
-                            'parent_product_id' => $product->id,
-                            'name'              => $variantData['name'] ?? null,
-                            'chinese_name'      => array_key_exists('chinese_name', $variantData) ? $variantData['chinese_name'] : ($variant ? $variant->chinese_name : null),
-                            'part_no'           => $variantData['part_no'] ?? null,
-                            'category_id'       => $data['category_id'],
-                            'brand_id'          => $variantData['brand_id'] ?? (array_key_exists('brand_id', $data) ? $data['brand_id'] : $product->brand_id),
-                            'uom'               => $variantData['uom'] ?? ($data['uom'] ?? StockConstants::DEFAULT_UOM),
-                            'address'           => $data['address'] ?? null,
-                            'stock'             => $variantData['stock'],
-                            'alert_limit'       => $variantAlertLimit,
-                            'price1'            => $variantData['price1'],
-                            'price2'            => $variantData['price2'],
-                            'status'            => $variantStatus,
-                            'notes'             => array_key_exists('notes', $variantData) ? $variantData['notes'] : ($variant ? $variant->notes : null),
-                            'image'             => array_key_exists('image', $variantData) ? $variantData['image'] : ($variant ? $variant->image : null),
-                            'is_dead_stock'     => array_key_exists('is_dead_stock', $variantData) ? $variantData['is_dead_stock'] : ($variant ? $variant->is_dead_stock : false),
-                            'damaged'           => array_key_exists('damaged', $variantData) ? $variantData['damaged'] : ($variant ? $variant->damaged : 0),
-                        ];
-
-                        if ($variant) {
-                            $variant->update($variantFields);
-                            $payloadVariantIds[] = $variant->id;
-                        } else {
-                            $variant = Product::create($variantFields);
-                            $payloadVariantIds[] = $variant->id;
-                        }
-
-                        if (isset($variantData['option_ids'])) {
-                            $variant->variantOptions()->sync($variantData['option_ids']);
-                        }
-                    }
-
-                    // Delete variants that were removed in the full edit form
-                    $currentVariants = Product::where('parent_product_id', $product->id)->get();
-                    foreach ($currentVariants as $currentVariant) {
-                        if (!in_array($currentVariant->id, $payloadVariantIds)) {
-                            $rawVariantImage = $currentVariant->getRawOriginal('image');
-                            if ($rawVariantImage && $rawVariantImage !== $product->getRawOriginal('image')) {
-                                $this->deleteCloudImage($rawVariantImage);
-                            }
-                            $currentVariant->variantOptions()->detach();
-                            $currentVariant->delete();
-                        }
-                    }
+                if (!array_key_exists('variants', $data)) {
+                    // No variants in payload (e.g. a status toggle): variants only follow the parent's status.
+                    $this->cascadeStatusToVariants($product, $parentState);
+                } elseif (is_array($data['variants'])) {
+                    $this->syncVariants($product, $data, $alertLimit, $parentState);
                 }
 
                 return $product->fresh(['category', 'variants.variantOptions.type']);
@@ -397,6 +322,220 @@ class ProductService
                 ]);
             }
             throw $e;
+        }
+    }
+
+    // Every variant id in the payload must be an existing child of this product. Without this, passing
+    // another product's id would re-parent and overwrite that product.
+    private function assertVariantIdsBelongToProduct(Product $product, array $data): void
+    {
+        if (!isset($data['variants']) || !is_array($data['variants'])) {
+            return;
+        }
+
+        $ids = array_values(array_filter(array_column($data['variants'], 'id')));
+        if ($ids === []) {
+            return;
+        }
+
+        $ownIds = Product::where('parent_product_id', $product->id)->whereIn('id', $ids)->pluck('id')->all();
+        foreach ($ids as $id) {
+            if (!in_array((int) $id, $ownIds, true)) {
+                throw $this->foreignVariantException($id);
+            }
+        }
+    }
+
+    // 422 raised when a payload variant id is not a child of the product being edited.
+    private function foreignVariantException($id): ValidationException
+    {
+        return ValidationException::withMessages([
+            'variants' => ["Variant ID {$id} does not belong to this product."],
+        ]);
+    }
+
+    // Payload-level part number guards, then one query for part numbers owned by other products.
+    private function assertVariantPartNosAreValid(array $data): void
+    {
+        if (!isset($data['variants']) || !is_array($data['variants'])) {
+            return;
+        }
+
+        $variants = $data['variants'];
+        $partNos  = array_filter(array_column($variants, 'part_no'));
+
+        // Intentional redundant safeguards in case this method is called from paths bypassing UpdateProductRequest.
+        if (count($partNos) !== count(array_unique($partNos))) {
+            throw ValidationException::withMessages([
+                'variants' => ['Duplicate part numbers detected within the variants payload.'],
+            ]);
+        }
+        if (!empty($data['part_no']) && in_array($data['part_no'], $partNos)) {
+            throw ValidationException::withMessages([
+                'variants' => ["A variant cannot have the same part number as the parent product ('{$data['part_no']}')."],
+            ]);
+        }
+
+        $this->assertPartNosNotOwnedByOthers($variants, $partNos);
+    }
+
+    // A part number is taken when a different product owns it; a variant may keep its own.
+    // One whereIn() replaces the old per-variant exists() query. Matching is case-insensitive like the
+    // database; the unique index on products.part_no remains the final guard.
+    private function assertPartNosNotOwnedByOthers(array $variants, array $partNos): void
+    {
+        if ($partNos === []) {
+            return;
+        }
+
+        $owners = Product::whereIn('part_no', array_values($partNos))
+            ->get(['id', 'part_no'])
+            ->keyBy(fn (Product $p) => mb_strtolower($p->part_no));
+
+        foreach ($variants as $variantData) {
+            $partNo = $variantData['part_no'] ?? null;
+            if (empty($partNo)) {
+                continue;
+            }
+
+            $owner = $owners->get(mb_strtolower($partNo));
+            if ($owner && (empty($variantData['id']) || (int) $owner->id !== (int) $variantData['id'])) {
+                throw ValidationException::withMessages([
+                    'variants' => ["The part number '{$partNo}' is already in use by another product."],
+                ]);
+            }
+        }
+    }
+
+    // True for the string 'Disabled' or the Disabled enum case.
+    private function isDisabledStatus($status): bool
+    {
+        return ($status instanceof \BackedEnum ? $status->value : $status) === 'Disabled';
+    }
+
+    // Used when the payload has no `variants` key (e.g. the Enable / Disable button).
+    // Disabled parent => every variant Disabled. Otherwise each variant's status is recalculated from its own
+    // stock, but a variant that was disabled on its own stays Disabled unless the parent itself is being re-enabled.
+    private function cascadeStatusToVariants(Product $parent, array $parentState): void
+    {
+        if ($parent->parent_product_id !== null) {
+            return;
+        }
+
+        if ($parentState['disabled']) {
+            Product::where('parent_product_id', $parent->id)->update(['status' => 'Disabled']);
+            return;
+        }
+
+        foreach (Product::where('parent_product_id', $parent->id)->get() as $variant) {
+            if ($this->isDisabledStatus($variant->status) && !$parentState['was_disabled']) {
+                continue;
+            }
+            $variant->update(['status' => $this->calculateStatus($variant->stock, $variant->alert_limit)]);
+        }
+    }
+
+    // Create / update the listed variants, then delete the ones that were removed in the edit form.
+    private function syncVariants(Product $parent, array $data, $alertLimit, array $parentState): void
+    {
+        $variants = $data['variants'];
+        // One query: this product's current variants, keyed by id. Also the only rows a payload id may refer to.
+        $children = Product::where('parent_product_id', $parent->id)->get()->keyBy('id');
+        // Variants without their own image read the parent's via an accessor; hand them the parent
+        // we already hold instead of letting each one query for it.
+        $children->each(fn (Product $child) => $child->setRelation('parent', $parent));
+
+        $keptIds = [];
+        foreach ($variants as $variantData) {
+            $keptIds[] = $this->saveVariant($parent, $data, $variantData, $alertLimit, $children, $parentState)->id;
+        }
+
+        $this->deleteRemovedVariants($parent, $children, $keptIds);
+    }
+
+    // Update one existing variant in place (looked up in $existing, this product's children) or create a
+    // new one, then sync its option links.
+    private function saveVariant(Product $parent, array $data, array $variantData, $alertLimit, \Illuminate\Support\Collection $existing, array $parentState): Product
+    {
+        $variantAlertLimit = $variantData['alert_limit'] ?? $alertLimit;
+        $variantStatus     = $this->resolveVariantStatus($variantData, $variantAlertLimit, $parentState);
+
+        $variant = null;
+        if (!empty($variantData['id'])) {
+            $variant = $existing->get($variantData['id']) ?? throw $this->foreignVariantException($variantData['id']);
+        }
+
+        $variantFields = [
+            'parent_product_id' => $parent->id,
+            'name'              => $variantData['name'] ?? null,
+            'chinese_name'      => array_key_exists('chinese_name', $variantData) ? $variantData['chinese_name'] : ($variant ? $variant->chinese_name : null),
+            'part_no'           => $variantData['part_no'] ?? null,
+            'category_id'       => $data['category_id'],
+            // Brand: a variant's own choice wins, otherwise it follows the base product's brand.
+            'brand_id'          => $variantData['brand_id'] ?? (array_key_exists('brand_id', $data) ? $data['brand_id'] : $parent->brand_id),
+            'uom'               => $variantData['uom'] ?? ($data['uom'] ?? StockConstants::DEFAULT_UOM),
+            'address'           => $data['address'] ?? null,
+            'stock'             => $variantData['stock'],
+            'alert_limit'       => $variantAlertLimit,
+            'price1'            => $variantData['price1'],
+            'price2'            => $variantData['price2'],
+            'status'            => $variantStatus,
+            'notes'             => array_key_exists('notes', $variantData) ? $variantData['notes'] : ($variant ? $variant->notes : null),
+            'image'             => array_key_exists('image', $variantData) ? $variantData['image'] : ($variant ? $variant->image : null),
+            'is_dead_stock'     => array_key_exists('is_dead_stock', $variantData) ? $variantData['is_dead_stock'] : ($variant ? $variant->is_dead_stock : false),
+            'damaged'           => array_key_exists('damaged', $variantData) ? $variantData['damaged'] : ($variant ? $variant->damaged : 0),
+        ];
+
+        if ($variant) {
+            $variant->update($variantFields);
+        } else {
+            $variant = Product::create($variantFields);
+        }
+
+        if (isset($variantData['option_ids'])) {
+            $variant->variantOptions()->sync($variantData['option_ids']);
+        }
+
+        return $variant;
+    }
+
+    // Status a variant gets when saved from the edit form:
+    //  - parent Disabled            => Disabled (disabling the parent disables every variant, new ones included)
+    //  - variant sent as Disabled   => stays Disabled, unless the parent is being re-enabled right now
+    //  - anything else              => follows its own stock and alert level
+    private function resolveVariantStatus(array $variantData, $alertLimit, array $parentState): string
+    {
+        if ($parentState['disabled']) {
+            return 'Disabled';
+        }
+
+        $current = $variantData['status'] ?? 'Active';
+        if ($current === 'Disabled') {
+            if (!$parentState['was_disabled']) {
+                return 'Disabled';
+            }
+            $current = 'Active'; // parent re-enabled: recalculate, same as the Enable button
+        }
+
+        return $this->calculateStatus($variantData['stock'], $alertLimit, $current);
+    }
+
+    // Delete variants that were not in the payload, including their own (non-inherited) cloud image.
+    private function deleteRemovedVariants(Product $parent, $children, array $keptIds): void
+    {
+        $parentImage = $parent->getRawOriginal('image');
+
+        foreach ($children as $child) {
+            if (in_array($child->id, $keptIds)) {
+                continue;
+            }
+
+            $rawImage = $child->getRawOriginal('image');
+            if ($rawImage && $rawImage !== $parentImage) {
+                $this->deleteCloudImage($rawImage);
+            }
+            $child->variantOptions()->detach();
+            $child->delete();
         }
     }
 

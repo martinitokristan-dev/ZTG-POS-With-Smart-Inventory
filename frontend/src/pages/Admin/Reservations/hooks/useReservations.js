@@ -6,6 +6,7 @@ import { invalidateCachePage } from '../../../../shared/hooks/usePaginatedCache'
 import { copyReservationsToClipboard } from '../../../../shared/utils/orderFromChinaExcelExporter';
 import { showToast } from '../../../../utils/toast';
 import { printCollectionReceipt } from '../../../../utils/printReceipt';
+import { getLineItemName } from '../../../../shared/utils/lineItemDisplay';
 import echo from '../../../../lib/echo';
 
 const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
@@ -471,7 +472,7 @@ export default function useReservations() {
             enginePlate: target.engine_plate_number,
             items: (target.items || []).map(it => ({
                 ...it,
-                name: `[DEPOSIT HOLD] ${it.product?.name || it.item_name || it.name || 'Item'}`,
+                name: `[DEPOSIT HOLD] ${getLineItemName(it)}`,
             })),
             total: depAmt,
             amount: depAmt,
@@ -503,7 +504,7 @@ export default function useReservations() {
             enginePlate: target.engine_plate_number,
             items: (target.items || []).map(it => ({
                 ...it,
-                name: balAmt > 0 ? `[BALANCE] ${it.product?.name || it.item_name || it.name || 'Item'}` : (it.product?.name || it.item_name || it.name || 'Item'),
+                name: balAmt > 0 ? `[BALANCE] ${getLineItemName(it)}` : getLineItemName(it),
             })),
             total: balAmt > 0 ? balAmt : totalAmt,
             amount: balAmt > 0 ? balAmt : totalAmt,

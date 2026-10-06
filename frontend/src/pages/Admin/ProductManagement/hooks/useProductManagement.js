@@ -5,6 +5,8 @@ import { useProducts } from '../../../../contexts/ProductContext';
 import { resetDashboardCache } from '../../../../shared/hooks/useDashboardCache';
 import { resetReportsCache } from '../../../../shared/hooks/useReportsCache';
 import echo from '../../../../lib/echo';
+import { confirmDialog } from '../../../../shared/utils/confirmDialog';
+import { showToast } from '../../../../utils/toast';
 
 // Module-level cache — survives component unmount/remount on route changes
 let _cachedProductList = [];
@@ -150,6 +152,29 @@ export default function useProductManagement() {
             setVariantOptions(res.data || []);
         } catch (e) {
             console.error('Failed to load variants:', e);
+        }
+    };
+
+    /**
+     * Create a new option (e.g. "Bronze") under a variant type straight from the product form.
+     * Adds it to local state so the dropdown shows it without a full reload.
+     * Resolves to the created option; rejects with a user-readable message.
+     */
+    const handleCreateVariantOption = async (variantTypeId, value) => {
+        const trimmed = (value || '').trim();
+        if (!trimmed) throw new Error('Please enter a value.');
+        try {
+            const res = await api.post(`/variants/${variantTypeId}/options`, { value: trimmed });
+            const created = res.data?.variant_option;
+            if (!created) throw new Error('Unexpected server response.');
+            setVariantOptions(prev => prev.map(vt => vt.id === variantTypeId
+                ? { ...vt, options: [...(vt.options || []), created] }
+                : vt));
+            return created;
+        } catch (err) {
+            const apiErrors = err.response?.data?.errors;
+            const firstError = apiErrors ? Object.values(apiErrors).flat()[0] : null;
+            throw new Error(firstError || err.response?.data?.message || err.message || 'Could not add option.');
         }
     };
 
@@ -544,7 +569,12 @@ export default function useProductManagement() {
     };
 
     const handleDeleteProduct = async (product) => {
-        if (!window.confirm(`Are you sure you want to delete ${product.name}?`)) return;
+        const variantCount = product.variants?.length || 0;
+        if (!(await confirmDialog({
+            title: 'Delete product?',
+            message: `"${product.name || product.part_no || 'This product'}"${variantCount > 0 ? ` and its ${variantCount} variant${variantCount === 1 ? '' : 's'}` : ''} will be permanently deleted. Products with sales history cannot be deleted.`,
+            confirmText: 'Delete',
+        }))) return;
         const { commit, rollback } = optimisticDeleteProduct(product.id);
         try {
             await api.delete(`/products/${product.id}`);
@@ -553,7 +583,7 @@ export default function useProductManagement() {
             loadProducts();
         } catch (error) {
             rollback();
-            alert(error.response?.data?.message || 'Error deleting product.');
+            showToast(error.response?.data?.message || 'Error deleting product.', 'error');
         }
     };
 
@@ -601,7 +631,7 @@ export default function useProductManagement() {
         } catch (error) {
             opt.rollback();
             loadProducts();
-            alert(error.response?.data?.message || 'Error toggling product status.');
+            showToast(error.response?.data?.message || 'Error toggling product status.', 'error');
         }
     };
 
@@ -748,6 +778,7 @@ export default function useProductManagement() {
         // Handlers
         handleAddProduct, handleEditProduct, handleDamageSubmit, handleDeleteProduct, handleToggleStatus,
         handleAddressChange, handleImageUpload, uploadingImage, imageProgress,
+        handleCreateVariantOption,
         openEdit, openDamage, openView,
         brands, loadBrands,
     };

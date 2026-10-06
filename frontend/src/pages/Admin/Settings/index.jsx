@@ -27,6 +27,7 @@ export default function SettingsView() {
         categories, showCategoryModal, setShowCategoryModal, selectedCategory, setSelectedCategory, categoryName, setCategoryName,
         categoryVariants, setCategoryVariants, categorySubmitting,
         newOptionValue, setNewOptionValue,
+        variantTypes, handleAddVariantType, handleDeleteVariantType, handleRenameVariantType,
         uomList, newUomValue, setNewUomValue, editingUomIndex, setEditingUomIndex, editUomValue, setEditUomValue,
         handleAddUom, handleUpdateUom, handleDeleteUom,
         brands, showBrandModal, setShowBrandModal, selectedBrand, setSelectedBrand,
@@ -397,6 +398,10 @@ export default function SettingsView() {
                                             handleUpdateVariantOption={handleUpdateVariantOption}
                                             handleDeleteVariantOption={handleDeleteVariantOption}
                                             getOptionsForType={getOptionsForType}
+                                            variantTypes={variantTypes}
+                                            handleAddVariantType={handleAddVariantType}
+                                            handleDeleteVariantType={handleDeleteVariantType}
+                                            handleRenameVariantType={handleRenameVariantType}
                                             newOptionValue={newOptionValue}
                                             setNewOptionValue={setNewOptionValue}
                                             uomList={uomList}
@@ -445,6 +450,7 @@ export default function SettingsView() {
                 categoryVariants={categoryVariants}
                 setCategoryVariants={setCategoryVariants}
                 getOptionsForType={getOptionsForType}
+                variantTypes={variantTypes}
             />
 
             <BrandModal

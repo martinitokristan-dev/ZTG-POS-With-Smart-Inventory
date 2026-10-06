@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import usePaginatedCache, { invalidateCachePage } from '../../../../shared/hooks/usePaginatedCache';
 import echo from '../../../../lib/echo';
+import { getLineItemName, getLineItemPartNo } from '../../../../shared/utils/lineItemDisplay';
 
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
@@ -129,8 +130,8 @@ export default function useDailySales() {
 
                 if (netQty <= 0) return;
 
-                const resolvedName = item.product?.name || item.name || 'Unknown Product';
-                const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
+                const resolvedName = getLineItemName(item, 'Unknown Product');
+                const resolvedPartNo = getLineItemPartNo(item, 'N/A');
                 const resolvedBrand = item.product?.brand || item.brand || item.product?.parent?.brand;
                 result.push({
                     ...item,

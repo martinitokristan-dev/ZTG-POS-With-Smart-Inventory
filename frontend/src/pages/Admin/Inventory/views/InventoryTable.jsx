@@ -147,7 +147,7 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                 <table className="data-table" style={{ minWidth: '850px', width: '100%' }}>
                     <thead>
                         <tr>
-                            <th style={{ textAlign: 'left' }}>Product</th>
+                            <th style={{ textAlign: 'left' }}>Product / Brand</th>
                             <th style={{ textAlign: 'left' }}>Part No.</th>
                             <th style={{ textAlign: 'left' }}>Category</th>
                             {track_warehouse_locations && (

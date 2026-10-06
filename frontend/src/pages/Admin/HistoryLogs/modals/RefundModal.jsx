@@ -3,6 +3,7 @@ import api from '../../../../shared/api';
 import useMobileSheet from '../../../../shared/useMobileSheet';
 import IOSSelect from '../../../../shared/components/IOSSelect';
 import { resetReportsCache } from '../../../../shared/hooks/useReportsCache';
+import { getLineItemName, getLineItemPartNo } from '../../../../shared/utils/lineItemDisplay';
 
 export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fmtDate, fmt, onSearchTransaction }) {
     // Read the actual logged-in user from localStorage
@@ -346,8 +347,8 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                             {txItems.length === 0 ? (
                                                 <tr><td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: '#6B7280', fontSize: '13px' }}>Enter a transaction number to load items</td></tr>
                                             ) : txItems.map((item, index) => {
-                                                const partNo = item.product?.part_no || item.part_no || item.partNo || item.product?.partNo || item.sku || '—';
-                                                const name = item.product?.name || item.name || 'Unknown Part';
+                                                const partNo = getLineItemPartNo(item, item.product?.partNo || item.sku || '—');
+                                                const name = getLineItemName(item, 'Unknown Part');
                                                 const price = item.price || 0;
 
                                                 const rawQty = Number(item.qty || 0);

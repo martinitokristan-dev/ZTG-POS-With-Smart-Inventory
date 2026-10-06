@@ -392,7 +392,7 @@ export default function ProductsTable({
                     <table className="data-table" style={{ minWidth: '780px', width: '100%' }}>
                         <thead style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B', borderBottom: '2px solid var(--table-border)', background: 'var(--table-header-bg)' }}>
                             <tr>
-                                <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'left' }}>Product</th>
+                                <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'left' }}>Product / Brand</th>
                                 <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'left' }}>Part No.</th>
                                 <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'left' }}>Category</th>
                                 {track_warehouse_locations && (

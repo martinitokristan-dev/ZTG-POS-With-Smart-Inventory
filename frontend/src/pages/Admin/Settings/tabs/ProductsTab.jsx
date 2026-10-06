@@ -1,4 +1,6 @@
 import React from 'react';
+import NewVariantTypeForm from './NewVariantTypeForm';
+import CustomVariantTypeActions from './CustomVariantTypeActions';
 
 export default function ProductsTab({
     activeSubTab, setActiveSubTab, settings, handleSettingInputChange, handleToggleSetting,
@@ -6,8 +8,18 @@ export default function ProductsTab({
     newOptionValue, setNewOptionValue, handleAddVariantOption, handleDeleteVariantOption, getOptionsForType,
     handleSaveBulkSettings, handleUpdateVariantOption,
     uomList, newUomValue, setNewUomValue, handleAddUom, handleUpdateUom, handleDeleteUom,
-    brands = [], openAddBrand, openEditBrand, handleDeleteBrand
+    brands = [], openAddBrand, openEditBrand, handleDeleteBrand,
+    variantTypes = [], handleAddVariantType, handleDeleteVariantType, handleRenameVariantType
 }) {
+    // Variant types created by the admin (everything that is not one of the five built-ins).
+    // NOTE: do not add hooks here. The panels below call hooks inside render-time IIFEs,
+    // so this component must keep a stable hook count per tab.
+    const BUILT_IN_TYPE_KEYS = ['size', 'quality', 'color', 'specification', 'material'];
+    const customTypes = (variantTypes || []).filter(t => t?.name && !BUILT_IN_TYPE_KEYS.includes(t.name.trim().toLowerCase()));
+    const activeCustomType = activeSubTab?.startsWith('vt:')
+        ? customTypes.find(t => `vt:${t.id}` === activeSubTab)
+        : null;
+
     return (
         <div className="prod-tabs-layout">
             {/* Left Sidebar */}
@@ -33,6 +45,19 @@ export default function ProductsTab({
                         {tab.label}
                     </button>
                 ))}
+
+                {customTypes.map(t => (
+                    <button
+                        key={`vt-${t.id}`}
+                        onClick={() => setActiveSubTab(`vt:${t.id}`)}
+                        className={`prod-vtab-btn ${activeSubTab === `vt:${t.id}` ? 'active' : ''}`}
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                        {t.name}
+                    </button>
+                ))}
+
+                {handleAddVariantType && <NewVariantTypeForm onAdd={handleAddVariantType} />}
             </div>
 
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -92,11 +117,17 @@ export default function ProductsTab({
                                         <div className="cat-card-info">
                                             <div className="cat-card-name">{c.name}</div>
                                             <div className="cat-variant-badges">
-                                                {c.variants && c.variants.length > 0 ? c.variants.map(v => (
-                                                    <span key={v} className={`cv-badge ${v}`}>
-                                                        {v === 'quality' ? 'Quality' : v === 'color' ? 'Color' : v === 'specification' ? 'Specification' : v === 'material' ? 'Material' : 'Size'}
-                                                    </span>
-                                                )) : <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>No variants assigned</span>}
+                                                {c.variants && c.variants.length > 0 ? c.variants.map(v => {
+                                                    // Show the type's real name (custom types too); built-ins keep their colour class.
+                                                    const isBuiltIn = BUILT_IN_TYPE_KEYS.includes(v);
+                                                    const label = (variantTypes || []).find(t => t.name?.trim().toLowerCase() === v)?.name
+                                                        || v.charAt(0).toUpperCase() + v.slice(1);
+                                                    return (
+                                                        <span key={v} className={`cv-badge ${isBuiltIn ? v : 'custom'}`}>
+                                                            {label}
+                                                        </span>
+                                                    );
+                                                }) : <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>No variants assigned</span>}
                                             </div>
                                         </div>
                                         <div className="cat-card-actions">
@@ -158,7 +189,7 @@ export default function ProductsTab({
                     )}
 
                     {/* PANEL: Variants (Sizes, Quality, Colors, Specification, Material) */}
-                    {['sizes', 'quality', 'colors', 'specification', 'material'].includes(activeSubTab) && (() => {
+                    {(['sizes', 'quality', 'colors', 'specification', 'material'].includes(activeSubTab) || !!activeCustomType) && (() => {
                         const typeMap = { 
                             sizes: 'Size', 
                             quality: 'Quality', 
@@ -173,7 +204,7 @@ export default function ProductsTab({
                             specification: 'e.g. Standard Type, High Pressure, Heavy Duty Type',
                             material: 'e.g. Steel, Alloy Steel, Rubber'
                         };
-                        const typeName = typeMap[activeSubTab];
+                        const typeName = typeMap[activeSubTab] ?? activeCustomType?.name ?? 'Variant';
                         const [editingVariantId, setEditingVariantId] = React.useState(null);
                         const [editValue, setEditValue] = React.useState('');
 
@@ -211,6 +242,14 @@ export default function ProductsTab({
                                     <div style={{ flex: 1 }}>
                                         <h4 style={{ margin: '0 0 3px', fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>{typeName} Options</h4>
                                         <p className="panel-desc" style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>Manage available {typeName.toLowerCase()} values for products.</p>
+                                        {activeCustomType && (handleDeleteVariantType || handleRenameVariantType) && (
+                                            <CustomVariantTypeActions
+                                                key={activeCustomType.id}
+                                                type={activeCustomType}
+                                                onRename={handleRenameVariantType}
+                                                onDelete={handleDeleteVariantType}
+                                            />
+                                        )}
                                     </div>
                                     <div className="add-option-row" style={{ flexShrink: 0, display: 'flex', gap: '8px', alignItems: 'center' }}>
                                         <input 

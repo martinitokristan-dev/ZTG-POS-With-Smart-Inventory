@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import usePaginatedCache, { invalidateCachePage } from '../../../../shared/hooks/usePaginatedCache';
 import echo from '../../../../lib/echo';
 import api from '../../../../shared/api';
+import { getLineItemName, getLineItemPartNo } from '../../../../shared/utils/lineItemDisplay';
 
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
@@ -146,8 +147,8 @@ export default function useSalesLog() {
             // Skip items with 0 active sales remaining
             if (netQty <= 0) return;
 
-            const resolvedName = item.product?.name || item.name || 'Unknown Product';
-            const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
+            const resolvedName = getLineItemName(item, 'Unknown Product');
+            const resolvedPartNo = getLineItemPartNo(item, 'N/A');
             const rawPrice = Number(item.original_price || item.price || 0);
             const resolvedPrice = rawPrice > 0 ? rawPrice : (Number(t.amount || 0) / Math.max(1, netQty));
             

@@ -1,4 +1,5 @@
 import { numberToWordsPesos } from './numberToWords';
+import { getLineItemName, getLineItemPartNo } from '../shared/utils/lineItemDisplay';
 
 /**
  * printReceipt.js
@@ -85,8 +86,9 @@ export function printSalesInvoice(options) {
     for (let i = 0; i < 16; i++) {
         const it = itemList[i];
         if (it) {
-            const name = it.name || it.item_name || it.product?.name || 'Item';
-            const partNoStr = (it.partNo || it.part_no || it.product?.part_no) ? ` [${it.partNo || it.part_no || it.product?.part_no}]` : '';
+            const name = getLineItemName(it);
+            const partNo = getLineItemPartNo(it, '');
+            const partNoStr = partNo ? ` [${partNo}]` : '';
             const qty = it.qty || it.quantity || 1;
             const price = Number(it.price || it.retail_price || 0);
             const lineTotal = Number(it.total || (price * qty) || 0);
@@ -479,7 +481,7 @@ export function printCollectionReceipt(options) {
     for (let i = 0; i < 5; i++) {
         const it = itemRows[i];
         if (it) {
-            const name = it.name || it.item_name || it.product?.name || 'Item';
+            const name = getLineItemName(it);
             const qtyStr = it.qty ? ` (X${it.qty})` : '';
             const amtStr = Number(it.total || (it.price * (it.qty || 1)) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
             particularsRows += `

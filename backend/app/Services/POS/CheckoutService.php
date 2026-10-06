@@ -48,7 +48,9 @@ class CheckoutService
 
             // 1. Lock all cart product rows to prevent race conditions
             $productIds = array_column($cart, 'product_id');
+            //    Eager-load variant options + parent so line snapshots need no extra queries.
             $products = Product::whereIn('id', $productIds)
+                ->with(['variantOptions', 'parent'])
                 ->lockForUpdate()
                 ->get()
                 ->keyBy('id');

@@ -5,6 +5,8 @@
  * - 11 Columns: DATE | QTY | PART NUMBER | PART NAME | PRICE | SALES | CUSTOMER NAME | PAYMENT | DISCOUNTED | S.I./C.R./D.R. | SERVE BY
  */
 
+import { getLineItemName, getLineItemPartNo } from './lineItemDisplay';
+
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -110,7 +112,7 @@ export const copySalesToClipboard = async (transactionsItems = []) => {
     const tx = item.tx || {};
     const isPartialRefund = tx.is_partial_refund === true;
     const isDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void') && !isPartialRefund;
-    let resolvedName = item.product?.name || item.name || 'Unknown Product';
+    let resolvedName = getLineItemName(item, 'Unknown Product');
     const brandName = item.product?.brand?.name || item.brand?.name || (typeof item.brand === 'string' ? item.brand : null) || (typeof item.product?.brand === 'string' ? item.product?.brand : null) || item.product?.parent?.brand?.name;
     if (brandName && !resolvedName.toLowerCase().includes(`- ${String(brandName).toLowerCase()}`) && !resolvedName.toLowerCase().includes(`[${String(brandName).toLowerCase()}]`)) {
         resolvedName = `${resolvedName} - ${brandName}`;
@@ -119,7 +121,7 @@ export const copySalesToClipboard = async (transactionsItems = []) => {
     if (variantOpt && !resolvedName.toLowerCase().includes(String(variantOpt).toLowerCase())) {
         resolvedName = `${resolvedName} (${variantOpt})`;
     }
-    const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
+    const resolvedPartNo = getLineItemPartNo(item, 'N/A');
     const qty = Number(item.displayQty ?? item.qty ?? 1);
     const breakdown = calculateItemDiscountBreakdown(item, tx);
     const unitPrice = breakdown.unitPrice;
@@ -213,7 +215,7 @@ export const exportSalesToExcel = (transactionsItems = [], options = {}) => {
     const tx = item.tx || {};
     const isPartialRefund = tx.is_partial_refund === true;
     const isDeduction = (tx.status === 'Refund' || tx.status === 'Return' || tx.status === 'Void') && !isPartialRefund;
-    let resolvedName = item.product?.name || item.name || 'Unknown Product';
+    let resolvedName = getLineItemName(item, 'Unknown Product');
     const brandName = item.product?.brand?.name || item.brand?.name || (typeof item.brand === 'string' ? item.brand : null) || (typeof item.product?.brand === 'string' ? item.product?.brand : null) || item.product?.parent?.brand?.name;
     if (brandName && !resolvedName.toLowerCase().includes(`- ${String(brandName).toLowerCase()}`) && !resolvedName.toLowerCase().includes(`[${String(brandName).toLowerCase()}]`)) {
         resolvedName = `${resolvedName} - ${brandName}`;
@@ -222,7 +224,7 @@ export const exportSalesToExcel = (transactionsItems = [], options = {}) => {
     if (variantOpt && !resolvedName.toLowerCase().includes(String(variantOpt).toLowerCase())) {
         resolvedName = `${resolvedName} (${variantOpt})`;
     }
-    const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
+    const resolvedPartNo = getLineItemPartNo(item, 'N/A');
     const qty = Number(item.displayQty ?? item.qty ?? 1);
     const breakdown = calculateItemDiscountBreakdown(item, tx);
     const unitPrice = breakdown.unitPrice;

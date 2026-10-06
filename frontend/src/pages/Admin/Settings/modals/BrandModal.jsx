@@ -13,9 +13,10 @@ export default function BrandModal({
     onSubmit,
     submitting = false
 }) {
-    if (!isOpen) return null;
-
+    // Hooks must run on every render (React rule), so the "closed" check lives inside the effect
+    // and the early return comes after it.
     useEffect(() => {
+        if (!isOpen) return undefined;
         const handleKeyDown = (e) => {
             if (e.key === 'Escape') {
                 onClose();
@@ -29,6 +30,8 @@ export default function BrandModal({
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, onClose]);
+
+    if (!isOpen) return null;
 
     const submitLabel = submitting 
         ? (selectedBrand ? 'Updating Brand...' : 'Saving Brand...') 

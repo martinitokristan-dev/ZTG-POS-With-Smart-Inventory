@@ -1,13 +1,72 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-export default function IOSSelect({ value, onChange, options = [], placeholder = 'Select option', className = '', style = {}, disabled = false }) {
+/**
+ * Themed dropdown.
+ *
+ * Optional inline creation: pass `onCreateOption(text)` returning a Promise that
+ * resolves to the new option's value (or { value }). An "Add new" row then appears
+ * at the bottom of the menu, and the created option is selected automatically.
+ * If the promise rejects, its message is shown under the input.
+ */
+export default function IOSSelect({ value, onChange, options = [], placeholder = 'Select option', className = '', style = {}, disabled = false, onCreateOption = null, createLabel = 'Add new option' }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [newOptionText, setNewOptionText] = useState('');
+    const [createError, setCreateError] = useState('');
+    const [savingOption, setSavingOption] = useState(false);
     const containerRef = useRef(null);
+
+    const resetCreate = () => {
+        setIsCreating(false);
+        setNewOptionText('');
+        setCreateError('');
+    };
+
+    const submitNewOption = async () => {
+        if (!onCreateOption || savingOption) return;
+        const text = newOptionText.trim();
+        if (!text) {
+            setCreateError('Please enter a value.');
+            return;
+        }
+        setSavingOption(true);
+        setCreateError('');
+        try {
+            const created = await onCreateOption(text);
+            const createdValue = created && typeof created === 'object' ? created.value ?? created.id : created;
+            resetCreate();
+            setIsOpen(false);
+            if (createdValue !== undefined && createdValue !== null) {
+                onChange({ target: { value: String(createdValue) } });
+            }
+        } catch (err) {
+            setCreateError(err?.message || 'Could not add option.');
+        } finally {
+            setSavingOption(false);
+        }
+    };
+
+    // Enter saves the new option; Escape cancels. Propagation is stopped so a
+    // surrounding form or modal-level Enter shortcut does not submit.
+    const handleCreateKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            submitNewOption();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            resetCreate();
+        }
+    };
 
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (containerRef.current && !containerRef.current.contains(e.target)) {
                 setIsOpen(false);
+                setIsCreating(false);
+                setNewOptionText('');
+                setCreateError('');
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -145,6 +204,49 @@ export default function IOSSelect({ value, onChange, options = [], placeholder =
                                 </div>
                             );
                         })
+                    )}
+
+                    {onCreateOption && (
+                        <div style={{ borderTop: '1px solid var(--border)', marginTop: '4px', paddingTop: '6px' }}>
+                            {isCreating ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '4px' }}>
+                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            autoFocus
+                                            aria-label={createLabel}
+                                            placeholder="Type new value..."
+                                            value={newOptionText}
+                                            disabled={savingOption}
+                                            onChange={(e) => { setNewOptionText(e.target.value); setCreateError(''); }}
+                                            onKeyDown={handleCreateKeyDown}
+                                            style={{ flex: 1, minWidth: 0, fontSize: '13px', padding: '6px 10px' }}
+                                        />
+                                        <button type="button" className="btn btn-primary btn-sm" onClick={submitNewOption} disabled={savingOption} style={{ padding: '5px 10px', fontSize: '12px' }}>
+                                            {savingOption ? 'Adding...' : 'Add'}
+                                        </button>
+                                        <button type="button" className="btn btn-secondary btn-sm" onClick={resetCreate} disabled={savingOption} style={{ padding: '5px 10px', fontSize: '12px' }}>
+                                            Cancel
+                                        </button>
+                                    </div>
+                                    {createError && (
+                                        <div role="alert" style={{ fontSize: '11.5px', color: 'var(--danger, #DC2626)', fontWeight: 600 }}>{createError}</div>
+                                    )}
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCreating(true)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', padding: '9px 12px', borderRadius: '10px', border: 'none', background: 'transparent', color: 'var(--primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M12 5v14M5 12h14" />
+                                    </svg>
+                                    {createLabel}
+                                </button>
+                            )}
+                        </div>
                     )}
                 </div>
             )}

@@ -25,7 +25,7 @@ export default function SalesTable({ loading, items, fmt, fmtDate }) {
                             <th style={{ padding: '10px 12px', fontWeight: '600' }}>Date</th>
                             <th style={{ padding: '10px 12px', fontWeight: '600' }}>S.I./C.R./D.R.</th>
                             <th style={{ padding: '10px 12px', fontWeight: '600' }}>Part No.</th>
-                            <th style={{ padding: '10px 14px', fontWeight: '600' }}>Product</th>
+                            <th style={{ padding: '10px 14px', fontWeight: '600' }}>Product / Brand</th>
                             <th style={{ padding: '10px 8px', fontWeight: '600', textAlign: 'center' }}>Qty</th>
                             <th style={{ padding: '10px 10px', fontWeight: '600', textAlign: 'right' }}>Price</th>
                             <th style={{ padding: '10px 10px', fontWeight: '600', textAlign: 'right' }}>Sales</th>

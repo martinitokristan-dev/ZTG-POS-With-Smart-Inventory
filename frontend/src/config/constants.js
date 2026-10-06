@@ -33,3 +33,8 @@ export const NOTIFICATION_BUBBLE_DISPLAY_MS = 3000;
 
 /** Maximum number of pages pre-fetched and cached for history / daily-sales lists */
 export const PAGINATED_CACHE_MAX_PAGES = 50;
+
+// ─── Product Variants ────────────────────────────────────────────────────────
+
+/** Maximum variant rows the "Generate combinations" tool creates in one click (guards against huge accidental matrices) */
+export const VARIANT_GENERATOR_MAX_COMBINATIONS = 100;

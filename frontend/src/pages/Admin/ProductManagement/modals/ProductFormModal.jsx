@@ -3,6 +3,8 @@ import IOSSelect from '../../../../shared/components/IOSSelect';
 import ImageUploadOverlay from '../../../../shared/components/ImageUploadOverlay';
 import api from '../../../../shared/api';
 import useSystemSettings from '../../../../shared/hooks/useSystemSettings';
+import VariantGeneratorPanel from './VariantGeneratorPanel';
+import { showToast } from '../../../../utils/toast';
 
 const VariantImageUpload = ({ variant, idx, onUpdateVariantImage, baseImage }) => {
     const [uploading, setUploading] = useState(false);
@@ -110,7 +112,7 @@ export default function ProductFormModal({
     isOpen, mode,
     onClose, onSubmit,
     formData, setFormData,
-    categories, brands = [], variantOptions,
+    categories, brands = [], variantOptions, onCreateVariantOption = null,
     handleAddressChange, handleImageUpload, uploadingImage = false, imageProgress = 0,
     errorMessage, selectedProduct,
     isSubmitting = false,
@@ -131,6 +133,9 @@ export default function ProductFormModal({
     }, [isOpen]);
 
     const [isTranslating, setIsTranslating] = useState(false);
+    // Client-side check messages (e.g. trailing dash in a part number), shown in the red box at the top.
+    const [formError, setFormError] = useState('');
+    useEffect(() => { if (!isOpen) setFormError(''); }, [isOpen]);
     const [lastAutoTranslation, setLastAutoTranslation] = useState('');
     const [availableBrands, setAvailableBrands] = useState(brands || []);
 
@@ -213,7 +218,7 @@ export default function ProductFormModal({
     const triggerTranslation = async () => {
         const nameVal = formData.name?.trim();
         if (!nameVal) {
-            alert("Please enter an English Name first.");
+            showToast('Please enter an English Name first.', 'error');
             return;
         }
         setIsTranslating(true);
@@ -228,26 +233,57 @@ export default function ProductFormModal({
                 }));
                 setLastAutoTranslation(translated);
             } else {
-                alert("Translation failed. Please enter it manually.");
+                showToast('Translation failed. Please enter it manually.', 'error');
             }
         } catch (err) {
-            alert("Translation failed. Please enter it manually.");
+            showToast('Translation failed. Please enter it manually.', 'error');
         } finally {
             setIsTranslating(false);
         }
     };
 
-    const renderVariantOptionsForVariant = (variant, idx) => {
-        const selectedCatId = parseInt(formData.category_id);
-        if (!selectedCatId) return <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Select a category first.</div>;
+    // Variant types the selected category allows. Categories are linked to types by id (variant_type_ids),
+    // so renaming a type never hides its options. Falls back to matching by lowercase name only for a
+    // category object that carries just `variants` (e.g. an optimistic copy before the server reply).
+    const selectedCatObj = categories.find(c => c.id === parseInt(formData.category_id));
+    const allowedTypeIds = Array.isArray(selectedCatObj?.variant_type_ids) ? selectedCatObj.variant_type_ids : null;
+    const allowedTypeNames = (selectedCatObj?.variants || []).map(t => t.toLowerCase());
+    const allowedVariantTypes = (variantOptions || []).filter(v => allowedTypeIds
+        ? allowedTypeIds.includes(v.id)
+        : allowedTypeNames.includes(v.name.toLowerCase()));
+    const assignedTypeCount = allowedTypeIds ? allowedTypeIds.length : allowedTypeNames.length;
 
-        const selectedCatObj = categories.find(c => c.id === selectedCatId);
-        if (!selectedCatObj || !selectedCatObj.variants || selectedCatObj.variants.length === 0) {
+    // New rows start from the parent's name, prices and alert level, with a suggested part number.
+    const buildVariantRow = (rowIndex, optionIds = []) => ({
+        name: formData.name || '',
+        chinese_name: formData.chinese_name || '',
+        part_no: generateNextVariantPartNo(formData.part_no, rowIndex),
+        price1: formData.price1 || 0, price2: formData.price2 || 0,
+        stock: 0, alert_limit: formData.alert_limit || 5, option_ids: optionIds
+    });
+
+    // Rows come from the generator with their OWN price / stock / alert level (every variant is different).
+    const handleGenerateVariants = (newRows) => {
+        const current = formData.variants || [];
+        const added = newRows.map((r, i) => ({
+            ...buildVariantRow(current.length + i, r.option_ids),
+            price1: r.price1,
+            // Single-price mode keeps price2 equal to price1, same as the base product fields.
+            price2: enable_dual_pricing ? r.price2 : r.price1,
+            stock: r.stock,
+            alert_limit: r.alert_limit,
+        }));
+        setFormData({ ...formData, variants: [...current, ...added] });
+    };
+
+    const renderVariantOptionsForVariant = (variant, idx) => {
+        if (!selectedCatObj) return <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Select a category first.</div>;
+
+        if (assignedTypeCount === 0) {
             return <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>No variant types are assigned to this category.</div>;
         }
 
-        const allowedTypes = selectedCatObj.variants ? selectedCatObj.variants.map(t => t.toLowerCase()) : [];
-        const filteredOptions = variantOptions?.filter(v => allowedTypes.includes(v.name.toLowerCase()));
+        const filteredOptions = allowedVariantTypes;
         if (!filteredOptions || filteredOptions.length === 0) {
             return <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>No variant options configured for category.</div>;
         }
@@ -271,6 +307,10 @@ export default function ProductFormModal({
                         value={selectedVal}
                         placeholder={`Select ${vType.name}...`}
                         options={formattedOpts}
+                        onCreateOption={onCreateVariantOption
+                            ? (text) => onCreateVariantOption(vType.id, text).then(created => created.id)
+                            : null}
+                        createLabel={`Add new ${vType.name}`}
                         onChange={(e) => {
                             const val = parseInt(e.target.value);
                             const nv = [...formData.variants];
@@ -290,6 +330,7 @@ export default function ProductFormModal({
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        setFormError('');
         if (formData.variants && formData.variants.length > 0) {
             for (let i = 0; i < formData.variants.length; i++) {
                 const v = formData.variants[i];
@@ -297,7 +338,9 @@ export default function ProductFormModal({
                     v.name = formData.name?.trim() || 'Variant';
                 }
                 if (v.part_no && v.part_no.endsWith('-')) {
-                    alert(`Variant part number "${v.part_no}" cannot end with a trailing dash. Please provide a suffix.`);
+                    // Shown in the form's red error box at the top (no browser popup).
+                    setFormError(`Variant part number "${v.part_no}" cannot end with a trailing dash. Please provide a suffix.`);
+                    document.querySelector('.modal-card-lg .modal-body')?.scrollTo({ top: 0, behavior: 'smooth' });
                     return;
                 }
             }
@@ -338,7 +381,7 @@ export default function ProductFormModal({
                             </div>
                         )}
 
-                        {errorMessage && <div style={{ padding: '12px', background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', borderRadius: '6px', fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>{errorMessage}</div>}
+                        {(formError || errorMessage) && <div role="alert" style={{ padding: '12px', background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', borderRadius: '6px', fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>{formError || errorMessage}</div>}
 
                         <div className="form-group" style={{ marginBottom: '16px' }}>
                             <label className="form-label">Product Image <span style={{ color: 'red' }}>*</span></label>
@@ -540,13 +583,41 @@ export default function ProductFormModal({
                         {/* Status & Variants */}
                         <div className="section-header">Status & Variants</div>
                         <div className="grid-2">
-                            <div className="form-group">
-                                <label className="form-label">Product Status</label>
-                                <select className="form-control" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
-                                    <option value="Active">Active</option>
-                                    <option value="Inactive">Inactive</option>
-                                </select>
-                            </div>
+                            {/* Status only applies when editing: new products get their status from stock, and the
+                                server derives Low Stock / No Stock itself, so the dropdown offers Active or Disabled only. */}
+                            {isEdit && (
+                                <div className="form-group">
+                                    <label className="form-label" htmlFor="productStatusSelect">
+                                        {(formData.variants || []).length > 0 ? 'Base Product Status' : 'Product Status'}
+                                    </label>
+                                    <select
+                                        id="productStatusSelect"
+                                        className="form-control"
+                                        value={formData.status === 'Disabled' ? 'Disabled' : 'Active'}
+                                        onChange={(e) => {
+                                            const next = e.target.value;
+                                            // Re-enabling a base product that was Disabled also re-enables its variants on save,
+                                            // so show them as Active here too. (Compared with the ORIGINAL status, so toggling
+                                            // the dropdown back and forth never wipes a variant you disabled on its own.)
+                                            const revive = next === 'Active' && selectedProduct?.status === 'Disabled';
+                                            setFormData({
+                                                ...formData,
+                                                status: next,
+                                                variants: revive ? (formData.variants || []).map(v => ({ ...v, status: 'Active' })) : formData.variants
+                                            });
+                                        }}
+                                    >
+                                        <option value="Active">Active</option>
+                                        <option value="Disabled">Disabled (hidden from POS)</option>
+                                    </select>
+                                    {(formData.variants || []).length > 0 && (
+                                        <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '6px', lineHeight: 1.4 }}>
+                                            Disabled here hides the base product and all {(formData.variants || []).length} of its variants.
+                                            To hide only one variant, use that variant's own Status below.
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: '24px' }}>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-main)', cursor: 'pointer' }}>
                                     <input type="checkbox" style={{ width: '16px', height: '16px', accentColor: 'var(--primary)' }} checked={formData.is_dead_stock} onChange={(e) => setFormData({ ...formData, is_dead_stock: e.target.checked })} />
@@ -561,19 +632,23 @@ export default function ProductFormModal({
                                     <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Product Variants</span>
                                     <button type="button" className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px' }}
                                         onClick={() => {
-                                            const newVariants = [...(formData.variants || []), {
-                                                name: formData.name || '',
-                                                chinese_name: formData.chinese_name || '',
-                                                part_no: generateNextVariantPartNo(formData.part_no, formData.variants?.length || 0),
-                                                price1: formData.price1 || 0, price2: formData.price2 || 0,
-                                                stock: 0, alert_limit: formData.alert_limit || 5, option_ids: []
-                                            }];
-                                            setFormData({ ...formData, variants: newVariants });
+                                            const current = formData.variants || [];
+                                            setFormData({ ...formData, variants: [...current, buildVariantRow(current.length)] });
                                         }}>
                                         <svg viewBox="0 0 24 24" style={{ width: '12px', height: '12px', fill: 'none', stroke: 'currentColor', strokeWidth: 2.5 }}><path d="M12 5v14M5 12h14" /></svg>
                                         Add Variant
                                     </button>
                                 </div>
+
+                                <VariantGeneratorPanel
+                                    variantTypes={allowedVariantTypes}
+                                    existingVariants={formData.variants || []}
+                                    onGenerate={handleGenerateVariants}
+                                    price1Label={price1_label || 'Orig. Price'}
+                                    price2Label={price2_label || 'Retail Price'}
+                                    showPrice2={enable_dual_pricing}
+                                    defaultAlertLimit={formData.alert_limit || 5}
+                                />
 
                                 {(!formData.variants || formData.variants.length === 0) ? (
                                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center', padding: '10px 0' }}>
@@ -591,6 +666,9 @@ export default function ProductFormModal({
                                             }).filter(Boolean);
 
                                         const variantDisplayName = variant.name || formData.name || 'Variant';
+                                        // A variant is hidden when it is Disabled itself OR when its base product is Disabled.
+                                        const baseDisabled = formData.status === 'Disabled';
+                                        const variantOff = baseDisabled || variant.status === 'Disabled';
 
                                         return (
                                             <div key={idx} style={{ padding: '12px', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'var(--bg-card)', position: 'relative' }}>
@@ -608,6 +686,17 @@ export default function ProductFormModal({
                                                         {selectedOptionLabels.length > 0 && (
                                                             <span style={{ color: 'var(--primary, #3B82F6)', fontWeight: '600', fontSize: '13px' }}>
                                                                 ({selectedOptionLabels.join(', ')})
+                                                            </span>
+                                                        )}
+                                                        {isEdit && (
+                                                            <span
+                                                                style={{
+                                                                    fontSize: '11px', fontWeight: 700, padding: '3px 9px', borderRadius: '9999px', lineHeight: 1,
+                                                                    backgroundColor: variantOff ? '#FEE2E2' : '#DCFCE7',
+                                                                    color: variantOff ? '#DC2626' : '#15803D'
+                                                                }}
+                                                            >
+                                                                {variantOff ? 'Disabled' : 'Active'}
                                                             </span>
                                                         )}
                                                     </div>
@@ -664,7 +753,9 @@ export default function ProductFormModal({
                                                         }} />
                                                     </div>
                                                     <div className="form-group" style={{ marginBottom: 0 }}>
-                                                        <label className="form-label">{mode === 'edit' ? 'Current Stock' : 'Initial Stock'}</label>
+                                                        {/* Stock of an already-saved variant changes through Restock. A variant that is being
+                                                            added right now (no id yet) still needs its starting stock. */}
+                                                        <label className="form-label">{isEdit && variant.id ? 'Current Stock' : 'Initial Stock'}</label>
                                                         <input
                                                             type="number"
                                                             className="form-control"
@@ -674,8 +765,8 @@ export default function ProductFormModal({
                                                             onChange={(e) => {
                                                                 const nv = [...formData.variants]; nv[idx].stock = e.target.value === '' ? '' : parseInt(e.target.value); setFormData({ ...formData, variants: nv });
                                                             }}
-                                                            disabled={mode === 'edit'}
-                                                            style={mode === 'edit' ? { backgroundColor: 'var(--bg-secondary)', cursor: 'not-allowed', color: 'var(--text-muted)' } : {}}
+                                                            disabled={isEdit && !!variant.id}
+                                                            style={isEdit && variant.id ? { backgroundColor: 'var(--bg-secondary)', cursor: 'not-allowed', color: 'var(--text-muted)' } : {}}
                                                         />
                                                     </div>
                                                     <div className="form-group" style={{ marginBottom: 0 }}>
@@ -689,6 +780,36 @@ export default function ProductFormModal({
                                                 <div className="grid-2" style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', marginTop: '4px' }}>
                                                     {renderVariantOptionsForVariant(variant, idx)}
                                                 </div>
+
+                                                {/* Availability: last row of the card, with a plain-words explanation beside the dropdown */}
+                                                {isEdit && (
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px 16px', borderTop: '1px solid var(--border)', paddingTop: '12px', marginTop: '12px' }}>
+                                                        <div className="form-group" style={{ marginBottom: 0, flex: '0 0 260px', maxWidth: '100%' }}>
+                                                            <label className="form-label" htmlFor={`variantStatus-${idx}`}>Variant Status</label>
+                                                            <select
+                                                                id={`variantStatus-${idx}`}
+                                                                className="form-control"
+                                                                value={variantOff ? 'Disabled' : 'Active'}
+                                                                disabled={baseDisabled}
+                                                                onChange={(e) => {
+                                                                    const nv = [...formData.variants];
+                                                                    nv[idx] = { ...nv[idx], status: e.target.value };
+                                                                    setFormData({ ...formData, variants: nv });
+                                                                }}
+                                                            >
+                                                                <option value="Active">Active</option>
+                                                                <option value="Disabled">Disabled (hidden from POS)</option>
+                                                            </select>
+                                                        </div>
+                                                        <div style={{ flex: '1 1 220px', fontSize: '12px', lineHeight: 1.45, color: 'var(--text-secondary)' }}>
+                                                            {baseDisabled
+                                                                ? 'The base product is Disabled, so this variant is hidden from POS too.'
+                                                                : variantOff
+                                                                    ? 'Only this variant is hidden from POS. The base product and the other variants are not affected.'
+                                                                    : 'This variant can be sold in POS. Choose Disabled to hide only this variant.'}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })}

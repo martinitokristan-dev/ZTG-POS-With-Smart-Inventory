@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 import IOSSelect from '../../../../shared/components/IOSSelect';
 import { printUnifiedReceipt } from '../../../../utils/printReceipt';
+import { getLineItemName, getLineItemPartNo, getLineItemUnit } from '../../../../shared/utils/lineItemDisplay';
 import api from '../../../../shared/api';
 
 const docTypeOptions = [
@@ -189,11 +190,11 @@ export default function CheckoutModal({
 
         // Map items structured for printUnifiedReceipt
         const mappedItems = (completedTx.items || []).map(item => ({
-            name: item.product?.name || item.name || 'Item',
-            partNo: item.product?.part_no || item.partNo || item.part_no || '—',
+            name: getLineItemName(item),
+            partNo: getLineItemPartNo(item),
             qty: item.qty,
             price: item.price,
-            unit: item.product?.unit || item.unit || 'pc'
+            unit: getLineItemUnit(item)
         }));
 
         printUnifiedReceipt({
@@ -385,7 +386,7 @@ export default function CheckoutModal({
                                         {(completedTx.items || []).map(item => {
                                             const price = parseFloat(item.price || 0);
                                             const itemTotal = price * item.qty;
-                                            const partNo = item.product?.part_no || item.partNo || item.part_no;
+                                            const partNo = getLineItemPartNo(item, '');
                                             const tierBadge = item.price_tier === 'price2' ? (
                                                 <span key={`${item.id}-badge`} style={{ fontSize: '9.5px', backgroundColor: '#F5F3FF', color: '#7C3AED', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', marginLeft: '4px' }}>P2</span>
                                             ) : (
@@ -395,7 +396,7 @@ export default function CheckoutModal({
                                                 <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '8px', alignItems: 'center', fontSize: '12.5px', color: '#1E293B', padding: '3px 0' }}>
                                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                         <span style={{ fontWeight: '600', color: '#0F172A' }}>
-                                                            {item.product?.name || item.name || 'Item'}
+                                                            {getLineItemName(item)}
                                                             {tierBadge}
                                                         </span>
                                                         {partNo && <span style={{ fontSize: '11px', color: '#64748B' }}>P/N: {partNo}</span>}

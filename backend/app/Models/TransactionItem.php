@@ -23,6 +23,10 @@ class TransactionItem extends Model
         'discount',
         'price_tier',
         'unit',
+        // Frozen at time of sale so history survives product/variant edits
+        'item_name',
+        'part_no',
+        'variant_label',
     ];
 
     protected $appends = ['net_qty'];

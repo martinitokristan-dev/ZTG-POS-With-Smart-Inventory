@@ -142,6 +142,7 @@ function ProductManagement() {
                 categories={pm.categories}
                 brands={pm.brands}
                 variantOptions={pm.variantOptions}
+                onCreateVariantOption={pm.handleCreateVariantOption}
                 handleAddressChange={pm.handleAddressChange}
                 handleImageUpload={pm.handleImageUpload}
                 uploadingImage={pm.uploadingImage}
@@ -161,6 +162,7 @@ function ProductManagement() {
                 categories={pm.categories}
                 brands={pm.brands}
                 variantOptions={pm.variantOptions}
+                onCreateVariantOption={pm.handleCreateVariantOption}
                 handleAddressChange={pm.handleAddressChange}
                 handleImageUpload={pm.handleImageUpload}
                 uploadingImage={pm.uploadingImage}

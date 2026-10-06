@@ -4,7 +4,7 @@ export default function CategoryModal({
     isOpen, showCategoryModal,
     onClose, setShowCategoryModal,
     selectedCategory, categoryName, setCategoryName,
-    categoryVariants, setCategoryVariants, getOptionsForType,
+    categoryVariants, setCategoryVariants, getOptionsForType, variantTypes = [],
     onSubmit, handleCategorySubmit,
     submitting, categorySubmitting = false
 }) {
@@ -46,13 +46,26 @@ export default function CategoryModal({
         });
     };
 
-    const variantsList = [
+    // Built-in types are always offered. Custom types created in Settings are appended,
+    // keyed by lowercase name (the same key the backend and product form use).
+    const builtInList = [
         { key: 'size', title: 'Size', typeName: 'Size' },
         { key: 'quality', title: 'Quality', typeName: 'Quality' },
         { key: 'color', title: 'Color', typeName: 'Color' },
         { key: 'specification', title: 'Specification', typeName: 'Specification' },
         { key: 'material', title: 'Material', typeName: 'Material' }
     ];
+    const builtInKeys = builtInList.map(v => v.key);
+    const customList = (variantTypes || [])
+        .filter(t => t?.name && !builtInKeys.includes(t.name.trim().toLowerCase()))
+        .map(t => ({ key: t.name.trim().toLowerCase(), title: t.name, typeName: t.name }));
+    // Keep any key already saved on this category visible even if its type was removed,
+    // so it can be unticked instead of silently sticking around.
+    const knownKeys = [...builtInKeys, ...customList.map(v => v.key)];
+    const orphanList = (categoryVariants || [])
+        .filter(k => !knownKeys.includes(k))
+        .map(k => ({ key: k, title: k, typeName: k }));
+    const variantsList = [...builtInList, ...customList, ...orphanList];
 
     return (
         <div className="modal-overlay" id="addCategoryModal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>

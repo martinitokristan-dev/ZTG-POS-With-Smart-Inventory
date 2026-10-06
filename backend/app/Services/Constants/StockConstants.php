@@ -18,7 +18,8 @@ class StockConstants
     public const DEFAULT_UOM = 'Piece / PCS';
 
     /**
-     * Days threshold for marking products as dead stock.
+     * Default days with no sales before a product is flagged as dead stock.
+     * Used when the `dead_stock_period` setting is missing or blank; matches the Settings page default.
      */
-    public const DEAD_STOCK_DAYS_THRESHOLD = 180;
+    public const DEAD_STOCK_DAYS_THRESHOLD = 30;
 }

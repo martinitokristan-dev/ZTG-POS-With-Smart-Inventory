@@ -10,6 +10,7 @@ import Unauthorized from './pages/Errors/Unauthorized';
 import Forbidden from './pages/Errors/Forbidden';
 import PrivateRoute from './shared/PrivateRoute';
 import AppShell from './shared/AppShell';
+import ConfirmDialogHost from './shared/components/ConfirmDialogHost';
 
 import Dashboard from './pages/Admin/Dashboard/index.jsx';
 import ProductManagement from './pages/Admin/ProductManagement/index.jsx';
@@ -173,6 +174,7 @@ function App() {
                             {/* Catch-all */}
                             <Route path="*" element={<Navigate to="/login" replace />} />
                         </Routes>
+                        <ConfirmDialogHost />
                     </InventoryProvider>
                 </ProductProvider>
             </NotificationProvider>

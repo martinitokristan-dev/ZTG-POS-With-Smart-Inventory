@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import api from '../../../../shared/api';
 import { showToast } from '../../../../utils/toast';
+import { confirmDialog } from '../../../../shared/utils/confirmDialog';
 
 export function useUserPermissions() {
     const [users, setUsers] = React.useState([]);
@@ -231,7 +232,12 @@ export function useUserPermissions() {
 
     const handleResetUserOverrides = async () => {
         if (!selectedUser) return;
-        if (!window.confirm(`Reset permissions for ${selectedUser.full_name || selectedUser.username} back to default ${selectedUser.role} role?`)) {
+        if (!(await confirmDialog({
+            title: 'Reset permissions?',
+            message: `${selectedUser.full_name || selectedUser.username} will go back to the default ${selectedUser.role} role permissions. Custom overrides will be removed.`,
+            confirmText: 'Reset',
+            variant: 'warning',
+        }))) {
             return;
         }
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import IOSSelect from '../../../../shared/components/IOSSelect';
+import { getLineItemName } from '../../../../shared/utils/lineItemDisplay';
 
 export default function FulfillOrderModal({
     isOpen, onClose, onSubmit, selected,
@@ -80,7 +81,7 @@ export default function FulfillOrderModal({
                                             {selected.items?.map((item, idx) => (
                                                 <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)', background: idx % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)' }}>
                                                     <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                                        <div>{item.product?.name || item.item_name || item.name || '—'}</div>
+                                                        <div>{getLineItemName(item, '—')}</div>
                                                         {(item.chinese_name || item.product?.chinese_name) && (
                                                             <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'normal', marginTop: '2px' }}>{item.chinese_name || item.product?.chinese_name}</div>
                                                         )}

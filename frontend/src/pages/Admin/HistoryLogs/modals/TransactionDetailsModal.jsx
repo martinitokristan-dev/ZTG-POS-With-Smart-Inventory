@@ -2,6 +2,7 @@ import React from 'react';
 import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 import { calculateItemDiscountBreakdown, formatDiscountRate } from '../../../../shared/utils/discountCalculator';
+import { getLineItemName, getLineItemPartNo } from '../../../../shared/utils/lineItemDisplay';
 
 export default function TransactionDetailsModal({ isOpen, onClose, transaction, fmtDate, fmt }) {
     if (!isOpen || !transaction) return null;
@@ -153,7 +154,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                         <thead style={{ background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)', fontSize: '12px', color: 'var(--table-text-secondary)' }}>
                             <tr>
                                 <th style={{ padding: '10px 12px', fontWeight: '700', letterSpacing: '0.04em', verticalAlign: 'bottom', width: hasRefundOrReturn ? '95px' : '105px' }}>PART NO.</th>
-                                <th style={{ padding: '10px 12px', fontWeight: '700', letterSpacing: '0.04em', verticalAlign: 'bottom' }}>PRODUCT</th>
+                                <th style={{ padding: '10px 12px', fontWeight: '700', letterSpacing: '0.04em', verticalAlign: 'bottom' }}>PRODUCT / BRAND</th>
                                 <th style={{ padding: '10px 6px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'center', verticalAlign: 'bottom', width: '45px' }}>QTY</th>
                                 <th style={{ padding: '10px 8px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'right', verticalAlign: 'bottom', width: '75px' }}>PRICE</th>
                                 <th style={{ padding: '10px 8px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'right', verticalAlign: 'bottom', width: '85px' }}>SALES</th>
@@ -177,8 +178,8 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                         </thead>
                         <tbody style={{ fontSize: '14px' }}>
                              {processedItems.map((item, index) => {
-                                const partNo = item.product?.part_no || item.part_no || '—';
-                                const name = item.product?.name || item.name || 'Unknown Part';
+                                const partNo = getLineItemPartNo(item);
+                                const name = getLineItemName(item, 'Unknown Part');
                                 const brandVal = item.product?.brand || item.brand || item.product?.parent?.brand;
                                 const itemDiscTotal = item.itemDisc;
                                 const refundedQty = item.refundedQty;

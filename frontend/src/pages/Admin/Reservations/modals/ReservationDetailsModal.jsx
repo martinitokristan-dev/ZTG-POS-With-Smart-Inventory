@@ -2,6 +2,7 @@ import React from 'react';
 import CopyableText from '../../../../shared/components/CopyableText';
 import StatusBadge from '../../../../shared/components/StatusBadge';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
+import { getLineItemName } from '../../../../shared/utils/lineItemDisplay';
 
 export default function ReservationDetailsModal({ isOpen, onClose, reservation, fmt, fmtDate, onPrintCR, onReprintDepositCR, onReprintBalanceCR }) {
     if (!isOpen || !reservation) return null;
@@ -121,7 +122,7 @@ export default function ReservationDetailsModal({ isOpen, onClose, reservation, 
                                             const rawPNo = item.product?.part_no || item.part_no;
                                             const pNo = (!rawPNo || String(rawPNo).trim().toUpperCase() === 'N/A' || String(rawPNo).trim() === '') ? '—' : String(rawPNo).trim();
                                             const isDash = pNo === '—';
-                                            const pName = item.product?.name || item.item_name || item.name || 'Unknown Product';
+                                            const pName = getLineItemName(item, 'Unknown Product');
                                             const unitPrice = Number(item.price || 0);
                                             const qty = Number(item.qty || 1);
                                             const lineTotal = unitPrice * qty;

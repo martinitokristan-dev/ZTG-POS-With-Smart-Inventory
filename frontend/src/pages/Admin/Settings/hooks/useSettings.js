@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../../../../shared/api';
 import { fetchSettingData, resetSettingsCache } from '../../../../shared/hooks/useSettingsCache';
+import { confirmDialog } from '../../../../shared/utils/confirmDialog';
 import { useProducts } from '../../../../contexts/ProductContext';
 import { useNotifications } from '../../../../contexts/NotificationContext';
 import { showToast } from '../../../../utils/toast';
@@ -764,16 +765,25 @@ export default function useSettings() {
     // ------------------------------------------------------------------------
     const [categorySubmitting, setCategorySubmitting] = useState(false);
 
+    // Type ids for the chosen variant keys, or undefined when a key has no type row yet (a built-in type
+    // nobody has added options to). Keeps the optimistic category copy consistent: `variant_type_ids`
+    // must never be left holding the OLD ids next to the new `variants`.
+    const idsForVariantKeys = (keys) => {
+        const ids = (keys || []).map(k => variantTypes.find(t => t.name?.trim().toLowerCase() === k)?.id);
+        return ids.every(id => id !== undefined) ? ids : undefined;
+    };
+
     const handleCategorySubmit = async (e) => {
         e.preventDefault();
         if (categorySubmitting) return;
         setCategorySubmitting(true);
         let commitFn, rollbackFn;
+        const optimisticData = { name: categoryName, variants: categoryVariants, variant_type_ids: idsForVariantKeys(categoryVariants) };
         if (selectedCategory) {
-            const { commit, rollback } = optimisticUpdateCategory(selectedCategory.id, { name: categoryName, variants: categoryVariants });
+            const { commit, rollback } = optimisticUpdateCategory(selectedCategory.id, optimisticData);
             commitFn = commit; rollbackFn = rollback;
         } else {
-            const { commit, rollback } = optimisticUpdateCategory(Date.now(), { name: categoryName, variants: categoryVariants });
+            const { commit, rollback } = optimisticUpdateCategory(Date.now(), optimisticData);
             commitFn = commit; rollbackFn = rollback;
         }
 
@@ -801,7 +811,11 @@ export default function useSettings() {
     };
 
     const handleDeleteCategory = async (cat) => {
-        if (!window.confirm(`Are you sure you want to delete ${cat.name}?`)) return;
+        if (!(await confirmDialog({
+            title: 'Delete category?',
+            message: `"${cat.name}" will be removed. Categories that still have products cannot be deleted.`,
+            confirmText: 'Delete',
+        }))) return;
         const { commit, rollback } = optimisticDeleteCategory(cat.id);
         try {
             await api.delete(`/categories/${cat.id}`);
@@ -862,7 +876,11 @@ export default function useSettings() {
     };
 
     const handleDeleteBrand = async (brand) => {
-        if (!window.confirm(`Are you sure you want to delete brand "${brand.name}"?`)) return;
+        if (!(await confirmDialog({
+            title: 'Delete brand?',
+            message: `"${brand.name}" will be removed. Products using it will keep working without a brand.`,
+            confirmText: 'Delete',
+        }))) return;
         try {
             await api.delete(`/brands/${brand.id}`);
             setBrands(prev => prev.filter(b => b.id !== brand.id));
@@ -962,7 +980,11 @@ export default function useSettings() {
     };
 
     const handleDeleteVariantOption = async (optionId, typeName) => {
-        if (!window.confirm('Delete this variant option?')) return;
+        if (!(await confirmDialog({
+            title: 'Delete option?',
+            message: 'This option will be removed. Options that products still use cannot be deleted.',
+            confirmText: 'Delete',
+        }))) return;
         try {
             await api.delete(`/variant-options/${optionId}`);
             setVariantTypes(prev => prev.map(vt => {
@@ -978,6 +1000,93 @@ export default function useSettings() {
             showToast('Variant option deleted.', 'success');
         } catch (err) {
             showToast(err.response?.data?.message || 'Failed to delete variant option.', 'error');
+        }
+    };
+
+    /**
+     * Create a custom variant type (e.g. "Voltage"). Resolves to true on success so the
+     * caller can clear its input. Opens the new type's tab so options can be added right away.
+     */
+    const handleAddVariantType = async (rawName) => {
+        const name = (rawName || '').trim();
+        if (!name) return false;
+        if (variantTypes.some(v => v.name?.toLowerCase() === name.toLowerCase())) {
+            showToast(`"${name}" already exists.`, 'error');
+            return false;
+        }
+
+        try {
+            const res = await api.post('/variants', { name });
+            const created = res.data?.variant_type;
+            if (!created) throw new Error('Unexpected server response.');
+
+            setVariantTypes(prev => [...prev, { ...created, options: created.options || [] }]);
+            resetSettingsCache('variants');
+            setActiveSubTab(`vt:${created.id}`);
+            showToast(`Variant type "${name}" created. Add its options below.`, 'success');
+            return true;
+        } catch (err) {
+            const apiErrors = err.response?.data?.errors;
+            const firstError = apiErrors ? Object.values(apiErrors).flat()[0] : null;
+            showToast(firstError || err.response?.data?.message || 'Failed to create variant type.', 'error');
+            return false;
+        }
+    };
+
+    /**
+     * Delete a custom variant type. The server refuses when products use it or a
+     * category still has it assigned, and its message is shown as-is.
+     */
+    const handleDeleteVariantType = async (type) => {
+        if (!type) return;
+        if (!(await confirmDialog({
+            title: 'Delete variant type?',
+            message: `"${type.name}" and all of its options will be removed. Types that products or categories still use cannot be deleted.`,
+            confirmText: 'Delete',
+        }))) return;
+
+        try {
+            await api.delete(`/variants/${type.id}`);
+            setVariantTypes(prev => prev.filter(v => v.id !== type.id));
+            resetSettingsCache('variants');
+            setActiveSubTab('categories');
+            showToast(`Variant type "${type.name}" deleted.`, 'success');
+        } catch (err) {
+            const apiErrors = err.response?.data?.errors;
+            const firstError = apiErrors ? Object.values(apiErrors).flat()[0] : null;
+            showToast(firstError || err.response?.data?.message || 'Failed to delete variant type.', 'error');
+        }
+    };
+
+    /**
+     * Rename a custom variant type. The server also updates every category that uses the type,
+     * so categories are re-fetched afterwards. Resolves to true on success.
+     */
+    const handleRenameVariantType = async (type, rawName) => {
+        const name = (rawName || '').trim();
+        if (!type || !name || name === type.name) return false;
+        if (variantTypes.some(v => v.id !== type.id && v.name?.toLowerCase() === name.toLowerCase())) {
+            showToast(`"${name}" already exists.`, 'error');
+            return false;
+        }
+
+        try {
+            const res = await api.put(`/variants/${type.id}`, { name });
+            const updated = res.data?.variant_type;
+            if (!updated) throw new Error('Unexpected server response.');
+
+            setVariantTypes(prev => prev.map(v => v.id === type.id ? { ...v, name: updated.name } : v));
+            resetSettingsCache('variants');
+            resetSettingsCache('categories');
+            refetchCategories();
+            loadCategories();
+            showToast(`Variant type renamed to "${updated.name}".`, 'success');
+            return true;
+        } catch (err) {
+            const apiErrors = err.response?.data?.errors;
+            const firstError = apiErrors ? Object.values(apiErrors).flat()[0] : null;
+            showToast(firstError || err.response?.data?.message || 'Failed to rename variant type.', 'error');
+            return false;
         }
     };
 
@@ -1046,7 +1155,11 @@ export default function useSettings() {
 
     const handleDeleteUom = async (index) => {
         const item = uomList[index];
-        if (!window.confirm(`Delete Unit of Measure "${item}"?`)) return;
+        if (!(await confirmDialog({
+            title: 'Delete unit of measure?',
+            message: `"${item}" will be removed from the list. Products already using it keep their unit.`,
+            confirmText: 'Delete',
+        }))) return;
         const updated = uomList.filter((_, i) => i !== index);
         await handleSaveUomList(updated);
         showToast(`Unit of Measure "${item}" deleted.`, 'success');
@@ -1081,7 +1194,11 @@ export default function useSettings() {
     };
 
     const handleDeleteRule = async (rule) => {
-        if (!window.confirm('Delete this alert rule?')) return;
+        if (!(await confirmDialog({
+            title: 'Delete alert rule?',
+            message: `"${rule.name || 'This rule'}" will stop sending alerts.`,
+            confirmText: 'Delete',
+        }))) return;
         try {
             await api.delete(`/alert-rules/${rule.id}`);
             setAlertRules(prev => prev.filter(r => r.id !== rule.id));
@@ -1349,6 +1466,7 @@ export default function useSettings() {
         categories, showCategoryModal, setShowCategoryModal, selectedCategory, setSelectedCategory,
         categoryName, setCategoryName, categoryVariants, setCategoryVariants,
         newOptionValue, setNewOptionValue, categorySubmitting,
+        variantTypes, handleAddVariantType, handleDeleteVariantType, handleRenameVariantType,
         handleCategorySubmit, handleDeleteCategory, handleAddVariantOption, handleUpdateVariantOption, handleDeleteVariantOption, getOptionsForType,
         uomList, newUomValue, setNewUomValue, editingUomIndex, setEditingUomIndex, editUomValue, setEditUomValue,
         handleAddUom, handleUpdateUom, handleDeleteUom,

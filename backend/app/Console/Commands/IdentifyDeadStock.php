@@ -11,6 +11,7 @@ use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
 use App\Events\NotificationSent;
 use App\Events\ProductUpdated;
+use App\Services\Constants\StockConstants;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -39,7 +40,7 @@ class IdentifyDeadStock extends Command
         $this->info('Starting dead stock identification scan...');
 
         // 1. Get setting threshold and alert toggle
-        $days = (int) Setting::where('key', 'dead_stock_period')->value('value') ?: 30;
+        $days = (int) Setting::where('key', 'dead_stock_period')->value('value') ?: StockConstants::DEAD_STOCK_DAYS_THRESHOLD;
         $sendAlerts = Setting::where('key', 'send_dead_stock_alerts')->value('value') !== 'false';
         $this->info("   Threshold config: {$days} days with no sales. (Send Alerts: " . ($sendAlerts ? 'Enabled' : 'Disabled') . ")");
 

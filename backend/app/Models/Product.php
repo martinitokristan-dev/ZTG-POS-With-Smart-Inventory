@@ -62,6 +62,45 @@ class Product extends Model
         return null;
     }
 
+    /**
+     * Name to freeze on sale/reservation lines. Variants without their own name use the parent's.
+     *
+     * Eager-load `parent` before calling this in a loop to avoid one query per row.
+     *
+     * @return string|null The display name, or null if neither product nor parent has one.
+     */
+    public function snapshotName(): ?string
+    {
+        if (!empty($this->name)) {
+            return $this->name;
+        }
+
+        return $this->parent_product_id ? $this->parent?->name : null;
+    }
+
+    /**
+     * Human-readable variant label such as "M, Black", ordered by variant type.
+     *
+     * Falls back to the legacy free-text `variant_options` column. Eager-load
+     * `variantOptions` before calling this in a loop to avoid one query per row.
+     *
+     * @return string|null The label, or null when the product has no variant options.
+     */
+    public function variantLabel(): ?string
+    {
+        $label = $this->variantOptions
+            ->sortBy([['variant_type_id', 'asc'], ['id', 'asc']])
+            ->pluck('value')
+            ->filter()
+            ->implode(', ');
+
+        if ($label !== '') {
+            return $label;
+        }
+
+        return !empty($this->variant_options) ? $this->variant_options : null;
+    }
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);

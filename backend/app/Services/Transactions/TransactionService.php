@@ -231,8 +231,10 @@ class TransactionService
      */
     private function checkDailyVoidLimit(int $cashierId): void
     {
-        $limitSetting = Setting::where('key', 'daily_void_limit')->first();
-        $limit = $limitSetting ? (int) $limitSetting->value : 5;
+        // A blank/non-numeric saved value falls back to the default instead of becoming 0,
+        // which would silently block every void.
+        $rawLimit = Setting::where('key', 'daily_void_limit')->value('value');
+        $limit = is_numeric($rawLimit) ? (int) $rawLimit : SecurityConstants::DEFAULT_DAILY_VOID_LIMIT;
 
         $todayVoids = Transaction::where('cashier_id', $cashierId)
             ->where('status', TransactionStatus::VOID->value)

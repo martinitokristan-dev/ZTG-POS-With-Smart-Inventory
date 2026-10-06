@@ -8,6 +8,8 @@
  * - Exact Number Formatting (#,##0.00)
  */
 
+import { getLineItemName } from './lineItemDisplay';
+
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -141,7 +143,7 @@ export const copyReservationsToClipboard = async (reservationsList = [], activeT
       const dateOrder = formatDate(r.date || r.created_at);
       const rawPNo = item.product?.part_no || item.part_no;
       const partNo = (!rawPNo || String(rawPNo).trim().toUpperCase() === 'N/A' || String(rawPNo).trim() === '' || String(rawPNo).trim() === '—') ? '' : String(rawPNo).trim();
-      const description = item.product?.name || item.item_name || item.name || '—';
+      const description = getLineItemName(item, '—');
       const enginePlate = r.engine_plate_number || item.engine_plate_number || '';
       const qtyOrdered = Number(item.qty || 1);
       const custName = (r.customer?.name || r.customer_name || '—').toUpperCase();

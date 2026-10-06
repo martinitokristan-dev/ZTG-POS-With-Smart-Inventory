@@ -110,7 +110,7 @@ export default function ProductGrid({
                     <table className="pos-table data-table" style={{ width: '100%', minWidth: '650px', borderCollapse: 'collapse' }}>
                         <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--table-header-bg)' }}>
                             <tr>
-                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)', maxWidth: '200px' }}>Product</th>
+                                <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)', maxWidth: '200px' }}>Product / Brand</th>
                                 <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Part No.</th>
                                 <th style={{ textAlign: 'left', padding: '12px 14px', fontSize: '12.5px', fontWeight: '600', letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)', borderBottom: '2px solid var(--table-border)' }}>Category</th>
                                 {track_warehouse_locations && (

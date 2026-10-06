@@ -37,7 +37,10 @@ export function showToast(message, type = 'success') {
         -webkit-backdrop-filter: blur(12px);
     `;
 
-    toast.innerHTML = `<span>${message}</span>`;
+    // Plain text only: messages can come from the server and contain user-typed names.
+    const text = document.createElement('span');
+    text.textContent = String(message ?? '');
+    toast.appendChild(text);
     container.appendChild(toast);
 
     requestAnimationFrame(() => {

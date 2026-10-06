@@ -39,6 +39,7 @@ class UpdateProductRequest extends FormRequest
             'variants'                => 'nullable|array',
             'variants.*.id'           => 'nullable|integer|exists:products,id',
             'variants.*.name'         => 'nullable|string|max:255',
+            'variants.*.status'       => 'nullable|string|in:Active,Low Stock,No Stock,Disabled',
             'variants.*.part_no'      => 'nullable|string|max:50|distinct|different:part_no',
             'variants.*.stock'        => 'required_with:variants|integer|min:0',
             'variants.*.alert_limit'  => 'nullable|integer|min:0',

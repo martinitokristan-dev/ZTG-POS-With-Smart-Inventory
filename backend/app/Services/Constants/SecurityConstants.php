@@ -26,4 +26,10 @@ class SecurityConstants
      * Threshold for logging failed attempts.
      */
     public const FAILED_ATTEMPT_LOG_THRESHOLD = 3;
+
+    /**
+     * Daily void limit per cashier used when the `daily_void_limit` setting is missing or blank.
+     * Matches the Settings page default.
+     */
+    public const DEFAULT_DAILY_VOID_LIMIT = 5;
 }

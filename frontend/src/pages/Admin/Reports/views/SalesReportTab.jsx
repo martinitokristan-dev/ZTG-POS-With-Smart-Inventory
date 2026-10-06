@@ -9,6 +9,7 @@ import { showToast } from '../../../../utils/toast';
 import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 import TablePagination from '../../../../shared/components/TablePagination';
+import { getLineItemName, getLineItemPartNo } from '../../../../shared/utils/lineItemDisplay';
 
 export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtDate, isReportGenerated, setIsReportGenerated, startDate, setStartDate, endDate, setEndDate }) {
     const [confirming, setConfirming] = useState(false);
@@ -393,7 +394,7 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                 <th style={{ padding: '10px 12px', fontWeight: '600' }}>Date</th>
                                 <th style={{ padding: '10px 12px', fontWeight: '600' }}>S.I./C.R./D.R.</th>
                                 <th style={{ padding: '10px 12px', fontWeight: '600' }}>Part No.</th>
-                                <th style={{ padding: '10px 14px', fontWeight: '600' }}>Product</th>
+                                <th style={{ padding: '10px 14px', fontWeight: '600' }}>Product / Brand</th>
                                 <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: '600' }}>Qty</th>
                                 <th style={{ padding: '10px 10px', textAlign: 'right', fontWeight: '600' }}>Price</th>
                                 <th style={{ padding: '10px 10px', textAlign: 'right', fontWeight: '600' }}>Sales</th>
@@ -429,8 +430,8 @@ export default function SalesReportTab({ salesSummary, employees = [], fmt, fmtD
                                         ? 'var(--danger, #DC2626)'
                                         : 'var(--success, #16A34A)';
                                     const amountPrefix = isFullDeduction ? '- ' : '';
-                                    const resolvedName = item.product?.name || item.name || 'Unknown Product';
-                                    const resolvedPartNo = item.product?.part_no || item.partNo || 'N/A';
+                                    const resolvedName = getLineItemName(item, 'Unknown Product');
+                                    const resolvedPartNo = getLineItemPartNo(item, 'N/A');
                                     const resolvedBrand = item.product?.brand || item.brand;
                                     const breakdown = calculateItemDiscountBreakdown(item, tx);
                                     const unitPrice = breakdown.unitPrice;
