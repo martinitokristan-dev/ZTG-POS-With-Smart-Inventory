@@ -21,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // proxy adds itself, so a client cannot spoof its IP by sending its own header.
         // ('**' would trust every hop and must not be used.)
         $middleware->trustProxies(at: '*');
+        // Behind Cloudflare that right-most entry is a Cloudflare server, so the real visitor
+        // IP comes from CF-Connecting-IP instead (see the middleware for details).
+        $middleware->append(\App\Http\Middleware\UseCloudflareClientIp::class);
         $middleware->alias([
             'role'       => \App\Http\Middleware\RoleMiddleware::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,

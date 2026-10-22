@@ -56,6 +56,13 @@ return [
 
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
 
+    // Read the visitor IP from Cloudflare's CF-Connecting-IP header (UseCloudflareClientIp).
+    // On by default in production, where all traffic arrives through Cloudflare (Render).
+    'trust_cloudflare_ip' => filter_var(
+        env('TRUST_CLOUDFLARE_IP', env('APP_ENV', 'production') === 'production'),
+        FILTER_VALIDATE_BOOLEAN
+    ),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

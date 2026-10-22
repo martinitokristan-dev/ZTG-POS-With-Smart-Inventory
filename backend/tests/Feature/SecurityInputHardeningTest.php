@@ -126,6 +126,66 @@ class SecurityInputHardeningTest extends TestCase
         $this->postJson('/api/login', ['login_id' => 'nobody21', 'password' => 'wrong'])->assertStatus(429);
     }
 
+    /**
+     * Production path: visitor -> Cloudflare -> Render proxy -> app. The right-most
+     * X-Forwarded-For entry is a Cloudflare server that changes per request; the real visitor
+     * is in CF-Connecting-IP. Found in production: the 21st login was not limited.
+     */
+    public function test_login_limit_uses_the_cloudflare_visitor_ip_behind_rotating_cloudflare_servers(): void
+    {
+        config(['app.trust_cloudflare_ip' => true]);
+
+        for ($i = 1; $i <= 20; $i++) {
+            $this->withHeaders([
+                'CF-Connecting-IP' => '203.0.113.7',
+                'X-Forwarded-For'  => "203.0.113.7, 172.70.0.{$i}", // A different Cloudflare server each time
+            ])->postJson('/api/login', ['login_id' => "nobody{$i}", 'password' => 'wrong'])->assertStatus(422);
+        }
+
+        $this->withHeaders([
+            'CF-Connecting-IP' => '203.0.113.7',
+            'X-Forwarded-For'  => '203.0.113.7, 172.70.0.99',
+        ])->postJson('/api/login', ['login_id' => 'nobody21', 'password' => 'wrong'])->assertStatus(429);
+
+        // Another visitor behind the same Cloudflare servers is not affected.
+        $this->withHeaders([
+            'CF-Connecting-IP' => '198.51.100.20',
+            'X-Forwarded-For'  => '198.51.100.20, 172.70.0.1',
+        ])->postJson('/api/login', ['login_id' => 'someone', 'password' => 'wrong'])->assertStatus(422);
+    }
+
+    public function test_the_same_account_locks_after_five_tries_behind_cloudflare(): void
+    {
+        config(['app.trust_cloudflare_ip' => true]);
+
+        for ($i = 1; $i <= 5; $i++) {
+            $response = $this->withHeaders([
+                'CF-Connecting-IP' => '203.0.113.8',
+                'X-Forwarded-For'  => "203.0.113.8, 172.71.0.{$i}",
+            ])->postJson('/api/login', ['login_id' => 'admin1', 'password' => 'wrong']);
+        }
+
+        $response->assertStatus(422);
+        $this->assertStringContainsString('Too many failed login attempts', $response->json('errors.login_id.0'));
+    }
+
+    public function test_an_invalid_or_disabled_cloudflare_header_is_ignored(): void
+    {
+        // Disabled (e.g. local dev without Cloudflare): the header must not change the IP.
+        config(['app.trust_cloudflare_ip' => false]);
+        $middleware = new \App\Http\Middleware\UseCloudflareClientIp();
+        $request = \Illuminate\Http\Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => '10.0.0.1']);
+        $request->headers->set('CF-Connecting-IP', '203.0.113.9');
+        $middleware->handle($request, fn () => response('ok'));
+        $this->assertNull($request->headers->get('X-Forwarded-For'));
+
+        // Enabled but not a valid IP: ignored.
+        config(['app.trust_cloudflare_ip' => true]);
+        $request->headers->set('CF-Connecting-IP', 'not-an-ip');
+        $middleware->handle($request, fn () => response('ok'));
+        $this->assertNull($request->headers->get('X-Forwarded-For'));
+    }
+
     public function test_login_tokens_expire_after_a_day(): void
     {
         $this->assertSame(1440, config('sanctum.expiration'));
