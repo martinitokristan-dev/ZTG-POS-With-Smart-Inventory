@@ -5,6 +5,10 @@ FROM php:8.2.35-apache
 # Install dependencies
 RUN apt-get update && apt-get install -y \
     libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype-dev \
+    libwebp-dev \
+    libzip-dev \
     libonig-dev \
     libxml2-dev \
     zip \
@@ -16,7 +20,10 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd pdo_pgsql
+# - zip: required by phpoffice/phpspreadsheet (Excel product import)
+# - gd with JPEG/WebP/FreeType: the import reads pictures from the sheet and writes JPEG thumbnails
+RUN docker-php-ext-configure gd --with-jpeg --with-freetype --with-webp \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd pdo_pgsql zip
 
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
