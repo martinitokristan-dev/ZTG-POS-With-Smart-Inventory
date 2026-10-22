@@ -3,6 +3,10 @@ import { useInventory } from './hooks/useInventory';
 import InventoryTable from './views/InventoryTable';
 import ViewProductModal from './modals/ViewProductModal';
 import IOSSelect from '../../../shared/components/IOSSelect';
+import ProductImportModal from './modals/ProductImportModal';
+import useProductImport from './hooks/useProductImport';
+import useSystemSettings from '../../../shared/hooks/useSystemSettings';
+import { useModulePermission } from '../../../shared/hooks/useModulePermission';
 
 export default function Inventory() {
     const {
@@ -22,8 +26,19 @@ export default function Inventory() {
         dateFilter, setDateFilter,
         page, setPage,
         perPage, setPerPage,
-        pagination
+        pagination,
+        refreshAll,
+        highlightedId
     } = useInventory();
+
+    // Importing creates products, so it follows the Products "create" permission (same as the backend route).
+    const productPermissions = useModulePermission('products');
+    const importFlow = useProductImport({ onImported: refreshAll });
+    const { price1_label, price2_label } = useSystemSettings();
+    const categoryNames = [...new Set([
+        ...categories.map(c => c.name),
+        ...(importFlow.preview?.plan?.entities?.categories || []).map(c => c.name),
+    ])];
 
     return (
         <>
@@ -32,12 +47,25 @@ export default function Inventory() {
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                             <h1 style={{ fontSize: '20px', margin: 0 }}>Inventory Management</h1>
-                            <span className="badge badge-success" style={{ fontSize: '11px', padding: '4px 10px', display: 'inline-block' }}>Read-Only View</span>
+                            {!productPermissions.canCreate && (
+                                <span className="badge badge-success" style={{ fontSize: '11px', padding: '4px 10px', display: 'inline-block' }}>Read-Only View</span>
+                            )}
                         </div>
                         <div className="page-description" style={{ marginTop: '4px', fontSize: '12px' }}>
                             {totalItems} total items across {categoriesCount} categories · {outOfStockCount} out of stock · {lowStockCount} low stock
                         </div>
                     </div>
+                    {productPermissions.canCreate && (
+                        <button type="button" className="btn btn-primary" onClick={importFlow.openImport}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                            Import from Excel
+                        </button>
+                    )}
                 </div>
 
                 <div className="content-body">
@@ -99,6 +127,7 @@ export default function Inventory() {
                         onPageChange={setPage}
                         perPage={perPage}
                         onPerPageChange={setPerPage}
+                        highlightedId={highlightedId}
                     />
 
                 </div>
@@ -106,6 +135,15 @@ export default function Inventory() {
             <ViewProductModal 
                 showViewModal={showViewModal} setShowViewModal={setShowViewModal}
                 selectedProduct={selectedProduct}
+            />
+
+            <ProductImportModal
+                isOpen={importFlow.isOpen}
+                onClose={importFlow.closeImport}
+                flow={importFlow}
+                categoryNames={categoryNames}
+                priceLabels={{ price1: price1_label || 'Price 1', price2: price2_label || 'Price 2' }}
+                canUndo={productPermissions.canDelete}
             />
         </>
     );

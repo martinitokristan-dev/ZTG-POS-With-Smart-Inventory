@@ -161,25 +161,43 @@ class PhaseSevenTest extends TestCase
             'message' => 'Product running low',
         ]);
 
+        // Notifications belong to Admin/Supervisor (security review, Sprint 21), so an Admin acts here.
         // Mark as read
-        $response = $this->actingAs($this->cashier)
+        $response = $this->actingAs($this->admin)
             ->patchJson("/api/notifications/{$notif->id}/read");
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('notifications', ['id' => $notif->id, 'is_read' => true]);
 
         // Read all
-        $response = $this->actingAs($this->cashier)
+        $response = $this->actingAs($this->admin)
             ->postJson('/api/notifications/read-all');
 
         $response->assertStatus(200);
 
         // Delete
-        $response = $this->actingAs($this->cashier)
+        $response = $this->actingAs($this->admin)
             ->deleteJson("/api/notifications/{$notif->id}");
 
         $response->assertStatus(200);
         $this->assertDatabaseMissing('notifications', ['id' => $notif->id]);
+    }
+
+    public function test_cashier_cannot_change_or_delete_notifications()
+    {
+        $notif = Notification::create([
+            'type'     => NotificationType::SYSTEM->value,
+            'sub_type' => 'security_alert',
+            'title'    => 'Security Alert',
+            'message'  => 'Failed login attempts',
+            'is_read'  => false,
+        ]);
+
+        $this->actingAs($this->cashier)->patchJson("/api/notifications/{$notif->id}/read")->assertStatus(403);
+        $this->actingAs($this->cashier)->postJson('/api/notifications/read-all')->assertStatus(403);
+        $this->actingAs($this->cashier)->deleteJson("/api/notifications/{$notif->id}")->assertStatus(403);
+
+        $this->assertDatabaseHas('notifications', ['id' => $notif->id, 'is_read' => false]);
     }
 
     /* ─── Log Tests ───────────────────────────────────────── */

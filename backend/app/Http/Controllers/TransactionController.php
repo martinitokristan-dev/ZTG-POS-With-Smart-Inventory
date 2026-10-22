@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ListTransactionsRequest;
 use App\Http\Requests\RefundReturnRequest;
 use App\Http\Requests\VerifyPinRequest;
 use App\Http\Requests\VoidRequest;
@@ -23,30 +24,20 @@ class TransactionController extends Controller
     /**
      * List transactions with filters: status, type, cashier_id, date_from, date_to, search.
      */
-    public function index(Request $request): JsonResponse
+    public function index(ListTransactionsRequest $request): JsonResponse
     {
-        $filters = $request->only([
-            'status', 'type', 'tx_type', 'cashier_id', 'date_from', 'date_to', 'search', 'payment_method', 'sort_by', 'sort_order'
-        ]);
-
-        // Security: If logged-in user is a Cashier, strictly isolate queries to their own cashier session/transactions
-        $user = $request->user();
-        $roleName = is_object($user?->role) ? ($user->role->value ?? (string)$user->role) : (string)($user?->role ?? '');
-        if (strcasecmp($roleName, 'Cashier') === 0) {
-            $filters['cashier_id'] = $user->id;
-        }
-
-        $transactions = $this->transactionService->getAll($filters);
+        $transactions = $this->transactionService->getAll($this->listFilters($request));
 
         return response()->json($transactions);
     }
 
     /**
      * Get a single transaction with all relationships.
+     * A Cashier gets 404 for another cashier's transaction (same rule as the list).
      */
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
-        $transaction = $this->transactionService->show($id);
+        $transaction = $this->transactionService->show($id, $this->ownTransactionsOnly($request));
         return response()->json($transaction);
     }
 
@@ -138,5 +129,53 @@ class TransactionController extends Controller
             'message'     => 'Pending order paid successfully.',
             'transaction' => $updated,
         ]);
+    }
+
+    /**
+     * Find which list page holds a transaction (used by "View invoice" in notifications).
+     *
+     * Accepts the same filters as index(), so the page matches what the user sees.
+     * Responds { found: false } when the transaction doesn't exist or is hidden by the filters.
+     */
+    public function findPage(ListTransactionsRequest $request, int $id): JsonResponse
+    {
+        return response()->json(
+            $this->transactionService->findPage($id, $this->listFilters($request))
+        );
+    }
+
+    /**
+     * Filters accepted by the transaction list, with cashier isolation applied.
+     * A Cashier only ever sees their own transactions.
+     */
+    private function listFilters(ListTransactionsRequest $request): array
+    {
+        $filters = array_intersect_key($request->validated(), array_flip([
+            'status', 'type', 'tx_type', 'cashier_id', 'date_from', 'date_to', 'search', 'payment_method', 'sort_by', 'sort_order'
+        ]));
+
+        $ownId = $this->ownTransactionsOnly($request);
+        if ($ownId !== null) {
+            $filters['cashier_id'] = $ownId;
+        }
+
+        return $filters;
+    }
+
+    /**
+     * The user id to restrict transactions to, or null when the user may see everyone's.
+     *
+     * Based on permissions, not the role name, so custom roles follow the same rule:
+     * only users who can view History Logs (Admin, or any role granted it) see every
+     * cashier's transactions. Everyone else (Cashier, custom front-desk roles) sees their own.
+     */
+    private function ownTransactionsOnly(Request $request): ?int
+    {
+        $user = $request->user();
+        if (!$user) {
+            return null; // Unreachable behind auth:sanctum; kept for static analysis.
+        }
+
+        return $user->hasPermission('history_logs', 'can_view') ? null : $user->id;
     }
 }

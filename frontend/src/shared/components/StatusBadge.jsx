@@ -18,6 +18,8 @@ const STATUS_CONFIG = {
     'partial return':   { className: 'status-pending', text: 'Partial Return' },
     partial_return:     { className: 'status-pending', text: 'Partial Return' },
     void:               { className: 'status-void', text: 'Voided' },
+    imported:           { className: 'status-completed', text: 'Imported' },
+    'import undone':    { className: 'status-void', text: 'Import Undone' },
     cancelled:          { className: 'status-void', text: 'Cancelled' },
 };
 

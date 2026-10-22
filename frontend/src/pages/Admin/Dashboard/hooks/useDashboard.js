@@ -23,17 +23,18 @@ export function useDashboard() {
 
     // Replace local fetch with context
     const { unreadCount: notificationsCount } = useNotifications();
-    const { inventory: products, refetch: refetchInventory } = useInventory();
+    const { inventory: products, refreshIfStale: refreshInventoryIfStale } = useInventory();
 
     // Top selling products state
     const [topProducts, setTopProducts] = useState([]);
 
-    // Always fetch fresh inventory data on dashboard load
+    // Refresh inventory on dashboard load, unless it was just loaded (the app loads it on start
+    // and realtime events keep it current), so opening the dashboard doesn't download it twice.
     useEffect(() => {
-        if (typeof refetchInventory === 'function') {
-            refetchInventory();
+        if (typeof refreshInventoryIfStale === 'function') {
+            refreshInventoryIfStale();
         }
-    }, [refetchInventory]);
+    }, [refreshInventoryIfStale]);
 
     // Instantly calculate total stock & product metrics whenever products update
     useEffect(() => {

@@ -11,7 +11,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(
+            \App\Services\Products\Import\Images\ImportImageUploader::class,
+            \App\Services\Products\Import\Images\CloudinaryImportImageUploader::class
+        );
     }
 
     /**
@@ -24,6 +27,25 @@ class AppServiceProvider extends ServiceProvider
         if (app()->environment('production') || str_contains((string) config('app.url'), 'https://')) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
+
+        // Realtime is best-effort: a Pusher outage is logged instead of failing the request
+        // (see ResilientPusherBroadcaster). Same Pusher client Laravel would build itself.
+        \Illuminate\Support\Facades\Broadcast::extend('pusher', function ($app, array $config) {
+            return new \App\Broadcasting\ResilientPusherBroadcaster(
+                $app->make(\Illuminate\Broadcasting\BroadcastManager::class)->pusher($config),
+                $config['jsonp'] ?? false
+            );
+        });
+
+        // Literal "contains" search: % and _ typed by the user are not wildcards (see LikeSearch).
+        \Illuminate\Database\Query\Builder::macro('whereContains', function (string $column, string $term) {
+            /** @var \Illuminate\Database\Query\Builder $this */
+            return \App\Support\LikeSearch::apply($this, $column, $term, 'and');
+        });
+        \Illuminate\Database\Query\Builder::macro('orWhereContains', function (string $column, string $term) {
+            /** @var \Illuminate\Database\Query\Builder $this */
+            return \App\Support\LikeSearch::apply($this, $column, $term, 'or');
+        });
 
         \App\Models\Product::observe(\App\Observers\ProductObserver::class);
         \App\Models\Transaction::observe(\App\Observers\TransactionObserver::class);

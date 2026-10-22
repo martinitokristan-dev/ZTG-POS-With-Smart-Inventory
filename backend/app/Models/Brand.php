@@ -14,6 +14,7 @@ class Brand extends Model
         'name',
         'description',
         'status',
+        'import_batch_id',
     ];
 
     public function products(): HasMany

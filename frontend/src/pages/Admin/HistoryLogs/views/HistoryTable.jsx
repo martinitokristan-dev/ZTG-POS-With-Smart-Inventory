@@ -9,6 +9,7 @@ export default function HistoryTable({
     loading, transactions, fmt, fmtDate, 
     handleOpenRefund, handleOpenVoid, handleOpenView, handleOpenPay,
     permissions = {},
+    highlightedId = null,
 }) {
     const canEdit = permissions.canEdit ?? true;
     const [openDropdownId, setOpenDropdownId] = useState(null);
@@ -119,8 +120,20 @@ export default function HistoryTable({
                                 rowStatus = 'Void';
                             }
 
+                            const isHighlighted = highlightedId === tx.id;
+                            
                             return (
-                                <tr key={tx.id} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '48px' }}>
+                                <tr 
+                                    key={tx.id} 
+                                    data-transaction-id={tx.id}
+                                    style={{ 
+                                        borderBottom: '1px solid var(--table-border-subtle)', 
+                                        minHeight: '48px',
+                                        backgroundColor: isHighlighted ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
+                                        transition: 'background-color 0.3s ease',
+                                        animation: isHighlighted ? 'highlightPulse 1s ease-in-out' : 'none'
+                                    }}
+                                >
                                     <td style={{ padding: '12px 16px' }}>
                                         <span style={{ display: 'block', color: 'var(--table-text-primary)', fontSize: '15px', fontWeight: '500' }}>{displayDate}</span>
                                         {displayTime && <span style={{ display: 'block', fontSize: '13px', color: 'var(--table-text-secondary)', fontWeight: '500' }}>{displayTime}</span>}

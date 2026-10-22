@@ -41,7 +41,8 @@ class SeedScalabilityData extends Command
             'phone_number' => '09123456789',
             'username' => 'admin',
             'email' => 'admin@ztg.com',
-            'password' => bcrypt('Admin*123'),
+            // Test data only: random password, so no shared default exists (reset via Profile/tinker).
+            'password' => bcrypt(\Illuminate\Support\Str::password(16)),
             'role' => 'Admin',
             'status' => 'Active'
         ]);
@@ -51,7 +52,7 @@ class SeedScalabilityData extends Command
             'phone_number' => '09987654321',
             'username' => 'cashier',
             'email' => 'cashier@ztg.com',
-            'password' => bcrypt('Cashier*123'),
+            'password' => bcrypt(\Illuminate\Support\Str::password(16)),
             'role' => 'Cashier',
             'status' => 'Active'
         ]);

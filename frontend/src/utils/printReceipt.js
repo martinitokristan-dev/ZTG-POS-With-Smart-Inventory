@@ -1,5 +1,10 @@
 import { numberToWordsPesos } from './numberToWords';
 import { getLineItemName, getLineItemPartNo } from '../shared/utils/lineItemDisplay';
+import escapeHtml from '../shared/utils/escapeHtml';
+
+// Every text value below that comes from data (names, part numbers, customer details,
+// settings, invoice numbers) is escaped where it is defined, because the markup is
+// inserted with innerHTML. Numbers formatted by fmtPesos/toLocaleString are safe.
 
 /**
  * printReceipt.js
@@ -51,17 +56,17 @@ export function printSalesInvoice(options) {
 
     const bizName = businessInfo?.business_name || cachedBiz?.business_name || 'ZTG HEAVY EQUIPMENT PARTS SUPPLY';
     const bizAddress = businessInfo?.address || cachedBiz?.address || 'Purok 5 Taguibo 8600 City of Butuan, Agusan del Norte, Philippines';
-    const bizTin = businessInfo?.tin || cachedBiz?.tin || '382-832-238-00002';
+    const bizTin = escapeHtml(businessInfo?.tin || cachedBiz?.tin || '382-832-238-00002');
     const taxRate = parseFloat(businessInfo?.tax_rate || cachedBiz?.tax_rate || '12') || 12;
     const taxDivisor = 1 + (taxRate / 100);
 
-    const finalInvoiceNo = invoiceNo || siNo || receiptNo || '—';
-    const finalCustomer = customer || customerName || 'Walk-in Customer';
-    const finalTin = buyerTin || tin || '—';
-    const finalAddress = buyerAddress || address || [phone, enginePlate].filter(Boolean).join(' · ') || '—';
-    const finalDate = date || new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: '2-digit' });
-    const finalPaymentMethod = (paymentMethod || payment || 'Cash').toUpperCase();
-    const finalServedBy = servedBy || options.cashier || options.checker || 'Cashier';
+    const finalInvoiceNo = escapeHtml(invoiceNo || siNo || receiptNo || '—');
+    const finalCustomer = escapeHtml(customer || customerName || 'Walk-in Customer');
+    const finalTin = escapeHtml(buyerTin || tin || '—');
+    const finalAddress = escapeHtml(buyerAddress || address || [phone, enginePlate].filter(Boolean).join(' · ') || '—');
+    const finalDate = escapeHtml(date || new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: '2-digit' }));
+    const finalPaymentMethod = String(paymentMethod || payment || 'Cash').toUpperCase(); // Only compared, never printed
+    const finalServedBy = escapeHtml(servedBy || options.cashier || options.checker || 'Cashier');
 
     const numericTotal = Number(total || amount || 0);
     const numericDiscount = Number(discountAmount || discount || 0);
@@ -86,12 +91,13 @@ export function printSalesInvoice(options) {
     for (let i = 0; i < 16; i++) {
         const it = itemList[i];
         if (it) {
-            const name = getLineItemName(it);
-            const partNo = getLineItemPartNo(it, '');
+            const name = escapeHtml(getLineItemName(it));
+            const partNo = escapeHtml(getLineItemPartNo(it, ''));
             const partNoStr = partNo ? ` [${partNo}]` : '';
-            const qty = it.qty || it.quantity || 1;
+            const rawQty = it.qty || it.quantity || 1;
+            const qty = escapeHtml(rawQty);
             const price = Number(it.price || it.retail_price || 0);
-            const lineTotal = Number(it.total || (price * qty) || 0);
+            const lineTotal = Number(it.total || (price * rawQty) || 0);
 
             itemsRows += `
                 <tr style="height: 18px;">
@@ -446,17 +452,17 @@ export function printCollectionReceipt(options) {
         logoUrl = null,
     } = options;
 
-    const finalReceiptNo = receiptNo || siNo || invoiceNo || '—';
-    const finalCustomer = customer || customerName || 'Walk-in Customer';
-    const finalAddress = address || [phone, enginePlate].filter(Boolean).join(' · ') || '—';
-    const finalDate = date || new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: '2-digit' });
-    const finalPaymentMethod = (paymentMethod || payment || 'Cash').toUpperCase();
-    const finalChequeNo = chequeNumber || options.cheque_number || '';
-    const finalOrderRef = orderNo || orderRef || (options.order_ref ? options.order_ref : '');
-    const finalServedBy = servedBy || options.cashier || options.fulfilled_by || 'Staff';
+    const finalReceiptNo = escapeHtml(receiptNo || siNo || invoiceNo || '—');
+    const finalCustomer = escapeHtml(customer || customerName || 'Walk-in Customer');
+    const finalAddress = escapeHtml(address || [phone, enginePlate].filter(Boolean).join(' · ') || '—');
+    const finalDate = escapeHtml(date || new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: '2-digit' }));
+    const finalPaymentMethod = String(paymentMethod || payment || 'Cash').toUpperCase(); // Only compared, never printed
+    const finalChequeNo = escapeHtml(chequeNumber || options.cheque_number || '');
+    const finalOrderRef = escapeHtml(orderNo || orderRef || (options.order_ref ? options.order_ref : ''));
+    const finalServedBy = escapeHtml(servedBy || options.cashier || options.fulfilled_by || 'Staff');
 
     const numericTotal = Number(total || amount || balancePaid || 0);
-    const wordsAmount = numberToWordsPesos(numericTotal);
+    const wordsAmount = escapeHtml(numberToWordsPesos(numericTotal));
 
     // Business identity
     let cachedBiz = {};
@@ -481,8 +487,8 @@ export function printCollectionReceipt(options) {
     for (let i = 0; i < 5; i++) {
         const it = itemRows[i];
         if (it) {
-            const name = getLineItemName(it);
-            const qtyStr = it.qty ? ` (X${it.qty})` : '';
+            const name = escapeHtml(getLineItemName(it));
+            const qtyStr = it.qty ? ` (X${escapeHtml(it.qty)})` : '';
             const amtStr = Number(it.total || (it.price * (it.qty || 1)) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
             particularsRows += `
                 <tr style="height: 24px;">

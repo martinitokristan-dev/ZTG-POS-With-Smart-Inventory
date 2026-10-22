@@ -33,6 +33,11 @@ class NotificationSent implements ShouldBroadcast, ShouldDispatchAfterCommit
                 : (is_string($notification->created_at) ? strtotime($notification->created_at) : time())
             ) * 1000,
             'read'      => (bool) ($notification->is_read ?? false),
+            // Navigation targets, so a realtime notification's "View" button works
+            // without waiting for the next poll (see notificationTarget.js).
+            'link'           => $notification->link ?: null,
+            'product_id'     => $notification->product_id ? (int) $notification->product_id : null,
+            'transaction_id' => $notification->transaction_id ? (int) $notification->transaction_id : null,
         ];
     }
 

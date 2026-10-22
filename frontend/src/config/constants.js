@@ -20,6 +20,9 @@ export const POS_TOP_CATEGORIES_LIMIT = 5;
 /** Fallback polling interval for inventory / product context (5 minutes) */
 export const INVENTORY_POLL_INTERVAL_MS = 300000;
 
+/** Inventory data younger than this is reused instead of re-downloaded (e.g. when opening the dashboard). Realtime events keep it current in between. */
+export const INVENTORY_FRESH_MS = 30000;
+
 /** Debounce delay before re-polling after a real-time event (5 seconds) */
 export const REALTIME_DEBOUNCE_POLL_MS = 5000;
 
@@ -28,6 +31,9 @@ export const NOTIFICATION_POLL_INTERVAL_MS = 15000;
 
 /** Milliseconds to display the notification bubble before auto-dismissing */
 export const NOTIFICATION_BUBBLE_DISPLAY_MS = 3000;
+
+/** Notifications fetched per page in the inbox (infinite scroll loads the next page near the bottom) */
+export const NOTIFICATION_PAGE_SIZE = 20;
 
 // ─── Cache ───────────────────────────────────────────────────────────────────
 

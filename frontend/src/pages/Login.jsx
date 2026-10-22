@@ -111,7 +111,10 @@ function Login() {
             navigate(targetRoute);
         } catch (err) {
             console.error(err);
-            if (err.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
+            if (err.response?.status === 429) {
+                // Route throttle: too many sign-in attempts from this network in one minute.
+                setError('Too many sign-in attempts. Please wait a minute and try again.');
+            } else if (err.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
                 setError('Your account is pending email verification. Please check your inbox for the setup link sent by your administrator.');
             } else if (err.response && err.response.data && err.response.data.errors) {
                 const errors = err.response.data.errors;

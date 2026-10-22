@@ -13,5 +13,7 @@ enum TransactionStatus: string
     case PAID = 'Paid';
     case RESTOCKED = 'Restocked';
     case DAMAGED = 'Damaged';
+    case IMPORTED = 'Imported';
+    case IMPORT_UNDONE = 'Import Undone';
     case SECURITY_ALERT = 'Security Alert';
 }

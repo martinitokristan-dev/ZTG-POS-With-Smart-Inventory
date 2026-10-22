@@ -44,6 +44,7 @@ export default function IOSDatePicker({
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [dropUp, setDropUp] = useState(openUpward);
+    const [pickerMode, setPickerMode] = useState('days'); // 'days', 'months', 'years'
     const containerRef = useRef(null);
 
     // Selected date object
@@ -63,11 +64,14 @@ export default function IOSDatePicker({
         const handleClickOutside = (e) => {
             if (containerRef.current && !containerRef.current.contains(e.target)) {
                 setIsOpen(false);
+                setPickerMode('days'); // Reset to days view when closing
+                // Reset view to today when closed without selection
+                setViewDate(selectedDate || new Date());
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    }, [selectedDate]);
 
     // Check bounds on open to decide whether to open upward or downward
     const handleToggleOpen = () => {
@@ -81,6 +85,9 @@ export default function IOSDatePicker({
             }
         }
         setIsOpen(!isOpen);
+        if (isOpen) {
+            setPickerMode('days'); // Reset mode when closing
+        }
     };
 
     const validViewDate = (viewDate && !isNaN(viewDate.getTime())) ? viewDate : new Date();
@@ -91,7 +98,39 @@ export default function IOSDatePicker({
         'January', 'February', 'March', 'April', 'May', 'June', 
         'July', 'August', 'September', 'October', 'November', 'December'
     ];
+    const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const dayNames = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+
+    // Navigation functions
+    const prevMonth = () => setViewDate(new Date(viewYear, viewMonth - 1, 1));
+    const nextMonth = () => setViewDate(new Date(viewYear, viewMonth + 1, 1));
+    const prevYear = () => setViewDate(new Date(viewYear - 1, viewMonth, 1));
+    const nextYear = () => setViewDate(new Date(viewYear + 1, viewMonth, 1));
+    const prevDecade = () => setViewDate(new Date(viewYear - 10, viewMonth, 1));
+    const nextDecade = () => setViewDate(new Date(viewYear + 10, viewMonth, 1));
+
+    // Toggle between picker modes (iOS style)
+    const handleHeaderClick = () => {
+        if (pickerMode === 'days') {
+            setPickerMode('months');
+        } else if (pickerMode === 'months') {
+            setPickerMode('years');
+        } else {
+            setPickerMode('days');
+        }
+    };
+
+    // Handle month selection
+    const handleSelectMonth = (monthIndex) => {
+        setViewDate(new Date(viewYear, monthIndex, 1));
+        setPickerMode('days');
+    };
+
+    // Handle year selection - automatically show months picker
+    const handleSelectYear = (year) => {
+        setViewDate(new Date(year, viewMonth, 1));
+        setPickerMode('months'); // Automatically show months after selecting year
+    };
 
     // Generate days for calendar grid
     const firstDayOfMonth = new Date(viewYear, viewMonth, 1).getDay();
@@ -103,8 +142,9 @@ export default function IOSDatePicker({
     const totalGridSlots = prevMonthDays.length + currentMonthDays.length;
     const nextMonthDays = Array.from({ length: (42 - totalGridSlots) % 7 }, (_, i) => i + 1);
 
-    const prevMonth = () => setViewDate(new Date(viewYear, viewMonth - 1, 1));
-    const nextMonth = () => setViewDate(new Date(viewYear, viewMonth + 1, 1));
+    // Generate year range (current decade)
+    const startDecade = Math.floor(viewYear / 10) * 10;
+    const yearRange = Array.from({ length: 12 }, (_, i) => startDecade + i - 1); // -1 to show previous year, then 10 years, then next year
 
     const handleSelectDay = (day) => {
         const m = String(viewMonth + 1).padStart(2, '0');
@@ -199,7 +239,7 @@ export default function IOSDatePicker({
                         border: '1px solid var(--border, #E2E8F0)',
                         boxShadow: '0 16px 36px -4px rgba(15, 23, 42, 0.18), 0 6px 16px rgba(0, 0, 0, 0.08)',
                         padding: '16px',
-                        width: '280px',
+                        width: '320px',
                         maxWidth: 'calc(100vw - 32px)',
                         boxSizing: 'border-box',
                         fontFamily: 'var(--font-ui)',
@@ -207,96 +247,216 @@ export default function IOSDatePicker({
                         animation: 'ios-popover-appear 0.2s ease-out forwards',
                     }}
                 >
-                    {/* Header: Month & Year + Nav Chevrons */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                        <span className="ios-calendar-title" style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary, #0F172A)' }}>
-                            {monthNames[viewMonth]} {viewYear}
-                        </span>
-                        <div style={{ display: 'flex', gap: '4px' }}>
+                    {/* Header: Month (text, left) + Year (clickable, center) + Nav Arrows (right) */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                        {/* Left: Month Text - Not clickable, just display */}
+                        <div style={{ flex: 1 }}>
+                            {pickerMode !== 'years' && (
+                                <span
+                                    className="ios-calendar-month-text"
+                                    style={{ 
+                                        fontSize: '16px', 
+                                        fontWeight: 700, 
+                                        color: 'var(--text-primary, #0F172A)',
+                                        padding: '6px 10px',
+                                        fontFamily: 'inherit'
+                                    }}
+                                >
+                                    {monthNames[viewMonth]}
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Center: Year Button - Only clickable element */}
+                        <button
+                            type="button"
+                            onClick={() => setPickerMode('years')}
+                            className="ios-calendar-title"
+                            style={{ 
+                                fontSize: '16px', 
+                                fontWeight: 700, 
+                                color: pickerMode === 'years' ? '#3B82F6' : 'var(--text-primary, #0F172A)',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '6px 10px',
+                                borderRadius: '8px',
+                                transition: 'all 0.15s ease',
+                                fontFamily: 'inherit'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover, #F1F5F9)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                        >
+                            {pickerMode === 'years' ? `${startDecade} - ${startDecade + 9}` : viewYear}
+                        </button>
+
+                        {/* Right: Navigation Arrows */}
+                        <div style={{ flex: 1, display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
                             <button
                                 type="button"
-                                onClick={prevMonth}
+                                onClick={pickerMode === 'days' ? prevMonth : pickerMode === 'months' ? prevYear : prevDecade}
                                 className="ios-calendar-nav-btn"
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: '8px', color: 'var(--text-secondary, #64748B)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover, #F1F5F9)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
                             >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                             </button>
                             <button
                                 type="button"
-                                onClick={nextMonth}
+                                onClick={pickerMode === 'days' ? nextMonth : pickerMode === 'months' ? nextYear : nextDecade}
                                 className="ios-calendar-nav-btn"
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: '8px', color: 'var(--text-secondary, #64748B)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover, #F1F5F9)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
                             >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                             </button>
                         </div>
                     </div>
 
-                    {/* Day Name Headers */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', marginBottom: '8px' }}>
-                        {dayNames.map((d) => (
-                            <span key={d} style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted, #94A3B8)', letterSpacing: '0.5px' }}>{d}</span>
-                        ))}
-                    </div>
+                    {/* DAYS VIEW */}
+                    {pickerMode === 'days' && (
+                        <>
+                            {/* Day Name Headers */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', marginBottom: '8px' }}>
+                                {dayNames.map((d) => (
+                                    <span key={d} style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted, #94A3B8)', letterSpacing: '0.5px' }}>{d}</span>
+                                ))}
+                            </div>
 
-                    {/* Days Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', textAlign: 'center' }}>
-                        {prevMonthDays.map((d) => (
-                            <span key={`prev-${d}`} style={{ padding: '8px 0', fontSize: '13px', color: 'var(--text-muted, #CBD5E1)', opacity: 0.5, cursor: 'default' }}>{d}</span>
-                        ))}
-                        {currentMonthDays.map((d) => {
-                            const active = isSelected(d);
-                            const today = isToday(d);
-                            return (
-                                <button
-                                    key={`curr-${d}`}
-                                    type="button"
-                                    onClick={() => handleSelectDay(d)}
-                                    className={`ios-calendar-day-btn ${active ? 'active' : ''}`}
-                                    style={{
-                                        border: active ? 'none' : (today ? '2px solid #3B82F6' : 'none'),
-                                        background: active ? '#3B82F6' : (today ? 'rgba(59, 130, 246, 0.15)' : 'transparent'),
-                                        color: active ? '#FFFFFF' : (today ? '#3B82F6' : 'var(--text-primary, #0F172A)'),
-                                        fontWeight: active || today ? 700 : 500,
-                                        fontSize: '13px',
-                                        width: '32px',
-                                        height: '32px',
-                                        margin: 'auto',
-                                        borderRadius: '50%',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.15s ease',
-                                        boxShadow: active ? '0 4px 10px rgba(59, 130, 246, 0.35)' : (today ? '0 0 0 2px rgba(59, 130, 246, 0.2)' : 'none'),
-                                    }}
-                                >
-                                    {d}
-                                </button>
-                            );
-                        })}
-                        {nextMonthDays.map((d) => (
-                            <span key={`next-${d}`} style={{ padding: '8px 0', fontSize: '13px', color: 'var(--text-muted, #CBD5E1)', opacity: 0.5, cursor: 'default' }}>{d}</span>
-                        ))}
-                    </div>
+                            {/* Days Grid */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', textAlign: 'center' }}>
+                                {prevMonthDays.map((d) => (
+                                    <span key={`prev-${d}`} style={{ padding: '8px 0', fontSize: '13px', color: 'var(--text-muted, #CBD5E1)', opacity: 0.5, cursor: 'default' }}>{d}</span>
+                                ))}
+                                {currentMonthDays.map((d) => {
+                                    const active = isSelected(d);
+                                    const today = isToday(d);
+                                    return (
+                                        <button
+                                            key={`curr-${d}`}
+                                            type="button"
+                                            onClick={() => handleSelectDay(d)}
+                                            className={`ios-calendar-day-btn ${active ? 'active' : ''}`}
+                                            style={{
+                                                border: active ? 'none' : (today ? '2px solid #3B82F6' : 'none'),
+                                                background: active ? '#3B82F6' : (today ? 'rgba(59, 130, 246, 0.15)' : 'transparent'),
+                                                color: active ? '#FFFFFF' : (today ? '#3B82F6' : 'var(--text-primary, #0F172A)'),
+                                                fontWeight: active || today ? 700 : 500,
+                                                fontSize: '14px',
+                                                width: '36px',
+                                                height: '36px',
+                                                margin: 'auto',
+                                                borderRadius: '50%',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s ease',
+                                                boxShadow: active ? '0 4px 10px rgba(59, 130, 246, 0.35)' : (today ? '0 0 0 2px rgba(59, 130, 246, 0.2)' : 'none'),
+                                            }}
+                                            onMouseEnter={(e) => !active && (e.currentTarget.style.background = 'var(--bg-hover, #F1F5F9)')}
+                                            onMouseLeave={(e) => !active && (e.currentTarget.style.background = today ? 'rgba(59, 130, 246, 0.15)' : 'transparent')}
+                                        >
+                                            {d}
+                                        </button>
+                                    );
+                                })}
+                                {nextMonthDays.map((d) => (
+                                    <span key={`next-${d}`} style={{ padding: '8px 0', fontSize: '13px', color: 'var(--text-muted, #CBD5E1)', opacity: 0.5, cursor: 'default' }}>{d}</span>
+                                ))}
+                            </div>
+                        </>
+                    )}
 
-                    {/* Footer Actions */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border, #F1F5F9)' }}>
-                        <button
-                            type="button"
-                            onClick={handleClear}
-                            style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-                        >
-                            Clear
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleToday}
-                            style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
-                        >
-                            Today
-                        </button>
-                    </div>
+                    {/* MONTHS VIEW */}
+                    {pickerMode === 'months' && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                            {monthNamesShort.map((month, idx) => {
+                                const isCurrentMonth = selectedDate && selectedDate.getFullYear() === viewYear && selectedDate.getMonth() === idx;
+                                return (
+                                    <button
+                                        key={month}
+                                        type="button"
+                                        onClick={() => handleSelectMonth(idx)}
+                                        style={{
+                                            padding: '14px',
+                                            borderRadius: '12px',
+                                            border: 'none',
+                                            background: isCurrentMonth ? '#3B82F6' : 'var(--bg-secondary, #F8FAFC)',
+                                            color: isCurrentMonth ? '#FFFFFF' : 'var(--text-primary, #0F172A)',
+                                            fontSize: '13px',
+                                            fontWeight: isCurrentMonth ? 700 : 600,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease',
+                                            fontFamily: 'inherit',
+                                            boxShadow: isCurrentMonth ? '0 4px 10px rgba(59, 130, 246, 0.35)' : 'none',
+                                        }}
+                                        onMouseEnter={(e) => !isCurrentMonth && (e.currentTarget.style.background = 'var(--bg-hover, #E2E8F0)')}
+                                        onMouseLeave={(e) => !isCurrentMonth && (e.currentTarget.style.background = 'var(--bg-secondary, #F8FAFC)')}
+                                    >
+                                        {month}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* YEARS VIEW */}
+                    {pickerMode === 'years' && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                            {yearRange.map((year) => {
+                                const isCurrentYear = selectedDate && selectedDate.getFullYear() === year;
+                                const isOutOfDecade = year < startDecade || year > startDecade + 9;
+                                return (
+                                    <button
+                                        key={year}
+                                        type="button"
+                                        onClick={() => handleSelectYear(year)}
+                                        style={{
+                                            padding: '14px',
+                                            borderRadius: '12px',
+                                            border: 'none',
+                                            background: isCurrentYear ? '#3B82F6' : 'var(--bg-secondary, #F8FAFC)',
+                                            color: isCurrentYear ? '#FFFFFF' : (isOutOfDecade ? 'var(--text-muted, #94A3B8)' : 'var(--text-primary, #0F172A)'),
+                                            fontSize: '13px',
+                                            fontWeight: isCurrentYear ? 700 : 600,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease',
+                                            fontFamily: 'inherit',
+                                            opacity: isOutOfDecade ? 0.6 : 1,
+                                            boxShadow: isCurrentYear ? '0 4px 10px rgba(59, 130, 246, 0.35)' : 'none',
+                                        }}
+                                        onMouseEnter={(e) => !isCurrentYear && (e.currentTarget.style.background = 'var(--bg-hover, #E2E8F0)')}
+                                        onMouseLeave={(e) => !isCurrentYear && (e.currentTarget.style.background = 'var(--bg-secondary, #F8FAFC)')}
+                                    >
+                                        {year}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Footer Actions - Only show in days mode */}
+                    {pickerMode === 'days' && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border, #F1F5F9)' }}>
+                            <button
+                                type="button"
+                                onClick={handleClear}
+                                style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                                Clear
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleToday}
+                                style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                                Today
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

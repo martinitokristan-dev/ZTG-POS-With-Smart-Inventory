@@ -10,6 +10,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfileAvatarController;
 use App\Http\Controllers\AlertRuleController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductImportController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\ReservationController;
@@ -27,7 +28,9 @@ use App\Http\Controllers\UserPermissionController;
 use Illuminate\Support\Facades\Route;
 
 // Public authentication & media routes
-Route::post('/login', [AuthController::class, 'login']);
+// Per-IP cap against password spraying across many accounts; AuthController::login still
+// locks one username + IP after 5 wrong passwords.
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:20,1');
 Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink']);
 Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword']);
 Route::get('/auth/set-password', [StaffVerificationController::class, 'getSetPasswordPage']);
@@ -62,6 +65,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/variants', [VariantController::class, 'index']);
 
     // Products: read routes (all authenticated roles)
+    // What an Excel import created: product data is readable by every signed-in role, and the
+    // History Logs open this for import records.
+    Route::get('/product-imports/batches/{batch}', [ProductImportController::class, 'show'])->whereNumber('batch');
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/products/{product}', [ProductController::class, 'show']);
 
@@ -115,6 +121,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/brands', [BrandController::class, 'store']);
         Route::post('/variants', [VariantController::class, 'storeType']);
         Route::post('/variants/{variant_type}/options', [VariantController::class, 'storeOption']);
+
+        // Smart Excel product import (preview first, then save in chunks)
+        Route::post('/product-imports/upload', [ProductImportController::class, 'upload']);
+        Route::post('/product-imports/analyze', [ProductImportController::class, 'analyze']);
+        Route::delete('/product-imports/uploads/{token}', [ProductImportController::class, 'cancel']);
+        Route::get('/product-imports/batches', [ProductImportController::class, 'index']);
+        Route::post('/product-imports/batches', [ProductImportController::class, 'start']);
+        Route::post('/product-imports/batches/{batch}/chunks', [ProductImportController::class, 'chunk']);
+        Route::post('/product-imports/batches/{batch}/finish', [ProductImportController::class, 'finish']);
     });
 
     Route::middleware('permission:products,can_edit')->group(function () {
@@ -132,6 +147,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/brands/{brand}', [BrandController::class, 'destroy']);
         Route::delete('/variants/{variant_type}', [VariantController::class, 'destroyType']);
         Route::delete('/variant-options/{variant_option}', [VariantController::class, 'destroyOption']);
+        Route::post('/product-imports/batches/{batch}/undo', [ProductImportController::class, 'undo']);
     });
 
     // Activity Logs & Active User Sessions (Guarded by history_logs permission)
@@ -156,8 +172,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Read: all authenticated roles; Write (refund/void/return/pay): strictly guarded by history_logs or sales_log permission (Admin / Supervisor)
     // Cashier is checkout only (POS) and cannot refund, return, void, or pay
     Route::get('/transactions', [TransactionController::class, 'index']);
-    Route::get('/transactions/{transaction}', [TransactionController::class, 'show']);
-    Route::post('/transactions/verify-pin', [TransactionController::class, 'verifyPin']);
+    Route::get('/transactions/{transaction}', [TransactionController::class, 'show'])->whereNumber('transaction');
+    // whereNumber: a non-numeric id is a 404, not a 500 from the typed controller argument.
+    Route::get('/transactions/{id}/find-page', [TransactionController::class, 'findPage'])->whereNumber('id');
+    // Route throttle on top of the per-user PIN lockout in TransactionService::verifyPin.
+    Route::post('/transactions/verify-pin', [TransactionController::class, 'verifyPin'])->middleware('throttle:10,1');
     Route::middleware('permission:history_logs|sales_log,can_edit')->group(function () {
         Route::post('/transactions/{transaction}/refund', [TransactionController::class, 'refund']);
         Route::post('/transactions/{transaction}/return', [TransactionController::class, 'return']);
@@ -176,11 +195,14 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
 
-    // Notifications: accessible to all authenticated users
+    // Notifications are for Admin and Supervisor only (they include security alerts).
+    // Other roles get an empty inbox from index() and 403 on every change.
     Route::get('/notifications', [NotificationController::class, 'index']);
-    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
-    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
-    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+    Route::middleware('role:Admin,Supervisor')->group(function () {
+        Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->whereNumber('id');
+        Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])->whereNumber('id');
+    });
 
     // Logs: guarded by specific module permissions
     Route::get('/daily-sales', [ReportController::class, 'dailySales'])->middleware('permission:sales_log,can_view');
@@ -197,6 +219,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reports/refund-void-analysis', [ReportController::class, 'refundVoidAnalysis']);
     });
     Route::get('/inventory', [ReportController::class, 'inventory'])->middleware('permission:inventory,can_view');
+    Route::get('/inventory/find-page/{id}', [ReportController::class, 'inventoryFindPage'])
+        ->whereNumber('id')
+        ->middleware('permission:inventory,can_view');
 
 
     // Example routes for RBAC testing

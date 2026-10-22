@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\UserProfile;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 return new class extends Migration
 {
@@ -121,19 +122,22 @@ return new class extends Migration
             );
         }
 
-        // 5. Ensure Default TechOps User exists
-        $techUser = User::updateOrCreate(
-            ['username' => 'techops'],
-            [
-                'password'          => Hash::make('TechOps*123'),
-                'pin'               => 'TechOps*123',
-                'role'              => UserRole::TECHNICAL_OPERATIONS,
-                'status'            => UserStatus::ACTIVE,
-                'email_verified_at' => now(),
-            ]
-        );
+        // 5. Ensure Default TechOps User exists.
+        // No shared default password: a new account gets a random secret nobody knows, and the
+        // developer sets the real one through "Forgot password" or Profile > Change password.
+        // An existing account keeps its password, PIN and status (it may have been disabled on purpose).
+        $techUser = User::firstOrNew(['username' => 'techops']);
+        if (!$techUser->exists) {
+            $secret = Str::random(64);
+            $techUser->password = Hash::make($secret);
+            $techUser->pin = Hash::make($secret);
+            $techUser->status = UserStatus::ACTIVE;
+            $techUser->email_verified_at = now();
+        }
+        $techUser->role = UserRole::TECHNICAL_OPERATIONS;
+        $techUser->save();
 
-        UserProfile::updateOrCreate(
+        UserProfile::firstOrCreate(
             ['user_id' => $techUser->id],
             [
                 'full_name'    => 'Mark TechOps',

@@ -6,8 +6,8 @@
 > **Prepared by:** Martini to Kristan (martinitokristan-dev)
 > **Repository:** [ZTG-POS-With-Smart-Inventory](https://github.com/martinitokristan-dev/ZTG-POS-With-Smart-Inventory)
 > **Live Frontend:** [ztg-pos-with-smart-inventory.pages.dev](https://ztg-pos-with-smart-inventory.pages.dev)
-> **Live Backend API:** [ztg-pos-with-smart-inventory.onrender.com](https://ztg-pos-with-smart-inventory.onrender.com)
-> **Document Version:** 2.6 | Date: August 2026
+> **Live Backend API:** [ztg-pos-backend.onrender.com](https://ztg-pos-backend.onrender.com)
+> **Document Version:** 2.7 | Date: October 2026
 
 ---
 
@@ -180,9 +180,11 @@ The development was split into two parallel tracks:
 
 **Automated Test Suite (`php artisan test`):**
 
-- **122 tests, 470 assertions** — all passing ✅
-- **Duration: ~7.0 seconds** (full suite)
-- Covers: Auth, POS Checkout, Returns, Refunds, Voids, Reservations, Products, Categories, Variants, Employees, Settings, Notifications, Alert Rules, Profile Avatar Upload/Remove, Reports
+- **379 tests, 2,369 assertions** — all passing ✅ (October 2026)
+- **Duration: ~34 seconds** (full suite, in-memory SQLite — never touches the real database)
+- Covers: Auth, POS Checkout, Returns, Refunds, Voids, Reservations, Products, Categories, Variants, Employees, Settings, Notifications, Alert Rules, Profile Avatar Upload/Remove, Reports, Excel Product Import, Notification Inbox Paging, "View Invoice" Page Finder, Inventory Stock List
+
+**Regression check against `main` (October 2026):** the full suite of the `main` branch (250 tests, 985 assertions) was run in a separate checkout and compared test by test with the feature branch. All 250 `main` tests exist unchanged on the branch and pass with the same assertion counts; the branch adds 129 new tests.
 
 **API Performance Benchmark (`php artisan test:api-performance`):**
 
@@ -219,7 +221,7 @@ Full production deployment was completed across the following infrastructure:
 | Component | Platform | URL |
 |---|---|---|
 | Frontend | Cloudflare Pages (CDN) | `ztg-pos-with-smart-inventory.pages.dev` |
-| Backend API | Render.com (Docker) | `ztg-pos-with-smart-inventory.onrender.com` |
+| Backend API | Render.com (Docker) | `ztg-pos-backend.onrender.com` |
 | Database | TiDB Cloud Serverless | `gateway01.ap-southeast-1.prod.aws.tidbcloud.com` |
 | Real-Time | Pusher (Channels) | `ap1` cluster (Singapore) |
 | File Storage | Cloudflare R2 | Persistent S3-compatible avatar/image storage |
@@ -674,6 +676,9 @@ app/Services/
 | `DELETE` | `/api/products/{id}` | Admin / Authorized | Delete a product |
 | `POST` | `/api/products/restock` | Admin / Authorized | Restock inventory |
 | `POST` | `/api/products/{id}/damaged` | Admin / Authorized | Log damaged stock deduction |
+| `GET` | `/api/inventory` | Inventory permission | Full inventory list with category, brand and variants (`paginate=1` for one table page with `sales_count`) |
+| `GET` | `/api/inventory?view=stock` | Inventory permission | Lightweight whole-catalog stock list (10 fields per product + variant option names) used for dashboard totals, Critical Stock Alerts and Inventory header counts |
+| `GET` | `/api/inventory/find-page/{id}` | Inventory permission | Returns `{ found, page, position, base_id }`: which Inventory table page holds a product (a variant is found through its base product), with the table's `category_id`, `status`, `search` and `per_page`. Used by stock-alert notifications |
 
 **POS (Checkout & Processing):**
 
@@ -686,10 +691,21 @@ app/Services/
 
 | Method | Endpoint | Role | Description |
 |---|---|---|---|
-| `GET` | `/api/transactions` | All | List all transactions with advanced filtering |
+| `GET` | `/api/transactions` | All | List all transactions with advanced filtering (sort: `date` or `id`, ties broken by `id`) |
+| `GET` | `/api/transactions/{id}/find-page` | All (Cashier: own only) | Returns `{ found, page, position }`: which list page holds the transaction with the same filters and sort. Used by notification "View invoice" |
 | `POST` | `/api/transactions/{id}/refund` | Admin / Cashier | Full refund with manager PIN verification |
 | `POST` | `/api/transactions/{id}/return` | Admin / Cashier | Itemized partial return with stock restock options |
 | `POST` | `/api/transactions/{id}/void` | Admin / Cashier | Void transaction with manager PIN approval |
+
+**Notifications (Admin / Supervisor):**
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/notifications` | Full list, newest first (original response) |
+| `GET` | `/api/notifications?per_page=20&before_id={id}` | One inbox page: `{ data, has_more, next_before_id, unread_count }`. `before_id` is a keyset cursor, so new notifications never shift older pages. `per_page` is 1–100 |
+| `PATCH` | `/api/notifications/{id}/read` | Mark one notification as read |
+| `POST` | `/api/notifications/read-all` | Mark all as read |
+| `DELETE` | `/api/notifications/{id}` | Delete a notification |
 
 **System Health (Public):**
 
@@ -772,8 +788,11 @@ The POS module uses a composable hook pattern. The root `usePOS` hook is a thin 
 | Component | Description |
 |---|---|
 | `Sidebar.jsx` | Global navigation sidebar & mobile drawer overlay |
-| `NotificationsDropdown.jsx` | Bell icon + real-time notification dropdown |
-| `IOSDatePicker.jsx` | Popover iOS calendar picker with smart right-edge alignment |
+| `NotificationsDropdown.jsx` | Bell icon + real-time notification dropdown with infinite scroll (20 per page) |
+| `NotificationDetailModal.jsx` | Detail card opened from a notification, with a "View invoice / details" action that routes to the right module |
+| `hooks/useFindAndHighlight.js` | Shared by History Logs and Inventory: reads `?highlight={id}`, asks the module's `find-page` endpoint for the page (retrying without filters if the record is filtered out), jumps there, scrolls to the row and highlights it for 3 seconds |
+| `utils/notificationTarget.js` | `resolveNotificationTarget()`: decides which page each notification opens, including links saved by older versions |
+| `IOSDatePicker.jsx` | Popover iOS calendar picker with smart right-edge alignment. Tap the year to pick Year → Month → Day; resets to today when closed without a choice |
 | `IOSSelect.jsx` | iOS custom select popover with active checkmarks (`✓`) |
 | `IOSTimePicker.jsx` | iOS time picker selector popover |
 | `PrivateRoute.jsx` | Auth guard that redirects unauthenticated users |
@@ -875,6 +894,25 @@ Used for:
 7. All connected Admin browsers receive the push notification
 8. Notification bell badge count updates in real-time
 ```
+
+### Notification Inbox Loading
+
+- The inbox loads the newest **20** notifications. Scrolling near the bottom loads the next 20 (an `IntersectionObserver` watches a marker at the end of the list).
+- Pages use a keyset cursor (`before_id`), so a notification arriving at the top never causes duplicates or skipped rows.
+- The badge shows the server's `unread_count`, so it stays correct even when older pages are not loaded.
+- The 15-second fallback poll refreshes only the newest page and keeps the older pages the user already scrolled through.
+- Tapping a notification opens a detail card. Its action button opens the record the notification is about:
+
+| Notification | Opens | Behaviour |
+|---|---|---|
+| Refund, Return, Void, Damaged, Restocked, Imported, Import Undone, Reservation Deposit / Paid, Pending Order, Deposit Auto-Voided | History Logs `?highlight={transaction}` | Jumps to the page, scrolls to the row, highlights it |
+| Low Stock, Out of Stock, Dead Stock | Inventory `?highlight={product}` | Jumps to the page, scrolls to the product (or variant) row, highlights it |
+| Reservation Expired | Reservations `?view={reservation}` | Opens the reservation details (expired reservations are not listed in either tab) |
+| Daily Sales Reminder | Reports | Opens the page |
+| Security Alert | Settings → Activity Logs | Opens the tab |
+
+- If the record is hidden by the filters on screen, the page clears its filters and tries again. If it was deleted, a short message says it is no longer available.
+- Completed sales do not create notifications (by design, to reduce noise), so no notification opens the Sales Log.
 
 ### Pusher Configuration
 
@@ -1014,7 +1052,7 @@ A **Content Delivery Network (CDN)** is a globally distributed network of server
 
 | Variable | Value |
 |---|---|
-| `VITE_API_URL` | `https://ztg-pos-with-smart-inventory.onrender.com/api` |
+| `VITE_API_URL` | `https://ztg-pos-backend.onrender.com/api` |
 | `VITE_PUSHER_APP_KEY` | `[pusher key]` |
 | `VITE_PUSHER_APP_CLUSTER` | `ap1` |
 
@@ -1103,7 +1141,7 @@ By pinging every **3 minutes**, it keeps Render from ever considering the server
 
 | Setting | Value | Reason |
 |---|---|---|
-| URL to Monitor | `https://ztg-pos-with-smart-inventory.onrender.com/up` | Laravel 11 built-in health endpoint |
+| URL to Monitor | `https://ztg-pos-backend.onrender.com/up` | Laravel 11 built-in health endpoint |
 | Alert When | URL becomes unavailable | Core uptime monitoring |
 | Check Frequency | Every 3 minutes | Prevents Render 15-min sleep threshold |
 | HTTP Method | GET | Read-only health check |
@@ -1125,11 +1163,15 @@ return Application::configure(basePath: dirname(__DIR__))
 **Live Test Result:**
 
 ```bash
-$ curl -i https://ztg-pos-with-smart-inventory.onrender.com/up
+$ curl -i https://ztg-pos-backend.onrender.com/up
 
 HTTP/1.1 200 OK
 # Response: "Application up" - rendered in 9ms
 ```
+
+> **Note (October 2026):** The backend moved from `ztg-pos-with-smart-inventory.onrender.com` to `ztg-pos-backend.onrender.com`. The old address now answers `404` with `x-render-routing: no-server`, so the BetterStack monitor must point to the new `/up` URL above, or it stops keeping the server awake. Older change-log entries below keep the old address because they describe what happened at the time.
+
+**Response Compression (verified October 2026):** Render compresses responses automatically through Cloudflare, so no Apache or Docker setting is needed. A request with `Accept-Encoding: br, gzip` returned `Content-Encoding: gzip` for `/up` (HTML) and `Content-Encoding: br` (Brotli) for `/api/public/branding` (JSON).
 
 ---
 
@@ -1983,7 +2025,86 @@ Previously, logging into the **Admin** account in Tab 1 and the **Cashier** acco
 
 ---
 
-*End of ZTG Heavy Parts Capstone Project Documentation v2.6*
+### SPRINT 21 — Smart Notification Navigation, Inbox Infinite Scroll & Inventory Load Performance
+**Date: October 2026**
 
-*Document updated: August 2026*
+#### 1. Notification Detail Card & "View Invoice" Navigation
+- Tapping a notification opens `NotificationDetailModal` with an action button. Every transaction notification (refunds, returns, voids, damaged, restocks, imports, reservation payments) opens **History Logs** with `?highlight={id}`; stock alerts open **Inventory**; expired reservations open their details in **Reservations**. The routing lives in `resolveNotificationTarget()`.
+- New endpoint `GET /api/transactions/{id}/find-page` returns the list page that holds the transaction. It reuses the exact query of `GET /api/transactions` (`TransactionService::buildListQuery`), so filters, search, cashier isolation and sort always match what the table shows. The position is one indexed `COUNT` instead of loading every id.
+- The shared `useFindAndHighlight` hook jumps to that page, scrolls the row into view and pulses it for 3 seconds. History Logs and Inventory both use it.
+- New endpoint `GET /api/inventory/find-page/{id}` does the same for stock alerts. It shares the Inventory table's filters and order (`ReportService::applyInventoryRowFilters` / `orderInventoryRows`), and the table now breaks name ties by `id` so pages are stable.
+- **Fixed broken notification links.** Older links pointed at pages that don't exist, so the router sent the user to the login screen:
+
+| Notification | Old link | New link |
+|---|---|---|
+| Low / Out of Stock | `/products/{id}` | `/inventory?highlight={id}` |
+| Dead Stock | `/product-management` (no product) | `/inventory?highlight={id}` |
+| Reservation Expired | `/reservations/{id}` | `/reservations?view={id}` |
+| Daily Sales Reminder | `/reports/sales` | `/reports` |
+
+  Notifications already saved with the old links are translated in the browser, so they work too. The dead-stock alert keeps `product_id` empty on purpose: the low-stock auto-resolve deletes alerts by `product_id` and would otherwise remove it.
+- The transaction list now sorts only by `date` or `id` (anything else falls back to `date`) and breaks ties by `id`, so page boundaries are stable when many sales share the same time.
+
+#### 2. Notification Inbox Infinite Scroll
+- `GET /api/notifications?per_page=20&before_id={id}` returns one page with `has_more`, `next_before_id` and the server `unread_count`. Without `per_page`, the original full-list response is unchanged.
+- Validated by `ListNotificationsRequest` (`per_page` 1–100, `before_id` integer).
+
+#### 3. Inventory Load Performance
+- The app-wide inventory list (dashboard totals, Critical Stock Alerts, Inventory header counts) now calls `GET /api/inventory?view=stock`, served by `ReportService::getInventoryStockList`. It sends only the fields those features read and skips the per-variant image lookup that `Product::getImageAttribute` ran for every variant.
+- Measured on the 5,378-product local catalog with identical rows, order, values and summary:
+
+| | Before | After |
+|---|---|---|
+| Database queries | 2,922 | 7 |
+| Build time (local) | 3.3 s | 0.4 s |
+| Response size | 4.6 MB | 1.3 MB (74 KB compressed) |
+
+- Opening the dashboard reuses inventory loaded in the last 30 seconds (`INVENTORY_FRESH_MS`), and simultaneous requests share one download. Sales and imports still force a fresh load.
+- Removed a duplicate `variants.variantOptions.type` eager load from the full inventory list.
+
+#### 4. iOS Date Picker
+- Tapping the year opens a year grid, then a month grid, then the days. The month name is plain text and the arrows move one month. Closing without a choice resets the view to today. The calendar grew from 280 px to 320 px wide.
+
+#### 5. Deployment & Tests
+- Backend moved to `ztg-pos-backend.onrender.com`; verified that Render compresses JSON with Brotli.
+- Added `SmartNavigationAndLoadTest` (23 tests) covering inbox paging, transaction and inventory `find-page` correctness (sorts, duplicate names and times, filters, search, variants, cashier isolation, deleted records, non-numeric ids), the new notification links, the realtime notification payload, and the stock list's shape and constant query count.
+
+#### 6. Code Review Fixes
+| Problem | Fix |
+|---|---|
+| More than 20 new notifications between two polls left a hole in the inbox that "load more" never filled. | The poll keeps older rows only when the new first page still reaches them (`pageTopId`); otherwise it drops them and paging restarts. |
+| Realtime notifications had no `link`, `product_id` or `transaction_id`, so their "View" button did nothing. | `NotificationSent` broadcasts these fields and the Echo listener uses `mapNotification`, like polled rows. |
+| `GET /transactions/abc/find-page` returned a 500. | Route constrained with `whereNumber('id')` (now 404). |
+| Opening a second notification within 3 s lost its highlight (the first timer removed `?highlight`). | `useFindAndHighlight` clears old timers on a new id and only removes `?highlight` while it still points at the same record. |
+| The unread badge jumped back after "Mark read" when an older poll answered late. | Polls that started before the last mark-read (or before the server saved it) don't overwrite the count. |
+| "View" button shown for notifications with nowhere to go. | Hidden when `resolveNotificationTarget` returns `null`. |
+| Cleanups | Removed the unused `?highlight` effect in the Sales Log (it leaked timers); `getInventorySummary` reuses `inventoryStatusCounts()`; fixed stale docblocks. |
+
+#### 7. Security Review Fixes
+| Risk | Before | After |
+|---|---|---|
+| Developer (`techops`) account | Password and PIN hardcoded in a migration and a seeder; every seeder run reset them and re-activated the account. | No shared password. A new account gets a random secret; the developer sets the real one via Forgot password or Profile > Change password. Re-running never touches an existing account's password, PIN or status. |
+| Receipt printing (stored XSS) | Product names, part numbers, customer, address and other text went into the receipt HTML unescaped. | Every text value is escaped with `shared/utils/escapeHtml.js`. |
+| Approval PIN | Lockout keyed on the `user_id` sent by the browser (changing it reset the counter); a cashier's own PIN could approve; plaintext PIN comparison. | Only an active Admin or Supervisor's PIN/password approves. Lockout counts per logged-in user + IP. Route throttle `10/min` on `verify-pin`. Hash checks only. |
+| Single transaction read (IDOR) | `GET /transactions/{id}` returned any transaction to any role. | Same isolation as the list: 404 for other cashiers' transactions. |
+| Cashier isolation | Based on the role name `Cashier`, so custom roles saw everything. | Based on permission: only users who can view History Logs see every cashier's transactions. |
+| Notifications | Any role could mark read or delete (including security alerts). | Mark/delete need Admin or Supervisor (403 otherwise); other roles get an empty inbox. |
+| Login spraying | Only a per-account lockout. | Plus a per-IP route throttle (20/min). The Login page shows a clear message on 429. |
+| List parameters | `per_page`, arrays and bad dates reached the query builder (500s, unbounded pages). | Form Requests: `ListProductsRequest` (max 100), `ListInventoryRequest` (positive integer; "All" = 999999), `ListTransactionsRequest` (scalars, `Y-m-d` dates). |
+| LIKE search | `%` and `_` acted as wildcards. | `whereContains` / `orWhereContains` macros (`App\Support\LikeSearch`) escape them with `ESCAPE '!'`, same on MySQL and SQLite. |
+| Report errors | Raw exception text (SQL, table names) returned to the browser. | Generic message; details only in the log. |
+| Login tokens | Never expired. | Expire after 24 h (`SANCTUM_EXPIRATION_MINUTES`); `sanctum:prune-expired` runs daily. |
+| CORS | Localhost and every preview build allowed in production. | Production allows only the live frontend (+ `ALLOWED_ORIGINS`); previews only with `CORS_ALLOW_PREVIEW_ORIGINS=true`. |
+| Spreadsheet import | Any PhpSpreadsheet reader (HTML, XML, ODS...) and an unbounded row scan. | Only XLSX/XLS/CSV readers; at most `MAX_ROWS + 10,000` rows scanned per sheet. |
+
+- **Realtime outages (found in manual testing):** when Pusher was unreachable ("cURL error 28: SSL connection timeout"), each broadcast waited up to 30 s and then failed the request, even though the data was saved. `App\Broadcasting\ResilientPusherBroadcaster` (registered for the `pusher` driver) now logs the failure and lets the request finish; Pusher timeouts are 3 s connect / 5 s total (`PUSHER_CONNECT_TIMEOUT`, `PUSHER_TIMEOUT`). Screens catch up through polling.
+- A PIN lockout is also logged as an abnormal activity (`pin_lockout`), so it appears under Activity Logs > Security Alerts & Anomalies and notifies Admins, like a login lockout. Single failed PINs stay in History Logs as "Security Alert" rows.
+- `trustProxies(at: '*')` was reviewed and kept: in Laravel `*` trusts only the directly connected proxy, so the client IP is the right-most `X-Forwarded-For` entry added by Render and cannot be spoofed by the client.
+- Tests: `SecurityHardeningTest` (12), `SecurityInputHardeningTest` (7) and `RealtimeBroadcastResilienceTest` (4); `PhaseSevenTest` now reads/deletes notifications as Admin and checks that a Cashier gets 403.
+
+---
+
+*End of ZTG Heavy Parts Capstone Project Documentation v2.7*
+
+*Document updated: October 2026*
 

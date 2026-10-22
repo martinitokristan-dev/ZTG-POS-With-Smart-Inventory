@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../../../shared/api';
 import { useProducts } from '../../../../contexts/ProductContext';
 import { fetchReservations, resetReservationsCache } from '../../../../shared/hooks/useReservationsCache';
@@ -63,6 +64,40 @@ export default function useReservations() {
         setDetailsReservation(r);
         setShowDetailsModal(true);
     };
+
+    // Notification "View" buttons open ?view={reservation id}. Expired reservations are not
+    // listed in either tab, so open the reservation's details directly instead of a table row.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const viewParam = searchParams.get('view');
+    useEffect(() => {
+        if (!viewParam) return undefined;
+        const clearViewParam = () => setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete('view');
+            return next;
+        }, { replace: true });
+
+        const id = Number(viewParam);
+        if (!Number.isInteger(id) || id <= 0) {
+            clearViewParam();
+            return undefined;
+        }
+
+        let cancelled = false;
+        api.get(`/reservations/${id}`)
+            .then((res) => {
+                if (cancelled) return;
+                setDetailsReservation(res.data);
+                setShowDetailsModal(true);
+            })
+            .catch(() => {
+                if (!cancelled) showToast('This reservation is no longer available.', 'error');
+            })
+            // Clear only after the request settles, so the param change can't cancel it.
+            .finally(() => { if (!cancelled) clearViewParam(); });
+
+        return () => { cancelled = true; };
+    }, [viewParam, setSearchParams]);
 
     /* ── Add-Order form state ── */
     const [custName, setCustName] = useState('');

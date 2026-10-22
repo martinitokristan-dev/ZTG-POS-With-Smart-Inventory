@@ -110,6 +110,7 @@ export default function HistoryLogs() {
                                 handleOpenView={hl.handleOpenView}
                                 handleOpenPay={hl.handleOpenPay}
                                 permissions={permissions}
+                                highlightedId={hl.highlightedId}
                             />
                             
                             {/* Standardized Pagination Controls */}

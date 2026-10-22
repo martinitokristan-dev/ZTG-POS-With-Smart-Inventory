@@ -32,6 +32,21 @@ class InvoiceConstants
     public const SI_PREFIX_RESTOCK = 'INV-RESTOCK-';
 
     /**
+     * Prefix for Excel product import records in the History Logs.
+     */
+    public const SI_PREFIX_IMPORT = 'INV-IMPORT-';
+
+    /**
+     * Prefix for "import undone" records in the History Logs.
+     */
+    public const SI_PREFIX_IMPORT_UNDO = 'INV-IMPORT-UNDO-';
+
+    /**
+     * Number padding for import records (INV-IMPORT-0001).
+     */
+    public const IMPORT_NUMBER_PADDING = 4;
+
+    /**
      * Prefix for refund OR numbers.
      */
     public const OR_PREFIX_REFUND = 'OR-RFD-';

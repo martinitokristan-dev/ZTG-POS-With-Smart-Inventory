@@ -3,6 +3,7 @@ import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 import { calculateItemDiscountBreakdown, formatDiscountRate } from '../../../../shared/utils/discountCalculator';
 import { getLineItemName, getLineItemPartNo } from '../../../../shared/utils/lineItemDisplay';
+import ImportBatchDetails from '../../../../shared/components/ImportBatchDetails';
 
 export default function TransactionDetailsModal({ isOpen, onClose, transaction, fmtDate, fmt }) {
     if (!isOpen || !transaction) return null;
@@ -29,6 +30,17 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
     const isFullRefund = (status === 'Refund' || status === 'Return') && !isPartialRefund;
     const isVoid = status === 'Void';
 
+    // Excel import records keep a small JSON summary; the product list is loaded from the import itself.
+    const isImportRecord = status === 'Imported' || status === 'Import Undone';
+    let importInfo = {};
+    if (isImportRecord && tx.internal_notes) {
+        try {
+            importInfo = (typeof tx.internal_notes === 'string' ? JSON.parse(tx.internal_notes) : tx.internal_notes) || {};
+        } catch (e) {
+            importInfo = {};
+        }
+    }
+
     let title = 'Transaction Details';
     let subtitle = tx.si_no || '—';
     let statusColor = '#334155';
@@ -38,6 +50,10 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
         title = 'Restock Details';
         subtitle = 'Inventory restock record';
         statusColor = '#059669';
+    } else if (isImportRecord) {
+        title = status === 'Imported' ? 'Product Import Details' : 'Import Undone';
+        subtitle = `${tx.si_no || '—'} · ${importInfo.file_name || 'Excel file'}`;
+        statusColor = status === 'Imported' ? '#059669' : '#DC2626';
     } else if (isVoid) {
         title = 'Void Transaction Details';
         subtitle = 'Cancelled sale record';
@@ -333,7 +349,21 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                             </>
                         )}
 
-                        {status !== 'Restocked' && status !== 'Void' && status !== 'Deposit' && status !== 'Paid' && (
+                        {isImportRecord && (
+                            <>
+                                {auditDetailRow('Action', status === 'Imported' ? 'Excel Product Import' : 'Excel Import Undone')}
+                                {auditDetailRow('Date & Time', fmtDate(tx.date || tx.created_at))}
+                                {auditDetailRow(status === 'Imported' ? 'Imported By' : 'Undone By', tx.cashier?.full_name || tx.cashier?.name || '—')}
+                                {auditDetailRow('File', importInfo.file_name || '—')}
+                                {status === 'Imported'
+                                    ? auditDetailRow('Products Added', `${importInfo.products ?? 0} products, ${importInfo.variants ?? 0} variants`, { color: '#059669', fontWeight: '700' })
+                                    : auditDetailRow('Products Removed', `${importInfo.removed?.products ?? importInfo.products ?? 0} products`, { color: '#DC2626', fontWeight: '700' })}
+                                {status === 'Imported' && auditDetailRow('Total Stock Added', `+${tx.total_qty || 0}`, { color: '#059669', fontWeight: '700' })}
+                                {status === 'Imported' && Number(importInfo.failed || 0) > 0 && auditDetailRow('Could Not Be Saved', `${importInfo.failed} products`, { color: '#DC2626', fontWeight: '700' })}
+                            </>
+                        )}
+
+                        {status !== 'Restocked' && !isImportRecord && status !== 'Void' && status !== 'Deposit' && status !== 'Paid' && (
                             <>
                                 {auditDetailRow('Invoice No.', tx.si_no || '—')}
                                 {auditDetailRow('Date & Time', fmtDate(tx.date || tx.created_at))}
@@ -424,7 +454,13 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                             </div>
                         </div>
                     )}
-                    {itemsBlock}
+                    {status === 'Imported' && importInfo.import_batch_id && (
+                        <div style={{ marginTop: '16px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '10px' }}>Imported Products</span>
+                            <ImportBatchDetails batchId={importInfo.import_batch_id} showSummary={false} />
+                        </div>
+                    )}
+                    {!isImportRecord && itemsBlock}
                 </div>
                 <div className="modal-footer audit-detail-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', background: 'var(--table-header-bg)', display: 'flex', justifyContent: 'flex-end' }}>
                     <button type="button" className="btn btn-secondary" onClick={onClose} style={{ padding: '8px 24px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>Close</button>

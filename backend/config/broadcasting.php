@@ -34,7 +34,11 @@ return [
                 'encrypted' => true,
             ],
             'client_options' => [
-                // Guzzle client options — leave empty for defaults
+                // Guzzle options. Laravel's default waits up to 30 s for Pusher on every
+                // broadcast, which froze saves when Pusher was unreachable. Fail fast instead;
+                // the request continues either way (ResilientPusherBroadcaster).
+                'connect_timeout' => (float) env('PUSHER_CONNECT_TIMEOUT', 3),
+                'timeout'         => (float) env('PUSHER_TIMEOUT', 5),
             ],
         ],
 

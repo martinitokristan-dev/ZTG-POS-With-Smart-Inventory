@@ -19,23 +19,27 @@ return [
 
     'allowed_methods' => ['*'],
 
+    // Production only accepts the live frontend (plus ALLOWED_ORIGINS). Local dev servers and
+    // Cloudflare preview deployments (*.pos-hep.pages.dev) are accepted outside production, or
+    // in production when CORS_ALLOW_PREVIEW_ORIGINS=true (e.g. while testing a preview build).
     'allowed_origins' => array_values(array_unique(array_merge(
-        [
+        ['https://pos-hep.pages.dev'],
+        (env('APP_ENV', 'production') !== 'production') ? [
             'http://localhost:3000',
             'http://127.0.0.1:3000',
             'http://localhost:5173',
             'http://127.0.0.1:5173',
-            'https://pos-hep.pages.dev',
-        ],
+        ] : [],
         array_filter(
-            explode(',', env('ALLOWED_ORIGINS', '')),
-            fn($v) => trim($v) !== ''
+            array_map('trim', explode(',', env('ALLOWED_ORIGINS', ''))),
+            fn($v) => $v !== ''
         )
     ))),
 
-    'allowed_origins_patterns' => [
-        '#^https://([a-zA-Z0-9-]+\.)?pos-hep\.pages\.dev$#',
-    ],
+    'allowed_origins_patterns' => (env('APP_ENV', 'production') !== 'production'
+        || filter_var(env('CORS_ALLOW_PREVIEW_ORIGINS', false), FILTER_VALIDATE_BOOLEAN))
+        ? ['#^https://([a-zA-Z0-9-]+\.)?pos-hep\.pages\.dev$#']
+        : [],
 
     'allowed_headers' => ['*'],
 

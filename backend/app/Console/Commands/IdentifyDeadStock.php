@@ -85,7 +85,9 @@ class IdentifyDeadStock extends Command
                             'sub_type' => 'Dead Stock',
                             'title'    => 'Dead Stock Classified',
                             'message'  => "Product '{$product->name}' ({$product->part_no}) classified as Dead Stock — no sales in {$days} days.",
-                            'link'     => '/product-management',
+                            // Product id lives only in the link: setting product_id would let the
+                            // low-stock auto-resolve in NotificationService delete this alert.
+                            'link'     => "/inventory?highlight={$product->id}",
                         ]);
 
                         event(new NotificationSent($notification));

@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ['prefix' => 'api', 'middleware' => ['auth:sanctum']],
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // '*' trusts only the directly connected proxy (REMOTE_ADDR = Render's load balancer),
+        // not every hop. The client IP is then the right-most X-Forwarded-For entry, which that
+        // proxy adds itself, so a client cannot spoof its IP by sending its own header.
+        // ('**' would trust every hop and must not be used.)
         $middleware->trustProxies(at: '*');
         $middleware->alias([
             'role'       => \App\Http\Middleware\RoleMiddleware::class,

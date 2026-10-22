@@ -20,6 +20,37 @@ class NotificationService
     }
 
     /**
+     * Get one page of notifications, newest first, using a keyset cursor.
+     *
+     * Keyset paging (id < before_id) stays stable while new notifications keep
+     * arriving at the top, unlike offset paging which would shift rows.
+     *
+     * @param  int       $perPage  Number of notifications to return.
+     * @param  int|null  $beforeId Only return notifications with an id lower than this.
+     * @return array{data: Collection, has_more: bool, next_before_id: int|null, unread_count: int}
+     */
+    public function getPage(int $perPage, ?int $beforeId = null): array
+    {
+        // Fetch one extra row to know whether another page exists, without a COUNT query.
+        $rows = Notification::with(['product', 'transaction'])
+            ->when($beforeId, fn ($query) => $query->where('id', '<', $beforeId))
+            ->latest('id')
+            ->limit($perPage + 1)
+            ->get();
+
+        $hasMore = $rows->count() > $perPage;
+        $page = new Collection($rows->take($perPage)->all());
+
+        return [
+            'data'           => $page,
+            'has_more'       => $hasMore,
+            'next_before_id' => $hasMore ? $page->last()->id : null,
+            // The badge needs the true total, not just the unread rows loaded so far.
+            'unread_count'   => Notification::where('is_read', false)->count(),
+        ];
+    }
+
+    /**
      * Mark a specific notification as read.
      */
     public function markAsRead(int $id): Notification
@@ -97,7 +128,8 @@ class NotificationService
                     'title'      => $isOos ? 'Out of Stock Alert' : 'Low Stock Alert',
                     'message'    => "Product '{$displayName}' is {$statusMsg}. Current quantity {$product->stock}.",
                     'product_id' => $product->id,
-                    'link'       => "/products/{$product->id}",
+                    // Opens the Inventory table on the product's page with the row highlighted.
+                    'link'       => "/inventory?highlight={$product->id}",
                     'created_at' => now(),
                 ]);
                 event(new NotificationSent($notification));
@@ -122,6 +154,8 @@ class NotificationService
             'Void'           => 'Void',
             'Restocked'      => 'Restocked',
             'Damaged'        => 'Damaged',
+            'Imported'       => 'Imported',
+            'Import Undone'  => 'Import Undone',
             'Deposit'        => 'Deposit',
             'Paid'           => 'Paid',
             'Security Alert' => 'Security Alert',
@@ -147,6 +181,8 @@ class NotificationService
             'Void'           => 'Transaction Voided',
             'Restocked'      => 'Inventory Restocked',
             'Damaged'        => 'Damaged Stock Logged',
+            'Imported'       => 'Products Imported',
+            'Import Undone'  => 'Product Import Undone',
             'Deposit'        => 'Reservation Deposit',
             'Paid'           => 'Reservation Paid',
             'Pending'        => 'Pending Order Created',
@@ -164,6 +200,8 @@ class NotificationService
             'Void'           => "Invoice {$transaction->si_no} has been voided.",
             'Restocked'      => "Batch inventory restocking logged. SI No: {$transaction->si_no}.",
             'Damaged'        => "Damaged inventory logged. SI No: {$transaction->si_no}.",
+            'Imported'       => "{$transaction->refund_reason}. Ref: {$transaction->si_no}.",
+            'Import Undone'  => "{$transaction->refund_reason}. Ref: {$transaction->si_no}.",
             'Deposit'        => "Reservation deposit of ₱" . $fmtAmt($transaction->amount) . " logged for Order {$transaction->si_no} by {$customerName}.",
             'Paid'           => "Reservation full payment of ₱" . $fmtAmt($transaction->amount) . " logged for Order {$transaction->si_no} by {$customerName}.",
             'Pending'        => "Pending Order {$transaction->si_no} for ₱" . $fmtAmt($transaction->amount) . " has been created.",

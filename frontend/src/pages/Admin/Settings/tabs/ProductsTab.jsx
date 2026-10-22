@@ -1,6 +1,7 @@
 import React from 'react';
 import NewVariantTypeForm from './NewVariantTypeForm';
 import CustomVariantTypeActions from './CustomVariantTypeActions';
+import PagedList from '../../../../shared/components/PagedList';
 
 export default function ProductsTab({
     activeSubTab, setActiveSubTab, settings, handleSettingInputChange, handleToggleSetting,
@@ -75,7 +76,7 @@ export default function ProductsTab({
                                     <input type="checkbox" checked={settings.display_chinese_names === 'true'} onChange={() => handleToggleSetting('display_chinese_names')} />
                                 </label>
                                 <label className="toggle-row" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
-                                    <span className="toggle-label" style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>Enable product variants (Size, Color, Quality, Specification, Material)</span>
+                                    <span className="toggle-label" style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>Enable product variants</span>
                                     <input type="checkbox" checked={settings.enable_product_variants === 'true' || settings.enable_variants === 'true'} onChange={() => handleToggleSetting('enable_product_variants')} />
                                 </label>
                                 <label className="toggle-row" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
@@ -107,13 +108,20 @@ export default function ProductsTab({
                                     Add Category
                                 </button>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {(!categories || categories.length === 0) ? (
+                            <PagedList
+                                key="categories"
+                                items={categories || []}
+                                noun="categories"
+                                getKey={(c) => c.id}
+                                getSearchText={(c) => `${c.name} ${(c.variants || []).join(' ')}`}
+                                style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+                                empty={
                                     <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
                                         No product categories found. Click "+ Add Category" to create one.
                                     </div>
-                                ) : categories.map(c => (
-                                    <div key={c.id} className="cat-card">
+                                }
+                                renderItem={(c) => (
+                                    <div className="cat-card">
                                         <div className="cat-card-info">
                                             <div className="cat-card-name">{c.name}</div>
                                             <div className="cat-variant-badges">
@@ -135,8 +143,8 @@ export default function ProductsTab({
                                             <button className="btn btn-danger btn-sm" style={{ background: 'transparent', color: '#DC2626', borderColor: '#fca5a5' }} onClick={() => handleDeleteCategory(c)}>Remove</button>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                )}
+                            />
                         </div>
                     )}
 
@@ -153,13 +161,20 @@ export default function ProductsTab({
                                     Add Brand
                                 </button>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {(!brands || brands.length === 0) ? (
+                            <PagedList
+                                key="brands"
+                                items={brands || []}
+                                noun="brands"
+                                getKey={(b) => b.id}
+                                getSearchText={(b) => `${b.name} ${b.description || ''}`}
+                                style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+                                empty={
                                     <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
                                         No product brands created yet. Click "+ Add Brand" to create one.
                                     </div>
-                                ) : brands.map(b => (
-                                    <div key={b.id} className="cat-card">
+                                }
+                                renderItem={(b) => (
+                                    <div className="cat-card">
                                         <div className="cat-card-info">
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>{b.name}</span>
@@ -183,8 +198,8 @@ export default function ProductsTab({
                                             <button className="btn btn-danger btn-sm" style={{ background: 'transparent', color: '#DC2626', borderColor: '#fca5a5' }} onClick={() => handleDeleteBrand(b)}>Remove</button>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                )}
+                            />
                         </div>
                     )}
 
@@ -268,8 +283,15 @@ export default function ProductsTab({
                                     </div>
                                 </div>
                                 <div className="variant-list">
-                                    {getOptionsForType(typeName).map(opt => (
-                                        <div key={opt.id} className="vitem" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', border: '1px solid var(--border)', borderRadius: '6px', marginBottom: '8px', background: '#fff' }}>
+                                    <PagedList
+                                        key={`options-${typeName}`}
+                                        items={getOptionsForType(typeName)}
+                                        noun={`${typeName.toLowerCase()} options`}
+                                        getKey={(opt) => opt.id}
+                                        getSearchText={(opt) => opt.value}
+                                        empty={<p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0' }}>No options added yet.</p>}
+                                        renderItem={(opt) => (
+                                        <div className="vitem" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', border: '1px solid var(--border)', borderRadius: '6px', marginBottom: '8px', background: '#fff' }}>
                                             {editingVariantId === opt.id ? (
                                                 <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center' }}>
                                                     <input type="text" className="form-control" value={editValue} onChange={e => setEditValue(e.target.value)} autoFocus onKeyDown={(e) => { if(e.key === 'Enter') handleSaveEdit(opt.id); if(e.key === 'Escape') setEditingVariantId(null); }} style={{ flex: 1, height: '32px' }} />
@@ -286,10 +308,8 @@ export default function ProductsTab({
                                                 </>
                                             )}
                                         </div>
-                                    ))}
-                                    {getOptionsForType(typeName).length === 0 && (
-                                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0' }}>No options added yet.</p>
-                                    )}
+                                        )}
+                                    />
                                 </div>
                             </div>
                         );
@@ -331,8 +351,15 @@ export default function ProductsTab({
                                     </div>
                                 </div>
                                 <div className="variant-list">
-                                    {(uomList || []).map((uom, idx) => (
-                                        <div key={idx} className="vitem" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', border: '1px solid var(--border)', borderRadius: '6px', marginBottom: '8px', background: '#fff' }}>
+                                    <PagedList
+                                        key="uom"
+                                        items={uomList || []}
+                                        noun="units"
+                                        getKey={(uom, idx) => `${idx}-${uom}`}
+                                        getSearchText={(uom) => uom}
+                                        empty={<p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0' }}>No units of measure added yet.</p>}
+                                        renderItem={(uom, idx) => (
+                                        <div className="vitem" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', border: '1px solid var(--border)', borderRadius: '6px', marginBottom: '8px', background: '#fff' }}>
                                             {editingUomIdx === idx ? (
                                                 <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center' }}>
                                                     <input 
@@ -357,10 +384,8 @@ export default function ProductsTab({
                                                 </>
                                             )}
                                         </div>
-                                    ))}
-                                    {(!uomList || uomList.length === 0) && (
-                                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0' }}>No units of measure added yet.</p>
-                                    )}
+                                        )}
+                                    />
                                 </div>
                             </div>
                         );

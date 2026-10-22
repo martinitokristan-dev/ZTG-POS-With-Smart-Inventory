@@ -17,6 +17,7 @@ class VariantType extends Model
 
     protected $fillable = [
         'name',
+        'import_batch_id',
     ];
 
     public function options(): HasMany

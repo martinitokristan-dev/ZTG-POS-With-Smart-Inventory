@@ -50,7 +50,10 @@ return [
     |
     */
 
-    'expiration' => null,
+    // A leaked or forgotten login token stops working after this many minutes (default 24 h,
+    // so a full shop day never gets interrupted). Set SANCTUM_EXPIRATION_MINUTES to change it.
+    // Expired tokens are deleted daily by `sanctum:prune-expired` (routes/console.php).
+    'expiration' => (int) env('SANCTUM_EXPIRATION_MINUTES', 1440) ?: null,
 
     /*
     |--------------------------------------------------------------------------

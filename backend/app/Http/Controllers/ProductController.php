@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ListProductsRequest;
 use App\Http\Requests\LogDamagedRequest;
 use App\Http\Requests\RestockProductRequest;
 use App\Http\Requests\StoreProductRequest;
@@ -26,11 +27,11 @@ class ProductController extends Controller
     /**
      * List base products with optional search/category/status filters.
      */
-    public function index(Request $request): JsonResponse
+    public function index(ListProductsRequest $request): JsonResponse
     {
-        $products = $this->productService->getAll($request->only([
+        $products = $this->productService->getAll(array_intersect_key($request->validated(), array_flip([
             'search', 'category_id', 'status', 'paginate', 'per_page', 'page', 'limit'
-        ]));
+        ])));
 
         return response()->json($products);
     }

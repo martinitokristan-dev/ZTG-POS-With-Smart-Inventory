@@ -73,9 +73,9 @@ function Sidebar({ isOpen = false, onClose = () => {}, isMobile = false }) {
     const navigate = useRouterNavigate();
     const location = useRouterLocation();
     const [avatarError, setAvatarError] = React.useState(false);
-    const [expandedDropdowns, setExpandedDropdowns] = React.useState({
-        '/user-management': true,
-    });
+    // Sub-menus start closed; a group opens by itself only while one of its pages is active
+    // (see isExpanded below), and the user's own open / close click is remembered after that.
+    const [expandedDropdowns, setExpandedDropdowns] = React.useState({});
     const [user, setUser] = React.useState(() => {
         const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         return userStr ? JSON.parse(userStr) : null;

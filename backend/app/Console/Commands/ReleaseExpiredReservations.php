@@ -106,7 +106,9 @@ class ReleaseExpiredReservations extends Command
                         'sub_type' => 'Void',
                         'title'    => 'Reservation Expired',
                         'message'  => "Reservation {$reservation->order_no} for {$customerName} has expired and was released{$depositText}.",
-                        'link'     => "/reservations/{$reservation->id}",
+                        // Expired reservations are not listed in either Reservations tab, so the
+                        // page opens this reservation's details instead of highlighting a row.
+                        'link'     => "/reservations?view={$reservation->id}",
                     ]);
 
                     // Dispatch NotificationSent event

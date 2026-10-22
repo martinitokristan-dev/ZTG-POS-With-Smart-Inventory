@@ -214,6 +214,6 @@ export default function useSalesLog() {
         metrics,
         fmt,
         fmtDate,
-        cashiers
+        cashiers,
     };
 }

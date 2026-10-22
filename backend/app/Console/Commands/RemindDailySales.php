@@ -53,7 +53,7 @@ class RemindDailySales extends Command
                     'type' => NotificationType::SYSTEM->value,
                     'title' => 'Daily Sales Reminder',
                     'message' => "Reminder: Please report today's sales. There are completed transactions today.",
-                    'link' => '/reports/sales'
+                    'link' => '/reports'
                 ]);
                 $this->info('Sales reminder notification created.');
             } else {

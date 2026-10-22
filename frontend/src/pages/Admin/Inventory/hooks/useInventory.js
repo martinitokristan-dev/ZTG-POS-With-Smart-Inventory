@@ -1,9 +1,15 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import api from '../../../../shared/api';
 import { useInventory as useGlobalInventory } from '../../../../contexts/InventoryContext';
 import { useProducts as useGlobalProducts } from '../../../../contexts/ProductContext';
 import { flattenToSellableSKUs } from '../../../../shared/utils/skuHelpers';
+import useFindAndHighlight from '../../../../shared/hooks/useFindAndHighlight';
 import echo from '../../../../lib/echo';
+
+const productRowSelector = (id) => `[data-product-id="${id}"]`;
+
+/** Page size the table requests ("All" is sent as 999999). */
+const toRequestPerPage = (perPage) => (perPage === 'All' || perPage === 'all' || perPage >= 999999 ? 999999 : perPage);
 
 // Module-level cache — survives component unmount/remount on route changes
 let _cachedInventoryProducts = [];
@@ -11,8 +17,8 @@ let _cachedInventoryPagination = null;
 
 export function useInventory() {
     // Read from global contexts (zero-fetch page load/filtering)
-    const { inventory: globalProducts } = useGlobalInventory();
-    const { categories } = useGlobalProducts();
+    const { inventory: globalProducts, refetch: refetchGlobalInventory } = useGlobalInventory();
+    const { categories, refetch: refetchGlobalProducts } = useGlobalProducts();
 
     // Local paginated state — seeded from module cache so revisits are instant
     const [paginatedProducts, setPaginatedProducts] = useState(_cachedInventoryProducts);
@@ -27,6 +33,8 @@ export function useInventory() {
     const [categoryId, setCategoryId] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [dateFilter, setDateFilter] = useState('today'); // 'today', 'this_week', 'this_month', 'this_year', 'all'
+    // Bumped to reload the table after bulk changes (e.g. an Excel import).
+    const [reloadKey, setReloadKey] = useState(0);
 
     // Modal state
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -38,12 +46,7 @@ export function useInventory() {
             try {
                 // Only show spinner on very first load (module cache is empty)
                 if (_cachedInventoryProducts.length === 0) setLoading(true);
-                const queryParams = [`paginate=1`, `page=${page}`];
-                if (perPage === 'All' || perPage === 'all' || perPage >= 999999) {
-                    queryParams.push(`per_page=999999`);
-                } else {
-                    queryParams.push(`per_page=${perPage}`);
-                }
+                const queryParams = [`paginate=1`, `page=${page}`, `per_page=${toRequestPerPage(perPage)}`];
                 if (search) queryParams.push(`search=${encodeURIComponent(search)}`);
                 if (categoryId) queryParams.push(`category_id=${categoryId}`);
                 if (statusFilter && statusFilter !== 'All') queryParams.push(`status=${statusFilter}`);
@@ -74,7 +77,7 @@ export function useInventory() {
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [search, categoryId, statusFilter, dateFilter, page, perPage]);
+    }, [search, categoryId, statusFilter, dateFilter, page, perPage, reloadKey]);
 
     // Reset page when filters change
     useEffect(() => {
@@ -185,6 +188,48 @@ export function useInventory() {
         return flattenToSellableSKUs(filteredProductsForStats, statusFilter);
     }, [filteredProductsForStats, statusFilter]);
 
+    // Reload the table, the global inventory/product lists and the categories (new ones may exist).
+    const refreshAll = () => {
+        setReloadKey(k => k + 1);
+        refetchGlobalInventory?.();
+        refetchGlobalProducts?.();
+    };
+
+    // Stock-alert notifications open ?highlight={product id}: jump to its page and highlight the row.
+    const locateProduct = useCallback(async (id, { unfiltered }) => {
+        const params = { per_page: toRequestPerPage(perPage) };
+        if (!unfiltered) {
+            if (search) params.search = search;
+            if (categoryId) params.category_id = categoryId;
+            if (statusFilter && statusFilter !== 'All') params.status = statusFilter;
+        }
+        const res = await api.get(`/inventory/find-page/${id}`, { params });
+        return res.data;
+    }, [perPage, search, categoryId, statusFilter]);
+
+    const clearFilters = useCallback(() => {
+        setSearch('');
+        setCategoryId('');
+        setStatusFilter('');
+    }, []);
+
+    // Base rows and variant rows: a stock alert can point at either.
+    const rowIds = useMemo(() => paginatedProducts.flatMap(p => [p.id, ...(p.variants || []).map(v => v.id)]), [paginatedProducts]);
+    const reloadTable = useCallback(() => setReloadKey(k => k + 1), []);
+
+    const { highlightedId } = useFindAndHighlight({
+        locate: locateProduct,
+        page,
+        setPage,
+        loadedPage: pagination?.current_page,
+        rowIds,
+        loading,
+        rowSelector: productRowSelector,
+        clearFilters,
+        refetch: reloadTable,
+        label: 'product',
+    });
+
     const totalItems = filteredSKUs.length;
     const categoriesCount = new Set(filteredSKUs.map(p => p.category_id)).size;
     const outOfStockCount = filteredSKUs.filter(p => p.stock === 0).length;
@@ -207,6 +252,8 @@ export function useInventory() {
         outOfStockCount,
         lowStockCount,
         dateFilter, setDateFilter,
-        perPage, setPerPage
+        perPage, setPerPage,
+        refreshAll,
+        highlightedId
     };
 }

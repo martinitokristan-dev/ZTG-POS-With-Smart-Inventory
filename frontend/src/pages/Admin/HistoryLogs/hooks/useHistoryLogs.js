@@ -5,6 +5,9 @@ import usePaginatedCache, { invalidateCachePage } from '../../../../shared/hooks
 import echo from '../../../../lib/echo';
 import { resetDashboardCache } from '../../../../shared/hooks/useDashboardCache';
 import { resetReportsCache } from '../../../../shared/hooks/useReportsCache';
+import useFindAndHighlight from '../../../../shared/hooks/useFindAndHighlight';
+
+const transactionRowSelector = (id) => `[data-transaction-id="${id}"]`;
 
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
@@ -40,6 +43,33 @@ export default function useHistoryLogs() {
     }), [statusParam, paymentParam, searchParam]);
 
     const { data: transactions, loading, page, setPage, pagination, refetch } = usePaginatedCache('history', '/transactions', queryParams);
+
+    // Notification "View" buttons open ?highlight={transaction id}: jump to its page and highlight it.
+    const locateTransaction = useCallback(async (id, { unfiltered }) => {
+        const res = await api.get(`/transactions/${id}/find-page`, { params: unfiltered ? {} : queryParams });
+        return res.data;
+    }, [queryParams]);
+
+    const clearFilters = useCallback(() => {
+        setActiveTab('All');
+        setSearchQuery('');
+        setPaymentFilter('All');
+    }, []);
+
+    const transactionIds = useMemo(() => transactions.map(t => t.id), [transactions]);
+
+    const { highlightedId } = useFindAndHighlight({
+        locate: locateTransaction,
+        page,
+        setPage,
+        loadedPage: pagination?.current_page,
+        rowIds: transactionIds,
+        loading,
+        rowSelector: transactionRowSelector,
+        clearFilters,
+        refetch,
+        label: 'transaction',
+    });
 
     useEffect(() => {
         const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
@@ -211,6 +241,7 @@ export default function useHistoryLogs() {
         handleClosePay,
         handlePaySubmit,
         fmt,
-        fmtDate
+        fmtDate,
+        highlightedId
     };
 }

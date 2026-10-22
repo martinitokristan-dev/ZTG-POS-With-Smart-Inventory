@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import api from '../shared/api';
 import echo from '../lib/echo';
-import { INVENTORY_POLL_INTERVAL_MS, REALTIME_DEBOUNCE_POLL_MS } from '../config/constants';
+import { INVENTORY_POLL_INTERVAL_MS, REALTIME_DEBOUNCE_POLL_MS, INVENTORY_FRESH_MS } from '../config/constants';
 
 const InventoryContext = createContext();
 
@@ -13,8 +13,11 @@ export const InventoryProvider = ({ children }) => {
     // Tracks { [id]: { time: number, action: 'update', newStock: number } }
     const optimisticTimestamps = useRef({});
     const pollTimer = useRef(null);
+    const inFlight = useRef(null);       // The request currently running, shared by all callers
+    const rerunAfter = useRef(false);    // A forced refresh arrived while a request was running
+    const lastFetchedAt = useRef(0);     // When the last successful load finished
 
-    const fetchInventory = useCallback(async () => {
+    const loadInventory = useCallback(async () => {
         const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
         const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
         if (!token || !userStr) return;
@@ -26,8 +29,10 @@ export const InventoryProvider = ({ children }) => {
             }
             
             const fetchStart = Date.now();
-            const res = await api.get('/inventory');
+            // view=stock: only the fields this app-wide list needs (counts and stock alerts).
+            const res = await api.get('/inventory', { params: { view: 'stock' } });
             const data = res.data || { summary: {}, products: [] };
+            lastFetchedAt.current = Date.now();
             
             setInventoryData(prev => {
                 const newProductsMap = new Map(data.products.map(p => [p.id, p]));
@@ -55,6 +60,42 @@ export const InventoryProvider = ({ children }) => {
         }
     }, []);
 
+    /** Start a load, or join the one already running so the same data is never downloaded twice at once. */
+    const runLoad = useCallback(() => {
+        if (!inFlight.current) {
+            inFlight.current = loadInventory().finally(() => {
+                inFlight.current = null;
+                if (rerunAfter.current) {
+                    // Data may have changed after the running request started (e.g. a sale just completed).
+                    rerunAfter.current = false;
+                    runLoad();
+                }
+            });
+        }
+        return inFlight.current;
+    }, [loadInventory]);
+
+    /**
+     * Forced refresh (used after sales, imports and polls).
+     * If a load is already running, a fresh load is queued to start right after it, so the
+     * data always ends up newer than this call. The returned promise settles when the load
+     * that is running now finishes; the queued reload follows on its own.
+     */
+    const fetchInventory = useCallback(() => {
+        if (inFlight.current) {
+            rerunAfter.current = true;
+            return inFlight.current;
+        }
+        return runLoad();
+    }, [runLoad]);
+
+    /** Refresh only when the data is older than maxAgeMs; otherwise reuse it (or join a running load). */
+    const refreshIfStale = useCallback((maxAgeMs = INVENTORY_FRESH_MS) => {
+        if (inFlight.current) return inFlight.current;
+        if (Date.now() - lastFetchedAt.current < maxAgeMs) return Promise.resolve();
+        return runLoad();
+    }, [runLoad]);
+
     const schedulePoll = useCallback((delay = INVENTORY_POLL_INTERVAL_MS) => { // 5 minutes fallback
         if (pollTimer.current) clearTimeout(pollTimer.current);
         pollTimer.current = setTimeout(() => {
@@ -63,7 +104,8 @@ export const InventoryProvider = ({ children }) => {
     }, [fetchInventory]);
 
     useEffect(() => {
-        fetchInventory().finally(() => schedulePoll(INVENTORY_POLL_INTERVAL_MS));
+        // refreshIfStale: a remount (e.g. React StrictMode in dev) joins the first load instead of repeating it.
+        refreshIfStale().finally(() => schedulePoll(INVENTORY_POLL_INTERVAL_MS));
 
         const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
         const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
@@ -124,7 +166,7 @@ export const InventoryProvider = ({ children }) => {
                 echo.leaveChannel('private-products');
             }
         };
-    }, [fetchInventory, schedulePoll]);
+    }, [refreshIfStale, schedulePoll]);
 
     const debouncePoll = () => {
         schedulePoll(REALTIME_DEBOUNCE_POLL_MS);
@@ -165,7 +207,8 @@ export const InventoryProvider = ({ children }) => {
             inventory: inventoryData.products, 
             inventorySummary: inventoryData.summary,
             optimisticUpdateStock, 
-            refetch: fetchInventory 
+            refetch: fetchInventory,
+            refreshIfStale
         }}>
             {children}
         </InventoryContext.Provider>

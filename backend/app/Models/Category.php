@@ -28,6 +28,7 @@ class Category extends Model
         'name',
         'variants',
         'variant_type_ids',
+        'import_batch_id',
     ];
 
     /** The pre-migration JSON column is kept (renamed) only as a rollback safety net. */

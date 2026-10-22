@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ListInventoryRequest;
 use App\Models\Transaction;
 use App\Services\Reports\ReportService;
 use Illuminate\Http\JsonResponse;
@@ -11,6 +12,12 @@ use App\Models\ReportLog;
 
 class ReportController extends Controller
 {
+    /**
+     * Shown instead of the exception text, which can contain SQL, table names or file paths.
+     * The real error is written to the log.
+     */
+    private const REPORT_ERROR = 'This report could not be generated. Please try again.';
+
     protected ReportService $reportService;
 
     public function __construct(ReportService $reportService)
@@ -60,7 +67,7 @@ class ReportController extends Controller
                 'revenue_by_payment'  => [],
                 'last_7_days'         => [],
                 'transactions'        => [],
-                'error'               => $e->getMessage(),
+                'error'               => self::REPORT_ERROR,
             ]);
         }
     }
@@ -123,7 +130,7 @@ class ReportController extends Controller
                 'revenue_per_product' => [],
                 'dead_stock'          => [],
                 'totals'              => [],
-                'error'               => $e->getMessage(),
+                'error'               => self::REPORT_ERROR,
             ]);
         }
     }
@@ -154,7 +161,7 @@ class ReportController extends Controller
             return response()->json([
                 'summary' => [],
                 'details' => [],
-                'error'   => $e->getMessage(),
+                'error'   => self::REPORT_ERROR,
             ]);
         }
     }
@@ -177,13 +184,35 @@ class ReportController extends Controller
 
     /**
      * Inventory Summary and filterable list.
+     *
+     * `?view=stock` returns the lightweight whole-catalog stock list used for app-wide
+     * counts and alerts. Without it, the full list (or a page with `paginate=1`) is returned.
      */
-    public function inventory(Request $request): JsonResponse
+    public function inventory(ListInventoryRequest $request): JsonResponse
     {
-        $data = $this->reportService->getInventorySummary($request->only([
+        $validated = $request->validated();
+        if (($validated['view'] ?? null) === 'stock') {
+            return response()->json($this->reportService->getInventoryStockList());
+        }
+
+        $data = $this->reportService->getInventorySummary(array_intersect_key($validated, array_flip([
             'category_id', 'status', 'search', 'paginate', 'per_page', 'page', 'date_filter'
-        ]));
+        ])));
         return response()->json($data);
+    }
+
+    /**
+     * Find which Inventory table page holds a product (stock-alert notifications use this).
+     *
+     * Accepts the table's filters (category_id, status, search, per_page) so the page matches
+     * what the user sees. Responds { found: false } when the product is gone or filtered out.
+     */
+    public function inventoryFindPage(ListInventoryRequest $request, int $id): JsonResponse
+    {
+        return response()->json($this->reportService->findInventoryPage(
+            $id,
+            array_intersect_key($request->validated(), array_flip(['category_id', 'status', 'search', 'per_page']))
+        ));
     }
 
     /**

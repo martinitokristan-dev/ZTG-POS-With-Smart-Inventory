@@ -4,11 +4,14 @@ namespace App\Services\Transactions;
 
 use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
+use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\User;
 use App\Services\Products\ProductService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -45,17 +48,116 @@ class TransactionService
         $this->refundItemValidator = $refundItemValidator;
     }
 
+    /** Rows per page for the transaction lists (History Logs, Sales Log). */
+    public const LIST_PER_PAGE = 20;
+
+    /** Columns the transaction list may be sorted by. Anything else falls back to 'date'. */
+    private const LIST_SORTABLE = ['date', 'id'];
+
     /**
      * List transactions with optional filters.
      * Returns latest-first, paginated 20 per page.
      */
     public function getAll(array $filters = []): LengthAwarePaginator
     {
-        $query = Transaction::with(['customer', 'cashier', 'approver', 'checker', 'items.product.brand', 'items.product.parent.brand', 'items.product.variantOptions', 'reservation']);
+        $query = $this->buildListQuery($filters)
+            ->with(['customer', 'cashier', 'approver', 'checker', 'items.product.brand', 'items.product.parent.brand', 'items.product.variantOptions', 'reservation']);
 
-        $sortBy = $filters['sort_by'] ?? 'date';
-        $sortOrder = $filters['sort_order'] ?? 'desc';
+        $paginator = $query->paginate(self::LIST_PER_PAGE);
+        $paginator->getCollection()->transform(function ($tx) {
+            if ($tx->items) {
+                $tx->items->transform(function ($item) {
+                    if ($item->product) {
+                        $prod = $item->product;
+                        $baseName = $prod->parent ? $prod->parent->name : $prod->name;
+                        $optionValues = $prod->variantOptions ? $prod->variantOptions->pluck('value')->join(' - ') : '';
+                        if ($optionValues) {
+                            $item->product->name = "{$baseName} ({$optionValues})";
+                        } elseif ($prod->parent && strpos($prod->name, '(') === false) {
+                            $item->product->name = "{$prod->parent->name} ({$prod->name})";
+                        }
+                    }
+                    return $item;
+                });
+            }
+            return $tx;
+        });
+
+        return $paginator;
+    }
+
+    /**
+     * Find which page of the filtered, sorted transaction list holds a transaction.
+     *
+     * Uses the exact same query as getAll(), so the page number always matches what
+     * the list shows. The position is a single COUNT of the rows ranked before the
+     * target (index-friendly), instead of loading every id into memory.
+     *
+     * @param  int    $id      Transaction to locate.
+     * @param  array  $filters Same filters the list was loaded with.
+     * @return array{found: bool, page?: int, position?: int}
+     */
+    public function findPage(int $id, array $filters = []): array
+    {
+        $target = Transaction::query()->select(['id', 'date'])->find($id);
+        if (!$target) {
+            return ['found' => false];
+        }
+
+        // Is the transaction visible at all with these filters?
+        if (!$this->buildListQuery($filters)->whereKey($id)->exists()) {
+            return ['found' => false];
+        }
+
+        [$sortBy, $sortOrder] = $this->resolveListSort($filters);
+        $op = $sortOrder === 'desc' ? '>' : '<';
+
+        // Rows that sort before the target: same order as buildListQuery (sort column, then id).
+        $before = $this->buildListQuery($filters)
+            ->where(function ($q) use ($sortBy, $op, $target) {
+                if ($sortBy === 'id') {
+                    $q->where('id', $op, $target->id);
+                    return;
+                }
+                $q->where($sortBy, $op, $target->{$sortBy})
+                  ->orWhere(function ($tie) use ($sortBy, $op, $target) {
+                      $tie->where($sortBy, $target->{$sortBy})->where('id', $op, $target->id);
+                  });
+            })
+            ->count();
+
+        return [
+            'found'    => true,
+            'page'     => intdiv($before, self::LIST_PER_PAGE) + 1,
+            'position' => $before + 1,
+        ];
+    }
+
+    /**
+     * Whitelisted sort column and direction for the transaction list.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function resolveListSort(array $filters): array
+    {
+        $sortBy = in_array($filters['sort_by'] ?? null, self::LIST_SORTABLE, true) ? $filters['sort_by'] : 'date';
+        $sortOrder = strtolower((string) ($filters['sort_order'] ?? 'desc')) === 'asc' ? 'asc' : 'desc';
+        return [$sortBy, $sortOrder];
+    }
+
+    /**
+     * Filtered and sorted transaction query shared by getAll() and findPage().
+     * Ties on the sort column are broken by id, so page boundaries are stable.
+     */
+    private function buildListQuery(array $filters): Builder
+    {
+        $query = Transaction::query();
+
+        [$sortBy, $sortOrder] = $this->resolveListSort($filters);
         $query->orderBy($sortBy, $sortOrder);
+        if ($sortBy !== 'id') {
+            $query->orderBy('id', $sortOrder);
+        }
 
         if (!empty($filters['status'])) {
             $statuses = array_map('trim', explode(',', $filters['status']));
@@ -86,7 +188,7 @@ class TransactionService
                       ->orWhereNotNull('cheque_number');
                 });
             } else {
-                $query->where('payment_method', 'like', '%' . $method . '%');
+                $query->whereContains('payment_method', (string) $method);
             }
         }
 
@@ -119,55 +221,51 @@ class TransactionService
         }
 
         if (!empty($filters['search'])) {
-            $query->where(function ($q) use ($filters) {
-                $q->where('si_no', 'like', '%' . $filters['search'] . '%')
-                  ->orWhere('or_no', 'like', '%' . $filters['search'] . '%')
-                  ->orWhereHas('customer', function ($cq) use ($filters) {
-                      $cq->where('name', 'like', '%' . $filters['search'] . '%');
+            $term = (string) $filters['search'];
+            // whereContains: literal search, % and _ are not wildcards (App\Support\LikeSearch).
+            $query->where(function ($q) use ($term) {
+                $q->whereContains('si_no', $term)
+                  ->orWhereContains('or_no', $term)
+                  ->orWhereHas('customer', function ($cq) use ($term) {
+                      $cq->whereContains('name', $term);
                   });
             });
         }
 
-        $paginator = $query->paginate(20);
-        $paginator->getCollection()->transform(function ($tx) {
-            if ($tx->items) {
-                $tx->items->transform(function ($item) {
-                    if ($item->product) {
-                        $prod = $item->product;
-                        $baseName = $prod->parent ? $prod->parent->name : $prod->name;
-                        $optionValues = $prod->variantOptions ? $prod->variantOptions->pluck('value')->join(' - ') : '';
-                        if ($optionValues) {
-                            $item->product->name = "{$baseName} ({$optionValues})";
-                        } elseif ($prod->parent && strpos($prod->name, '(') === false) {
-                            $item->product->name = "{$prod->parent->name} ({$prod->name})";
-                        }
-                    }
-                    return $item;
-                });
-            }
-            return $tx;
-        });
-
-        return $paginator;
+        return $query;
     }
 
     /**
      * Get a single transaction with all relationships.
      */
-    public function show(int $id): Transaction
+    public function show(int $id, ?int $onlyCashierId = null): Transaction
     {
         return Transaction::with(['customer', 'cashier', 'approver', 'checker', 'items.product.brand', 'items.product.parent.brand', 'reservation'])
+            // Cashier isolation: someone else's transaction is "not found" (no existence leak).
+            ->when($onlyCashierId !== null, fn ($q) => $q->where('cashier_id', $onlyCashierId))
             ->findOrFail($id);
     }
 
     /**
-     * Verify a user's PIN with brute-force rate limiting (5 attempts / 60 seconds).
-     * On failure, logs a Security Alert transaction.
+     * Verify an approval PIN (or password) before a sensitive operation.
+     *
+     * Only an authorized approver can approve: an active Admin or Supervisor. Any of them
+     * may type their own PIN or password; a Cashier's (or anyone else's) PIN is never accepted,
+     * even their own. The named approver is checked first, then the other approvers.
+     *
+     * Brute-force protection: 5 failed attempts per 60 seconds, counted per logged-in user
+     * and IP. The approver id comes from the request, so it is not part of the key (changing
+     * it must not reset the counter). Each failure logs a Security Alert transaction.
+     *
+     * @param  int          $userId  Approver named by the request (may be the logged-in user).
+     * @param  string       $pin     PIN or password typed by the approver.
+     * @param  string|null  $context Text added to the security alert.
      */
     public function verifyPin(int $userId, string $pin, ?string $context = null): bool
     {
         $ip = request()?->ip() ?? '127.0.0.1';
-        $throttleKey = "pin-verify|{$userId}|{$ip}";
+        $actorId = auth()->id() ?? $userId;
+        $throttleKey = "pin-verify|{$actorId}|{$ip}";
 
         if (RateLimiter::tooManyAttempts($throttleKey, SecurityConstants::MAX_PIN_ATTEMPTS)) {
             $seconds = RateLimiter::availableIn($throttleKey);
@@ -176,26 +274,7 @@ class TransactionService
             ]);
         }
 
-        $user = User::find($userId);
-
-        $isPinMatch = $user && !empty($user->pin) && (Hash::check($pin, $user->pin) || $user->pin === $pin);
-        $isPasswordMatch = $user && Hash::check($pin, $user->password);
-
-        if ($isPinMatch || $isPasswordMatch) {
-            RateLimiter::clear($throttleKey);
-            return true;
-        }
-
-        // If target user didn't match (e.g., if $userId was a cashier), check if $pin matches ANY Admin or Supervisor
-        $matchingAdmin = User::whereIn('role', ['Admin', 'Supervisor'])
-            ->get()
-            ->first(function ($admin) use ($pin) {
-                $pinMatch = !empty($admin->pin) && (Hash::check($pin, $admin->pin) || $admin->pin === $pin);
-                $passMatch = Hash::check($pin, $admin->password);
-                return $pinMatch || $passMatch;
-            });
-
-        if ($matchingAdmin) {
+        if ($this->findApproverByPin($userId, $pin)) {
             RateLimiter::clear($throttleKey);
             return true;
         }
@@ -203,11 +282,11 @@ class TransactionService
         RateLimiter::hit($throttleKey, SecurityConstants::PIN_LOCKOUT_SECONDS);
         $attempts = RateLimiter::attempts($throttleKey);
 
-        // Log a security alert for failed PIN/Password attempt
+        // Log a security alert for failed PIN/Password attempt (cashier_id = who typed it)
         Transaction::create([
             'si_no'          => SecurityConstants::SECURITY_ALERT_PREFIX . now()->timestamp,
             'date'           => now(),
-            'cashier_id'     => $userId,
+            'cashier_id'     => $actorId,
             'total_qty'      => 0,
             'amount'         => 0,
             'payment_method' => 'N/A',
@@ -217,6 +296,23 @@ class TransactionService
         ]);
 
         if ($attempts >= SecurityConstants::MAX_PIN_ATTEMPTS) {
+            // Same as a login lockout: shows under Activity Logs > Security Alerts & Anomalies
+            // and notifies Admins.
+            $this->activityLogService->logAbnormal(
+                action: 'pin_lockout',
+                description: "Abnormal Security Alert: approval PIN locked for "
+                    . SecurityConstants::PIN_LOCKOUT_SECONDS . " seconds after {$attempts} failed attempts"
+                    . ($context ? " ({$context})" : '') . " by user ID {$actorId} from IP {$ip}",
+                metadata: [
+                    'actor_id'    => $actorId,
+                    'approver_id' => $userId,
+                    'ip_address'  => $ip,
+                    'attempts'    => $attempts,
+                    'lockout_s'   => SecurityConstants::PIN_LOCKOUT_SECONDS,
+                ],
+                userId: $actorId
+            );
+
             $seconds = RateLimiter::availableIn($throttleKey);
             throw ValidationException::withMessages([
                 'approval_pin' => ["Too many failed PIN verification attempts. Please wait {$seconds} second(s) before trying again."],
@@ -224,6 +320,32 @@ class TransactionService
         }
 
         return false;
+    }
+
+    /**
+     * The authorized approver (active Admin or Supervisor) whose PIN or password matches.
+     *
+     * PINs are stored hashed (User casts `pin` as hashed), so only Hash::check is used.
+     * The named approver is tried first, so the usual case costs one or two hash checks.
+     */
+    private function findApproverByPin(int $preferredId, string $pin): ?User
+    {
+        if ($pin === '') {
+            return null;
+        }
+
+        $approvers = User::query()
+            ->select(['id', 'pin', 'password'])
+            ->whereIn('role', [UserRole::ADMIN->value, UserRole::SUPERVISOR->value])
+            ->where('status', UserStatus::ACTIVE->value)
+            ->get()
+            ->sortBy(fn (User $u) => $u->id === $preferredId ? 0 : 1);
+
+        return $approvers->first(function (User $approver) use ($pin) {
+            $pinMatch = !empty($approver->pin) && Hash::check($pin, $approver->pin);
+
+            return $pinMatch || Hash::check($pin, $approver->password);
+        });
     }
 
     /**

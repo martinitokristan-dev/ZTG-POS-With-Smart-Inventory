@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNotifications } from '../contexts/NotificationContext';
+import NotificationDetailModal from './NotificationDetailModal';
 
 // Helper: resolve icon properties from notification type/sub_type
 function getNotifIcon(n) {
@@ -154,8 +155,26 @@ function NotificationBubble({ notif, onClick }) {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function NotificationsDropdown() {
     const [isOpen, setIsOpen] = useState(false);
+    const [selectedNotification, setSelectedNotification] = useState(null);
     const dropdownRef = useRef(null);
-    const { notifications, unreadCount, markAsRead, markAllRead, bubbleNotif, dismissBubble } = useNotifications();
+    const listRef = useRef(null);      // Scrollable notification list
+    const sentinelRef = useRef(null);  // Invisible marker at the bottom of the list
+    const { notifications, unreadCount, hasMore, loadingMore, loadMore, markAsRead, markAllRead, bubbleNotif, dismissBubble } = useNotifications();
+
+    // Infinite scroll: load older notifications when the bottom marker comes into view
+    useEffect(() => {
+        if (!isOpen || !hasMore || !listRef.current || !sentinelRef.current) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) loadMore();
+            },
+            // Start loading slightly before the user actually hits the bottom
+            { root: listRef.current, rootMargin: '0px 0px 80px 0px' }
+        );
+        observer.observe(sentinelRef.current);
+        return () => observer.disconnect();
+    }, [isOpen, hasMore, loadMore, notifications.length]);
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -178,8 +197,20 @@ export default function NotificationsDropdown() {
     };
 
     const handleMarkRead = async (id) => {
+        // Find the notification
+        const notification = notifications.find(n => n.id === id);
+        if (!notification) return;
+
+        // Mark as read
         await markAsRead(id);
+        
+        // Show detail modal
+        setSelectedNotification(notification);
         setIsOpen(false);
+    };
+
+    const handleCloseDetail = () => {
+        setSelectedNotification(null);
     };
 
     return (
@@ -239,7 +270,7 @@ export default function NotificationsDropdown() {
                                 Mark all as read
                             </button>
                         </div>
-                        <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
+                        <div ref={listRef} style={{ maxHeight: '320px', overflowY: 'auto' }} aria-busy={loadingMore}>
                             {notifications.length === 0 ? (
                                 <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
                                     No notifications to display.
@@ -249,10 +280,32 @@ export default function NotificationsDropdown() {
                                     <NotificationCard n={n} isBubble={false} />
                                 </div>
                             ))}
+
+                            {/* Infinite scroll marker + status footer */}
+                            {hasMore && <div ref={sentinelRef} style={{ height: '1px' }} aria-hidden="true" />}
+                            {loadingMore && (
+                                <div role="status" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                    <span style={{ width: '14px', height: '14px', border: '2px solid var(--border)', borderTopColor: 'var(--primary, #3B82F6)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                    Loading older notifications...
+                                </div>
+                            )}
+                            {!hasMore && !loadingMore && notifications.length > 0 && (
+                                <div style={{ padding: '12px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
+                                    No older notifications
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
             </div>
+
+            {/* Detail Modal */}
+            {selectedNotification && (
+                <NotificationDetailModal 
+                    notification={selectedNotification}
+                    onClose={handleCloseDetail}
+                />
+            )}
         </>
     );
 }

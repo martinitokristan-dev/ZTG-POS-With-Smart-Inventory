@@ -16,6 +16,7 @@ class VariantOption extends Model
     protected $fillable = [
         'variant_type_id',
         'value',
+        'import_batch_id',
     ];
 
     public function type(): BelongsTo

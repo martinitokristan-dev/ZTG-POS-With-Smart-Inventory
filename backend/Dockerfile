@@ -1,4 +1,6 @@
-FROM php:8.2-apache
+# Pinned to a patched release: 8.2.35 fixes PHP2Shell (CVE-2026-109618, CVE-2026-109619).
+# A floating tag like 8.2-apache can come from an old build cache. Bump this on every PHP security release.
+FROM php:8.2.35-apache
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
@@ -22,6 +24,9 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Increase PHP upload limit to match frontend's 12MB validation limit
 RUN echo "upload_max_filesize = 15M" > /usr/local/etc/php/conf.d/uploads.ini \
     && echo "post_max_size = 20M" >> /usr/local/etc/php/conf.d/uploads.ini
+
+# Don't advertise the PHP version (the X-Powered-By header showed it to everyone).
+RUN echo "expose_php = Off" > /usr/local/etc/php/conf.d/security.ini
 
 # Set working directory
 WORKDIR /var/www/html

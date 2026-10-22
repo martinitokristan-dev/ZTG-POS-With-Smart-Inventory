@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -566,12 +567,155 @@ class ReportService
             ->toArray();
     }
 
+    /** Product columns the app-wide stock list needs (dashboard totals, critical-stock widget, inventory header counts). */
+    private const STOCK_LIST_COLUMNS = [
+        'id', 'parent_product_id', 'name', 'chinese_name', 'part_no', 'category_id',
+        'stock', 'alert_limit', 'status', 'is_dead_stock',
+    ];
+
     /**
-     * Inventory Summary & Product Listing.
+     * Lightweight stock list of the whole catalog: base products with their variants.
+     *
+     * The frontend keeps this in memory for counts and low-stock alerts, so it carries
+     * only the fields those features read. Category, brand, image, prices and timestamps
+     * are left out on purpose, which also skips the per-variant image lookup that
+     * Product::getImageAttribute would otherwise run.
+     *
+     * @return array{summary: array, products: array<int, array>}
      */
-    public function getInventorySummary(array $filters = []): array
+    public function getInventoryStockList(): array
     {
-        // 1. Calculate status counts
+        $columns = array_map(fn ($c) => "products.{$c}", self::STOCK_LIST_COLUMNS);
+
+        $bases = Product::query()
+            ->select($columns)
+            ->whereNull('parent_product_id')
+            ->with([
+                'variants' => fn ($q) => $q->select($columns),
+                'variants.variantOptions' => fn ($q) => $q->select([
+                    'variant_options.id', 'variant_options.variant_type_id', 'variant_options.value',
+                ]),
+            ])
+            ->orderBy('name')
+            ->get();
+
+        // Plain arrays: no pivot data and no accessors in the JSON.
+        $row = fn (Product $p) => [
+            'id'                => $p->id,
+            'parent_product_id' => $p->parent_product_id,
+            'name'              => $p->name,
+            'chinese_name'      => $p->chinese_name,
+            'part_no'           => $p->part_no,
+            'category_id'       => $p->category_id,
+            'stock'             => $p->stock,
+            'alert_limit'       => $p->alert_limit,
+            'status'            => $p->status?->value,
+            'is_dead_stock'     => $p->is_dead_stock,
+        ];
+
+        $products = $bases->map(fn (Product $base) => $row($base) + [
+            'variants' => $base->variants->map(fn (Product $variant) => $row($variant) + [
+                // Same order as Product::variantLabel(): by variant type, then option id.
+                'variant_options' => $variant->variantOptions
+                    ->sortBy([['variant_type_id', 'asc'], ['id', 'asc']])
+                    ->map(fn ($option) => ['id' => $option->id, 'value' => $option->value])
+                    ->values()
+                    ->all(),
+            ])->values()->all(),
+        ])->all();
+
+        return [
+            'summary'  => $this->inventoryStatusCounts(),
+            'products' => $products,
+        ];
+    }
+
+    /**
+     * Find which page of the Inventory table holds a product (used by stock-alert notifications).
+     *
+     * The table lists base products, with variants shown under their base, so a variant is
+     * located through its base product. Uses the same filters and order as getInventorySummary().
+     * Ordered ids are read directly (not counted) so the position follows the database's own
+     * name collation exactly; one id column for a few thousand products is cheap.
+     *
+     * @param  int    $productId Base product or variant id.
+     * @param  array  $filters   category_id, status, search, per_page (same as the table request).
+     * @return array{found: bool, page?: int, position?: int, base_id?: int}
+     */
+    public function findInventoryPage(int $productId, array $filters = []): array
+    {
+        $product = Product::query()->select(['id', 'parent_product_id'])->find($productId);
+        if (!$product) {
+            return ['found' => false];
+        }
+        $baseId = $product->parent_product_id ?: $product->id;
+
+        $query = Product::query()->whereNull('parent_product_id');
+        $this->applyInventoryRowFilters($query, $filters);
+        $this->orderInventoryRows($query);
+
+        $position = $query->pluck('products.id')->search($baseId);
+        if ($position === false) {
+            return ['found' => false];
+        }
+
+        $perPage = max(1, (int) ($filters['per_page'] ?? 20));
+
+        return [
+            'found'    => true,
+            'page'     => intdiv($position, $perPage) + 1,
+            'position' => $position + 1,
+            'base_id'  => $baseId,
+        ];
+    }
+
+    /**
+     * Row filters of the Inventory table (base products), shared by the list and the page finder.
+     */
+    private function applyInventoryRowFilters(Builder $query, array $filters): void
+    {
+        if (!empty($filters['category_id'])) {
+            $query->where('category_id', $filters['category_id']);
+        }
+
+        if (!empty($filters['status'])) {
+            $query->where(function ($q) use ($filters) {
+                $q->where('status', $filters['status'])
+                    ->orWhereHas('variants', function ($sub) use ($filters) {
+                        $sub->where('status', $filters['status']);
+                    });
+            });
+        }
+
+        if (!empty($filters['search'])) {
+            $term = (string) $filters['search'];
+            // whereContains: literal search, % and _ are not wildcards (App\Support\LikeSearch).
+            $query->where(function ($q) use ($term) {
+                $q->whereContains('name', $term)
+                    ->orWhereContains('part_no', $term)
+                    ->orWhereHas('variants', function ($sub) use ($term) {
+                        $sub->whereContains('name', $term)
+                            ->orWhereContains('part_no', $term);
+                    });
+            });
+        }
+    }
+
+    /**
+     * Inventory table order: by name, ties broken by id so page boundaries are stable.
+     */
+    private function orderInventoryRows(Builder $query): void
+    {
+        $query->orderBy('name')->orderBy('products.id');
+    }
+
+    /**
+     * Sellable-SKU counts shown as inventory summary numbers.
+     *
+     * @return array{total_products: int, active_count: int, low_stock_count: int, out_of_stock_count: int}
+     */
+    private function inventoryStatusCounts(): array
+    {
         $sellableQuery = Product::where(function ($q) {
             $q->whereNotNull('parent_product_id')
                 ->orWhere(function ($sub) {
@@ -583,13 +727,26 @@ class ReportService
                 });
         });
 
-        $totalProducts = (clone $sellableQuery)->count();
-        $activeCount = (clone $sellableQuery)->where('status', 'Active')->count();
-        $lowStockCount = (clone $sellableQuery)->where(function ($q) {
-            $q->where('stock', '>', 0)
-                ->whereRaw('stock <= IFNULL(alert_limit, 5)');
-        })->count();
-        $outOfStockCount = (clone $sellableQuery)->where('stock', 0)->count();
+        return [
+            'total_products'     => (clone $sellableQuery)->count(),
+            'active_count'       => (clone $sellableQuery)->where('status', 'Active')->count(),
+            'low_stock_count'    => (clone $sellableQuery)->where(function ($q) {
+                $q->where('stock', '>', 0)->whereRaw('stock <= IFNULL(alert_limit, 5)');
+            })->count(),
+            'out_of_stock_count' => (clone $sellableQuery)->where('stock', 0)->count(),
+        ];
+    }
+
+    /**
+     * Inventory summary counts and the Inventory table's product listing.
+     *
+     * @param  array  $filters category_id, status, search, date_filter, paginate, per_page.
+     * @return array{summary: array, products: mixed}
+     */
+    public function getInventorySummary(array $filters = []): array
+    {
+        // 1. Status counts (shared with the light stock list, so both always agree)
+        $summary = $this->inventoryStatusCounts();
 
         $salesSubquery = TransactionItem::selectRaw('COALESCE(SUM(transaction_items.qty - COALESCE(transaction_items.refunded_qty, 0)), 0)')
             ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
@@ -647,13 +804,15 @@ class ReportService
                 }
 
                 if (!empty($filters['search'])) {
-                    $q->where(function ($sub) use ($filters) {
-                        $sub->where('name', 'like', '%' . $filters['search'] . '%')
-                            ->orWhere('part_no', 'like', '%' . $filters['search'] . '%');
+                    $term = (string) $filters['search'];
+                    $q->where(function ($sub) use ($term) {
+                        $sub->whereContains('name', $term)
+                            ->orWhereContains('part_no', $term);
                     });
                 }
             },
-            'variants.variantOptions.type'
+            // variants.variantOptions.type is already loaded by the closure above; listing it
+            // again here made Laravel run those queries a second time.
         ])
             ->select('products.*')
             ->whereNull('parent_product_id');
@@ -662,43 +821,17 @@ class ReportService
             $query->selectSub(clone $salesSubquery, 'sales_count');
         }
 
-        if (!empty($filters['category_id'])) {
-            $query->where('category_id', $filters['category_id']);
-        }
-
-        if (!empty($filters['status'])) {
-            $query->where(function ($q) use ($filters) {
-                $q->where('status', $filters['status'])
-                    ->orWhereHas('variants', function ($sub) use ($filters) {
-                        $sub->where('status', $filters['status']);
-                    });
-            });
-        }
-
-        if (!empty($filters['search'])) {
-            $query->where(function ($q) use ($filters) {
-                $q->where('name', 'like', '%' . $filters['search'] . '%')
-                    ->orWhere('part_no', 'like', '%' . $filters['search'] . '%')
-                    ->orWhereHas('variants', function ($sub) use ($filters) {
-                        $sub->where('name', 'like', '%' . $filters['search'] . '%')
-                            ->orWhere('part_no', 'like', '%' . $filters['search'] . '%');
-                    });
-            });
-        }
+        $this->applyInventoryRowFilters($query, $filters);
+        $this->orderInventoryRows($query);
 
         if (isset($filters['paginate']) && $filters['paginate']) {
-            $products = $query->orderBy('name')->paginate($filters['per_page'] ?? 20);
+            $products = $query->paginate($filters['per_page'] ?? 20);
         } else {
-            $products = $query->orderBy('name')->get();
+            $products = $query->get();
         }
 
         return [
-            'summary' => [
-                'total_products' => $totalProducts,
-                'active_count' => $activeCount,
-                'low_stock_count' => $lowStockCount,
-                'out_of_stock_count' => $outOfStockCount,
-            ],
+            'summary'  => $summary,
             'products' => $products,
         ];
     }

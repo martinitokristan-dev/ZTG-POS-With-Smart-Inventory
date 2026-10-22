@@ -5,7 +5,7 @@ import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 import { calculateItemDiscountBreakdown } from '../../../../shared/utils/discountCalculator';
 
-export default function SalesTable({ loading, items, fmt, fmtDate }) {
+export default function SalesTable({ loading, items, fmt, fmtDate, highlightedId = null }) {
     if (loading) return <LoadingSpinner text="Loading sales data..." minHeight="200px" />;
 
     if (items.length === 0) {
@@ -51,8 +51,21 @@ export default function SalesTable({ loading, items, fmt, fmtDate }) {
                             const displayTime = timeParts.join(', ');
                             const brandVal = item.product?.brand || item.brand || item.product?.brand?.name;
 
+                            const isHighlighted = highlightedId === item._txId;
+
                             return (
-                                <tr key={i} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '44px', whiteSpace: 'nowrap' }}>
+                                <tr 
+                                    key={i} 
+                                    data-transaction-id={item._txId}
+                                    style={{ 
+                                        borderBottom: '1px solid var(--table-border-subtle)', 
+                                        minHeight: '44px', 
+                                        whiteSpace: 'nowrap',
+                                        backgroundColor: isHighlighted ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
+                                        transition: 'background-color 0.3s ease',
+                                        animation: isHighlighted ? 'highlightPulse 1s ease-in-out' : 'none'
+                                    }}
+                                >
                                     <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
                                         <span style={{ display: 'block', color: 'var(--table-text-primary)', fontSize: '14px', fontWeight: '500' }}>{displayDate}</span>
                                         {displayTime && <span style={{ display: 'block', fontSize: '12px', color: 'var(--table-text-secondary)', fontWeight: '500' }}>{displayTime}</span>}

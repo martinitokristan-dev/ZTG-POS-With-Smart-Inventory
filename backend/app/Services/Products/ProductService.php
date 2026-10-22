@@ -66,12 +66,14 @@ class ProductService
         $query = Product::with(['category', 'brand', 'variantOptions.type', 'variants' => function($q) use ($filters) {
             $q->with(['variantOptions.type', 'parent', 'brand']);
             if (!empty($filters['search'])) {
-                $q->where(function ($sub) use ($filters) {
-                    $sub->where('name', 'like', '%' . $filters['search'] . '%')
-                      ->orWhere('part_no', 'like', '%' . $filters['search'] . '%')
-                      ->orWhere('chinese_name', 'like', '%' . $filters['search'] . '%')
-                      ->orWhereHas('brand', function ($b) use ($filters) {
-                          $b->where('name', 'like', '%' . $filters['search'] . '%');
+                $term = (string) $filters['search'];
+                // whereContains: literal search, % and _ are not wildcards (App\Support\LikeSearch).
+                $q->where(function ($sub) use ($term) {
+                    $sub->whereContains('name', $term)
+                      ->orWhereContains('part_no', $term)
+                      ->orWhereContains('chinese_name', $term)
+                      ->orWhereHas('brand', function ($b) use ($term) {
+                          $b->whereContains('name', $term);
                       });
                 });
             }
@@ -92,19 +94,20 @@ class ProductService
         }])->whereNull('parent_product_id');
 
         if (!empty($filters['search'])) {
-            $query->where(function ($q) use ($filters) {
-                $q->where('name', 'like', '%' . $filters['search'] . '%')
-                  ->orWhere('part_no', 'like', '%' . $filters['search'] . '%')
-                  ->orWhere('chinese_name', 'like', '%' . $filters['search'] . '%')
-                  ->orWhereHas('brand', function ($b) use ($filters) {
-                      $b->where('name', 'like', '%' . $filters['search'] . '%');
+            $term = (string) $filters['search'];
+            $query->where(function ($q) use ($term) {
+                $q->whereContains('name', $term)
+                  ->orWhereContains('part_no', $term)
+                  ->orWhereContains('chinese_name', $term)
+                  ->orWhereHas('brand', function ($b) use ($term) {
+                      $b->whereContains('name', $term);
                   })
-                  ->orWhereHas('variants', function ($sub) use ($filters) {
-                      $sub->where('name', 'like', '%' . $filters['search'] . '%')
-                          ->orWhere('part_no', 'like', '%' . $filters['search'] . '%')
-                          ->orWhere('chinese_name', 'like', '%' . $filters['search'] . '%')
-                          ->orWhereHas('brand', function ($b) use ($filters) {
-                              $b->where('name', 'like', '%' . $filters['search'] . '%');
+                  ->orWhereHas('variants', function ($sub) use ($term) {
+                      $sub->whereContains('name', $term)
+                          ->orWhereContains('part_no', $term)
+                          ->orWhereContains('chinese_name', $term)
+                          ->orWhereHas('brand', function ($b) use ($term) {
+                              $b->whereContains('name', $term);
                           });
                   });
             });
@@ -205,6 +208,8 @@ class ProductService
                 'image'             => $data['image'] ?? null,
                 'is_dead_stock'     => $data['is_dead_stock'] ?? false,
                 'damaged'           => $data['damaged'] ?? 0,
+                // Set only by the Excel import (not accepted from the product form request).
+                'import_batch_id'   => $data['import_batch_id'] ?? null,
             ]);
 
             // 2. Save variant rows if provided
@@ -221,7 +226,9 @@ class ProductService
                         'category_id'       => $data['category_id'],
                         'brand_id'          => $variantData['brand_id'] ?? ($data['brand_id'] ?? null),
                         'uom'               => $variantData['uom'] ?? ($data['uom'] ?? StockConstants::DEFAULT_UOM),
-                        'address'           => $data['address'] ?? null,
+                        // The form never sends a per-variant address (it is not in StoreProductRequest),
+                        // so variants keep following the base; the Excel import can pass one per row.
+                        'address'           => !empty($variantData['address']) ? $variantData['address'] : ($data['address'] ?? null),
                         'stock'             => $variantData['stock'],
                         'alert_limit'       => $variantAlertLimit,
                         'price1'            => $variantData['price1'],
@@ -231,6 +238,7 @@ class ProductService
                         'image'             => !empty($variantData['image']) ? $variantData['image'] : null,
                         'is_dead_stock'     => $variantData['is_dead_stock'] ?? false,
                         'damaged'           => $variantData['damaged'] ?? 0,
+                        'import_batch_id'   => $data['import_batch_id'] ?? null,
                     ]);
 
                     // 3. Sync junction table for variant option associations

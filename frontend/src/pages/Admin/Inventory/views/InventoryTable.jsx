@@ -7,7 +7,7 @@ import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 import TablePagination from '../../../../shared/components/TablePagination';
 
-export default function InventoryTable({ products, loading, handleViewProduct, pagination, statusFilter, onPageChange, perPage, onPerPageChange }) {
+export default function InventoryTable({ products, loading, handleViewProduct, pagination, statusFilter, onPageChange, perPage, onPerPageChange, highlightedId = null }) {
     const showChineseNames = useDisplayChineseNames();
     const { track_warehouse_locations, enable_dual_pricing, price1_label, price2_label } = useSystemSettings();
     const renderRow = (item, isVariant, baseIndex, parentProduct) => {
@@ -49,8 +49,22 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
         const damagedBg = hasDamaged ? '#FEE2E2' : 'var(--bg-secondary)';
         const damagedColor = hasDamaged ? '#B91C1C' : 'var(--text-secondary)';
 
+        const isHighlighted = highlightedId === item.id;
+
         return (
-            <tr key={item.id} style={!isVariant && baseIndex > 0 ? { borderTop: '2px solid var(--border)' } : {}}>
+            <tr
+                key={item.id}
+                data-product-id={item.id}
+                style={{
+                    ...(!isVariant && baseIndex > 0 ? { borderTop: '2px solid var(--border)' } : {}),
+                    // Opened from a stock-alert notification.
+                    ...(isHighlighted ? {
+                        backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                        animation: 'highlightPulse 1s ease-in-out',
+                    } : {}),
+                    transition: 'background-color 0.3s ease',
+                }}
+            >
                 <td style={{ fontSize: '15px', maxWidth: '220px', overflow: 'hidden' }}>
                     {isVariant ? (
                         <>

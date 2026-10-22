@@ -32,6 +32,7 @@ class Product extends Model
         'variant_options',
         'notes',
         'image',
+        'import_batch_id',
     ];
 
     protected function casts(): array
