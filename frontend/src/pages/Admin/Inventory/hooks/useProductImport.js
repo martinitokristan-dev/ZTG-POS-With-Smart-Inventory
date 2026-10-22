@@ -138,8 +138,14 @@ export default function useProductImport({ onImported } = {}) {
         if (!(await confirmDialog({ title: `Import ${toSave.length} products?`, message: 'Brands, categories, variant options and units that do not exist yet will be added to Settings. You can undo this import later as long as none of its products has been sold or restocked.', confirmText: 'Import', variant: 'primary' }))) return;
 
         setError(''); setStep('importing'); cancelRequested.current = false;
-        const state = { total: toSave.length, done: 0, created: 0, variants: 0, failed: [], warnings: [], stopped: false, batchId: null };
+        const startTime = Date.now();
+        const state = { total: toSave.length, done: 0, created: 0, variants: 0, failed: [], warnings: [], stopped: false, batchId: null, elapsed: 0 };
         setProgress({ ...state });
+        
+        // Update elapsed time every second
+        const timer = setInterval(() => {
+            setProgress(prev => ({ ...prev, elapsed: Math.floor((Date.now() - startTime) / 1000) }));
+        }, 1000);
         try {
             state.batchId = (await api.post('/product-imports/batches', { token: preview.token })).data.batch.id;
         } catch (err) {
@@ -164,6 +170,8 @@ export default function useProductImport({ onImported } = {}) {
             const batch = (await api.post(`/product-imports/batches/${state.batchId}/finish`)).data?.batch;
             if (batch) { state.created = batch.products_created; state.variants = batch.variants_created; }
         } catch { /* products are saved; the batch stays open */ }
+        clearInterval(timer);
+        state.elapsed = Math.floor((Date.now() - startTime) / 1000);
         setProgress({ ...state });
         setStep('done');
         loadHistory();

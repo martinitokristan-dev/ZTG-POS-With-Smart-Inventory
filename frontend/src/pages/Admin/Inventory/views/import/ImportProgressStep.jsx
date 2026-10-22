@@ -11,6 +11,18 @@ export default function ImportProgressStep({ step, progress, onUploadAgain, canU
     const percent = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
     const hasProblems = progress.failed.length > 0;
 
+    // Calculate elapsed and estimated time
+    const elapsed = progress.elapsed || 0; // seconds
+    const elapsedMin = Math.floor(elapsed / 60);
+    const elapsedSec = elapsed % 60;
+    const elapsedText = elapsed > 0 ? `${elapsedMin}:${elapsedSec.toString().padStart(2, '0')}` : '0:00';
+    
+    const rate = progress.done > 0 ? elapsed / progress.done : 0;
+    const remaining = rate > 0 && !done ? Math.ceil((progress.total - progress.done) * rate) : 0;
+    const remainingMin = Math.floor(remaining / 60);
+    const remainingSec = remaining % 60;
+    const remainingText = remaining > 0 ? `~${remainingMin}:${remainingSec.toString().padStart(2, '0')} left` : '';
+
     let icon = <IconSpinner size={28} />;
     let tone = 'is-busy';
     let title = `Importing products... ${percent}%`;
@@ -31,8 +43,19 @@ export default function ImportProgressStep({ step, progress, onUploadAgain, canU
                 <h4>{title}</h4>
                 <p>{text}</p>
                 {!done && (
-                    <div className="imp-progress" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
-                        <div style={{ width: `${percent}%` }} />
+                    <>
+                        <div className="imp-progress" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
+                            <div style={{ width: `${percent}%` }} />
+                        </div>
+                        <div style={{ marginTop: '0.75rem', fontSize: '0.9rem', color: '#666' }}>
+                            <span>Elapsed: <strong>{elapsedText}</strong></span>
+                            {remainingText && <span style={{ marginLeft: '1.5rem' }}>{remainingText}</span>}
+                        </div>
+                    </>
+                )}
+                {done && elapsed > 0 && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
+                        Completed in <strong>{elapsedText}</strong>
                     </div>
                 )}
             </div>
