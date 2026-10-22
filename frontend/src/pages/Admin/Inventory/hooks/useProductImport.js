@@ -24,6 +24,7 @@ export default function useProductImport({ onImported } = {}) {
     const [progress, setProgress] = useState(null);
     const [history, setHistory] = useState([]);
     const [viewBatch, setViewBatch] = useState(null); // past import opened from Recent imports
+    const [uploadedFile, setUploadedFile] = useState(null); // Remember the file for re-upload
     const cancelRequested = useRef(false);
 
     const choicesFrom = (data) => (data?.sheets || []).map(s => ({ index: s.index, enabled: s.enabled, header_row: s.header_row, fields: { ...s.mapping } }));
@@ -45,7 +46,7 @@ export default function useProductImport({ onImported } = {}) {
 
     const reset = useCallback(() => {
         setStep('upload'); setReviewTab('products'); setError(''); setPreview(null); setSheetChoices([]); setViewBatch(null);
-        setDecisions(EMPTY_DECISIONS); setProgress(null); review.loadFamilies([]);
+        setDecisions(EMPTY_DECISIONS); setProgress(null); setUploadedFile(null); review.loadFamilies([]);
     }, [review.loadFamilies]);
 
     const discardUpload = useCallback(() => {
@@ -78,6 +79,7 @@ export default function useProductImport({ onImported } = {}) {
             fd.append('file', file);
             const res = await api.post('/product-imports/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
             applyPreview(res.data);
+            setUploadedFile(file); // Remember for re-upload
             setReviewTab('products');
             setStep('review');
         } catch (err) {
@@ -147,7 +149,7 @@ export default function useProductImport({ onImported } = {}) {
             if (cancelRequested.current) { state.stopped = true; break; }
             const chunk = toSave.slice(i, i + IMPORT_CHUNK_SIZE);
             try {
-                const res = (await api.post(`/product-imports/batches/${state.batchId}/chunks`, { families: chunk.map(toPayload) })).data;
+                const res = await postChunk(state.batchId, chunk.map(toPayload));
                 state.created += res.created; state.variants += res.variants;
                 state.failed.push(...res.failed); state.warnings.push(...res.warnings);
             } catch (err) {
@@ -157,7 +159,11 @@ export default function useProductImport({ onImported } = {}) {
             state.done = Math.min(toSave.length, i + chunk.length);
             setProgress({ ...state });
         }
-        try { await api.post(`/product-imports/batches/${state.batchId}/finish`); } catch { /* products are saved; the batch stays open */ }
+        try {
+            // The server counts what was really saved, so its totals win over the running count.
+            const batch = (await api.post(`/product-imports/batches/${state.batchId}/finish`)).data?.batch;
+            if (batch) { state.created = batch.products_created; state.variants = batch.variants_created; }
+        } catch { /* products are saved; the batch stays open */ }
         setProgress({ ...state });
         setStep('done');
         loadHistory();
@@ -195,15 +201,46 @@ export default function useProductImport({ onImported } = {}) {
         if (ok) reset();
     }, [progress, preview, undoBatch, reset]);
 
+    const uploadAgain = useCallback(async () => {
+        if (!uploadedFile) return;
+        discardUpload(); // Discard the previous upload token
+        await uploadFile(uploadedFile); // Re-upload the same file (reads latest from disk)
+    }, [uploadedFile, uploadFile, discardUpload]);
+
     return {
         isOpen, openImport, closeImport, step, busy, error, preview,
         reviewTab, setReviewTab,
-        uploadFile, sheetChoices, updateSheetChoice, columnsChanged, applyColumns, resetColumns,
+        uploadFile, uploadAgain, canUploadAgain: !!uploadedFile,
+        sheetChoices, updateSheetChoice, columnsChanged, applyColumns, resetColumns,
         decisions, toggleDecision,
         review, runImport, stopImport: () => { cancelRequested.current = true; },
         progress, history, undoBatch, undoLast, startOver,
         viewBatch, openBatch, closeBatch, undoViewed,
     };
+}
+
+/** Wait between automatic retries of a chunk (ms). */
+const CHUNK_RETRY_DELAYS_MS = [2000, 5000];
+
+/** Network errors, timeouts and server hiccups are worth one more try; validation errors are not. */
+const isRetryable = (err) => {
+    const status = err?.response?.status;
+    return !status || status === 408 || status === 429 || status >= 500;
+};
+
+/**
+ * Save one chunk, retrying after a lost connection or a server error. Safe to repeat: the
+ * server skips families this import already saved, so a retry never creates duplicates.
+ */
+async function postChunk(batchId, families) {
+    for (let attempt = 0; ; attempt++) {
+        try {
+            return (await api.post(`/product-imports/batches/${batchId}/chunks`, { families })).data;
+        } catch (err) {
+            if (attempt >= CHUNK_RETRY_DELAYS_MS.length || !isRetryable(err)) throw err;
+            await new Promise(resolve => setTimeout(resolve, CHUNK_RETRY_DELAYS_MS[attempt]));
+        }
+    }
 }
 
 // Only the fields the backend accepts.

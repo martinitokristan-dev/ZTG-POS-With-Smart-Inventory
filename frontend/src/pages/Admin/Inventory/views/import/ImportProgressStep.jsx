@@ -5,7 +5,7 @@ import ImportBatchDetails from '../../../../../shared/components/ImportBatchDeta
 /**
  * Step 3: saving progress, then exactly what was imported (searchable list with variants).
  */
-export default function ImportProgressStep({ step, progress }) {
+export default function ImportProgressStep({ step, progress, onUploadAgain, canUploadAgain }) {
     if (!progress) return null;
     const done = step === 'done';
     const percent = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
@@ -46,6 +46,17 @@ export default function ImportProgressStep({ step, progress }) {
             )}
             {done && progress.created === 0 && <Report title="Could not be saved" items={progress.failed} />}
             {done && <Report title="Saved with a note" items={progress.warnings} />}
+            {done && progress.failed.length > 0 && canUploadAgain && (
+                <div className="imp-center" style={{ marginTop: '1.5rem' }}>
+                    <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                        💡 <strong>Tip:</strong> Fix the failed products in your Excel file and click "Upload This File Again" below.
+                        Products already in the system will be skipped automatically.
+                    </p>
+                    <button type="button" className="btn btn-primary" onClick={onUploadAgain} style={{ marginRight: '0.5rem' }}>
+                        Upload This File Again
+                    </button>
+                </div>
+            )}
         </>
     );
 }

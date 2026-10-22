@@ -56,7 +56,7 @@ export default function ProductImportModal({ isOpen, onClose, flow, categoryName
                         <ImportUploadStep busy={busy} onFile={flow.uploadFile} history={flow.history} onView={flow.openBatch} onUndo={flow.undoBatch} canUndo={canUndo} />
                     )}
                     {step === 'review' && <ImportReviewStep flow={flow} categoryNames={categoryNames} priceLabels={priceLabels} />}
-                    {(step === 'importing' || step === 'done') && <ImportProgressStep step={step} progress={progress} />}
+                    {(step === 'importing' || step === 'done') && <ImportProgressStep step={step} progress={progress} onUploadAgain={flow.uploadAgain} canUploadAgain={flow.canUploadAgain} />}
                     {isDetails && viewBatch && <ImportBatchDetails batchId={viewBatch.id} />}
                 </div>
 
