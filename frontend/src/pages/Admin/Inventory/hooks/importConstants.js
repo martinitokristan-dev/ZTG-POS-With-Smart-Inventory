@@ -41,6 +41,9 @@ export const EMPTY_DECISIONS = {
     rejected_options: [],
     moved_options: [],
     category_renames: [],
+    brand_renames: [],
+    kept_brands: [],
+    kept_categories: [],
 };
 
 /**

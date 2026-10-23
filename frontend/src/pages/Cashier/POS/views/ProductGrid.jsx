@@ -3,6 +3,7 @@ import LoadingSpinner from '../../../../shared/components/LoadingSpinner';
 import useDisplayChineseNames from '../../../../shared/hooks/useDisplayChineseNames';
 import useSystemSettings from '../../../../shared/hooks/useSystemSettings';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
+import { hasPrice } from '../../../../shared/utils/price';
 
 const DEFAULT_PLACEHOLDER_IMAGE = "/ztg-icon.png";
 
@@ -135,11 +136,13 @@ export default function ProductGrid({
                                 const isOut = p.stock <= 0;
                                 const stockBadgeClass = isOut ? 'stock-badge stock-out' : isLow ? 'stock-badge stock-low' : 'stock-badge stock-in';
                                 const uomClean = p.uom ? p.uom.replace(/^.*\/\s*/, '').trim().toUpperCase() : 'PCS';
+                                // Clicking the row uses Price 1, or Price 2 when Price 1 is empty (empty prices are never sold).
+                                const rowTier = hasPrice(p.price1) || !enable_dual_pricing || !hasPrice(p.price2) ? 'price1' : 'price2';
 
                                 return (
                                     <tr 
                                         key={p.id} 
-                                        onClick={() => !isOut && addToCart(p, 'price1')}
+                                        onClick={() => !isOut && addToCart(p, rowTier)}
                                         style={{ borderBottom: '1px solid var(--table-border-subtle)', cursor: isOut ? 'not-allowed' : 'pointer', opacity: isOut ? 0.5 : 1, minHeight: '52px' }}
                                         className="hover-row"
                                     >
@@ -179,7 +182,9 @@ export default function ProductGrid({
                                             </span>
                                         </td>
                                         <td style={{ padding: '12px 14px', fontSize: '15px', fontWeight: '600', textAlign: 'right', color: 'var(--table-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
-                                            {!isOut ? (
+                                            {!hasPrice(p.price1) ? (
+                                                <span title={`No ${price1_label || 'Original Price'} set`}>—</span>
+                                            ) : !isOut ? (
                                                 <span 
                                                     onClick={(e) => { e.stopPropagation(); addToCart(p, 'price1'); }} 
                                                     style={{ cursor: 'pointer' }}
@@ -194,7 +199,9 @@ export default function ProductGrid({
                                         </td>
                                         {enable_dual_pricing && (
                                             <td style={{ padding: '12px 20px', fontSize: '15px', fontWeight: '600', textAlign: 'right', color: 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                {!isOut ? (
+                                                {!hasPrice(p.price2) ? (
+                                                    <span title={`No ${price2_label || 'Retail Price'} set`} style={{ color: 'var(--table-text-secondary)' }}>—</span>
+                                                ) : !isOut ? (
                                                     <span 
                                                         onClick={(e) => { e.stopPropagation(); addToCart(p, 'price2'); }} 
                                                         style={{ cursor: 'pointer' }}

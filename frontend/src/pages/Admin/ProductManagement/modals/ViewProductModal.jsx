@@ -1,5 +1,6 @@
 import React from 'react';
 import CopyableText from '../../../../shared/components/CopyableText';
+import { formatPrice } from '../../../../shared/utils/price';
 
 export default function ViewProductModal({ isOpen, onClose, product, categories = [] }) {
     if (!isOpen || !product) return null;
@@ -71,11 +72,11 @@ export default function ViewProductModal({ isOpen, onClose, product, categories 
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Original Price</span>
-                            <span style={{ fontWeight: '700', color: '#1E293B', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>₱{(parseFloat(product.price1) || 0).toLocaleString()}</span>
+                            <span style={{ fontWeight: '700', color: '#1E293B', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>{formatPrice(product.price1, {})}</span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Retail Price</span>
-                            <span style={{ fontWeight: '700', color: '#3B82F6', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>₱{(parseFloat(product.price2) || 0).toLocaleString()}</span>
+                            <span style={{ fontWeight: '700', color: '#3B82F6', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>{formatPrice(product.price2, {})}</span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dead Stock</span>
@@ -119,8 +120,8 @@ export default function ViewProductModal({ isOpen, onClose, product, categories 
                                                 <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                                                     <span style={{ background: vStockBg, color: vStockColor, padding: '3px 10px', borderRadius: '9999px', fontWeight: '700', fontSize: '11px' }}>{v.stock}</span>
                                                 </td>
-                                                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', color: '#334155' }}>₱{(parseFloat(v.price1) || 0).toLocaleString()}</td>
-                                                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '700', color: '#3B82F6' }}>₱{(parseFloat(v.price2) || 0).toLocaleString()}</td>
+                                                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', color: '#334155' }}>{formatPrice(v.price1, {})}</td>
+                                                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '700', color: '#3B82F6' }}>{formatPrice(v.price2, {})}</td>
                                             </tr>
                                         );
                                     })}

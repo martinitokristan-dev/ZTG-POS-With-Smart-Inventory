@@ -18,13 +18,14 @@ class ImportPlanner
     /** Score added per product that needs a variant type to tell its rows apart (outweighs plain usage). */
     private const DISTINGUISHING_WEIGHT = 100000;
 
-    /** Rows where one price was empty and the other was copied (reset per plan). */
-    private int $pricesCopied = 0;
+    /** @var array{price1: int, price2: int} Rows with only this price empty (reset per plan). */
+    private array $pricesMissing = ['price1' => 0, 'price2' => 0];
 
     public function __construct(
         private NameParser $parser,
         private CategoryClassifier $classifier,
         private ImportCatalogLookup $catalog,
+        private TypoMatcher $typos,
     ) {
     }
 
@@ -33,17 +34,19 @@ class ImportPlanner
      *
      * @param array            $records   Rows from {@see RowExtractor}.
      * @param array            $decisions Review decisions: rejected_brands, extra_brands,
-     *                                    rejected_options, moved_options, category_renames.
+     *                                    rejected_options, moved_options, category_renames,
+     *                                    brand_renames, kept_brands, kept_categories.
      * @param ImportDictionary $dict      Dictionary loaded from the database.
      * @return array{families: list<array>, entities: array, stats: array}
      */
     public function plan(array $records, array $decisions, ImportDictionary $dict): array
     {
-        $this->pricesCopied = 0;
+        $this->pricesMissing = ['price1' => 0, 'price2' => 0];
         $dict = $this->applyDecisions($records, $decisions, $dict, $learned);
+        $brandRenames = $this->renames($decisions['brand_renames'] ?? []);
 
-        [$items, $duplicates] = $this->dedupe(array_map(fn ($r) => $this->item($r, $dict), $records));
-        $families = $this->group($items, $dict, $this->renames($decisions));
+        [$items, $duplicates] = $this->dedupe(array_map(fn ($r) => $this->item($r, $dict, $brandRenames), $records));
+        $families = $this->group($items, $dict, $this->renames($decisions['category_renames'] ?? []));
         $families = $this->applyTypeLimits($families, $dict);
         $families = $this->splitAmbiguous($families);
         $families = $this->markExisting($families);
@@ -57,9 +60,12 @@ class ImportPlanner
         }
         unset($family);
 
+        $entities = $this->suggestTypos($this->entities($families, $dict, $learned), $dict, $decisions);
+        $families = $this->noteTypos($families, $entities);
+
         return [
             'families' => $families,
-            'entities' => $this->entities($families, $dict, $learned),
+            'entities' => $entities,
             'stats'    => [
                 'rows'               => count($records),
                 'duplicates_merged'  => $duplicates,
@@ -67,7 +73,12 @@ class ImportPlanner
                 'variants'           => array_sum(array_map(fn ($f) => $f['is_simple'] ? 0 : count($f['variants']), $families)),
                 'simple_products'    => count(array_filter($families, fn ($f) => $f['is_simple'])),
                 'existing_skipped'   => count(array_filter($families, fn ($f) => $f['status'] === 'exists')),
-                'prices_copied'      => $this->pricesCopied,
+                'price1_missing'     => $this->pricesMissing['price1'],
+                'price2_missing'     => $this->pricesMissing['price2'],
+                'possible_typos'     => count(array_filter(
+                    array_merge($entities['brands'], $entities['categories']),
+                    fn ($e) => $e['suggestion'] !== null
+                )),
             ],
         ];
     }
@@ -90,9 +101,13 @@ class ImportPlanner
             }
         }
         $learned = [];
+        $known = $dict->brandCandidates();
         foreach (array_unique(array_merge(array_keys($brackets), array_keys($dashContexts))) as $word) {
-            // A dash word counts as a brand only after several different product names.
-            $isBrand = isset($brackets[$word]) || count($dashContexts[$word] ?? []) >= ImportConstants::MIN_DASH_BRAND_OCCURRENCES;
+            // A dash word counts as a brand only after several different product names, or when it is a
+            // misspelt known brand ("AIR HOSE - HOWOO" on one product); the Review then suggests the fix.
+            $isBrand = isset($brackets[$word])
+                || count($dashContexts[$word] ?? []) >= ImportConstants::MIN_DASH_BRAND_OCCURRENCES
+                || $this->typos->closest($word, $known, $dict->isStarterBrand($word)) !== null;
             if ($isBrand && !isset($rejectedKeys[TextNormalizer::key($word)])) {
                 $learned[] = $word;
             }
@@ -104,8 +119,8 @@ class ImportPlanner
             ->withOptionDecisions($decisions['rejected_options'] ?? [], $decisions['moved_options'] ?? []);
     }
 
-    // One parsed row: names, options, numbers and row-level warnings.
-    private function item(array $record, ImportDictionary $dict): array
+    // One parsed row: names, options, numbers and row-level warnings. $brandRenames: upper key => new brand name.
+    private function item(array $record, ImportDictionary $dict, array $brandRenames): array
     {
         $parsed = $this->parser->parse($record['name'] ?: $record['part'], $record['name'] ? $record['part'] : '', $dict);
         $warnings = $record['name'] === '' ? ['No description in the file; the part number is used as the name.'] : [];
@@ -120,6 +135,11 @@ class ImportPlanner
         }
         if ($parsed->otherBrands !== []) {
             $notes[] = 'Also fits: ' . implode(', ', $parsed->otherBrands);
+        }
+        // Brand corrected on the review screen ("HOWOO" -> "Howo"); a known spelling wins.
+        $renamed = $brand ? ($brandRenames[TextNormalizer::key($brand)] ?? null) : null;
+        if ($renamed !== null) {
+            $brand = $dict->brand($renamed)['name'] ?? $renamed;
         }
 
         $partNos = array_values(array_filter($parsed->partNumbers, fn ($p) => mb_strlen($p) <= 50));
@@ -137,7 +157,8 @@ class ImportPlanner
         return [
             'sheet'        => $record['sheet'],
             'row'          => $record['row'],
-            'original'     => TextNormalizer::clean($record['name'] ?: $record['part']),
+            // Row text without the brand found in it (before any review rename), for simple product names.
+            'original'     => $this->withoutBrand(TextNormalizer::clean($record['name'] ?: $record['part']), $parsed->brand),
             'base'         => $parsed->baseName,
             'brand'        => $brand,
             'options'      => $parsed->options,
@@ -157,29 +178,27 @@ class ImportPlanner
         ];
     }
 
-    // Price 1 / Price 2; a single PRICE column fills both; a missing one copies the other.
+    // Price 1 / Price 2 exactly as in the file: an empty cell stays empty (null), it never copies the
+    // other price (money must not be invented). A single PRICE column is the item's one price and is
+    // used for a tier only when that tier has no column/value of its own.
     private function prices(array $record, array &$warnings): array
     {
-        $p1 = TextNormalizer::number($record['price1']);
-        $p2 = TextNormalizer::number($record['price2']);
         $generic = TextNormalizer::number($record['price']);
+        $p1 = TextNormalizer::number($record['price1']) ?? $generic;
+        $p2 = TextNormalizer::number($record['price2']) ?? $generic;
 
-        if ($p1 === null && $p2 === null && $generic === null) {
-            $warnings[] = 'No price in the file; set to 0.';
-            return [0.0, 0.0];
+        if ($p1 === null && $p2 === null) {
+            $warnings[] = 'No price in the file. The prices stay empty and the product cannot be sold until a price is set.';
         }
-        // A missing price copies the other one. This is normal for files that use one price only,
-        // so it is counted for the summary instead of flagging every row.
-        if ($p1 === null) {
-            $p1 = $generic ?? $p2;
-            $this->pricesCopied += $generic === null ? 1 : 0;
-        }
-        if ($p2 === null) {
-            $p2 = $generic ?? $p1;
-            $this->pricesCopied += $generic === null ? 1 : 0;
-        }
+        // One empty price is common (some price lists fill only one column): counted for the summary
+        // instead of flagging every row.
+        $this->pricesMissing['price1'] += ($p1 === null && $p2 !== null) ? 1 : 0;
+        $this->pricesMissing['price2'] += ($p2 === null && $p1 !== null) ? 1 : 0;
 
-        return [max(0.0, round($p1, 2)), max(0.0, round($p2, 2))];
+        return [
+            $p1 === null ? null : max(0.0, round($p1, 2)),
+            $p2 === null ? null : max(0.0, round($p2, 2)),
+        ];
     }
 
     // Stock number and unit word ("2 ROLLS" -> [2, "ROLLS"]). Sales logs always start at 0.
@@ -242,11 +261,11 @@ class ImportPlanner
         return [array_values($byKey), $merged];
     }
 
-    // Category renames chosen on the review screen: upper key => new name.
-    private function renames(array $decisions): array
+    // Category or brand renames chosen on the review screen: upper key => new name.
+    private function renames(array $list): array
     {
         $renames = [];
-        foreach ($decisions['category_renames'] ?? [] as $rename) {
+        foreach ($list as $rename) {
             $from = TextNormalizer::key($rename['from'] ?? '');
             $to = TextNormalizer::clean($rename['to'] ?? '');
             if ($from !== '' && $to !== '') {
@@ -327,7 +346,7 @@ class ImportPlanner
         ];
     }
 
-    // A category may use at most 3 variant types: existing links first, then the most used new ones.
+    // A category may use at most MAX_TYPES_PER_CATEGORY (5) variant types: existing links first, then the most used new ones.
     // Values of other types are kept in the variant name.
     private function applyTypeLimits(array $families, ImportDictionary $dict): array
     {
@@ -407,7 +426,7 @@ class ImportPlanner
             $keep = [];
             $extra = [];
             foreach ($variants as $variant) {
-                // The variant name counts too: values that did not fit the category's 3 types live there.
+                // The variant name counts too: values that did not fit the category's types (max 5) live there.
                 $signature = $variant['options'] === [] ? '' : TextNormalizer::key($variant['name']) . '#' . $this->signature($variant['options']);
                 if ($signature === '' || isset($seen[$signature])) {
                     $extra[] = $variant;
@@ -421,7 +440,7 @@ class ImportPlanner
                 $result[] = $family;
             }
             foreach ($extra as $variant) {
-                // Values that did not fit the category's 3 variant types moved into the name: the family
+                // Values that did not fit the category's variant types (max 5) moved into the name: the family
                 // warning already explains that, so no second note is added.
                 $overflowed = TextNormalizer::key($variant['name']) !== TextNormalizer::key($family['name']);
                 $reason = match (true) {
@@ -557,11 +576,60 @@ class ImportPlanner
         ];
     }
 
-    // Row text without the brand word ("BMF GEAR OIL (18L)" -> "GEAR OIL (18L)"), tidied.
+    // Possible typos: each new brand/category gets `suggestion` (closest existing or starter name, or null).
+    // Names the user chose to keep as new (kept_brands / kept_categories) are not suggested again.
+    private function suggestTypos(array $entities, ImportDictionary $dict, array $decisions): array
+    {
+        $groups = [
+            'brands'     => [$dict->brandCandidates(), [$dict, 'isStarterBrand'], $decisions['kept_brands'] ?? []],
+            'categories' => [$dict->categoryCandidates(), [$dict, 'isStarterCategory'], $decisions['kept_categories'] ?? []],
+        ];
+        foreach ($groups as $group => [$candidates, $isKnown, $kept]) {
+            $keptKeys = array_flip(array_map(fn ($n) => TextNormalizer::key((string) $n), $kept));
+            $entities[$group] = array_map(function (array $entity) use ($candidates, $isKnown, $keptKeys) {
+                $skip = !$entity['is_new'] || isset($keptKeys[TextNormalizer::key($entity['name'])]);
+                $entity['suggestion'] = $skip ? null : $this->typos->closest($entity['name'], $candidates, $isKnown($entity['name']));
+
+                return $entity;
+            }, $entities[$group]);
+        }
+
+        return $entities;
+    }
+
+    // Products using a possible typo get a note, so they show under "Need a quick look".
+    private function noteTypos(array $families, array $entities): array
+    {
+        $notes = [];
+        foreach (['brand' => 'brands', 'category' => 'categories'] as $field => $group) {
+            foreach ($entities[$group] as $entity) {
+                if ($entity['suggestion'] !== null) {
+                    $notes[$field][TextNormalizer::key($entity['name'])] = ucfirst($field) . " \"{$entity['name']}\" looks like a typo. Did you mean {$entity['suggestion']['name']}?";
+                }
+            }
+        }
+        if ($notes === []) {
+            return $families;
+        }
+        foreach ($families as &$family) {
+            foreach (['brand', 'category'] as $field) {
+                $note = $notes[$field][TextNormalizer::key($family[$field] ?? '')] ?? null;
+                if ($note !== null) {
+                    $family['warnings'][] = $note;
+                }
+            }
+        }
+        unset($family);
+
+        return $families;
+    }
+
+    // Row text without the brand word ("BMF GEAR OIL (18L)" -> "GEAR OIL (18L)"), tidied. A dash that only
+    // introduced the brand goes with it ("AIR HOSE - HOWO #6" -> "AIR HOSE #6").
     private function withoutBrand(string $text, ?string $brand): string
     {
         if ($brand) {
-            $text = preg_replace('/(?<![\p{L}\p{N}])' . preg_quote($brand, '/') . '(?![\p{L}\p{N}])/iu', ' ', $text) ?? $text;
+            $text = preg_replace('/(?:\s*-\s*)?(?<![\p{L}\p{N}])' . preg_quote($brand, '/') . '(?![\p{L}\p{N}])/iu', ' ', $text) ?? $text;
         }
 
         return mb_substr(NameParser::tidy($text), 0, 255);

@@ -37,8 +37,9 @@ class CommitImportChunkRequest extends FormRequest
             'families.*.variants.*.part_no'         => 'nullable|string|max:50',
             'families.*.variants.*.chinese_name'    => 'nullable|string|max:255',
             'families.*.variants.*.stock'           => 'required|integer|min:0|max:100000000',
-            'families.*.variants.*.price1'          => 'required|numeric|min:0|max:9999999999',
-            'families.*.variants.*.price2'          => 'required|numeric|min:0|max:9999999999',
+            // Empty = no price in the file (kept empty, not 0).
+            'families.*.variants.*.price1'          => 'present|nullable|numeric|min:0|max:9999999999',
+            'families.*.variants.*.price2'          => 'present|nullable|numeric|min:0|max:9999999999',
             'families.*.variants.*.uom'             => 'nullable|string|max:50',
             'families.*.variants.*.address'         => 'nullable|string|max:50',
             'families.*.variants.*.notes'           => 'nullable|string|max:5000',

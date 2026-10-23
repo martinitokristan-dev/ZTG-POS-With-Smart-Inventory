@@ -303,10 +303,24 @@ class ImportCommitService
             'uom'          => ($row['uom'] ?? '') ?: $base['uom'],
             'part_no'      => $row['part_no'] ?? null,
             'stock'        => (int) $row['stock'],
-            'price1'       => (float) $row['price1'],
-            'price2'       => (float) $row['price2'],
+            'price1'       => self::price($row['price1'] ?? null),
+            'price2'       => self::price($row['price2'] ?? null),
             'notes'        => $this->nullIfEmpty($row['notes'] ?? null),
         ]);
+    }
+
+    // A price as saved: empty stays null (never 0), otherwise a number.
+    private static function price($value): ?float
+    {
+        return ($value === null || $value === '') ? null : (float) $value;
+    }
+
+    // Lowest price among the variants that have one (null when none has).
+    private static function lowestPrice(array $variants, string $field): ?float
+    {
+        $prices = array_filter(array_column($variants, $field), fn ($p) => $p !== null);
+
+        return $prices === [] ? null : min($prices);
     }
 
     // Payload for a base product with variants. Base stock is 0 so it is not counted as a sellable item.
@@ -325,8 +339,8 @@ class ImportCommitService
                 'chinese_name' => $row['chinese_name'] ?? null,
                 'part_no'      => $row['part_no'] ?? null,
                 'stock'        => (int) $row['stock'],
-                'price1'       => (float) $row['price1'],
-                'price2'       => (float) $row['price2'],
+                'price1'       => self::price($row['price1'] ?? null),
+                'price2'       => self::price($row['price2'] ?? null),
                 'uom'          => ($row['uom'] ?? '') ?: $base['uom'],
                 'address'      => $row['address'] ?? null,
                 'notes'        => $this->nullIfEmpty($row['notes'] ?? null),
@@ -337,8 +351,8 @@ class ImportCommitService
         return array_merge($base, [
             'part_no'  => null,
             'stock'    => 0,
-            'price1'   => min(array_column($variants, 'price1')),
-            'price2'   => min(array_column($variants, 'price2')),
+            'price1'   => self::lowestPrice($variants, 'price1'),
+            'price2'   => self::lowestPrice($variants, 'price2'),
             'variants' => $variants,
         ]);
     }

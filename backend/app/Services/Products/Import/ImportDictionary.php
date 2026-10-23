@@ -21,6 +21,9 @@ class ImportDictionary
     /** @var array<string, array{name: string, existing: bool, ambiguous: bool}> Upper key => brand. */
     private array $brands = [];
 
+    /** @var array<string, true> Upper keys of the starter brands in config/product_import.php. */
+    private array $starterBrandKeys = [];
+
     /** @var array<string, list<array{type: string, value: string, existing: bool}>> Upper phrase => meanings. */
     private array $phrases = [];
 
@@ -97,6 +100,7 @@ class ImportDictionary
         }
         foreach (($config['brands'] ?? []) as $name) {
             $dict->addBrand($name, false, isset($ambiguous[TextNormalizer::key($name)]));
+            $dict->starterBrandKeys[TextNormalizer::key($name)] = true;
         }
 
         $dict->stopwords = array_fill_keys(array_map('mb_strtoupper', $config['category_stopwords'] ?? []), true);
@@ -407,6 +411,78 @@ class ImportDictionary
     public function isExistingBrand(string $name): bool
     {
         return (bool) ($this->brands[TextNormalizer::key($name)]['existing'] ?? false);
+    }
+
+    /**
+     * Brands a new brand may be a typo of: those in the database and the starter list
+     * (not words learned from the file or typed by the user).
+     *
+     * @return list<array{name: string, existing: bool}>
+     */
+    public function brandCandidates(): array
+    {
+        $list = [];
+        foreach ($this->brands as $key => $brand) {
+            if ($brand['existing'] || isset($this->starterBrandKeys[$key])) {
+                $list[] = ['name' => $brand['name'], 'existing' => $brand['existing']];
+            }
+        }
+
+        return $list;
+    }
+
+    /**
+     * Whether a brand is on the starter list of real brands (config/product_import.php).
+     *
+     * @param string $name Brand name.
+     * @return bool
+     */
+    public function isStarterBrand(string $name): bool
+    {
+        return isset($this->starterBrandKeys[TextNormalizer::key($name)]);
+    }
+
+    /**
+     * Categories a new category may be a typo of: the shop's categories, then starter names not in the database yet.
+     *
+     * @return list<array{name: string, existing: bool}>
+     */
+    public function categoryCandidates(): array
+    {
+        $list = [];
+        $seen = [];
+        foreach ($this->categories as $category) {
+            $list[] = ['name' => $category['name'], 'existing' => true];
+            $seen[TextNormalizer::key($category['name'])] = true;
+        }
+        foreach (array_keys($this->starterCategories) as $name) {
+            if (!isset($seen[TextNormalizer::key($name)])) {
+                $list[] = ['name' => (string) $name, 'existing' => false];
+            }
+        }
+
+        return $list;
+    }
+
+    /**
+     * Whether a category is one of the starter names (config/product_import.php) or the fallback.
+     *
+     * @param string $name Category name.
+     * @return bool
+     */
+    public function isStarterCategory(string $name): bool
+    {
+        $key = TextNormalizer::key($name);
+        if ($key === TextNormalizer::key($this->fallbackCategory)) {
+            return true;
+        }
+        foreach (array_keys($this->starterCategories) as $starter) {
+            if (TextNormalizer::key((string) $starter) === $key) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Register a brand word; an existing (database) spelling is never overwritten.

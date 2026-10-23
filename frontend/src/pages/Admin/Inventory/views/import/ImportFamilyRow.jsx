@@ -1,8 +1,7 @@
 import React from 'react';
 import { IconChevron, IconImage } from './ImportIcons';
 import { canImport, isSelected, needsAttention } from '../../hooks/useImportReview';
-
-const peso = (v) => `₱${Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+import { formatPrice, hasPrice, priceInputValue } from '../../../../../shared/utils/price';
 const unitShort = (uom) => (uom ? uom.replace(/^.*\/\s*/, '') : '');
 
 /**
@@ -20,9 +19,10 @@ export default function ImportFamilyRow({ family, review, thumbnail, categoryNam
     const shown = counted.length ? counted : rows;
     const warnings = [...new Set([...(family.warnings || []), ...rows.flatMap(v => v.warnings || [])])];
     const stock = shown.reduce((sum, v) => sum + (parseInt(v.stock, 10) || 0), 0);
-    const prices = shown.map(v => Number(v.price1) || 0);
-    const low = prices.length ? Math.min(...prices) : 0;
-    const high = prices.length ? Math.max(...prices) : 0;
+    // Price column: Price 1 range of the rows that have one ("—" when none has a Price 1).
+    const prices = shown.filter(v => hasPrice(v.price1)).map(v => Number(v.price1));
+    const low = prices.length ? Math.min(...prices) : null;
+    const high = prices.length ? Math.max(...prices) : null;
     const listId = `imp-cats-${family.key}`;
     const toggle = () => setExpandedKey(open ? null : family.key);
     const newRows = rows.filter(v => !v.exists).length;
@@ -52,7 +52,7 @@ export default function ImportFamilyRow({ family, review, thumbnail, categoryNam
                 </div>
                 <div className="imp-cell imp-hide-sm">{partCell}</div>
                 <div className="imp-num imp-hide-sm">{stock} <span className="imp-sub" style={{ display: 'inline' }}>{unitShort(family.uom)}</span></div>
-                <div className="imp-num imp-hide-sm">{low === high ? peso(low) : `${peso(low)} – ${peso(high)}`}</div>
+                <div className="imp-num imp-hide-sm">{low === high ? formatPrice(low) : `${formatPrice(low)} – ${formatPrice(high)}`}</div>
                 <div>{status}</div>
                 <IconChevron />
             </div>
@@ -116,8 +116,9 @@ function VariantRow({ v, family, priceLabels, onChange }) {
                 disabled={locked} onChange={(e) => onChange({ part_no: e.target.value })} /></td>
             <td className="is-right"><Num value={v.stock} step="1" width={74} label="Stock" disabled={locked} onChange={(val) => onChange({ stock: val })} />
                 <span className="imp-sub">{unitShort(v.uom)}</span></td>
-            <td className="is-right"><Num value={v.price1} step="0.01" width={96} label={priceLabels.price1} disabled={locked} onChange={(val) => onChange({ price1: val })} /></td>
-            <td className="is-right"><Num value={v.price2} step="0.01" width={96} label={priceLabels.price2} disabled={locked} onChange={(val) => onChange({ price2: val })} /></td>
+            {/* Empty price = not in the file: the box stays blank and is saved empty (never 0). */}
+            <td className="is-right"><Num value={priceInputValue(v.price1)} step="0.01" width={96} label={priceLabels.price1} placeholder="—" disabled={locked} onChange={(val) => onChange({ price1: val === '' ? null : val })} /></td>
+            <td className="is-right"><Num value={priceInputValue(v.price2)} step="0.01" width={96} label={priceLabels.price2} placeholder="—" disabled={locked} onChange={(val) => onChange({ price2: val === '' ? null : val })} /></td>
         </tr>
     );
 }
@@ -131,9 +132,9 @@ function Field({ label, value, onChange, max, list, placeholder, disabled }) {
     );
 }
 
-function Num({ value, onChange, step, width, label, disabled }) {
+function Num({ value, onChange, step, width, label, disabled, placeholder }) {
     return (
-        <input type="number" min="0" step={step} className="imp-input is-num" style={{ width }} value={value} aria-label={label}
+        <input type="number" min="0" step={step} className="imp-input is-num" style={{ width }} value={value} aria-label={label} placeholder={placeholder}
             disabled={disabled} onChange={(e) => onChange(e.target.value)} />
     );
 }

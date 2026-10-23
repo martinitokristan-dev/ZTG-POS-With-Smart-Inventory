@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatPrice } from '../../../../shared/utils/price';
 
 export default function ViewProductModal({
     showViewModal, setShowViewModal,
@@ -28,8 +29,8 @@ export default function ViewProductModal({
                                 { label: 'Status', value: selectedProduct.status || 'Active' },
                                 { label: 'Stock Level', value: `${selectedProduct.stock} ${selectedProduct.uom ? selectedProduct.uom.replace(/^.*\/\s*/, '') : 'units'} (Alert ≤ ${selectedProduct.alert_limit || 5})` },
                                 { label: 'Sales Counter', value: `${selectedProduct.sales_count || 0} units sold` },
-                                { label: 'Original Price', value: `₱${(selectedProduct.price1 || 0).toLocaleString()}` },
-                                { label: 'Retail Price', value: `₱${(selectedProduct.price2 || 0).toLocaleString()}` },
+                                { label: 'Original Price', value: formatPrice(selectedProduct.price1, {}) },
+                                { label: 'Retail Price', value: formatPrice(selectedProduct.price2, {}) },
                                 { label: 'Damaged / Scrap', value: `${selectedProduct.damaged || 0} units` },
                                 { label: 'Dead Stock', value: selectedProduct.is_dead_stock ? 'Yes' : 'No' },
                             ].map(({ label, value, mono }) => (
@@ -67,8 +68,8 @@ export default function ViewProductModal({
                                                     <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                                                         <span style={{ background: sb, color: sc, padding: '3px 10px', borderRadius: '9999px', fontWeight: 700, fontSize: '11px' }}>{v.stock}</span>
                                                     </td>
-                                                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>₱{(v.price1 || 0).toLocaleString()}</td>
-                                                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--primary)' }}>₱{(v.price2 || 0).toLocaleString()}</td>
+                                                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>{formatPrice(v.price1, {})}</td>
+                                                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--primary)' }}>{formatPrice(v.price2, {})}</td>
                                                 </tr>
                                             );
                                         })}

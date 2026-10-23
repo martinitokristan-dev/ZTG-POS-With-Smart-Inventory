@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 import IOSSelect from '../../../../shared/components/IOSSelect';
 import useSystemSettings from '../../../../shared/hooks/useSystemSettings';
+import { hasPrice } from '../../../../shared/utils/price';
 
 export default function CartSidebar({ 
     cart, 
@@ -346,8 +347,9 @@ export default function CartSidebar({
                                                          updateCartItemPriceTier(item.id, item.priceTier || 'price1', selectedTier);
                                                      }}
                                                      options={[
-                                                         { value: 'price1', label: `${price1_label || 'Original'} (${fmt(item.price1)})` },
-                                                         { value: 'price2', label: `${price2_label || 'Retail'} (${fmt(item.price2)})` }
+                                                         // An empty price is shown as "no price" and cannot be chosen (the cart refuses it).
+                                                         { value: 'price1', label: `${price1_label || 'Original'} (${hasPrice(item.price1) ? fmt(item.price1) : 'no price'})` },
+                                                         { value: 'price2', label: `${price2_label || 'Retail'} (${hasPrice(item.price2) ? fmt(item.price2) : 'no price'})` }
                                                      ]}
                                                  />
                                             </div>

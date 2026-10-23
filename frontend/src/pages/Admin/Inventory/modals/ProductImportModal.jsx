@@ -22,6 +22,7 @@ export default function ProductImportModal({ isOpen, onClose, flow, categoryName
     const current = step === 'importing' ? 2 : STEPS.findIndex(([key]) => key === step);
     const subtitle = isDetails ? viewBatch?.file_name : (preview ? preview.file_name : 'Bring a whole price list into the system in one go.');
     const stepDone = (i) => i < current || (step === 'done' && i === current);
+    const typoCount = preview?.plan?.stats?.possible_typos || 0;
 
     return (
         <div className="modal-overlay" style={{ zIndex: 999 }}>
@@ -63,7 +64,12 @@ export default function ProductImportModal({ isOpen, onClose, flow, categoryName
                 <footer className="imp-foot">
                     {step === 'review' && (
                         <span className="imp-foot-note">
-                            {busy ? 'Updating the list...' : `${review.totals.selected} of ${review.totals.importable} new products selected${review.totals.variants ? ` · ${review.totals.variants} variants` : ''}`}
+                            {busy || flow.syncing ? 'Updating the list...' : `${review.totals.selected} of ${review.totals.importable} new products selected${review.totals.variants ? ` · ${review.totals.variants} variants` : ''}`}
+                            {!busy && !flow.syncing && typoCount > 0 && (
+                                <> · <button type="button" className="imp-link" onClick={() => flow.setReviewTab('settings')}>
+                                    {typoCount} possible {typoCount === 1 ? 'typo' : 'typos'} to check
+                                </button></>
+                            )}
                         </span>
                     )}
                     <div className="imp-foot-actions">
@@ -71,7 +77,8 @@ export default function ProductImportModal({ isOpen, onClose, flow, categoryName
                         {step === 'review' && (
                             <>
                                 <button type="button" className="btn btn-secondary" onClick={flow.startOver} disabled={busy}>Use another file</button>
-                                <button type="button" className="btn btn-primary" onClick={flow.runImport} disabled={busy || review.totals.selected === 0}>
+                                {/* Import waits until the list matches the latest choices. */}
+                                <button type="button" className="btn btn-primary" onClick={flow.runImport} disabled={busy || flow.syncing || review.totals.selected === 0}>
                                     {review.totals.selected === 0 ? 'Nothing new to import' : `Import ${review.totals.selected} ${review.totals.selected === 1 ? 'product' : 'products'}`}
                                 </button>
                             </>

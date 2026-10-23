@@ -41,6 +41,13 @@ class AnalyzeProductImportRequest extends FormRequest
             'decisions.category_renames'   => 'nullable|array|max:500',
             'decisions.category_renames.*.from'  => 'required|string|max:100',
             'decisions.category_renames.*.to'    => 'required|string|max:100',
+            'decisions.brand_renames'      => 'nullable|array|max:500',
+            'decisions.brand_renames.*.from'     => 'required|string|max:100',
+            'decisions.brand_renames.*.to'       => 'required|string|max:100',
+            'decisions.kept_brands'        => 'nullable|array|max:500',
+            'decisions.kept_brands.*'      => 'string|max:100',
+            'decisions.kept_categories'    => 'nullable|array|max:500',
+            'decisions.kept_categories.*'  => 'string|max:100',
         ];
     }
 

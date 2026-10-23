@@ -3,6 +3,7 @@ import IOSDatePicker from '../../../../shared/components/IOSDatePicker';
 import IOSTimePicker from '../../../../shared/components/IOSTimePicker';
 import IOSSelect from '../../../../shared/components/IOSSelect';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
+import { hasPrice } from '../../../../shared/utils/price';
 
 export default function AddReservationModal({
     isOpen, onClose, onOpen, onSubmit,
@@ -255,8 +256,9 @@ export default function AddReservationModal({
                                                                         onChange={(e) => updateCartItemPriceTier(itemId, c.priceTier || 'price2', e.target.value)}
                                                                         style={{ border: 'none', background: 'transparent', fontSize: '11px', fontWeight: '700', color: (c.priceTier || 'price2') === 'price1' ? '#2563EB' : '#7C3AED', outline: 'none', cursor: 'pointer', padding: 0, direction: 'rtl' }}
                                                                     >
-                                                                        <option value="price1">Original ({fmt(c.price1 || 0)})</option>
-                                                                        <option value="price2">Retail ({fmt(c.price2 || 0)})</option>
+                                                                        {/* An empty price cannot be chosen (never reserved as ₱0). */}
+                                                                        <option value="price1" disabled={!hasPrice(c.price1)}>Original ({hasPrice(c.price1) ? fmt(c.price1) : 'no price'})</option>
+                                                                        <option value="price2" disabled={!hasPrice(c.price2)}>Retail ({hasPrice(c.price2) ? fmt(c.price2) : 'no price'})</option>
                                                                     </select>
                                                                 ) : (
                                                                     <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{fmt(c.price)}</span>

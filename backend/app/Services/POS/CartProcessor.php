@@ -2,7 +2,9 @@
 
 namespace App\Services\POS;
 
+use App\Enums\PriceTier;
 use App\Models\Product;
+use App\Models\Setting;
 use App\Services\POS\DTOs\CartItemDTO;
 use App\Services\Products\ProductService;
 use Illuminate\Support\Collection;
@@ -81,8 +83,8 @@ class CartProcessor
      * }> $cart Cart items from the validated checkout request.
      * @param Collection<int, Product> $products Products keyed by ID (must already be locked via lockForUpdate()).
      * @return self Fluent interface — allows chaining.
-     * @throws ValidationException When a product is missing, stock is insufficient,
-     *                             or an item discount exceeds its line total.
+     * @throws ValidationException When a product is missing, stock is insufficient, the chosen
+     *                             price is empty, or an item discount exceeds its line total.
      */
     public function process(array $cart, Collection $products): self
     {
@@ -106,9 +108,18 @@ class CartProcessor
                 ]);
             }
 
+            // Guard 3: The chosen price must be set. An empty price is never sold as ₱0.
+            $tier = PriceTier::tryFrom($cartItem['price_tier'] ?? '') ?? PriceTier::PRICE1;
+            if ($product->{$tier->value} === null) {
+                $label = $this->priceLabel($tier);
+                throw ValidationException::withMessages([
+                    'cart' => ["{$product->snapshotName()} has no {$label}. Set a price in Inventory before selling it at this price."],
+                ]);
+            }
+
             $dto = new CartItemDTO($cartItem, $product);
 
-            // Guard 3: Item discount cannot exceed the gross line total
+            // Guard 4: Item discount cannot exceed the gross line total
             $origLineTotal = $dto->unitPrice * $dto->qty;
             if ($dto->itemDiscount > $origLineTotal) {
                 throw ValidationException::withMessages([
@@ -148,6 +159,15 @@ class CartProcessor
         }
 
         return $this;
+    }
+
+    // Shop's name for a price tier (Settings -> Pricing), read only when an error message needs it.
+    private function priceLabel(PriceTier $tier): string
+    {
+        $key = $tier->value . '_label';
+        $default = $tier === PriceTier::PRICE2 ? 'Retail Price' : 'Original Price';
+
+        return (string) (Setting::where('key', $key)->value('value') ?: $default);
     }
 
     /**

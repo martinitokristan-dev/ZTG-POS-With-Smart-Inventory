@@ -75,9 +75,12 @@ class ImportBatchQueryService
             'part_no' => $v->part_no,
             'stock'   => (int) $v->stock,
             'uom'     => $v->uom,
-            'price1'  => (float) $v->price1,
-            'price2'  => (float) $v->price2,
+            'price1'  => $v->price1 === null ? null : (float) $v->price1,
+            'price2'  => $v->price2 === null ? null : (float) $v->price2,
         ])->values();
+        $price = fn (string $field) => $variants->isEmpty()
+            ? ($product->{$field} === null ? null : (float) $product->{$field})
+            : $variants->pluck($field)->filter(fn ($p) => $p !== null)->min();
 
         return [
             'id'       => $product->id,
@@ -88,8 +91,8 @@ class ImportBatchQueryService
             'image'    => $product->getRawOriginal('image'),
             'uom'      => $product->uom,
             'stock'    => $variants->isEmpty() ? (int) $product->stock : (int) $variants->sum('stock'),
-            'price1'   => $variants->isEmpty() ? (float) $product->price1 : (float) $variants->min('price1'),
-            'price2'   => $variants->isEmpty() ? (float) $product->price2 : (float) $variants->min('price2'),
+            'price1'   => $price('price1'),
+            'price2'   => $price('price2'),
             'variants' => $variants,
         ];
     }

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import useImportBatchDetails from '../hooks/useImportBatchDetails';
 import useSystemSettings from '../hooks/useSystemSettings';
+import { formatPrice } from '../utils/price';
 import './ImportBatchDetails.css';
 
-const peso = (v) => `₱${Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+// "₱1,250" or "—" for an empty price (never shown as ₱0).
+const peso = (v) => formatPrice(v);
 const unitShort = (uom) => (uom ? uom.replace(/^.*\/\s*/, '') : '');
 
 /**
@@ -73,7 +75,7 @@ export default function ImportBatchDetails({ batchId, showSummary = true }) {
                                         </span>
                                         <span className="ibd-cell ibd-hide-sm">{hasVariants ? `${p.variants.length} variants` : (p.part_no || '—')}</span>
                                         <span className="ibd-num">{p.stock} <small style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{unitShort(p.uom)}</small></span>
-                                        <span className="ibd-num ibd-hide-sm">{hasVariants ? `from ${peso(p.price1)}` : peso(p.price1)}</span>
+                                        <span className="ibd-num ibd-hide-sm">{hasVariants && p.price1 !== null && p.price1 !== undefined ? `from ${peso(p.price1)}` : peso(p.price1)}</span>
                                         <span className="ibd-chevron" aria-hidden="true">
                                             {hasVariants && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>}
                                         </span>

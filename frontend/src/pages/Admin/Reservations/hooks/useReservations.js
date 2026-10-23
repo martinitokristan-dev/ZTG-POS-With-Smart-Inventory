@@ -8,6 +8,7 @@ import { copyReservationsToClipboard } from '../../../../shared/utils/orderFromC
 import { showToast } from '../../../../utils/toast';
 import { printCollectionReceipt } from '../../../../utils/printReceipt';
 import { getLineItemName } from '../../../../shared/utils/lineItemDisplay';
+import { hasPrice } from '../../../../shared/utils/price';
 import echo from '../../../../lib/echo';
 
 const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
@@ -235,8 +236,9 @@ export default function useReservations() {
                             name: optLabel && !p.name.includes(optLabel) ? `${p.name} (${optLabel})` : p.name,
                             part_no: basePartNo,
                             stock: p.stock,
+                            // Prices exactly as saved: an empty one stays empty (never borrowed from the other price).
                             price1: p.price1,
-                            price2: p.price2 || p.price1,
+                            price2: p.price2,
                         });
                     } else {
                         if (p.stock > 0) {
@@ -246,7 +248,7 @@ export default function useReservations() {
                                 part_no: basePartNo,
                                 stock: p.stock,
                                 price1: p.price1,
-                                price2: p.price2 || p.price1,
+                                price2: p.price2,
                             });
                         }
                         p.variants.forEach(v => {
@@ -260,8 +262,8 @@ export default function useReservations() {
                                 name: vName,
                                 part_no: v.part_no || v.partNo || basePartNo,
                                 stock: v.stock,
-                                price1: v.price1 || p.price1,
-                                price2: v.price2 || p.price2 || p.price1,
+                                price1: v.price1,
+                                price2: v.price2,
                             });
                         });
                     }
@@ -296,12 +298,21 @@ export default function useReservations() {
     };
 
     const addToCart = (product, priceTier = 'price2') => {
+        // The chosen price when set, else the other one. With no price at all the item cannot be reserved.
+        if (!hasPrice(product[priceTier])) {
+            const other = priceTier === 'price1' ? 'price2' : 'price1';
+            if (!hasPrice(product[other])) {
+                showToast(`'${product.name}' has no price yet. Set its price in Inventory first.`, 'error');
+                return;
+            }
+            priceTier = other;
+        }
         const pId = product.id || product.product_id;
         setCartItems(prev => {
             const exists = prev.find(c => (c.product_id === pId || c.cart_item_id === pId) && (c.priceTier || 'price2') === priceTier);
             if (exists) return prev.map(c => ((c.product_id === pId || c.cart_item_id === pId) && (c.priceTier || 'price2') === priceTier) ? { ...c, qty: c.qty + 1 } : c);
             
-            const price = priceTier === 'price1' ? parseFloat(product.price1 || 0) : parseFloat(product.price2 || product.price1 || 0);
+            const price = parseFloat(product[priceTier]);
             return [...prev, { 
                 cart_item_id: pId,
                 product_id: pId, 
@@ -326,11 +337,14 @@ export default function useReservations() {
 
             const next = [...prev];
             const item = next[index];
+            // An empty price cannot be chosen (it would reserve the item for ₱0).
+            if (!hasPrice(item[newTier])) {
+                showToast(`'${item.name}' has no ${newTier === 'price1' ? 'Original' : 'Retail'} price yet.`, 'error');
+                return prev;
+            }
             const matchIndex = next.findIndex((c, i) => i !== index && (c.cart_item_id === productId || c.product_id === productId) && (c.priceTier || 'price2') === newTier);
 
-            const price = newTier === 'price1'
-                ? parseFloat(item.price1 || 0)
-                : parseFloat(item.price2 || item.price1 || 0);
+            const price = parseFloat(item[newTier]);
 
             if (matchIndex !== -1) {
                 const targetItem = next[matchIndex];

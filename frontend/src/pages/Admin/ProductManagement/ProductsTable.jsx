@@ -6,6 +6,7 @@ import useSystemSettings from '../../../shared/hooks/useSystemSettings';
 import { matchesStatusFilter } from '../../../shared/utils/skuHelpers';
 import CopyableText from '../../../shared/components/CopyableText';
 import FormattedProductName from '../../../shared/components/FormattedProductName';
+import { formatPrice } from '../../../shared/utils/price';
 
 export default function ProductsTable({
     products,
@@ -141,9 +142,9 @@ export default function ProductsTable({
                         </span>
                     </div>
                 </td>
-                <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', color: 'var(--text-primary)', fontWeight: '600', fontSize: '15px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(product.price1).toLocaleString('en-US')}</td>
+                <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', color: 'var(--text-primary)', fontWeight: '600', fontSize: '15px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatPrice(product.price1, {})}</td>
                 {enable_dual_pricing && (
-                    <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', fontWeight: '600', fontSize: '15px', color: 'var(--primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(product.price2).toLocaleString('en-US')}</td>
+                    <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', fontWeight: '600', fontSize: '15px', color: 'var(--primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatPrice(product.price2, {})}</td>
                 )}
                 <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)' }}>
                     <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'nowrap', alignItems: 'center' }}>

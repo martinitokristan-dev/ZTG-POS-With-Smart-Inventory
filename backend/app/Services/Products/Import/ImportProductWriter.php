@@ -93,8 +93,9 @@ class ImportProductWriter
             'address'           => $isVariant ? (!empty($item['address']) ? $item['address'] : ($base['address'] ?? null)) : ($base['address'] ?? null),
             'stock'             => $stock,
             'alert_limit'       => $alertLimit,
-            'price1'            => (float) ($item['price1'] ?? 0),
-            'price2'            => (float) ($item['price2'] ?? 0),
+            // Empty price stays empty (null), as in the file.
+            'price1'            => isset($item['price1']) ? (float) $item['price1'] : null,
+            'price2'            => isset($item['price2']) ? (float) $item['price2'] : null,
             'status'            => $this->productService->calculateStatus($stock, $alertLimit),
             'notes'             => $item['notes'] ?? null,
             'image'             => !empty($item['image']) ? $item['image'] : null,

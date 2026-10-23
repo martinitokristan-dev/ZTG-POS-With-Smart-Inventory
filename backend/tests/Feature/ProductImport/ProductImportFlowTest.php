@@ -136,7 +136,9 @@ class ProductImportFlowTest extends TestCase
         $this->assertSame('气管', $hose['chinese_name']);
         $this->assertSame([['type' => 'Size', 'value' => '#10']], $hose['variants'][2]['options']);
         $this->assertSame(2, $hose['variants'][2]['stock']);
-        $this->assertSame(50.0, (float) $hose['variants'][2]['price1'], 'empty Price 1 copies Price 2');
+        // Changed (user decision, Oct 2026): prices are copied exactly, an empty Price 1 stays empty.
+        $this->assertNull($hose['variants'][2]['price1'], 'empty Price 1 stays empty (never copied from Price 2)');
+        $this->assertSame(50.0, (float) $hose['variants'][2]['price2']);
 
         $connector = $this->family($plan, 'AIR CONNECTOR');
         $this->assertCount(2, $connector['variants']);

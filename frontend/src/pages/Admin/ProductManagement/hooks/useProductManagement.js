@@ -24,8 +24,9 @@ const DEFAULT_FORM = {
     address: '',
     stock: 0,
     alert_limit: 5,
-    price1: 0,
-    price2: 0,
+    // Blank until typed: an empty price is saved empty (not ₱0) and cannot be sold.
+    price1: '',
+    price2: '',
     image: '',
     notes: '',
     status: 'Active',

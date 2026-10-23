@@ -6,6 +6,7 @@ import { matchesStatusFilter } from '../../../../shared/utils/skuHelpers';
 import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 import TablePagination from '../../../../shared/components/TablePagination';
+import { formatPrice, hasPrice } from '../../../../shared/utils/price';
 
 export default function InventoryTable({ products, loading, handleViewProduct, pagination, statusFilter, onPageChange, perPage, onPerPageChange, highlightedId = null }) {
     const showChineseNames = useDisplayChineseNames();
@@ -104,9 +105,9 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                         </span>
                     </div>
                 </td>
-                <td style={{ fontWeight: 600, fontSize: '15px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(item.price1 || 0).toLocaleString('en-US')}</td>
+                <td style={{ fontWeight: 600, fontSize: '15px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} title={hasPrice(item.price1) ? undefined : 'No price set'}>{formatPrice(item.price1, {})}</td>
                 {enable_dual_pricing && (
-                    <td style={{ fontWeight: 600, fontSize: '15px', color: 'var(--primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>₱{Number(item.price2 || 0).toLocaleString('en-US')}</td>
+                    <td style={{ fontWeight: 600, fontSize: '15px', color: hasPrice(item.price2) ? 'var(--primary)' : 'var(--table-text-secondary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} title={hasPrice(item.price2) ? undefined : 'No price set'}>{formatPrice(item.price2, {})}</td>
                 )}
                 <td style={{ whiteSpace: 'nowrap', textAlign: 'right', fontSize: '15px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{item.sales_count || 0} sold</td>
                 <td>

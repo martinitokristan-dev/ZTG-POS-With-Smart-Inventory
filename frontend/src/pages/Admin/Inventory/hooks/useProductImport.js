@@ -3,10 +3,12 @@ import api from '../../../../shared/api';
 import { confirmDialog } from '../../../../shared/utils/confirmDialog';
 import { showToast } from '../../../../utils/toast';
 import { useImportReview, isSelected } from './useImportReview';
-import { IMPORT_CHUNK_SIZE, IMPORT_MAX_FILE_MB, EMPTY_DECISIONS, importErrorMessage } from './importConstants';
+import { IMPORT_CHUNK_SIZE, IMPORT_MAX_FILE_MB, importErrorMessage } from './importConstants';
+import { useImportDecisions } from './useImportDecisions';
+import { priceForApi } from '../../../../shared/utils/price';
 
 /**
- * Smart Excel import flow: upload -> review (products / new in Settings / columns) -> importing -> done.
+ * Smart Excel import flow: upload -> review (products / new items / columns) -> importing -> done.
  * Also loads the import history and handles undo.
  *
  * @param {{ onImported?: () => void }} options Called after products were saved or an import was undone.
@@ -20,7 +22,6 @@ export default function useProductImport({ onImported } = {}) {
     const [error, setError] = useState('');
     const [preview, setPreview] = useState(null);
     const [sheetChoices, setSheetChoices] = useState([]);
-    const [decisions, setDecisions] = useState(EMPTY_DECISIONS);
     const [progress, setProgress] = useState(null);
     const [history, setHistory] = useState([]);
     const [viewBatch, setViewBatch] = useState(null); // past import opened from Recent imports
@@ -35,6 +36,15 @@ export default function useProductImport({ onImported } = {}) {
         review.loadFamilies(data.plan?.families || []);
     }, [review.loadFamilies]);
 
+    // Review decisions: the screen updates at once, the file is re-checked once per burst of clicks.
+    const choices = useImportDecisions({
+        request: async (next) => (await api.post('/product-imports/analyze', { token: preview?.token, sheets: sheetChoices, decisions: next })).data,
+        apply: applyPreview,
+        hasEdits: review.hasEdits,
+        onError: (err) => setError(importErrorMessage(err)),
+    });
+    const { decisions, latestDecisions, markConfirmed, resetDecisions } = choices;
+
     const loadHistory = useCallback(async () => {
         try {
             const res = await api.get('/product-imports/batches');
@@ -46,8 +56,8 @@ export default function useProductImport({ onImported } = {}) {
 
     const reset = useCallback(() => {
         setStep('upload'); setReviewTab('products'); setError(''); setPreview(null); setSheetChoices([]); setViewBatch(null);
-        setDecisions(EMPTY_DECISIONS); setProgress(null); setUploadedFile(null); review.loadFamilies([]);
-    }, [review.loadFamilies]);
+        resetDecisions(); setProgress(null); setUploadedFile(null); review.loadFamilies([]);
+    }, [review.loadFamilies, resetDecisions]);
 
     const discardUpload = useCallback(() => {
         if (preview?.token && step !== 'done') api.delete(`/product-imports/uploads/${preview.token}`).catch(() => {});
@@ -96,7 +106,7 @@ export default function useProductImport({ onImported } = {}) {
         try {
             const res = await api.post('/product-imports/analyze', { token: preview.token, sheets: nextChoices, decisions: nextDecisions });
             applyPreview(res.data);
-            setDecisions(nextDecisions);
+            markConfirmed(nextDecisions);
             return true;
         } catch (err) {
             setError(importErrorMessage(err));
@@ -104,16 +114,16 @@ export default function useProductImport({ onImported } = {}) {
         } finally {
             setBusy(false);
         }
-    }, [preview, review.hasEdits, applyPreview]);
+    }, [preview, review.hasEdits, applyPreview, markConfirmed]);
 
     const columnsChanged = JSON.stringify(sheetChoices) !== JSON.stringify(choicesFrom(preview));
 
     const applyColumns = useCallback(async () => {
-        if (await reanalyze(sheetChoices, decisions)) {
+        if (await reanalyze(sheetChoices, latestDecisions.current)) {
             setReviewTab('products');
             showToast('Columns updated.');
         }
-    }, [sheetChoices, decisions, reanalyze]);
+    }, [sheetChoices, latestDecisions, reanalyze]);
 
     const resetColumns = useCallback(() => setSheetChoices(choicesFrom(preview)), [preview]);
 
@@ -121,14 +131,8 @@ export default function useProductImport({ onImported } = {}) {
         setSheetChoices(prev => prev.map(s => (s.index === index ? { ...s, ...changes } : s)));
     }, []);
 
-    const toggleDecision = useCallback((listName, item, matches) => {
-        const list = decisions[listName] || [];
-        const exists = list.some(matches);
-        const next = { ...decisions, [listName]: exists ? list.filter(i => !matches(i)) : [...list.filter(i => !matches(i)), item] };
-        reanalyze(sheetChoices, next);
-    }, [decisions, sheetChoices, reanalyze]);
-
     const runImport = useCallback(async () => {
+        if (choices.syncing) return; // the list is still being updated with the latest choices
         // Rows already in the system are never sent (the server would skip them anyway).
         const toSave = review.families
             .filter(isSelected)
@@ -139,16 +143,23 @@ export default function useProductImport({ onImported } = {}) {
 
         setError(''); setStep('importing'); cancelRequested.current = false;
         const startTime = Date.now();
-        const state = { total: toSave.length, done: 0, created: 0, variants: 0, failed: [], warnings: [], stopped: false, batchId: null, elapsed: 0 };
+        const state = { total: toSave.length, done: 0, created: 0, variants: 0, failed: [], warnings: [], stopped: false, batchId: null, elapsed: 0, smoothedRate: 0 };
         setProgress({ ...state });
         
-        // Update elapsed time every second
+        // Update elapsed time every second (smoothly)
         const timer = setInterval(() => {
-            setProgress(prev => ({ ...prev, elapsed: Math.floor((Date.now() - startTime) / 1000) }));
+            setProgress(prev => {
+                const newElapsed = Math.floor((Date.now() - startTime) / 1000);
+                // Exponential moving average for smooth rate calculation (alpha = 0.3)
+                const instantRate = prev.done > 0 ? newElapsed / prev.done : 0;
+                const newSmoothedRate = prev.smoothedRate === 0 ? instantRate : (0.3 * instantRate + 0.7 * prev.smoothedRate);
+                return { ...prev, elapsed: newElapsed, smoothedRate: newSmoothedRate };
+            });
         }, 1000);
         try {
             state.batchId = (await api.post('/product-imports/batches', { token: preview.token })).data.batch.id;
         } catch (err) {
+            clearInterval(timer);
             setError(importErrorMessage(err)); setStep('review'); return;
         }
         for (let i = 0; i < toSave.length; i += IMPORT_CHUNK_SIZE) {
@@ -163,7 +174,8 @@ export default function useProductImport({ onImported } = {}) {
                 state.failed.push(...chunk.map(f => ({ key: f.key, name: f.name, message })));
             }
             state.done = Math.min(toSave.length, i + chunk.length);
-            setProgress({ ...state });
+            // Update progress with latest done count (but keep smoothed rate from timer)
+            setProgress(prev => ({ ...state, elapsed: prev.elapsed, smoothedRate: prev.smoothedRate }));
         }
         try {
             // The server counts what was really saved, so its totals win over the running count.
@@ -171,12 +183,12 @@ export default function useProductImport({ onImported } = {}) {
             if (batch) { state.created = batch.products_created; state.variants = batch.variants_created; }
         } catch { /* products are saved; the batch stays open */ }
         clearInterval(timer);
-        state.elapsed = Math.floor((Date.now() - startTime) / 1000);
-        setProgress({ ...state });
+        const finalElapsed = Math.floor((Date.now() - startTime) / 1000);
+        setProgress(prev => ({ ...state, elapsed: finalElapsed, smoothedRate: prev.smoothedRate }));
         setStep('done');
         loadHistory();
         if (state.created > 0) onImported?.();
-    }, [review.families, preview, loadHistory, onImported]);
+    }, [review.families, preview, loadHistory, onImported, choices.syncing]);
 
     const undoBatch = useCallback(async (batch) => {
         if (!(await confirmDialog({ title: 'Undo this import?', message: `The ${batch.products_created} products from "${batch.file_name}" will be deleted, together with the brands, categories and variant options it added that nothing else uses.`, confirmText: 'Undo import', variant: 'danger' }))) return false;
@@ -220,7 +232,9 @@ export default function useProductImport({ onImported } = {}) {
         reviewTab, setReviewTab,
         uploadFile, uploadAgain, canUploadAgain: !!uploadedFile,
         sheetChoices, updateSheetChoice, columnsChanged, applyColumns, resetColumns,
-        decisions, toggleDecision,
+        // `decisions`: confirmed by the server (the plan on screen). `shownDecisions`: includes clicks still being applied.
+        decisions, shownDecisions: choices.shownDecisions, syncing: choices.syncing,
+        toggleDecision: choices.toggle, acceptSuggestions: choices.acceptSuggestions,
         review, runImport, stopImport: () => { cancelRequested.current = true; },
         progress, history, undoBatch, undoLast, startOver,
         viewBatch, openBatch, closeBatch, undoViewed,
@@ -258,7 +272,8 @@ function toPayload(f) {
         uom: f.uom || null, address: f.address || null, image: f.image || null, is_simple: !!f.is_simple,
         variants: f.variants.map(v => ({
             include: true, name: v.name || null, part_no: v.part_no || null, chinese_name: v.chinese_name || null,
-            stock: Math.max(0, parseInt(v.stock, 10) || 0), price1: Math.max(0, Number(v.price1) || 0), price2: Math.max(0, Number(v.price2) || 0),
+            // An empty price is sent as null and saved empty, exactly as in the file (never 0).
+            stock: Math.max(0, parseInt(v.stock, 10) || 0), price1: priceForApi(v.price1), price2: priceForApi(v.price2),
             uom: v.uom || null, address: v.address || null, notes: v.notes || null,
             options: (v.options || []).filter(o => o.value && o.type),
         })),

@@ -5,6 +5,7 @@ import api from '../../../../shared/api';
 import useSystemSettings from '../../../../shared/hooks/useSystemSettings';
 import VariantGeneratorPanel from './VariantGeneratorPanel';
 import { showToast } from '../../../../utils/toast';
+import { priceInputValue, priceForApi } from '../../../../shared/utils/price';
 
 const VariantImageUpload = ({ variant, idx, onUpdateVariantImage, baseImage }) => {
     const [uploading, setUploading] = useState(false);
@@ -258,7 +259,8 @@ export default function ProductFormModal({
         name: formData.name || '',
         chinese_name: formData.chinese_name || '',
         part_no: generateNextVariantPartNo(formData.part_no, rowIndex),
-        price1: formData.price1 || 0, price2: formData.price2 || 0,
+        // New variant rows start with the product's prices; an empty price stays empty (never 0).
+        price1: priceForApi(formData.price1), price2: priceForApi(formData.price2),
         stock: 0, alert_limit: formData.alert_limit || 5, option_ids: optionIds
     });
 
@@ -499,15 +501,15 @@ export default function ProductFormModal({
                         <div className="section-header">Pricing & Stock Alerts</div>
                         <div style={{ display: 'grid', gridTemplateColumns: enable_dual_pricing ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px' }}>
                             <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">{price1_label || 'Original Price'} <span style={{ color: 'red' }}>*</span></label>
+                                <label className="form-label">{price1_label || 'Original Price'}</label>
+                                {/* Blank = no price yet (saved empty, cannot be sold at this price). 0 stays 0. */}
                                 <input 
                                     type="number" 
                                     className="form-control" 
-                                    required 
                                     min="0" 
                                     step="any" 
-                                    placeholder="₱0.00" 
-                                    value={formData.price1 === 0 ? '' : formData.price1} 
+                                    placeholder="No price" 
+                                    value={priceInputValue(formData.price1)} 
                                     onChange={(e) => {
                                         const newPrice1 = e.target.value === '' ? '' : parseFloat(e.target.value);
                                         setFormData(prev => ({
@@ -531,8 +533,8 @@ export default function ProductFormModal({
                                         className="form-control" 
                                         min="0" 
                                         step="any" 
-                                        placeholder="₱0.00" 
-                                        value={formData.price2 === 0 ? '' : formData.price2} 
+                                        placeholder="No price" 
+                                        value={priceInputValue(formData.price2)} 
                                         onChange={(e) => setFormData({ ...formData, price2: e.target.value === '' ? '' : parseFloat(e.target.value) })}
                                         onKeyDown={(e) => {
                                             if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
@@ -742,13 +744,13 @@ export default function ProductFormModal({
                                                 <div className="grid-4" style={{ gap: '12px', marginBottom: '12px' }}>
                                                     <div className="form-group" style={{ marginBottom: 0 }}>
                                                         <label className="form-label">Orig. Price</label>
-                                                        <input type="number" className="form-control" required min="0" value={variant.price1 === 0 ? '' : variant.price1} onChange={(e) => {
+                                                        <input type="number" className="form-control" min="0" placeholder="No price" value={priceInputValue(variant.price1)} onChange={(e) => {
                                                             const nv = [...formData.variants]; nv[idx].price1 = e.target.value === '' ? '' : parseFloat(e.target.value); setFormData({ ...formData, variants: nv });
                                                         }} />
                                                     </div>
                                                     <div className="form-group" style={{ marginBottom: 0 }}>
                                                         <label className="form-label">Retail Price</label>
-                                                        <input type="number" className="form-control" min="0" value={variant.price2 === 0 ? '' : variant.price2} onChange={(e) => {
+                                                        <input type="number" className="form-control" min="0" placeholder="No price" value={priceInputValue(variant.price2)} onChange={(e) => {
                                                             const nv = [...formData.variants]; nv[idx].price2 = e.target.value === '' ? '' : parseFloat(e.target.value); setFormData({ ...formData, variants: nv });
                                                         }} />
                                                     </div>

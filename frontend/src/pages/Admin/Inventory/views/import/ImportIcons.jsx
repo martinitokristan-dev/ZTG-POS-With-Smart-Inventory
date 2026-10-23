@@ -30,6 +30,12 @@ export const IconInfo = ({ size = 16 }) => (
 export const IconSpinner = ({ size = 26 }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" {...base} className="imp-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
 );
+export const IconArrowRight = ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+);
+export const IconSpellCheck = ({ size = 18 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}><path d="m6 16 6-12 6 12" /><path d="M8 12h8" /><path d="m16 20 2 2 4-4" /></svg>
+);
 export const IconFile = ({ size = 16 }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" {...base}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
 );

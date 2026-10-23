@@ -1,7 +1,14 @@
 import { useState, useMemo } from 'react';
 import { POS_ERROR_DISPLAY_MS } from '../../../../config/constants';
+import { hasPrice } from '../../../../shared/utils/price';
+import useSystemSettings from '../../../../shared/hooks/useSystemSettings';
 
 export function usePOSCart() {
+    const { price1_label, price2_label } = useSystemSettings();
+    // Message for a product without a price on the chosen tier (an empty price is never sold as ₱0).
+    const noPriceMessage = (product, priceTier) =>
+        `'${product.name}' has no ${priceTier === 'price2' ? price2_label : price1_label} yet. Set its price in Inventory first.`;
+
     // Cart state
     const [cart, setCart] = useState([]);
 
@@ -23,6 +30,10 @@ export function usePOSCart() {
     const addToCart = (product, priceTier = 'price1') => {
         if (product.stock <= 0) {
             triggerError(`This item ('${product.name}') is out of stock!`);
+            return;
+        }
+        if (!hasPrice(product[priceTier])) {
+            triggerError(noPriceMessage(product, priceTier));
             return;
         }
 
@@ -132,6 +143,10 @@ export function usePOSCart() {
 
             const next = [...prev];
             const item = next[index];
+            if (!hasPrice(item[newTier])) {
+                triggerError(noPriceMessage(item, newTier));
+                return prev;
+            }
 
             const matchIndex = next.findIndex((c, i) => i !== index && c.id == productId && (c.priceTier || 'price1') === newTier);
 

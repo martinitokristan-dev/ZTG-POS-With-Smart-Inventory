@@ -64,6 +64,26 @@ class ImportConstants
     public const MIN_EXISTING_CATEGORY_SCORE = 2.0;
 
     /**
+     * Names of this many letters or fewer may differ by only one letter to count as a possible typo.
+     */
+    public const TYPO_SHORT_NAME_LENGTH = 4;
+
+    /**
+     * Letters a short name may differ by (a swap of two neighbours counts as one) to be a possible typo.
+     */
+    public const TYPO_MAX_EDITS_SHORT = 1;
+
+    /**
+     * Letters a longer name may differ by to be a possible typo ("SINOTRUCK" vs "SINOTRUK").
+     */
+    public const TYPO_MAX_EDITS_LONG = 2;
+
+    /**
+     * Names shorter than this are never checked for typos (too many false matches).
+     */
+    public const TYPO_MIN_NAME_LENGTH = 3;
+
+    /**
      * Batch status: products are being written.
      */
     public const STATUS_IN_PROGRESS = 'in_progress';

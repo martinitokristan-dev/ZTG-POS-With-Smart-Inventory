@@ -11,17 +11,19 @@ export default function ImportProgressStep({ step, progress, onUploadAgain, canU
     const percent = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
     const hasProblems = progress.failed.length > 0;
 
-    // Calculate elapsed and estimated time
+    // Format elapsed time
     const elapsed = progress.elapsed || 0; // seconds
     const elapsedMin = Math.floor(elapsed / 60);
     const elapsedSec = elapsed % 60;
     const elapsedText = elapsed > 0 ? `${elapsedMin}:${elapsedSec.toString().padStart(2, '0')}` : '0:00';
     
-    const rate = progress.done > 0 ? elapsed / progress.done : 0;
-    const remaining = rate > 0 && !done ? Math.ceil((progress.total - progress.done) * rate) : 0;
+    // Calculate estimated time remaining (smoothed)
+    // Use exponential moving average of rate to prevent blinking
+    const smoothedRate = progress.smoothedRate || 0;
+    const remaining = smoothedRate > 0 && !done && progress.done > 0 ? Math.ceil((progress.total - progress.done) * smoothedRate) : 0;
     const remainingMin = Math.floor(remaining / 60);
     const remainingSec = remaining % 60;
-    const remainingText = remaining > 0 ? `~${remainingMin}:${remainingSec.toString().padStart(2, '0')} left` : '';
+    const remainingText = remaining > 0 && progress.done >= Math.ceil(progress.total * 0.05) ? `Est. ${remainingMin}:${remainingSec.toString().padStart(2, '0')} left` : '';
 
     let icon = <IconSpinner size={28} />;
     let tone = 'is-busy';
@@ -49,13 +51,22 @@ export default function ImportProgressStep({ step, progress, onUploadAgain, canU
                         </div>
                         <div style={{ marginTop: '0.75rem', fontSize: '0.9rem', color: '#666' }}>
                             <span>Elapsed: <strong>{elapsedText}</strong></span>
-                            {remainingText && <span style={{ marginLeft: '1.5rem' }}>{remainingText}</span>}
+                            {remainingText && <span style={{ marginLeft: '1.5rem', color: '#10b981' }}><strong>{remainingText}</strong></span>}
                         </div>
                     </>
                 )}
                 {done && elapsed > 0 && (
-                    <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
-                        Completed in <strong>{elapsedText}</strong>
+                    <div style={{ 
+                        marginTop: '0.75rem', 
+                        display: 'inline-block',
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.95rem',
+                        fontWeight: '500'
+                    }}>
+                        Completed in {elapsedText}
                     </div>
                 )}
             </div>

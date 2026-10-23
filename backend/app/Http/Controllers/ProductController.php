@@ -69,8 +69,8 @@ class ProductController extends Controller
         event(new ProductUpdated($updatedProduct->id, [
             'name'         => $updatedProduct->name,
             'chinese_name' => $updatedProduct->chinese_name,
-            'price1'       => (float) $updatedProduct->price1,
-            'price2'       => (float) $updatedProduct->price2,
+            'price1'       => $updatedProduct->price1 === null ? null : (float) $updatedProduct->price1,
+            'price2'       => $updatedProduct->price2 === null ? null : (float) $updatedProduct->price2,
             'category_id'  => $updatedProduct->category_id,
             'status'       => $updatedProduct->status instanceof \BackedEnum ? $updatedProduct->status->value : (string) $updatedProduct->status,
         ]));
