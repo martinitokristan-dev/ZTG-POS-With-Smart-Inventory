@@ -70,4 +70,54 @@ class InvoiceConstants
      * SI/OR number padding for damaged transactions.
      */
     public const DAMAGED_NUMBER_PADDING = 3;
+
+    /**
+     * Numbering mode: the cashier types the number from the BIR-registered paper booklet.
+     * This is the default for every store.
+     */
+    public const NUMBERING_MODE_MANUAL = 'manual';
+
+    /**
+     * Numbering mode: the system issues sequential numbers. Needs a BIR permit for the POS,
+     * so only Technical Operations can switch to it.
+     */
+    public const NUMBERING_MODE_AUTO = 'auto';
+
+    /**
+     * Document type => settings key of its own counter (each series is independent).
+     */
+    public const NUMBERING_DOC_COUNTERS = [
+        'S.I.' => 'si_counter_si',
+        'D.R.' => 'si_counter_dr',
+        'C.R.' => 'si_counter_cr',
+    ];
+
+    /**
+     * Short form-field names (si / dr / cr) => document type.
+     */
+    public const NUMBERING_COUNTER_FIELDS = [
+        'si' => 'S.I.',
+        'dr' => 'D.R.',
+        'cr' => 'C.R.',
+    ];
+
+    /** Allowed digit length for system-generated numbers (6 → 000001). */
+    public const NUMBERING_DIGITS_MIN = 4;
+    public const NUMBERING_DIGITS_MAX = 10;
+    public const NUMBERING_DIGITS_DEFAULT = 6;
+
+    /**
+     * Settings keys only Technical Operations may change (through /system/invoice-numbering).
+     * The bulk PUT /settings ignores them, so an Admin cannot switch the mode or move a counter.
+     */
+    public const NUMBERING_PROTECTED_KEYS = [
+        'si_numbering_mode',
+        'si_counter_si',
+        'si_counter_dr',
+        'si_counter_cr',
+        'si_auto_digits',
+        'si_bir_permit_no',
+        'si_numbering_updated_at',
+        'si_numbering_updated_by',
+    ];
 }

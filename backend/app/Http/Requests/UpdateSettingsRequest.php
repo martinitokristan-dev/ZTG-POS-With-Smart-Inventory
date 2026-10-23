@@ -23,12 +23,8 @@ class UpdateSettingsRequest extends FormRequest
             'settings'                       => 'required|array',
             'settings.*'                     => 'nullable|string',
             'settings.contact_number'        => ['sometimes', 'nullable', 'string', 'regex:/^09\d{9}$/'],
-            // SI / OR Numbering (Hybrid Manual + Auto-Increment)
-            'settings.si_numbering_mode'     => 'sometimes|nullable|in:manual,auto',
-            'settings.si_counter_si'         => 'sometimes|nullable|string|max:20',
-            'settings.si_counter_dr'         => 'sometimes|nullable|string|max:20',
-            'settings.si_counter_cr'         => 'sometimes|nullable|string|max:20',
-            'settings.si_auto_digits'        => 'sometimes|nullable|integer|min:4|max:10',
+            // SI / OR numbering keys are not accepted here: SettingService::updateSettings drops
+            // them. Only Technical Operations changes them via PUT /system/invoice-numbering.
             // Numeric business settings: reject text / negatives / absurd values.
             'settings.tax_rate'              => 'sometimes|nullable|numeric|min:0|max:100',
             'settings.dead_stock_period'     => 'sometimes|nullable|integer|min:1|max:3650',

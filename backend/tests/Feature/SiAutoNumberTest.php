@@ -102,15 +102,25 @@ class SiAutoNumberTest extends TestCase
             ]);
     }
 
-    public function test_admin_can_update_si_numbering_settings(): void
+    /**
+     * User-approved change (Oct 2026): numbering needs BIR approval, so only Technical
+     * Operations may change it (PUT /system/invoice-numbering, see InvoiceNumberingTest).
+     * The Admin's bulk settings save still succeeds but leaves the numbering keys untouched.
+     */
+    public function test_admin_cannot_change_si_numbering_through_bulk_settings(): void
     {
+        Setting::updateOrCreate(['key' => 'si_numbering_mode'], ['value' => 'manual']);
+        Setting::updateOrCreate(['key' => 'si_counter_si'], ['value' => '000001']);
+
         $payload = [
             'settings' => [
+                'business_name'     => 'ZTG Test Store',
                 'si_numbering_mode' => 'auto',
                 'si_counter_si'     => '000050',
                 'si_counter_dr'     => '000010',
                 'si_counter_cr'     => '000005',
                 'si_auto_digits'    => '6',
+                'si_bir_permit_no'  => 'FAKE-PERMIT',
             ],
         ];
 
@@ -118,10 +128,10 @@ class SiAutoNumberTest extends TestCase
 
         $res->assertStatus(200);
 
-        $this->assertEquals('auto', Setting::where('key', 'si_numbering_mode')->value('value'));
-        $this->assertEquals('000050', Setting::where('key', 'si_counter_si')->value('value'));
-        $this->assertEquals('000010', Setting::where('key', 'si_counter_dr')->value('value'));
-        $this->assertEquals('000005', Setting::where('key', 'si_counter_cr')->value('value'));
+        $this->assertEquals('ZTG Test Store', Setting::where('key', 'business_name')->value('value'));
+        $this->assertEquals('manual', Setting::where('key', 'si_numbering_mode')->value('value'));
+        $this->assertEquals('000001', Setting::where('key', 'si_counter_si')->value('value'));
+        $this->assertNull(Setting::where('key', 'si_bir_permit_no')->value('value'));
     }
 
     public function test_auto_mode_generates_sequential_si_numbers_and_advances_counter(): void

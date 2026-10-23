@@ -4,6 +4,7 @@ namespace App\Services\Settings;
 
 use App\Models\Setting;
 use App\Models\Transaction;
+use App\Services\Constants\InvoiceConstants;
 
 class SettingService
 {
@@ -17,9 +18,14 @@ class SettingService
 
     /**
      * Bulk update settings.
+     *
+     * Invoice numbering keys (mode, counters, digit length, BIR permit) are skipped: only
+     * Technical Operations may change them, through InvoiceNumberingService.
      */
     public function updateSettings(array $settings): void
     {
+        $settings = array_diff_key($settings, array_flip(InvoiceConstants::NUMBERING_PROTECTED_KEYS));
+
         foreach ($settings as $key => $value) {
             // Protect business_logo from being accidentally erased by bulk settings PUT
             if ($key === 'business_logo' && (is_null($value) || $value === '')) {

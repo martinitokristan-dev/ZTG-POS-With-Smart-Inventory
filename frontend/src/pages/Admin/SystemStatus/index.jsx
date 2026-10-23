@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../shared/api';
 import echoInstance from '../../../lib/echo';
+import InvoiceNumberingCard from './InvoiceNumberingCard';
+
+/** Role of the signed-in user, read from the stored session (same source as PrivateRoute). */
+const readStoredRole = () => {
+    try {
+        const raw = sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user');
+        return raw ? String(JSON.parse(raw)?.role || '') : '';
+    } catch {
+        return '';
+    }
+};
 
 export default function SystemStatus() {
+    const [isTechOps] = useState(() => readStoredRole() === 'Technical Operations');
     const [timeBreakdown, setTimeBreakdown] = useState({
         days: '00',
         hours: '00',
@@ -1552,6 +1564,9 @@ export default function SystemStatus() {
                         </div>
                     )}
                 </div>
+
+                {/* Invoice numbering (BIR): Technical Operations only (the API also refuses other roles) */}
+                {isTechOps && <InvoiceNumberingCard />}
 
                 {/* 4. Better Stack Global Surveillance Launcher */}
                 <div className="status-white-card" style={{

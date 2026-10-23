@@ -25,6 +25,8 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\StaffVerificationController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserPermissionController;
+use App\Http\Controllers\InvoiceNumberingController;
+use App\Enums\UserRole;
 use Illuminate\Support\Facades\Route;
 
 // Public authentication & media routes
@@ -48,6 +50,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // System health diagnostics (Admin & Technical Operations / users with system_status permission)
     Route::middleware('permission:system_status,can_view')->group(function () {
         Route::get('/system-health/diagnostics', [SystemHealthController::class, 'diagnostics']);
+    });
+
+    // Invoice numbering (BIR): only Technical Operations may turn system-generated numbers on/off,
+    // set the starting numbers and the digit length. Role-based on purpose, not a grantable permission.
+    Route::middleware('role:' . UserRole::TECHNICAL_OPERATIONS->value)->group(function () {
+        Route::get('/system/invoice-numbering', [InvoiceNumberingController::class, 'show']);
+        Route::put('/system/invoice-numbering', [InvoiceNumberingController::class, 'update'])->middleware('throttle:10,1');
     });
 
     // Profile self-management routes

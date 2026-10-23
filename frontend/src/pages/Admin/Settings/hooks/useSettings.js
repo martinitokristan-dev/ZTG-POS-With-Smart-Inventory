@@ -6,6 +6,12 @@ import { useProducts } from '../../../../contexts/ProductContext';
 import { useNotifications } from '../../../../contexts/NotificationContext';
 import { showToast } from '../../../../utils/toast';
 
+// Settings only Technical Operations may change (System Status > Invoice Numbering).
+const NUMBERING_KEYS = [
+    'si_numbering_mode', 'si_counter_si', 'si_counter_dr', 'si_counter_cr', 'si_auto_digits',
+    'si_bir_permit_no', 'si_numbering_updated_at', 'si_numbering_updated_by',
+];
+
 export default function useSettings() {
     const { count: notificationsCount } = useNotifications();
 
@@ -661,7 +667,12 @@ export default function useSettings() {
         setShowConfirmSaveModal(false);
         try {
             const payload = { ...settings, business_logo: logoUrl };
-            await api.put('/settings', { settings: payload });
+            // Invoice numbering is read-only here (only Technical Operations changes it), so it is
+            // not sent; the backend ignores these keys anyway.
+            const requestSettings = Object.fromEntries(
+                Object.entries(payload).filter(([key]) => !NUMBERING_KEYS.includes(key))
+            );
+            await api.put('/settings', { settings: requestSettings });
             resetSettingsCache('settings');
 
             // Instantly update cached business details and notify all active listeners (Sidebar, Receipts, POS)
