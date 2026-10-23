@@ -169,7 +169,8 @@ class CategoryVariantTypeLinkTest extends TestCase
 
     public function test_unknown_type_id_and_too_many_ids_are_rejected(): void
     {
-        $types = collect(['A', 'B', 'C', 'D'])->map(fn ($n) => VariantType::create(['name' => $n]));
+        // One more type than the limit (5) must be rejected.
+        $types = collect(['A', 'B', 'C', 'D', 'E', 'F'])->map(fn ($n) => VariantType::create(['name' => $n]));
 
         $this->actingAs($this->admin)
             ->postJson('/api/categories', ['name' => 'X', 'variant_type_ids' => [99999]])

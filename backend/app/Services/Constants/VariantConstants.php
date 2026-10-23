@@ -20,5 +20,5 @@ class VariantConstants
     /**
      * Maximum number of variant types a single category may use.
      */
-    public const MAX_TYPES_PER_CATEGORY = 3;
+    public const MAX_TYPES_PER_CATEGORY = 5;
 }

@@ -41,7 +41,7 @@ export default function CategoryModal({
         setCategoryVariants(prev => {
             const current = prev || [];
             if (current.includes(key)) return current.filter(k => k !== key);
-            if (current.length >= 3) return current; // Max 3 selections
+            if (current.length >= 5) return current; // Max 5 selections
             return [...current, key];
         });
     };
@@ -71,8 +71,8 @@ export default function CategoryModal({
         <div className="modal-overlay" id="addCategoryModal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
             <style>
                 {`
-                .category-modal-card { width: 100%; max-width: 460px; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-lg); background: var(--bg-card); border: 1px solid var(--border); }
-                .cat-variant-card { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.15s ease; user-select: none; margin-bottom: 8px; background: var(--bg-secondary); }
+                .category-modal-card { width: 100%; max-width: 640px; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-lg); background: var(--bg-card); border: 1px solid var(--border); }
+                .cat-variant-card { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.15s ease; user-select: none; background: var(--bg-secondary); }
                 .cat-variant-card:hover { border-color: var(--primary); background: var(--primary-light); }
                 .cat-variant-card.selected { border-color: var(--primary); background: var(--primary-light); box-shadow: 0 0 0 1px var(--primary); }
                 .cat-variant-info { display: flex; flex-direction: column; gap: 2px; }
@@ -117,10 +117,10 @@ export default function CategoryModal({
                         {/* Assign Variant Types */}
                         <div className="form-group no-float" style={{ margin: 0 }}>
                             <label style={{ display: 'block', fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '10px' }}>
-                                Assign Variant Types <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 'normal' }}>(select up to 3)</span>
+                                Assign Variant Types <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 'normal' }}>(select up to 5)</span>
                             </label>
                             
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                 {variantsList.map(v => {
                                     const currentVars = categoryVariants || [];
                                     const isSelected = currentVars.includes(v.key);
@@ -143,10 +143,10 @@ export default function CategoryModal({
                                 })}
                             </div>
 
-                            {(categoryVariants || []).length >= 3 && (
+                            {(categoryVariants || []).length >= 5 && (
                                 <div style={{ fontSize: '11.5px', color: '#D97706', marginTop: '10px', fontWeight: 600, background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.25)', padding: '8px 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <svg viewBox="0 0 24 24" style={{ width: '14px', height: '14px', fill: 'none', stroke: 'currentColor', strokeWidth: 2, flexShrink: 0 }}><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                                    <span>Maximum 3 variant types per category.</span>
+                                    <span>Maximum 5 variant types per category.</span>
                                 </div>
                             )}
                         </div>

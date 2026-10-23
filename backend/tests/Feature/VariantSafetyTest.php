@@ -128,7 +128,7 @@ class VariantSafetyTest extends TestCase
             ->assertStatus(201);
     }
 
-    public function test_category_update_can_assign_custom_type_and_still_caps_at_three(): void
+    public function test_category_update_can_assign_custom_type_and_still_caps_at_five(): void
     {
         $this->customType();
 
@@ -136,8 +136,13 @@ class VariantSafetyTest extends TestCase
             ->putJson("/api/categories/{$this->category->id}", ['name' => 'Batteries', 'variants' => ['voltage']])
             ->assertStatus(200);
 
+        // Five types is the limit (raised from 3).
         $this->actingAs($this->admin)
-            ->putJson("/api/categories/{$this->category->id}", ['name' => 'Batteries', 'variants' => ['voltage', 'size', 'color', 'quality']])
+            ->putJson("/api/categories/{$this->category->id}", ['name' => 'Batteries', 'variants' => ['voltage', 'size', 'color', 'quality', 'material']])
+            ->assertStatus(200);
+
+        $this->actingAs($this->admin)
+            ->putJson("/api/categories/{$this->category->id}", ['name' => 'Batteries', 'variants' => ['voltage', 'size', 'color', 'quality', 'material', 'specification']])
             ->assertStatus(422)
             ->assertJsonValidationErrors('variants');
     }

@@ -178,7 +178,7 @@ class ImportEntityResolver
 
     /**
      * Option ids for a variant. Missing types/options are created and linked to the category.
-     * Values whose type cannot be linked (category already has 3 types) are returned in
+     * Values whose type cannot be linked (category already has MAX_TYPES_PER_CATEGORY types) are returned in
      * `$overflow` so the caller keeps them in the variant name.
      *
      * @param int                                      $categoryId Category of the product.
