@@ -1,8 +1,30 @@
 import React, { useState } from 'react';
 import IOSSelect from '../../../../shared/components/IOSSelect';
 
+const VOID_REASONS = [
+    'Wrong Transaction / Input Error',
+    'Duplicate Entry',
+    'System Error',
+    'Price Discrepancy',
+    'Other',
+];
+
+// A pending P.O. was never paid, so "cancel" fits better than "void".
+const CANCEL_PO_REASONS = [
+    'Customer Cancelled the Order',
+    'Items Returned Unused',
+    'Wrong Transaction / Input Error',
+    'Duplicate Entry',
+    'Other',
+];
+
+/**
+ * Voids a completed sale, or cancels a pending P.O. (same backend endpoint).
+ */
 export default function VoidModal({ isOpen, onClose, transaction, onSubmit, fmtDate, fmt }) {
-    const [reason, setReason] = useState('Wrong Transaction / Input Error');
+    const isPo = transaction?.status === 'Pending';
+    const reasons = isPo ? CANCEL_PO_REASONS : VOID_REASONS;
+    const [reason, setReason] = useState(VOID_REASONS[0]);
     const [restoreStock, setRestoreStock] = useState(true);
     const [adminName, setAdminName] = useState('Administrator');
     const [adminPin, setAdminPin] = useState('');
@@ -16,10 +38,10 @@ export default function VoidModal({ isOpen, onClose, transaction, onSubmit, fmtD
             setShowPin(false);
             setErrorMessage('');
             setIsSubmitting(false);
-            setReason('Wrong Transaction / Input Error');
+            setReason(transaction?.status === 'Pending' ? CANCEL_PO_REASONS[0] : VOID_REASONS[0]);
             setRestoreStock(true);
         }
-    }, [isOpen]);
+    }, [isOpen, transaction?.status]);
 
     if (!isOpen || !transaction) return null;
 
@@ -45,7 +67,7 @@ export default function VoidModal({ isOpen, onClose, transaction, onSubmit, fmtD
                 admin_pin: adminPin.trim()
             });
         } catch (err) {
-            setErrorMessage(err.response?.data?.message || err.message || 'Failed to void transaction.');
+            setErrorMessage(err.response?.data?.message || err.message || (isPo ? 'Failed to cancel the P.O.' : 'Failed to void transaction.'));
         } finally {
             setIsSubmitting(false);
         }
@@ -72,7 +94,7 @@ export default function VoidModal({ isOpen, onClose, transaction, onSubmit, fmtD
                         </div>
                         <div>
                             <h3 style={{ color: 'var(--danger)', fontSize: '18px', fontWeight: '700', margin: '0 0 2px 0' }}>
-                                Void Transaction
+                                {isPo ? 'Cancel P.O.' : 'Void Transaction'}
                             </h3>
                             <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>Admin authorization required — Cashier must physically request this action</p>
                         </div>
@@ -94,7 +116,11 @@ export default function VoidModal({ isOpen, onClose, transaction, onSubmit, fmtD
                         <div style={{ background: 'var(--danger-light)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '12px 16px', fontSize: '12.5px', color: 'var(--danger)' }}>
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0, marginTop: '1px' }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                <span><strong>This action cannot be undone.</strong> Voiding cancels the sale and generates an Official Receipt (OR-VOID) as proof. Only proceed after the cashier's physical request.</span>
+                                {isPo ? (
+                                    <span><strong>This action cannot be undone.</strong> Cancelling closes this unpaid P.O. so it can no longer be paid, and generates an Official Receipt (OR-VOID) as proof. Restore the items to inventory if the customer gave them back.</span>
+                                ) : (
+                                    <span><strong>This action cannot be undone.</strong> Voiding cancels the sale and generates an Official Receipt (OR-VOID) as proof. Only proceed after the cashier's physical request.</span>
+                                )}
                             </div>
                         </div>
     
@@ -119,7 +145,7 @@ export default function VoidModal({ isOpen, onClose, transaction, onSubmit, fmtD
                                     <span style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '13.5px' }}>{transaction.checker?.name || transaction.cashier?.full_name || transaction.cashier?.name || '—'}</span>
                                 </div>
                                 <div style={{ gridColumn: 'span 2', borderTop: '1px dashed var(--border)', paddingTop: '12px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount to Void</span>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{isPo ? 'Unpaid P.O. Amount' : 'Amount to Void'}</span>
                                     <span style={{ fontWeight: '800', color: 'var(--danger)', fontSize: '18px' }}>{fmt(transaction.amount || transaction.total)}</span>
                                 </div>
                             </div>
@@ -127,17 +153,11 @@ export default function VoidModal({ isOpen, onClose, transaction, onSubmit, fmtD
     
                         {/* Void Reason */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)' }}>Void Reason <span style={{ color: 'var(--danger)' }}>*</span></label>
+                            <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)' }}>{isPo ? 'Cancel Reason' : 'Void Reason'} <span style={{ color: 'var(--danger)' }}>*</span></label>
                             <IOSSelect
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value)}
-                                options={[
-                                    { value: 'Wrong Transaction / Input Error', label: 'Wrong Transaction / Input Error' },
-                                    { value: 'Duplicate Entry', label: 'Duplicate Entry' },
-                                    { value: 'System Error', label: 'System Error' },
-                                    { value: 'Price Discrepancy', label: 'Price Discrepancy' },
-                                    { value: 'Other', label: 'Other' }
-                                ]}
+                                options={reasons.map((r) => ({ value: r, label: r }))}
                             />
                         </div>
     
@@ -209,7 +229,9 @@ export default function VoidModal({ isOpen, onClose, transaction, onSubmit, fmtD
                                 opacity: isSubmitting ? 0.7 : 1
                             }}
                         >
-                            {isSubmitting ? 'Voiding Transaction...' : 'Confirm & Void Transaction'}
+                            {isSubmitting
+                                ? (isPo ? 'Cancelling P.O...' : 'Voiding Transaction...')
+                                : (isPo ? 'Confirm & Cancel P.O.' : 'Confirm & Void Transaction')}
                         </button>
                     </div>
                 </form>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TransactionStatus;
 use App\Http\Requests\ListTransactionsRequest;
 use App\Http\Requests\RefundReturnRequest;
 use App\Http\Requests\VerifyPinRequest;
@@ -103,6 +104,9 @@ class TransactionController extends Controller
      */
     public function void(VoidRequest $request, Transaction $transaction): JsonResponse
     {
+        $wasPendingPo = $transaction->status === TransactionStatus::PENDING
+            || $transaction->status === TransactionStatus::PENDING->value;
+
         $updated = $this->transactionService->processVoid(
             $transaction,
             $request->validated(),
@@ -110,7 +114,7 @@ class TransactionController extends Controller
         );
 
         return response()->json([
-            'message'     => 'Transaction voided successfully.',
+            'message'     => $wasPendingPo ? 'P.O. cancelled successfully.' : 'Transaction voided successfully.',
             'transaction' => $updated,
         ]);
     }

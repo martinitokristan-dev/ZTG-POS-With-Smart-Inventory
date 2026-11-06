@@ -43,3 +43,24 @@ export function priceInputValue(value) {
 export function priceForApi(value) {
     return hasPrice(value) ? Math.max(0, Number(value)) : null;
 }
+
+/**
+ * Whether a P.O. price is set. Unlike Price 1 / 2, a P.O. price of 0 counts as "no P.O. price"
+ * (the cashier then types it at a P.O. checkout).
+ *
+ * @param {number|string|null|undefined} value
+ * @returns {boolean}
+ */
+export function hasPoPrice(value) {
+    return hasPrice(value) && Number(value) > 0;
+}
+
+/**
+ * P.O. price as sent to the API: null when empty or 0, otherwise the number.
+ *
+ * @param {number|string|null|undefined} value
+ * @returns {number|null}
+ */
+export function poPriceForApi(value) {
+    return hasPoPrice(value) ? Number(value) : null;
+}

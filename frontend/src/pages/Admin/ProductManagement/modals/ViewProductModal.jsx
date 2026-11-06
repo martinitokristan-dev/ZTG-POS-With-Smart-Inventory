@@ -1,6 +1,6 @@
 import React from 'react';
 import CopyableText from '../../../../shared/components/CopyableText';
-import { formatPrice } from '../../../../shared/utils/price';
+import { formatPrice, hasPoPrice } from '../../../../shared/utils/price';
 
 export default function ViewProductModal({ isOpen, onClose, product, categories = [] }) {
     if (!isOpen || !product) return null;
@@ -79,6 +79,10 @@ export default function ViewProductModal({ isOpen, onClose, product, categories 
                             <span style={{ fontWeight: '700', color: '#3B82F6', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>{formatPrice(product.price2, {})}</span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>P.O. Price</span>
+                            <span style={{ fontWeight: '700', color: '#1E293B', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>{hasPoPrice(product.po_price) ? formatPrice(product.po_price, {}) : '—'}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span style={{ color: '#2563EB', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dead Stock</span>
                             <span style={{ fontWeight: '500', color: '#334155', fontSize: '15px', minHeight: '20px', display: 'inline-block' }}>{product.is_dead_stock ? 'Yes' : 'No'}</span>
                         </div>
@@ -97,6 +101,7 @@ export default function ViewProductModal({ isOpen, onClose, product, categories 
                                         <th style={{ padding: '9px 12px', color: '#64748B', fontSize: '11px', letterSpacing: '0.5px', textAlign: 'center' }}>STOCK</th>
                                         <th style={{ padding: '9px 12px', color: '#64748B', fontSize: '11px', letterSpacing: '0.5px', textAlign: 'right' }}>ORIG. PRICE</th>
                                         <th style={{ padding: '9px 12px', color: '#64748B', fontSize: '11px', letterSpacing: '0.5px', textAlign: 'right' }}>RETAIL PRICE</th>
+                                        <th style={{ padding: '9px 12px', color: '#64748B', fontSize: '11px', letterSpacing: '0.5px', textAlign: 'right' }}>P.O. PRICE</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -122,6 +127,7 @@ export default function ViewProductModal({ isOpen, onClose, product, categories 
                                                 </td>
                                                 <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', color: '#334155' }}>{formatPrice(v.price1, {})}</td>
                                                 <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '700', color: '#3B82F6' }}>{formatPrice(v.price2, {})}</td>
+                                                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '600', color: '#334155' }}>{hasPoPrice(v.po_price) ? formatPrice(v.po_price, {}) : '—'}</td>
                                             </tr>
                                         );
                                     })}

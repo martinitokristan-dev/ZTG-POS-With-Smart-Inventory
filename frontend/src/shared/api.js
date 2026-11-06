@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getAuthToken, removeAuthToken, removeAuthUser } from './auth';
+import { applyFriendlyError } from './utils/friendlyError';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || '/api',
@@ -20,10 +21,11 @@ api.interceptors.request.use((config) => {
     return Promise.reject(error);
 });
 
-// Auto-handle token expiration (401 response)
+// Plain-language error messages + auto-handle token expiration (401 response)
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        applyFriendlyError(error);
         if (error.response && error.response.status === 401) {
             removeAuthToken();
             removeAuthUser();

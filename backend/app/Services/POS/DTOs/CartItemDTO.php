@@ -15,7 +15,7 @@ use App\Services\Constants\StockConstants;
  *
  * @property-read int     $productId    Database ID of the product being sold.
  * @property-read int     $qty          Quantity requested by the cashier.
- * @property-read string  $priceTier    'price1' (original) or 'price2' (retail).
+ * @property-read string  $priceTier    'price1', 'price2' or 'po' (P.O. price, P.O. payments only).
  * @property-read float   $itemDiscount Per-line item discount amount in PHP pesos.
  * @property-read Product $product      The locked Product Eloquent model.
  * @property-read float   $unitPrice    Resolved unit price from the selected tier.
@@ -30,7 +30,7 @@ class CartItemDTO
     /** @var int Quantity requested by the cashier. */
     public int $qty;
 
-    /** @var string Price tier selected: 'price1' (original) or 'price2' (retail). */
+    /** @var string Price tier selected: 'price1', 'price2' or 'po' (P.O. price). */
     public string $priceTier;
 
     /** @var float Per-line item discount in PHP pesos (0 if no discount). */
@@ -55,6 +55,7 @@ class CartItemDTO
      *   product_id: int,
      *   qty: int,
      *   price_tier?: string,
+     *   po_price?: float,
      *   item_discount?: float
      * } $cartItem Raw cart entry from the checkout request payload.
      * @param Product $product The resolved Product model (already fetched and locked).
@@ -64,16 +65,22 @@ class CartItemDTO
         $this->productId   = $cartItem['product_id'];
         $this->qty         = $cartItem['qty'];
         $this->priceTier   = $cartItem['price_tier'] ?? 'price1';
-        $this->itemDiscount = (float)($cartItem['item_discount'] ?? 0);
+        // Money is kept in whole centavos so the saved line, the saved total and the printed
+        // invoice always agree (the columns are DECIMAL(12,2)).
+        $this->itemDiscount = round((float)($cartItem['item_discount'] ?? 0), 2);
         $this->product     = $product;
 
-        // Resolve unit price from the selected tier
-        $this->unitPrice = $this->priceTier === 'price2'
-            ? (float)$product->price2
-            : (float)$product->price1;
+        // Resolve unit price from the selected tier. For 'po', CartProcessor has already put the
+        // resolved P.O. price (the product's own, or the cashier's typed one) in po_price.
+        $this->unitPrice = match ($this->priceTier) {
+            'po'     => (float) ($cartItem['po_price'] ?? 0),
+            'price2' => (float) $product->price2,
+            default  => (float) $product->price1,
+        };
 
-        $origLineTotal   = $this->unitPrice * $this->qty;
-        $this->lineTotal = max(0, $origLineTotal - $this->itemDiscount);
+        $this->unitPrice = round($this->unitPrice, 2);
+        $origLineTotal   = round($this->unitPrice * $this->qty, 2);
+        $this->lineTotal = max(0, round($origLineTotal - $this->itemDiscount, 2));
         $this->newStock  = $product->stock - $this->qty;
     }
 

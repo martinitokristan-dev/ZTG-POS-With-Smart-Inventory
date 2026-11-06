@@ -1,11 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNotifications } from '../contexts/NotificationContext';
 import NotificationDetailModal from './NotificationDetailModal';
+import useNotificationSearch, { NOTIF_CATEGORIES, NOTIF_PERIODS } from './hooks/useNotificationSearch';
+import IOSSelect from './components/IOSSelect';
 
 // Helper: resolve icon properties from notification type/sub_type
 function getNotifIcon(n) {
     const subType = n.sub_type || '';
     const title   = n.title || '';
+
+    // Security first: a failed PIN "for Refund ..." must not look like a refund or a success.
+    if (subType === 'Security Alert' || subType === 'security_alert' || title.startsWith('Security Alert') || title === 'Failed PIN Attempt') {
+        return { bg: 'rgba(239, 68, 68, 0.12)', color: '#DC2626', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>' };
+    }
 
     if (subType === 'Refund' || subType === 'Return' || title.includes('Refund') || title.includes('Return')) {
         return { bg: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', svg: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>' };
@@ -150,6 +157,71 @@ function NotificationBubble({ notif, onClick }) {
     );
 }
 
+/** Short relative time for the list ("Just now", "5m", "3h", "2d", then "Oct 21"). */
+function shortTime(timestamp) {
+    if (!timestamp) return '';
+    const mins = Math.floor(Math.max(0, Date.now() - timestamp) / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d`;
+    return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+/** Split a newest-first list into Today / Yesterday / Earlier, keeping the order. */
+function groupByDay(list) {
+    const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
+    const startYesterday = startToday.getTime() - 86400000;
+    const groups = [];
+    list.forEach((n) => {
+        const label = n.timestamp >= startToday.getTime() ? 'Today' : n.timestamp >= startYesterday ? 'Yesterday' : 'Earlier';
+        const last = groups[groups.length - 1];
+        if (last && last.label === label) last.items.push(n);
+        else groups.push({ label, items: [n] });
+    });
+    return groups;
+}
+
+/** Text with the searched word marked, so it is clear why a row matched. Plain React, no HTML. */
+function Highlight({ text, term }) {
+    const value = String(text ?? '');
+    const q = term.trim();
+    if (!q) return value;
+    const lower = value.toLowerCase();
+    const needle = q.toLowerCase();
+    const parts = [];
+    let from = 0;
+    let at = lower.indexOf(needle);
+    while (at !== -1) {
+        if (at > from) parts.push(value.slice(from, at));
+        parts.push(<mark key={at} className="notif-mark">{value.slice(at, at + q.length)}</mark>);
+        from = at + q.length;
+        at = lower.indexOf(needle, from);
+    }
+    if (from < value.length) parts.push(value.slice(from));
+    return parts;
+}
+
+/** One list row: type icon, title, two-line message, time, and one quiet unread dot. */
+function NotificationRow({ n, onOpen, term = '' }) {
+    const icon = getNotifIcon(n);
+    return (
+        <button type="button" className={`notif-row${n.read ? '' : ' is-unread'}`} onClick={onOpen}>
+            <span className="notif-row-icon" style={{ background: icon.bg, color: icon.color }} dangerouslySetInnerHTML={{ __html: icon.svg }} aria-hidden="true" />
+            <span className="notif-row-body">
+                <span className="notif-row-top">
+                    <span className="notif-row-title"><Highlight text={n.title} term={term} /></span>
+                    <span className="notif-row-time" title={new Date(n.timestamp).toLocaleString()}>{shortTime(n.timestamp)}</span>
+                </span>
+                <span className="notif-row-msg"><Highlight text={n.message} term={term} /></span>
+            </span>
+            {!n.read && <span className="notif-row-dot" aria-label="Unread" />}
+        </button>
+    );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Notifications Dropdown Component
 // ─────────────────────────────────────────────────────────────────────────────
@@ -159,7 +231,15 @@ export default function NotificationsDropdown() {
     const dropdownRef = useRef(null);
     const listRef = useRef(null);      // Scrollable notification list
     const sentinelRef = useRef(null);  // Invisible marker at the bottom of the list
-    const { notifications, unreadCount, hasMore, loadingMore, loadMore, markAsRead, markAllRead, bubbleNotif, dismissBubble } = useNotifications();
+    const live = useNotifications();
+    const { unreadCount, markAsRead, markAllRead, bubbleNotif, dismissBubble } = live;
+    const filter = useNotificationSearch();
+
+    // With a search or filter set, the list comes from the server search; otherwise the live inbox.
+    const notifications = filter.isFiltering ? filter.results : live.notifications;
+    const hasMore = filter.isFiltering ? filter.hasMore : live.hasMore;
+    const loadingMore = filter.isFiltering ? filter.loadingMore : live.loadingMore;
+    const loadMore = filter.isFiltering ? filter.loadMore : live.loadMore;
 
     // Infinite scroll: load older notifications when the bottom marker comes into view
     useEffect(() => {
@@ -175,6 +255,11 @@ export default function NotificationsDropdown() {
         observer.observe(sentinelRef.current);
         return () => observer.disconnect();
     }, [isOpen, hasMore, loadMore, notifications.length]);
+
+    // New filter = start at the top of the list.
+    useEffect(() => {
+        if (listRef.current) listRef.current.scrollTop = 0;
+    }, [filter.isFiltering, filter.category, filter.unreadOnly, filter.period]);
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -194,6 +279,7 @@ export default function NotificationsDropdown() {
     const handleMarkAllRead = async (e) => {
         e.stopPropagation();
         await markAllRead();
+        filter.markAllLocalRead();
     };
 
     const handleMarkRead = async (id) => {
@@ -202,6 +288,7 @@ export default function NotificationsDropdown() {
         if (!notification) return;
 
         // Mark as read
+        filter.markLocalRead(id);
         await markAsRead(id);
         
         // Show detail modal
@@ -231,7 +318,7 @@ export default function NotificationsDropdown() {
                         <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                     </svg>
                     {unreadCount > 0 && (
-                        <span className={`notif-badge${isOpen ? '' : ' pulse'}`}>{unreadCount}</span>
+                        <span className={`notif-badge${isOpen ? '' : ' pulse'}`}>{unreadCount > 99 ? '99+' : unreadCount}</span>
                     )}
                 </button>
 
@@ -247,52 +334,120 @@ export default function NotificationsDropdown() {
                 )}
 
                 {isOpen && (
-                    <div className="notif-dropdown" style={{ display: 'block', zIndex: 9999, right: 0, marginTop: '8px', position: 'absolute', width: '380px', maxWidth: 'calc(100vw - 32px)', background: 'var(--bg-card)', borderRadius: '12px', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)', borderRadius: '12px 12px 0 0' }}>
-                            <span style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text-primary)' }}>Notifications</span>
-                            <button 
+                    <div className="notif-panel" role="dialog" aria-label="Notifications">
+                        {/* ── Header: title, unread count, bulk action ── */}
+                        <div className="notif-panel-head">
+                            <div className="notif-panel-title">
+                                <span>Notifications</span>
+                                {unreadCount > 0 && <span className="notif-count-pill">{unreadCount > 99 ? '99+' : unreadCount} new</span>}
+                            </div>
+                            <button
                                 type="button"
-                                className="mark-all-read-btn"
-                                onClick={handleMarkAllRead} 
-                                style={{ 
-                                    background: 'transparent', 
-                                    border: 'none', 
-                                    outline: 'none',
-                                    boxShadow: 'none',
-                                    fontSize: '12px', 
-                                    fontWeight: '600', 
-                                    cursor: 'pointer', 
-                                    padding: '4px 8px',
-                                    borderRadius: '6px',
-                                    transition: 'all 0.15s ease'
-                                }}
+                                className="notif-mark-all"
+                                onClick={handleMarkAllRead}
+                                disabled={unreadCount === 0}
                             >
-                                Mark all as read
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 7l-8.5 8.5L6 12" /><path d="M22 7l-8.5 8.5-1.2-1.2" /></svg>
+                                Mark all read
                             </button>
                         </div>
-                        <div ref={listRef} style={{ maxHeight: '320px', overflowY: 'auto' }} aria-busy={loadingMore}>
-                            {notifications.length === 0 ? (
-                                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                                    No notifications to display.
+
+                        {/* ── All / Unread tabs ── */}
+                        <div className="notif-tabs" role="tablist">
+                            <button type="button" role="tab" aria-selected={!filter.unreadOnly} className={!filter.unreadOnly ? 'active' : ''} onClick={() => filter.setUnreadOnly(false)}>All</button>
+                            <button type="button" role="tab" aria-selected={filter.unreadOnly} className={filter.unreadOnly ? 'active' : ''} onClick={() => filter.setUnreadOnly(true)}>
+                                Unread{unreadCount > 0 && <span className="notif-tab-count">{unreadCount > 99 ? '99+' : unreadCount}</span>}
+                            </button>
+                        </div>
+
+                        {/* ── Search & filters ── */}
+                        <div className="notif-filters">
+                            <div className="notif-search-row">
+                            <div className="notif-search">
+                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                                <input
+                                    type="text"
+                                    value={filter.search}
+                                    onChange={(e) => filter.setSearch(e.target.value)}
+                                    placeholder="Search product, part no. or S.I. no."
+                                    maxLength={100}
+                                    aria-label="Search notifications"
+                                />
+                                {filter.search && (
+                                    <button type="button" className="notif-search-clear" onClick={() => filter.setSearch('')} aria-label="Clear search">
+                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                                    </button>
+                                )}
+                            </div>
+                            <div className="notif-period">
+                                <IOSSelect
+                                    value={filter.period}
+                                    onChange={(e) => filter.setPeriod(e.target.value)}
+                                    options={NOTIF_PERIODS}
+                                />
+                            </div>
+                            </div>
+                            <div className="notif-chips" role="group" aria-label="Notification type">
+                                {NOTIF_CATEGORIES.map((c) => (
+                                    <button
+                                        key={c.value}
+                                        type="button"
+                                        className={`notif-chip${filter.category === c.value ? ' active' : ''}`}
+                                        aria-pressed={filter.category === c.value}
+                                        onClick={() => filter.setCategory(c.value)}
+                                    >
+                                        {c.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div ref={listRef} className="notif-list" aria-busy={loadingMore || filter.loading}>
+                            {filter.isFiltering && filter.error ? (
+                                <div role="alert" className="notif-state notif-state--error">
+                                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                                    <span>{filter.error}</span>
                                 </div>
-                            ) : notifications.map(n => (
-                                <div key={n.id} onClick={() => handleMarkRead(n.id)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: n.read ? 'var(--bg-card)' : 'var(--bg-secondary)', transition: 'background 0.2s' }}>
-                                    <NotificationCard n={n} isBubble={false} />
+                            ) : filter.isFiltering && filter.loading ? (
+                                <div role="status" className="notif-state">
+                                    <span className="notif-spinner" />
+                                    Searching...
                                 </div>
+                            ) : notifications.length === 0 ? (
+                                <div className="notif-state">
+                                    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+                                    {filter.isFiltering ? (
+                                        <>
+                                            <strong>No matching notifications</strong>
+                                            <span>Try another word or filter.</span>
+                                            <button type="button" className="notif-clear-link" onClick={filter.clearFilters}>Clear filters</button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <strong>You're all caught up</strong>
+                                            <span>New alerts will show up here.</span>
+                                        </>
+                                    )}
+                                </div>
+                            ) : groupByDay(notifications).map(({ label, items }) => (
+                                <section key={label} aria-label={label}>
+                                    <div className="notif-group-label">{label}</div>
+                                    {items.map(n => (
+                                        <NotificationRow key={n.id} n={n} term={filter.isFiltering ? filter.search : ''} onOpen={() => handleMarkRead(n.id)} />
+                                    ))}
+                                </section>
                             ))}
 
                             {/* Infinite scroll marker + status footer */}
                             {hasMore && <div ref={sentinelRef} style={{ height: '1px' }} aria-hidden="true" />}
                             {loadingMore && (
-                                <div role="status" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                    <span style={{ width: '14px', height: '14px', border: '2px solid var(--border)', borderTopColor: 'var(--primary, #3B82F6)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                <div role="status" className="notif-list-foot">
+                                    <span className="notif-spinner" />
                                     Loading older notifications...
                                 </div>
                             )}
-                            {!hasMore && !loadingMore && notifications.length > 0 && (
-                                <div style={{ padding: '12px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
-                                    No older notifications
-                                </div>
+                            {!hasMore && !loadingMore && !(filter.isFiltering && (filter.loading || filter.error)) && notifications.length > 0 && (
+                                <div className="notif-list-foot">That's everything</div>
                             )}
                         </div>
                     </div>

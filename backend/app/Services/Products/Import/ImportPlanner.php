@@ -167,6 +167,7 @@ class ImportPlanner
             'address'      => mb_substr($record['address'], 0, 50),
             'price1'       => $price1,
             'price2'       => $price2,
+            'po_price'     => $this->poPrice($record),
             'stock'        => $stock,
             'uom'          => $this->unit($record['uom'], $unitWord, $dict),
             'notes'        => implode("\n", array_unique($notes)),
@@ -199,6 +200,15 @@ class ImportPlanner
             $p1 === null ? null : max(0.0, round($p1, 2)),
             $p2 === null ? null : max(0.0, round($p2, 2)),
         ];
+    }
+
+    // P.O. price exactly as in the file's P.O. PRICE column. Only some items have one, so an empty
+    // (or 0) cell stays empty: it is never taken from Price 1 / Price 2 or the generic PRICE column.
+    private function poPrice(array $record): ?float
+    {
+        $value = TextNormalizer::number($record['po_price'] ?? '');
+
+        return ($value === null || $value <= 0) ? null : round($value, 2);
     }
 
     // Stock number and unit word ("2 ROLLS" -> [2, "ROLLS"]). Sales logs always start at 0.
@@ -338,6 +348,7 @@ class ImportPlanner
             'options'      => $options,
             'price1'       => $item['price1'],
             'price2'       => $item['price2'],
+            'po_price'     => $item['po_price'] ?? null,
             'stock'        => $item['stock'],
             'uom'          => $item['uom'],
             'address'      => $item['address'],

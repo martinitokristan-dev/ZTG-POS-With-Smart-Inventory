@@ -6,7 +6,7 @@ import { matchesStatusFilter } from '../../../../shared/utils/skuHelpers';
 import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 import TablePagination from '../../../../shared/components/TablePagination';
-import { formatPrice, hasPrice } from '../../../../shared/utils/price';
+import { formatPrice, hasPrice, hasPoPrice } from '../../../../shared/utils/price';
 
 export default function InventoryTable({ products, loading, handleViewProduct, pagination, statusFilter, onPageChange, perPage, onPerPageChange, highlightedId = null }) {
     const showChineseNames = useDisplayChineseNames();
@@ -109,6 +109,7 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                 {enable_dual_pricing && (
                     <td style={{ fontWeight: 600, fontSize: '15px', color: hasPrice(item.price2) ? 'var(--primary)' : 'var(--table-text-secondary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} title={hasPrice(item.price2) ? undefined : 'No price set'}>{formatPrice(item.price2, {})}</td>
                 )}
+                <td style={{ fontWeight: 600, fontSize: '15px', color: hasPoPrice(item.po_price) ? 'var(--text-primary)' : 'var(--table-text-secondary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} title={hasPoPrice(item.po_price) ? undefined : 'No P.O. price: typed at a P.O. checkout'}>{hasPoPrice(item.po_price) ? formatPrice(item.po_price, {}) : '—'}</td>
                 <td style={{ whiteSpace: 'nowrap', textAlign: 'right', fontSize: '15px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{item.sales_count || 0} sold</td>
                 <td>
                     <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'nowrap', alignItems: 'center' }}>
@@ -173,6 +174,7 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                             {enable_dual_pricing && (
                                 <th style={{ textAlign: 'right' }}>{price2_label || 'Retail Price'}</th>
                             )}
+                            <th style={{ textAlign: 'right' }}>P.O. Price</th>
                             <th style={{ textAlign: 'right' }}>Sales</th>
                             <th style={{ textAlign: 'left' }}>Status</th>
                             <th style={{ textAlign: 'center' }}>Damaged</th>
@@ -182,13 +184,13 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={9 + (track_warehouse_locations ? 1 : 0) + (enable_dual_pricing ? 1 : 0)} style={{ padding: '32px' }}>
+                                <td colSpan={10 + (track_warehouse_locations ? 1 : 0) + (enable_dual_pricing ? 1 : 0)} style={{ padding: '32px' }}>
                                     <LoadingSpinner text="Loading product inventory dataset..." minHeight="100px" />
                                 </td>
                             </tr>
                         ) : products.length === 0 ? (
                             <tr>
-                                <td colSpan={9 + (track_warehouse_locations ? 1 : 0) + (enable_dual_pricing ? 1 : 0)} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>
+                                <td colSpan={10 + (track_warehouse_locations ? 1 : 0) + (enable_dual_pricing ? 1 : 0)} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>
                                     No inventory items found.
                                 </td>
                             </tr>
@@ -250,6 +252,7 @@ export default function InventoryTable({ products, loading, handleViewProduct, p
                                     </td>
                                     <td style={{ padding: '16px' }}></td>
                                     {enable_dual_pricing && <td style={{ padding: '16px' }}></td>}
+                                    <td style={{ padding: '16px' }}></td>
                                     <td style={{ padding: '16px', textAlign: 'right', color: 'var(--primary)', fontSize: '13px', fontWeight: 800, whiteSpace: 'nowrap' }}>{totalSold} sold</td>
                                     <td style={{ padding: '16px' }}></td>
                                     <td style={{ padding: '16px', textAlign: 'center', color: 'var(--text-secondary)' }}>

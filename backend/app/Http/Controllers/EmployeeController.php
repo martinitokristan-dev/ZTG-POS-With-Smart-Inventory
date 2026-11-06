@@ -75,9 +75,11 @@ class EmployeeController extends Controller
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error("Failed to resend verification email for user {$employee->id}: " . $e->getMessage(), ['exception' => $e]);
+            \Illuminate\Support\Facades\Log::error("Failed to resend verification email for user {$employee->id}: " . $e->getMessage(), ['exception' => $e, 'error_reference' => \App\Support\ErrorReference::current()]);
+            $reference = \App\Support\ErrorReference::current();
             return response()->json([
-                'message' => 'Failed to resend verification email: ' . $e->getMessage()
+                'message'   => "The verification email could not be sent. Check the employee's email address and try again later. If it keeps failing, tell the system admin this code: {$reference}.",
+                'reference' => $reference,
             ], 500);
         }
 

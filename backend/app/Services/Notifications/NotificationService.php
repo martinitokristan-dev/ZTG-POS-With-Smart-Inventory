@@ -11,6 +11,67 @@ use App\Events\NotificationSent;
 
 class NotificationService
 {
+    /** Filter chips in the notification panel. */
+    public const CATEGORIES = ['stock', 'dead_stock', 'sales', 'security', 'other'];
+
+    private const SUB_DEAD_STOCK = 'Dead Stock';
+    /** Lockouts are saved as system/'security_alert'; each failed PIN as transaction/'Security Alert'. */
+    private const SUB_SECURITY   = ['security_alert', 'Security Alert'];
+    /** Transaction notifications that are really stock movements, not sales. */
+    private const SUB_INVENTORY  = ['Restocked', 'Damaged', 'Imported', 'Import Undone'];
+
+    /**
+     * Narrow the notification query by the panel's search and filters.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  array{search?: string|null, category?: string|null, unread?: bool|null, period?: string|null}  $filters
+     */
+    private function applyFilters($query, array $filters): void
+    {
+        $search = trim((string) ($filters['search'] ?? ''));
+        if ($search !== '') {
+            $query->where(fn ($q) => $q->whereContains('title', $search)->orWhereContains('message', $search));
+        }
+
+        switch ($filters['category'] ?? null) {
+            case 'stock': // low / out of stock alerts, restocks, damaged stock, imports
+                $query->where(fn ($q) => $q
+                    ->where(fn ($low) => $low->where('type', NotificationType::LOW_STOCK->value)
+                        ->where(fn ($s) => $s->whereNull('sub_type')->orWhere('sub_type', '!=', self::SUB_DEAD_STOCK)))
+                    ->orWhereIn('sub_type', self::SUB_INVENTORY));
+                break;
+            case 'dead_stock':
+                $query->where('sub_type', self::SUB_DEAD_STOCK);
+                break;
+            case 'sales': // sales, refunds, returns, voids, P.O., reservations
+                $query->whereIn('type', [NotificationType::TRANSACTION->value, NotificationType::RESERVATION->value])
+                      ->where(fn ($q) => $q->whereNull('sub_type')
+                          ->orWhereNotIn('sub_type', [...self::SUB_SECURITY, ...self::SUB_INVENTORY]));
+                break;
+            case 'security': // lockouts and every failed PIN / password attempt
+                $query->whereIn('sub_type', self::SUB_SECURITY);
+                break;
+            case 'other': // discounts, daily sales reminder, other system messages
+                $query->where('type', NotificationType::SYSTEM->value)
+                      ->where(fn ($q) => $q->whereNull('sub_type')->orWhereNotIn('sub_type', self::SUB_SECURITY));
+                break;
+        }
+
+        if (!empty($filters['unread'])) {
+            $query->where('is_read', false);
+        }
+
+        $from = match ($filters['period'] ?? null) {
+            'today' => now()->startOfDay(),
+            'week'  => now()->subDays(7),
+            'month' => now()->subDays(30),
+            default => null,
+        };
+        if ($from) {
+            $query->where('created_at', '>=', $from);
+        }
+    }
+
     /**
      * Get all notifications, latest first.
      */
@@ -27,13 +88,16 @@ class NotificationService
      *
      * @param  int       $perPage  Number of notifications to return.
      * @param  int|null  $beforeId Only return notifications with an id lower than this.
+     * @param  array     $filters  Optional search / category / unread / period (see applyFilters).
+     *                             unread_count is always the true inbox total, not the filtered count.
      * @return array{data: Collection, has_more: bool, next_before_id: int|null, unread_count: int}
      */
-    public function getPage(int $perPage, ?int $beforeId = null): array
+    public function getPage(int $perPage, ?int $beforeId = null, array $filters = []): array
     {
         // Fetch one extra row to know whether another page exists, without a COUNT query.
         $rows = Notification::with(['product', 'transaction'])
             ->when($beforeId, fn ($query) => $query->where('id', '<', $beforeId))
+            ->tap(fn ($query) => $this->applyFilters($query, $filters))
             ->latest('id')
             ->limit($perPage + 1)
             ->get();
@@ -186,7 +250,7 @@ class NotificationService
             'Deposit'        => 'Reservation Deposit',
             'Paid'           => 'Reservation Paid',
             'Pending'        => 'Pending Order Created',
-            'Security Alert' => 'Security Alert Alert',
+            'Security Alert' => 'Failed PIN Attempt',
             default          => 'Transaction Update',
         };
 

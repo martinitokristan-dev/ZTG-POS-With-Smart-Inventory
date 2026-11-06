@@ -27,6 +27,8 @@ const DEFAULT_FORM = {
     // Blank until typed: an empty price is saved empty (not ₱0) and cannot be sold.
     price1: '',
     price2: '',
+    // Optional: only items with a P.O. price from the owner have one.
+    po_price: '',
     image: '',
     notes: '',
     status: 'Active',
@@ -700,6 +702,7 @@ export default function useProductManagement() {
             alert_limit: targetProduct.alert_limit || 5,
             price1: targetProduct.price1, 
             price2: targetProduct.price2,
+            po_price: targetProduct.po_price ?? '',
             image: targetProduct.image || '', 
             notes: targetProduct.notes || '',
             variants: targetProduct.variants ? targetProduct.variants.map(v => ({...v, option_ids: v.variant_options ? v.variant_options.map(o => o.id) : []})) : [],

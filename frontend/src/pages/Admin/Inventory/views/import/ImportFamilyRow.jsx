@@ -79,6 +79,7 @@ export default function ImportFamilyRow({ family, review, thumbnail, categoryNam
                                     <th className="is-right">Stock</th>
                                     <th className="is-right">{priceLabels.price1}</th>
                                     <th className="is-right">{priceLabels.price2}</th>
+                                    <th className="is-right" title="Optional. Empty = the cashier types it at a P.O. checkout.">P.O. Price</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -119,6 +120,8 @@ function VariantRow({ v, family, priceLabels, onChange }) {
             {/* Empty price = not in the file: the box stays blank and is saved empty (never 0). */}
             <td className="is-right"><Num value={priceInputValue(v.price1)} step="0.01" width={96} label={priceLabels.price1} placeholder="—" disabled={locked} onChange={(val) => onChange({ price1: val === '' ? null : val })} /></td>
             <td className="is-right"><Num value={priceInputValue(v.price2)} step="0.01" width={96} label={priceLabels.price2} placeholder="—" disabled={locked} onChange={(val) => onChange({ price2: val === '' ? null : val })} /></td>
+            {/* Only some items have a P.O. price; blank = none (can be typed here or later in the product form). */}
+            <td className="is-right"><Num value={priceInputValue(v.po_price)} step="0.01" width={96} label="P.O. Price" placeholder="—" disabled={locked} onChange={(val) => onChange({ po_price: val === '' ? null : val })} /></td>
         </tr>
     );
 }

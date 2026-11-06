@@ -58,7 +58,6 @@ class LoginTest extends TestCase
         ]);
     }
 
-    /** @test */
     public function test_user_can_login_with_username_without_role_selection(): void
     {
         $response = $this->postJson('/api/login', [
@@ -73,7 +72,6 @@ class LoginTest extends TestCase
             ->assertJsonPath('user.role', 'Admin');
     }
 
-    /** @test */
     public function test_user_cannot_login_with_email_or_phone(): void
     {
         $response = $this->postJson('/api/login', [
@@ -86,7 +84,6 @@ class LoginTest extends TestCase
             ->assertJsonPath('errors.login_id.0', 'Invalid username or password.');
     }
 
-    /** @test */
     public function test_invalid_password_returns_clean_error_message(): void
     {
         $response = $this->postJson('/api/login', [
@@ -99,7 +96,6 @@ class LoginTest extends TestCase
             ->assertJsonPath('errors.login_id.0', 'Invalid username or password.');
     }
 
-    /** @test */
     public function test_non_existent_user_returns_clean_error_message(): void
     {
         $response = $this->postJson('/api/login', [
@@ -112,7 +108,6 @@ class LoginTest extends TestCase
             ->assertJsonPath('errors.login_id.0', 'Invalid username or password.');
     }
 
-    /** @test */
     public function test_inactive_user_cannot_login(): void
     {
         $response = $this->postJson('/api/login', [

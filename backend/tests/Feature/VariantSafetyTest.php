@@ -12,6 +12,7 @@ use App\Services\Constants\SecurityConstants;
 use App\Services\Constants\StockConstants;
 use App\Services\Transactions\TransactionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionMethod;
 use Tests\TestCase;
 
@@ -163,9 +164,7 @@ class VariantSafetyTest extends TestCase
 
     /* ─── Numeric settings ────────────────────────────────── */
 
-    /**
-     * @dataProvider invalidNumericSettings
-     */
+    #[DataProvider('invalidNumericSettings')]
     public function test_invalid_numeric_settings_are_rejected(string $key, string $value): void
     {
         $this->actingAs($this->admin)

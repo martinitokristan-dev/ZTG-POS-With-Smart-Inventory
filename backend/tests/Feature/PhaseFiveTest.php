@@ -434,6 +434,113 @@ class PhaseFiveTest extends TestCase
             ->assertJsonPath('transaction.payment_method', 'Cheque');
     }
 
+    /* ─── Cancel P.O. Tests ───────────────────────────────── */
+
+    /** A pending P.O. with 5 pumps that already left stock at checkout (stock is 50 after it). */
+    private function makePendingPo(): Transaction
+    {
+        $po = Transaction::create([
+            'si_no'           => 'SI-2026-PO-CANCEL',
+            'date'            => now(),
+            'customer_id'     => $this->customer->id,
+            'cashier_id'      => $this->cashier->id,
+            'total_qty'       => 5,
+            'amount'          => 12500.00,
+            'amount_tendered' => 0.00,
+            'payment_method'  => 'P.O. (Pending)',
+            'doc_type'        => 'S.I.',
+            'status'          => TransactionStatus::PENDING->value,
+            'type'            => TransactionType::SALE->value,
+        ]);
+        TransactionItem::create([
+            'transaction_id' => $po->id,
+            'product_id'     => $this->product->id,
+            'qty'            => 5,
+            'price'          => 2500.00,
+            'price_tier'     => 'price1',
+            'unit'           => 'pc',
+        ]);
+
+        return $po;
+    }
+
+    public function test_admin_can_cancel_pending_po_and_restore_stock(): void
+    {
+        $po = $this->makePendingPo();
+
+        $response = $this->actingAs($this->admin)
+            ->postJson("/api/transactions/{$po->id}/void", [
+                'void_reason'   => 'Customer Cancelled the Order',
+                'admin_id'      => $this->admin->id,
+                'admin_pin'     => '1234',
+                'restore_stock' => true,
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonFragment(['message' => 'P.O. cancelled successfully.'])
+            ->assertJsonPath('transaction.status', 'Void')
+            ->assertJsonPath('transaction.void_reason', 'Customer Cancelled the Order');
+        $this->assertStringStartsWith('OR-VOID-', $response->json('transaction.or_no'));
+
+        $this->assertDatabaseHas('products', ['id' => $this->product->id, 'stock' => 55]);
+        $this->assertEquals(0, (float) $po->fresh()->amount, 'a cancelled P.O. has no net sale');
+        $this->assertDatabaseHas('activity_logs', ['action' => 'cancel_po']);
+    }
+
+    public function test_cancel_pending_po_without_restoring_stock_leaves_stock_unchanged(): void
+    {
+        $po = $this->makePendingPo();
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/transactions/{$po->id}/void", [
+                'void_reason'   => 'Other',
+                'admin_id'      => $this->admin->id,
+                'admin_pin'     => '1234',
+                'restore_stock' => false,
+            ])->assertStatus(200);
+
+        $this->assertDatabaseHas('products', ['id' => $this->product->id, 'stock' => 50]);
+    }
+
+    public function test_cancelled_po_can_no_longer_be_paid(): void
+    {
+        $po = $this->makePendingPo();
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/transactions/{$po->id}/void", [
+                'void_reason'   => 'Customer Cancelled the Order',
+                'admin_id'      => $this->admin->id,
+                'admin_pin'     => '1234',
+                'restore_stock' => true,
+            ])->assertStatus(200);
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/transactions/{$po->id}/pay", [
+                'admin_id'        => $this->admin->id,
+                'admin_pin'       => '1234',
+                'payment_method'  => 'Cash',
+                'amount_tendered' => 12500.00,
+            ])->assertStatus(422)->assertJsonValidationErrors('transaction');
+
+        $this->assertSame('Void', $po->fresh()->status instanceof TransactionStatus ? $po->fresh()->status->value : $po->fresh()->status);
+    }
+
+    public function test_cancel_po_with_wrong_pin_changes_nothing(): void
+    {
+        $po = $this->makePendingPo();
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/transactions/{$po->id}/void", [
+                'void_reason'   => 'Other',
+                'admin_id'      => $this->admin->id,
+                'admin_pin'     => '0000',
+                'restore_stock' => true,
+            ])->assertStatus(422)->assertJsonValidationErrors('admin_pin');
+
+        $this->assertDatabaseHas('transactions', ['id' => $po->id, 'status' => 'Pending']);
+        $this->assertDatabaseHas('products', ['id' => $this->product->id, 'stock' => 50]);
+    }
+
     public function test_cashier_cannot_refund_return_void_or_pay_transaction()
     {
         // Cashier attempting refund -> 403

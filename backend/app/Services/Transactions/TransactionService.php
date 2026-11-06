@@ -398,6 +398,12 @@ class TransactionService
             $totalRefundAmount = 0;
             $invActions = [];
 
+            // What the customer really paid per line: the line after its item discount, with the
+            // order discount spread over the lines by their share. Refunding at the shelf price
+            // would give back money that was never paid (e.g. ₱100,000 back on a ₱90,000 sale).
+            $originalPaid = (float) ($transaction->original_amount ?? $transaction->amount);
+            $paidRatio = $this->paidRatio($transaction, $originalPaid);
+
             foreach ($refundedItems as $refundEntry) {
                 $item = TransactionItem::findOrFail($refundEntry['item_id']);
 
@@ -408,7 +414,7 @@ class TransactionService
                     continue;
                 }
 
-                $totalRefundAmount += $item->price * $qty;
+                $totalRefundAmount += $this->paidForUnits($item, $qty, $paidRatio);
 
                 // Track refunded_qty per line-item
                 $newRefundedQty = (int) ($item->refunded_qty ?? 0) + $qty;
@@ -435,12 +441,18 @@ class TransactionService
                 }
             }
 
-            // Round the total refunded amount
-            $refundedAmount = round($totalRefundAmount, 2);
-
             // Preserve original_amount (frozen at checkout); compute net sale amount
-            $originalAmount = (float) ($transaction->original_amount ?? $transaction->amount);
+            $originalAmount = $originalPaid;
             $existingRefunded = (float) ($transaction->refunded_amount ?? 0);
+            $remaining = max(0, round($originalAmount - $existingRefunded, 2));
+
+            // Never refund more than is left. When the last unit goes back, refund exactly what is
+            // left, so centavo rounding across several partial refunds always ends at ₱0.00.
+            $refundedAmount = min(round($totalRefundAmount, 2), $remaining);
+            $allUnitsBack = $transaction->items()->whereColumn('refunded_qty', '<', 'qty')->doesntExist();
+            if ($allUnitsBack) {
+                $refundedAmount = $remaining;
+            }
             $totalRefundedSoFar = $existingRefunded + $refundedAmount;
             $netSaleAmount = max(0, round($originalAmount - $totalRefundedSoFar, 2));
 
@@ -537,7 +549,44 @@ class TransactionService
     }
 
     /**
-     * Void an entire transaction.
+     * Share of each line's net amount the customer actually paid (1.0 when there was no order
+     * discount). Net line = unit price × qty − item discount; the sale total already has the order
+     * discount taken off, so total ÷ sum of net lines spreads that discount over the lines.
+     *
+     * @param  Transaction $transaction The sale being refunded.
+     * @param  float       $originalPaid The frozen sale total (original_amount).
+     * @return float Ratio between 0 and 1.
+     */
+    private function paidRatio(Transaction $transaction, float $originalPaid): float
+    {
+        $netLines = $transaction->items()->get(['price', 'qty', 'discount'])
+            ->sum(fn ($line) => max(0, (float) $line->price * (int) $line->qty - (float) $line->discount));
+
+        return $netLines > 0 ? min(1, $originalPaid / $netLines) : 0;
+    }
+
+    /**
+     * Money paid for $units units of one sale line (after item and order discounts), in pesos.
+     *
+     * @param  TransactionItem $item  The sold line.
+     * @param  int             $units Units being refunded or returned.
+     * @param  float           $paidRatio From paidRatio().
+     * @return float
+     */
+    private function paidForUnits(TransactionItem $item, int $units, float $paidRatio): float
+    {
+        $qty = max(1, (int) $item->qty);
+        $netLine = max(0, (float) $item->price * $qty - (float) $item->discount);
+
+        return round($netLine * $paidRatio * $units / $qty, 2);
+    }
+
+    /**
+     * Void an entire transaction, or cancel a pending P.O. (pending order).
+     *
+     * A pending P.O. already took the items out of stock at checkout but no money was received,
+     * so cancelling it uses the same steps as a void: approval PIN, optional stock restoration,
+     * status Void with the reason, and an OR-VOID proof number.
      */
     public function processVoid(Transaction $transaction, array $data, int $cashierId): Transaction
     {
@@ -546,16 +595,17 @@ class TransactionService
         $voidReason   = $data['void_reason'];
         $restoreStock = $data['restore_stock'];
 
-        // 1. Ensure transaction is Completed
+        // 1. Ensure transaction is Completed (void) or Pending (cancel P.O.)
         $currentStatus = is_object($transaction->status) ? $transaction->status->value : $transaction->status;
-        if ($currentStatus !== 'Completed') {
+        $isPendingPo = $currentStatus === TransactionStatus::PENDING->value;
+        if ($currentStatus !== TransactionStatus::COMPLETED->value && !$isPendingPo) {
             throw ValidationException::withMessages([
-                'transaction' => ['Only completed transactions can be voided.'],
+                'transaction' => ['Only completed transactions or pending P.O. orders can be voided.'],
             ]);
         }
 
         // 2. Verify admin PIN
-        $contextMsg = "Void on invoice {$transaction->si_no}. Admin ID: {$adminId}";
+        $contextMsg = ($isPendingPo ? 'Cancel P.O.' : 'Void') . " on invoice {$transaction->si_no}. Admin ID: {$adminId}";
         if (!$this->verifyPin($adminId, $adminPin, $contextMsg)) {
             throw ValidationException::withMessages([
                 'admin_pin' => ['Invalid admin PIN. The failed attempt has been logged.'],
@@ -648,9 +698,10 @@ class TransactionService
         try {
             $voidAmountFormatted = number_format((float) ($updated->original_amount ?? $updated->amount), 2);
             $this->activityLogService->log(
-                action: 'void',
+                action: $isPendingPo ? 'cancel_po' : 'void',
                 module: 'POS',
-                description: "Voided transaction {$updated->si_no} (Total: ₱{$voidAmountFormatted}). Reason: {$voidReason}",
+                description: ($isPendingPo ? "Cancelled pending P.O. {$updated->si_no}" : "Voided transaction {$updated->si_no}")
+                    . " (Total: ₱{$voidAmountFormatted}). Reason: {$voidReason}",
                 status: 'Success',
                 severity: 'warning',
                 userId: $adminId,

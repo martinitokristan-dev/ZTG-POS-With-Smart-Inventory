@@ -71,6 +71,7 @@ class ProductController extends Controller
             'chinese_name' => $updatedProduct->chinese_name,
             'price1'       => $updatedProduct->price1 === null ? null : (float) $updatedProduct->price1,
             'price2'       => $updatedProduct->price2 === null ? null : (float) $updatedProduct->price2,
+            'po_price'     => $updatedProduct->po_price === null ? null : (float) $updatedProduct->po_price,
             'category_id'  => $updatedProduct->category_id,
             'status'       => $updatedProduct->status instanceof \BackedEnum ? $updatedProduct->status->value : (string) $updatedProduct->status,
         ]));
@@ -161,8 +162,12 @@ class ProductController extends Controller
                      'url' => $result['secure_url'] ?? $result['url']
                  ]);
              } catch (\Throwable $e) {
-                 \Illuminate\Support\Facades\Log::error('ProductController uploadImage failed', ['error' => $e->getMessage()]);
-                 return response()->json(['message' => 'Image upload failed: ' . $e->getMessage()], 500);
+                 $reference = \App\Support\ErrorReference::current();
+                 \Illuminate\Support\Facades\Log::error('ProductController uploadImage failed', ['error' => $e->getMessage(), 'error_reference' => $reference]);
+                 return response()->json([
+                     'message'   => "The photo could not be uploaded. Check your internet connection and try again. If it keeps failing, tell the system admin this code: {$reference}.",
+                     'reference' => $reference,
+                 ], 500);
              }
          }
 

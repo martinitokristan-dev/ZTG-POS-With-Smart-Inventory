@@ -305,8 +305,17 @@ class ImportCommitService
             'stock'        => (int) $row['stock'],
             'price1'       => self::price($row['price1'] ?? null),
             'price2'       => self::price($row['price2'] ?? null),
+            'po_price'     => self::poPrice($row['po_price'] ?? null),
             'notes'        => $this->nullIfEmpty($row['notes'] ?? null),
         ]);
+    }
+
+    // A P.O. price as saved: empty (or 0) stays null, so the cashier types it at a P.O. checkout.
+    private static function poPrice($value): ?float
+    {
+        $price = self::price($value);
+
+        return ($price === null || $price <= 0) ? null : $price;
     }
 
     // A price as saved: empty stays null (never 0), otherwise a number.
@@ -341,6 +350,7 @@ class ImportCommitService
                 'stock'        => (int) $row['stock'],
                 'price1'       => self::price($row['price1'] ?? null),
                 'price2'       => self::price($row['price2'] ?? null),
+                'po_price'     => self::poPrice($row['po_price'] ?? null),
                 'uom'          => ($row['uom'] ?? '') ?: $base['uom'],
                 'address'      => $row['address'] ?? null,
                 'notes'        => $this->nullIfEmpty($row['notes'] ?? null),
@@ -353,6 +363,7 @@ class ImportCommitService
             'stock'    => 0,
             'price1'   => self::lowestPrice($variants, 'price1'),
             'price2'   => self::lowestPrice($variants, 'price2'),
+            'po_price' => self::lowestPrice($variants, 'po_price'),
             'variants' => $variants,
         ]);
     }

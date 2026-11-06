@@ -159,13 +159,14 @@ export default function useHistoryLogs() {
         const txId = (typeof arg1 === 'object' && arg1 !== null) ? (arg1.transaction_id || selectedTxForVoid?.id) : arg1;
         const payload = (typeof arg1 === 'object' && arg1 !== null) ? arg1 : arg2;
         try {
-            await api.post(`/transactions/${txId}/void`, payload);
+            const res = await api.post(`/transactions/${txId}/void`, payload);
             resetDashboardCache();
             resetReportsCache();
             handleCloseVoid();
             loadHistory();
+            showToast(res.data?.message || 'Transaction voided successfully.', 'success');
         } catch (err) {
-            console.error("Void failed:", err);
+            // The modal shows the error inline.
             throw err;
         }
     };
@@ -187,7 +188,6 @@ export default function useHistoryLogs() {
             handleClosePay();
             loadHistory();
         } catch (err) {
-            console.error("Pay failed:", err);
             showToast("Payment failed: " + (err.response?.data?.message || err.message), 'error');
             throw err;
         }

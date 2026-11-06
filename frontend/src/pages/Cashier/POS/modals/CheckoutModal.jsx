@@ -4,6 +4,10 @@ import IOSSelect from '../../../../shared/components/IOSSelect';
 import { printUnifiedReceipt } from '../../../../utils/printReceipt';
 import { getLineItemName, getLineItemPartNo, getLineItemUnit } from '../../../../shared/utils/lineItemDisplay';
 import api from '../../../../shared/api';
+import { hasPoPrice } from '../../../../shared/utils/price';
+
+// Pending order: paid later, every line sold at the P.O. price.
+const PO_METHOD = 'P.O. (Pending)';
 
 const docTypeOptions = [
     { value: 'S.I.', label: 'S.I. (Sales Invoice)' },
@@ -24,6 +28,7 @@ export default function CheckoutModal({
     onClose, 
     cart, 
     cartTotals, 
+    poPricing,
     setItemDiscount,
     orderDiscountType,
     setOrderDiscountType,
@@ -37,6 +42,27 @@ export default function CheckoutModal({
     const [siNumberingMode, setSiNumberingMode] = useState('manual');
     const [nextNumbers, setNextNumbers] = useState({ 'S.I.': '', 'D.R.': '', 'C.R.': '' });
     const [paymentMethod, setPaymentMethod] = useState('Cash');
+    // P.O.: true after a checkout attempt with a missing P.O. price (the empty boxes then turn red).
+    const [poAttempted, setPoAttempted] = useState(false);
+
+    // Choosing P.O. puts the cursor straight into the first P.O. price box that still needs a value.
+    const firstMissingPoId = poPricing.poPriceMissing[0]?.id;
+    const focusFirstPoPrice = () => {
+        if (firstMissingPoId === undefined) return;
+        const box = document.getElementById(`po-price-${firstMissingPoId}`);
+        if (box) {
+            box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            box.focus();
+        }
+    };
+    useEffect(() => {
+        if (isOpen && paymentMethod === PO_METHOD) {
+            const timer = setTimeout(focusFirstPoPrice, 60);
+            return () => clearTimeout(timer);
+        }
+    // Only when the method changes (not on every keystroke in a box).
+    // eslint-disable-next-line
+    }, [isOpen, paymentMethod]);
     
     // Amount Tendered / Received Fields (Cash, GCash, Bank Transfer)
     const [amountTendered, setAmountTendered] = useState('');
@@ -83,6 +109,8 @@ export default function CheckoutModal({
         if (isOpen) {
             setDocType('S.I.');
             setPaymentMethod('Cash');
+            poPricing.setPoMode(false);
+            setPoAttempted(false);
             setAmountTendered('');
             setChequeNumber('');
             setCheckoutSuccess(false);
@@ -124,6 +152,15 @@ export default function CheckoutModal({
 
     if (!isOpen) return null;
 
+    const isPo = paymentMethod === PO_METHOD;
+    // Choosing P.O. switches the whole cart to P.O. prices; any other method goes back to Price 1 / 2.
+    const choosePaymentMethod = (method) => {
+        setPaymentMethod(method);
+        poPricing.setPoMode(method === PO_METHOD);
+        setPoAttempted(false);
+        setError(null);
+    };
+
     const tenderedVal = parseFloat(amountTendered || 0);
     const changeDue = Math.max(0, tenderedVal - cartTotals.total);
     const isChangeSufficient = ['Cash', 'GCash', 'Bank Transfer', 'Cheque'].includes(paymentMethod) ? (tenderedVal >= cartTotals.total) : true;
@@ -151,6 +188,13 @@ export default function CheckoutModal({
                 ...(paymentMethod === 'Cheque' ? { cheque_number: chequeNumber.trim() } : {})
             };
         } else {
+            if (isPo && poPricing.poPriceMissing.length > 0) {
+                const count = poPricing.poPriceMissing.length;
+                setPoAttempted(true);
+                setError(`Enter the P.O. price for ${count} ${count === 1 ? 'item' : 'items'} (highlighted in red).`);
+                focusFirstPoPrice();
+                return;
+            }
             paymentData = { method: paymentMethod };
         }
 
@@ -207,7 +251,9 @@ export default function CheckoutModal({
             buyerAddress: completedTx.customer?.address || '',
             items: mappedItems,
             total: completedTx.amount,
-            discountAmount: Number(completedTx.discount_amount || cartTotals.discount || 0),
+            // Every peso discount on this invoice: the order discount plus each line's item discount.
+            discountAmount: Number(completedTx.discount_amount || 0)
+                + (completedTx.items || []).reduce((sum, item) => sum + Number(item.discount || 0), 0),
             payment: completedTx.payment_method,
             tendered: completedTx.amount_tendered || 0,
             change: Math.max(0, (completedTx.amount_tendered || 0) - completedTx.amount),
@@ -387,7 +433,9 @@ export default function CheckoutModal({
                                             const price = parseFloat(item.price || 0);
                                             const itemTotal = price * item.qty;
                                             const partNo = getLineItemPartNo(item, '');
-                                            const tierBadge = item.price_tier === 'price2' ? (
+                                            const tierBadge = item.price_tier === 'po' ? (
+                                                <span key={`${item.id}-badge`} style={{ fontSize: '9.5px', backgroundColor: '#FEF2F2', color: '#B91C1C', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', marginLeft: '4px' }}>P.O.</span>
+                                            ) : item.price_tier === 'price2' ? (
                                                 <span key={`${item.id}-badge`} style={{ fontSize: '9.5px', backgroundColor: '#F5F3FF', color: '#7C3AED', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', marginLeft: '4px' }}>P2</span>
                                             ) : (
                                                 <span key={`${item.id}-badge`} style={{ fontSize: '9.5px', backgroundColor: '#EFF6FF', color: '#2563EB', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', marginLeft: '4px' }}>P1</span>
@@ -565,8 +613,14 @@ export default function CheckoutModal({
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', overflowY: 'auto', paddingRight: '4px' }}>
                             {cart.map(item => {
                                 const isPrice2 = item.priceTier === 'price2';
-                                const origPrice = isPrice2 ? parseFloat(item.price2 || 0) : parseFloat(item.price1 || 0);
-                                const itemDisc = parseFloat(item.item_discount || 0);
+                                const origPrice = poPricing.unitPriceOf(item);
+                                const itemDisc = poPricing.discountOf(item);
+                                // P.O. sale and the product has no P.O. price: the cashier types it here.
+                                const needsPoPrice = isPo && !hasPoPrice(item.po_price);
+                                const poPriceTyped = poPricing.poPrices[item.id] ?? '';
+                                const poPriceInvalid = needsPoPrice && !hasPoPrice(poPriceTyped);
+                                // Red only after the cashier tried to check out without it; blue (a normal step) before.
+                                const poPriceShowError = poPriceInvalid && poAttempted;
                                 const origLineTotal = origPrice * item.qty;
                                 const lineTotal = Math.max(0, origLineTotal - itemDisc);
 
@@ -579,7 +633,7 @@ export default function CheckoutModal({
                                             gap: '10px', 
                                             padding: '12px 14px', 
                                             background: '#FFFFFF', 
-                                            border: itemDisc > 0 ? '1.5px solid #3B82F6' : '1px solid var(--border)', 
+                                            border: poPriceShowError ? '1.5px solid #EF4444' : ((itemDisc > 0 || poPriceInvalid) ? '1.5px solid #3B82F6' : '1px solid var(--border)'), 
                                             borderRadius: '10px',
                                             boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                                             transition: 'all 0.2s ease'
@@ -592,15 +646,21 @@ export default function CheckoutModal({
                                                         <FormattedProductName name={item.name} />
                                                     </span>
                                                     {/* Price Tier Badge */}
-                                                    <span className={isPrice2 ? "price-badge price-tier-2" : "price-badge price-tier-1"}>
-                                                        <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'currentColor' }}></span>
-                                                        {isPrice2 ? 'Price 2' : 'Price 1'}
-                                                    </span>
+                                                    {isPo ? (
+                                                        <span className="price-badge" style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}>
+                                                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'currentColor' }}></span>
+                                                            P.O. Price
+                                                        </span>
+                                                    ) : (
+                                                        <span className={isPrice2 ? "price-badge price-tier-2" : "price-badge price-tier-1"}>
+                                                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'currentColor' }}></span>
+                                                            {isPrice2 ? 'Price 2' : 'Price 1'}
+                                                        </span>
+                                                    )}
                                                 </div>
 
-
                                                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500', marginTop: '2px' }}>
-                                                    <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>{item.qty} pcs</span> × {fmt(origPrice)}
+                                                    <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>{item.qty} pcs</span> × {needsPoPrice && poPriceInvalid ? '—' : fmt(origPrice)}
                                                 </div>
                                             </div>
 
@@ -617,7 +677,44 @@ export default function CheckoutModal({
                                                 )}
                                             </div>
                                         </div>
-                                        
+
+                                        {/* P.O. sale and no saved P.O. price: one clear, labeled box to type it (for this sale only). */}
+                                        {needsPoPrice && (
+                                            <div style={{
+                                                display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+                                                padding: '10px 12px', borderRadius: '8px',
+                                                background: poPriceShowError ? '#FEF2F2' : '#EFF6FF',
+                                                border: poPriceShowError ? '1px solid #FCA5A5' : '1px solid #BFDBFE'
+                                            }}>
+                                                <label htmlFor={`po-price-${item.id}`} style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: '1 1 160px', minWidth: 0, cursor: 'pointer' }}>
+                                                    <span style={{ fontSize: '13px', fontWeight: '700', color: poPriceShowError ? '#991B1B' : '#1E3A8A' }}>Enter P.O. price</span>
+                                                    <span style={{ fontSize: '11.5px', color: poPriceShowError ? '#B91C1C' : '#475569', fontWeight: '500' }}>
+                                                        {poPriceShowError ? 'Required: this item has no saved P.O. price.' : 'Price per piece, for this sale only.'}
+                                                    </span>
+                                                </label>
+                                                <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                                    <span style={{ position: 'absolute', left: '12px', fontSize: '14px', fontWeight: '700', color: '#475569', pointerEvents: 'none' }}>₱</span>
+                                                    <input
+                                                        id={`po-price-${item.id}`}
+                                                        type="number"
+                                                        min="0.01"
+                                                        step="0.01"
+                                                        inputMode="decimal"
+                                                        placeholder="0.00"
+                                                        aria-label={`P.O. price for ${item.name}`}
+                                                        value={poPriceTyped}
+                                                        onChange={e => poPricing.setPoPrice(item.id, e.target.value)}
+                                                        style={{
+                                                            width: '150px', height: '40px', fontSize: '15px', fontWeight: '700',
+                                                            padding: '0 12px 0 28px', borderRadius: '8px', textAlign: 'right', outline: 'none',
+                                                            border: poPriceShowError ? '2px solid #EF4444' : '2px solid #3B82F6',
+                                                            backgroundColor: '#FFFFFF', color: '#0F172A'
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Per-Item Discount Input */}
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px dashed #E2E8F0', flexWrap: 'wrap' }}>
                                             {(() => {
@@ -875,8 +972,32 @@ export default function CheckoutModal({
                         {/* Payment Info */}
                         <div className="form-group" style={{ marginBottom: 0 }}>
                             <label className="form-label" style={{ fontSize: '10px', marginBottom: '4px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Payment Method</label>
-                            <IOSSelect value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} options={paymentMethodOptions} />
+                            <IOSSelect value={paymentMethod} onChange={e => choosePaymentMethod(e.target.value)} options={paymentMethodOptions} />
                         </div>
+
+                        {isPo && (
+                            <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', color: '#475569', lineHeight: 1.45, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                                <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontWeight: '700', color: '#1E3A8A', marginBottom: '2px' }}>P.O. prices are used for this sale</div>
+                                    {poPricing.poPriceMissing.length > 0 ? (
+                                        <span>
+                                            {poPricing.poPriceMissing.length} {poPricing.poPriceMissing.length === 1 ? 'item needs' : 'items need'} a P.O. price.
+                                        </span>
+                                    ) : (
+                                        <span>All P.O. prices are set. The customer pays later.</span>
+                                    )}
+                                </div>
+                                {poPricing.poPriceMissing.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={focusFirstPoPrice}
+                                        style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', background: '#2563EB', color: '#FFFFFF', fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                    >
+                                        Enter P.O. price
+                                    </button>
+                                )}
+                            </div>
+                        )}
 
                         {paymentMethod === 'Cheque' && (
                             <div style={{ background: '#F8FAFC', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>

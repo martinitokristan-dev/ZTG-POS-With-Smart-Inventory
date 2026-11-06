@@ -155,14 +155,26 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
         }
     };
 
+    // Same rule as the server (TransactionService::paidForUnits): refund what the customer
+    // actually paid, i.e. the line after its item discount with the order discount spread over
+    // the lines. Never the shelf price, and never more than what is left to refund.
+    const netLine = (item) => Math.max(0, Number(item.price || 0) * Number(item.qty || 0) - Number(item.discount || 0));
+    const netLinesTotal = txItems.reduce((sum, item) => sum + netLine(item), 0);
+    const originalPaid = Number(txToUse?.original_amount ?? txToUse?.amount ?? 0);
+    const paidRatio = netLinesTotal > 0 ? Math.min(1, originalPaid / netLinesTotal) : 0;
+    const remainingToRefund = Math.max(0, Math.round((originalPaid - Number(txToUse?.refunded_amount || 0)) * 100) / 100);
+    /** Money paid for `units` units of one line (what the row's Total column shows). */
+    const paidForUnits = (item, units) =>
+        Math.round(netLine(item) * paidRatio * units / Math.max(1, Number(item.qty || 1)) * 100) / 100;
+
     let subtotal = 0;
     txItems.forEach(item => {
         if (selectedItems[item.id]?.selected) {
-            subtotal += item.price * selectedItems[item.id].qty;
+            subtotal += paidForUnits(item, selectedItems[item.id].qty);
         }
     });
-    
-    const totalRefund = subtotal;
+
+    const totalRefund = Math.min(Math.round(subtotal * 100) / 100, remainingToRefund);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -357,7 +369,8 @@ export default function RefundModal({ isOpen, onClose, onSubmit, transaction, fm
                                                 const isItemFullyRefunded = maxRefundableQty <= 0;
 
                                                 const sel = selectedItems[item.id] || { selected: false, qty: 0 };
-                                                const total = sel.qty * price;
+                                                // Paid amount for the chosen units (after discounts), not shelf price × qty.
+                                                const total = paidForUnits(item, sel.qty);
 
                                                 return (
                                                     <tr key={index} style={{ borderBottom: '1px solid var(--border)', opacity: isItemFullyRefunded ? 0.6 : 1 }}>

@@ -158,7 +158,6 @@ class PhaseEightTest extends TestCase
 
     // ─── Test 1: Full Refund ────────────────────────────────────────────────────
 
-    /** @test */
     public function test_full_refund_removes_transaction_from_sales_report_revenue()
     {
         // Sell 5 items × ₱500 = ₱2,500
@@ -197,7 +196,6 @@ class PhaseEightTest extends TestCase
 
     // ─── Test 2: Partial Refund ─────────────────────────────────────────────────
 
-    /** @test */
     public function test_partial_refund_shows_net_sale_in_sales_report()
     {
         // Sell 100 items × ₱500 = ₱50,000
@@ -236,7 +234,6 @@ class PhaseEightTest extends TestCase
 
     // ─── Test 3: Partial + Full Refund in one report window ──────────────────
 
-    /** @test */
     public function test_mixed_full_and_partial_refunds_in_sales_report()
     {
         // Transaction A: 5 items × ₱500 = ₱2,500 — then FULL refund
@@ -268,7 +265,6 @@ class PhaseEightTest extends TestCase
 
     // ─── Test 4: original_amount frozen — multiple refund attempts ────────────
 
-    /** @test */
     public function test_original_amount_stays_frozen_across_multiple_refund_calls()
     {
         // Sell 10 items × ₱500 = ₱5,000
@@ -289,7 +285,6 @@ class PhaseEightTest extends TestCase
 
     // ─── Test 5: is_partial_refund flag present in transactions list ──────────
 
-    /** @test */
     public function test_is_partial_refund_flag_is_set_in_transactions_list()
     {
         // Create a partial refund transaction
@@ -317,7 +312,6 @@ class PhaseEightTest extends TestCase
 
     // ─── Test 6: Full refund transaction NOT in is_partial_refund list ────────
 
-    /** @test */
     public function test_full_refund_is_not_flagged_as_partial_refund()
     {
         $tx = $this->createCompletedTransaction(5);
@@ -339,7 +333,6 @@ class PhaseEightTest extends TestCase
 
     // ─── Test 7: Partial RETURN (not Refund) ─────────────────────────────────
 
-    /** @test */
     public function test_partial_return_type_shows_net_sale_in_sales_report()
     {
         // Sell 100 items × ₱500 = ₱50,000 — then Return 90 (same logic as Refund but type=Return)
@@ -370,7 +363,6 @@ class PhaseEightTest extends TestCase
 
     // ─── Test 8: Full VOID ───────────────────────────────────────────────────
 
-    /** @test */
     public function test_void_removes_transaction_from_sales_report()
     {
         // Sell 5 items × ₱500 = ₱2,500
@@ -412,7 +404,6 @@ class PhaseEightTest extends TestCase
 
     // ─── Test 9: All 3 types together ────────────────────────────────────────
 
-    /** @test */
     public function test_refund_return_and_void_all_calculate_correctly_in_one_report()
     {
         // A: Partial REFUND — 100 sold, 90 refunded, 10 remain = ₱5,000 net
@@ -452,7 +443,6 @@ class PhaseEightTest extends TestCase
         $this->assertEquals(3,        (int)$summary['transaction_count'],  'All-types: 3 counted (void excluded)');
     }
 
-    /** @test */
     public function test_sequential_partial_refunds_on_same_transaction(): void
     {
         $tx = $this->createCompletedTransaction(5);
@@ -494,7 +484,6 @@ class PhaseEightTest extends TestCase
         $this->assertTrue($tx->is_partial_refund);
     }
 
-    /** @test */
     public function test_product_performance_includes_partially_refunded_transactions(): void
     {
         $tx = $this->createCompletedTransaction(5);
@@ -527,7 +516,6 @@ class PhaseEightTest extends TestCase
         $this->assertEquals(1500.00, $topCat['revenue']);
     }
 
-    /** @test */
     public function test_pending_po_orders_are_excluded_from_sales_report_until_paid(): void
     {
         // 1. Create a Completed sale: 5 items @ ₱500 = ₱2,500

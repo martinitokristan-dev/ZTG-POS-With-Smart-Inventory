@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { POS_ERROR_DISPLAY_MS } from '../../../../config/constants';
-import { hasPrice } from '../../../../shared/utils/price';
+import { hasPrice, hasPoPrice } from '../../../../shared/utils/price';
 import useSystemSettings from '../../../../shared/hooks/useSystemSettings';
 
 export function usePOSCart() {
@@ -11,6 +11,36 @@ export function usePOSCart() {
 
     // Cart state
     const [cart, setCart] = useState([]);
+
+    // P.O. mode: on while the cashier has chosen the P.O. payment method at checkout. Every line is
+    // then priced at the product's P.O. price, or at the price typed here (by product id) when the
+    // product has none. Typed prices are for this sale only.
+    const [poMode, setPoMode] = useState(false);
+    const [poPrices, setPoPrices] = useState({});
+    const setPoPrice = (productId, value) => setPoPrices(prev => ({ ...prev, [productId]: value }));
+
+    // Unit price of a cart line: P.O. price in P.O. mode (0 while not typed yet), else Price 1 / 2.
+    const unitPriceOf = (item) => {
+        if (poMode) {
+            return hasPoPrice(item.po_price) ? parseFloat(item.po_price) : (parseFloat(poPrices[item.id]) || 0);
+        }
+        return item.priceTier === 'price2' ? parseFloat(item.price2 || 0) : parseFloat(item.price1 || 0);
+    };
+
+    // Item discount for the current price: a percent discount follows the price; a peso discount
+    // never exceeds the line (the P.O. price can be lower than the shelf price).
+    const discountOf = (item) => {
+        const gross = unitPriceOf(item) * (item.qty || 1);
+        if (item.item_discount_type === 'percent' && item.item_discount_rate > 0) {
+            return Math.round((gross * (item.item_discount_rate / 100)) * 100) / 100;
+        }
+        return Math.min(gross, parseFloat(item.item_discount || 0));
+    };
+
+    // Lines that still need a typed P.O. price (the product has none of its own).
+    const poPriceMissing = poMode
+        ? cart.filter(item => !hasPoPrice(item.po_price) && !hasPoPrice(poPrices[item.id]))
+        : [];
 
     // Discount state
     const [orderDiscountType, setOrderDiscountType] = useState('None'); // None, Senior, PWD, CustomAmount, CustomPercent
@@ -70,7 +100,7 @@ export function usePOSCart() {
                     return item;
                 }
 
-                const origPrice = item.priceTier === 'price2' ? parseFloat(item.price2 || 0) : parseFloat(item.price1 || 0);
+                const origPrice = unitPriceOf(item);
                 const newLineGross = origPrice * newQty;
                 let newDisc = item.item_discount || 0;
                 if (item.item_discount_type === 'percent' && item.item_discount_rate > 0) {
@@ -106,7 +136,7 @@ export function usePOSCart() {
                 if (otherItemsQty + parsed > item.stock) {
                     triggerError(`Cannot exceed available stock (${item.stock} available).`);
                     const maxAllowed = Math.max(1, item.stock - otherItemsQty);
-                    const origPrice = item.priceTier === 'price2' ? parseFloat(item.price2 || 0) : parseFloat(item.price1 || 0);
+                    const origPrice = unitPriceOf(item);
                     const newLineGross = origPrice * maxAllowed;
                     let newDisc = item.item_discount || 0;
                     if (item.item_discount_type === 'percent' && item.item_discount_rate > 0) {
@@ -117,7 +147,7 @@ export function usePOSCart() {
                     return { ...item, qty: maxAllowed, item_discount: newDisc };
                 }
 
-                const origPrice = item.priceTier === 'price2' ? parseFloat(item.price2 || 0) : parseFloat(item.price1 || 0);
+                const origPrice = unitPriceOf(item);
                 const newLineGross = origPrice * parsed;
                 let newDisc = item.item_discount || 0;
                 if (item.item_discount_type === 'percent' && item.item_discount_rate > 0) {
@@ -190,7 +220,7 @@ export function usePOSCart() {
 
         setCart(prev => prev.map(item => {
             if (item.id == productId && (item.priceTier || 'price1') === priceTier) {
-                const origPrice = item.priceTier === 'price2' ? parseFloat(item.price2 || 0) : parseFloat(item.price1 || 0);
+                const origPrice = unitPriceOf(item);
                 const lineGross = origPrice * (item.qty || 1);
 
                 if (discountType === 'percent') {
@@ -253,6 +283,8 @@ export function usePOSCart() {
         setCart([]);
         setOrderDiscountType('None');
         setOrderDiscountVal('');
+        setPoMode(false);
+        setPoPrices({});
     };
 
     // Cart Totals
@@ -261,8 +293,8 @@ export function usePOSCart() {
         let itemDiscountsTotal = 0;
 
         cart.forEach(item => {
-            const origPrice = item.priceTier === 'price2' ? parseFloat(item.price2 || 0) : parseFloat(item.price1 || 0);
-            const itemDisc = parseFloat(item.item_discount || 0);
+            const origPrice = unitPriceOf(item);
+            const itemDisc = discountOf(item);
             rawSubtotal += origPrice * item.qty;
             itemDiscountsTotal += itemDisc;
         });
@@ -313,7 +345,8 @@ export function usePOSCart() {
             tax: tax,
             total: netPayable
         };
-    }, [cart, orderDiscountType, orderDiscountVal]);
+    // unitPriceOf / discountOf read poMode and poPrices, so both are dependencies.
+    }, [cart, orderDiscountType, orderDiscountVal, poMode, poPrices]);
 
     return {
         cart,
@@ -326,6 +359,13 @@ export function usePOSCart() {
         setItemDiscount,
         clearCart,
         cartTotals,
+        poMode,
+        setPoMode,
+        poPrices,
+        setPoPrice,
+        poPriceMissing,
+        unitPriceOf,
+        discountOf,
         orderDiscountType,
         setOrderDiscountType: handleSetOrderDiscountType,
         isOrderDiscountActive: orderDiscountType !== 'None',

@@ -30,6 +30,7 @@ export const IMPORT_FIELD_LABELS = {
     price1: 'Price 1',
     price2: 'Price 2',
     price: 'Single price (fills Price 1 and 2)',
+    po_price: 'P.O. price (optional)',
     image: 'Image',
     notes: 'Notes',
 };

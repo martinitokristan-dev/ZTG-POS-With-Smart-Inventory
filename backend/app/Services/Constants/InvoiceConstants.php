@@ -22,6 +22,11 @@ class InvoiceConstants
     public const SI_PADDING_LENGTH = 5;
 
     /**
+     * Payment method for a pending order (P.O.): paid later, sold at the P.O. price.
+     */
+    public const PAYMENT_METHOD_PO = 'P.O. (Pending)';
+
+    /**
      * Prefix for damaged stock inventory transactions.
      */
     public const SI_PREFIX_DAMAGED = 'INV-DAMAGED-';

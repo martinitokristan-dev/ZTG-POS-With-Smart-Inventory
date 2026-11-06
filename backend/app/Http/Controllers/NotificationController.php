@@ -45,7 +45,8 @@ class NotificationController extends Controller
 
         return response()->json($this->notificationService->getPage(
             (int) $validated['per_page'],
-            isset($validated['before_id']) ? (int) $validated['before_id'] : null
+            isset($validated['before_id']) ? (int) $validated['before_id'] : null,
+            array_intersect_key($validated, array_flip(['search', 'category', 'unread', 'period']))
         ));
     }
 

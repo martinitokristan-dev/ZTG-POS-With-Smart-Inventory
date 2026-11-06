@@ -127,7 +127,10 @@ class ProductImportFlowTest extends TestCase
         $sheet = $preview['sheets'][0];
         $this->assertSame(1, $sheet['header_row']);
         $this->assertSame(5, $sheet['mapping']['stock'], 'two-row header STOCK / BALANCE');
-        $this->assertArrayNotHasKey('price', $sheet['mapping'], 'P.O PRICE is ignored');
+        // Changed (user decision, Nov 2026): P.O PRICE is no longer ignored, it is the optional P.O. price.
+        // It must never be mistaken for the generic PRICE column (which would fill Price 1 / 2).
+        $this->assertArrayNotHasKey('price', $sheet['mapping'], 'P.O PRICE is not the generic price');
+        $this->assertSame(8, $sheet['mapping']['po_price'], 'P.O PRICE maps to the P.O. price');
 
         $hose = $this->family($plan, 'AIR TUBE/AIR HOSE');
         $this->assertCount(4, $hose['variants'], 'merged description reaches all 4 size rows');
@@ -139,6 +142,7 @@ class ProductImportFlowTest extends TestCase
         // Changed (user decision, Oct 2026): prices are copied exactly, an empty Price 1 stays empty.
         $this->assertNull($hose['variants'][2]['price1'], 'empty Price 1 stays empty (never copied from Price 2)');
         $this->assertSame(50.0, (float) $hose['variants'][2]['price2']);
+        $this->assertSame(60.0, (float) $hose['variants'][2]['po_price'], 'P.O. price copied exactly');
 
         $connector = $this->family($plan, 'AIR CONNECTOR');
         $this->assertCount(2, $connector['variants']);
@@ -149,6 +153,7 @@ class ProductImportFlowTest extends TestCase
         $this->assertSame('Howo', $headlight['brand'], 'existing brand reused');
         $this->assertSame('Left', $headlight['variants'][0]['options'][0]['value'], 'existing option spelling');
         $this->assertSame('AZ9719720001', $headlight['variants'][0]['part_no']);
+        $this->assertNull($headlight['variants'][0]['po_price'], 'empty P.O. cell stays empty');
 
         $oil = $this->family($plan, 'HYDRAULIC OIL 68');
         $this->assertTrue($oil['is_simple']);
@@ -178,6 +183,8 @@ class ProductImportFlowTest extends TestCase
         $this->assertSame(['#10'], $size10->variantOptions->pluck('value')->all());
         $this->assertSame('Roll', $size10->uom);
         $this->assertSame('HANG', $size10->address);
+        $this->assertEquals(60, $size10->po_price, 'P.O. price saved exactly');
+        $this->assertNull(Product::where('part_no', 'AZ9719720001')->value('po_price'), 'no P.O. price in the file = none saved');
         $this->assertSame('917', (string) Product::where('part_no', null)->where('chinese_name', '快接头')->where('stock', 917)->value('stock'));
 
         $this->assertSame(1, Brand::where('name', 'Howo')->count(), 'no duplicate brand');

@@ -8,7 +8,8 @@ use App\Services\Constants\ImportConstants;
  * Finds the header row of a sheet and maps its columns to product fields.
  *
  * Works with any column order and with headers split over two rows ("STOCK" above
- * "BALANCE"). Unknown columns (e.g. "P.O PRICE", "SALES") are left unmapped and ignored.
+ * "BALANCE"). "P.O PRICE" maps to the optional P.O. price. Unknown columns (e.g. "SALES")
+ * are left unmapped and ignored.
  */
 class HeaderDetector
 {

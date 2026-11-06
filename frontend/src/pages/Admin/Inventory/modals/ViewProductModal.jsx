@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatPrice } from '../../../../shared/utils/price';
+import { formatPrice, hasPoPrice } from '../../../../shared/utils/price';
 
 export default function ViewProductModal({
     showViewModal, setShowViewModal,
@@ -31,6 +31,7 @@ export default function ViewProductModal({
                                 { label: 'Sales Counter', value: `${selectedProduct.sales_count || 0} units sold` },
                                 { label: 'Original Price', value: formatPrice(selectedProduct.price1, {}) },
                                 { label: 'Retail Price', value: formatPrice(selectedProduct.price2, {}) },
+                                { label: 'P.O. Price', value: hasPoPrice(selectedProduct.po_price) ? formatPrice(selectedProduct.po_price, {}) : '—' },
                                 { label: 'Damaged / Scrap', value: `${selectedProduct.damaged || 0} units` },
                                 { label: 'Dead Stock', value: selectedProduct.is_dead_stock ? 'Yes' : 'No' },
                             ].map(({ label, value, mono }) => (
@@ -54,6 +55,7 @@ export default function ViewProductModal({
                                             <th style={{ padding: '9px 12px', textAlign: 'center' }}>Stock</th>
                                             <th style={{ padding: '9px 12px', textAlign: 'right' }}>Orig. Price</th>
                                             <th style={{ padding: '9px 12px', textAlign: 'right' }}>Retail Price</th>
+                                            <th style={{ padding: '9px 12px', textAlign: 'right' }}>P.O. Price</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -70,6 +72,7 @@ export default function ViewProductModal({
                                                     </td>
                                                     <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>{formatPrice(v.price1, {})}</td>
                                                     <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--primary)' }}>{formatPrice(v.price2, {})}</td>
+                                                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>{hasPoPrice(v.po_price) ? formatPrice(v.po_price, {}) : '—'}</td>
                                                 </tr>
                                             );
                                         })}

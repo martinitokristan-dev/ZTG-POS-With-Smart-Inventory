@@ -72,12 +72,18 @@ export function printSalesInvoice(options) {
     const numericDiscount = Number(discountAmount || discount || 0);
     const grossSales = numericTotal + numericDiscount;
 
-    // Standard Philippine BIR VAT breakdown (Strict 2 decimals)
-    const vatableSales = grossSales > 0 ? Number((grossSales / taxDivisor).toFixed(2)) : 0;
-    const vatAmount = grossSales > 0 ? Number((grossSales - vatableSales).toFixed(2)) : 0;
+    // Standard Philippine BIR VAT breakdown (Strict 2 decimals).
+    // VAT is on the amount actually charged (after the peso discount), not on the price before it:
+    // ₱100,000 less ₱10,000 discount = ₱90,000 due → VATable ₱80,357.14, VAT ₱9,642.86.
+    // The right-hand column still adds up: Total Sales − VAT − Discount + VAT = Amount Due.
+    const vatBase = Math.max(0, numericTotal);
+    const vatableSales = vatBase > 0 ? Number((vatBase / taxDivisor).toFixed(2)) : 0;
+    const vatAmount = vatBase > 0 ? Number((vatBase - vatableSales).toFixed(2)) : 0;
     const netAmountDue = Number(numericTotal.toFixed(2));
     const grossSalesFixed = Number(grossSales.toFixed(2));
     const discountFixed = Number(numericDiscount.toFixed(2));
+    // Right-hand column: Total Sales − Less VAT = Amount Net of VAT (so the column sums to the amount due).
+    const amountNetOfVat = Number((grossSalesFixed - vatAmount).toFixed(2));
 
     const fmtPesos = (val) => Number(val || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -252,7 +258,7 @@ export function printSalesInvoice(options) {
                         <td style="font-size: 9px; font-weight: 500; border-bottom: 1px solid #000; border-right: 1px solid #000; padding: 1px 4px; vertical-align: middle;">Zero-RATED Sales</td>
                         <td style="font-size: 9px; font-weight: bold; text-align: right; border-bottom: 1px solid #000; border-right: 1px solid #000; padding: 1px 4px; vertical-align: middle; white-space: nowrap;">&#8369;0.00</td>
                         <td style="font-size: 9px; font-weight: 500; border-bottom: 1px solid #000; border-right: 1px solid #000; padding: 1px 4px; vertical-align: middle;">Amount: Net of VAT</td>
-                        <td style="font-size: 9px; font-weight: bold; text-align: right; border-bottom: 1px solid #000; padding: 1px 4px; vertical-align: middle; white-space: nowrap;">&#8369;${fmtPesos(vatableSales)}</td>
+                        <td style="font-size: 9px; font-weight: bold; text-align: right; border-bottom: 1px solid #000; padding: 1px 4px; vertical-align: middle; white-space: nowrap;">&#8369;${fmtPesos(amountNetOfVat)}</td>
                     </tr>
 
                     <!-- SUMMARY ROW 4 -->

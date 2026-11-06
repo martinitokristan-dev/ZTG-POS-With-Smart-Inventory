@@ -12,6 +12,9 @@ export default function HistoryTable({
     highlightedId = null,
 }) {
     const canEdit = permissions.canEdit ?? true;
+    // Same row menu as Product Management: it hangs under the ⋮ button (right edges aligned),
+    // the last two rows open it upward, and the table card keeps empty space below the rows
+    // so the menu never makes the table scroll (that scrollbar was the "blinking").
     const [openDropdownId, setOpenDropdownId] = useState(null);
     // Live logo URL — always current, never frozen per BIR spec
     const [logoUrl, setLogoUrl] = useState(null);
@@ -27,17 +30,24 @@ export default function HistoryTable({
             .catch(() => { /* logo silently absent */ });
     }, []);
 
-    // Close dropdowns on click outside or when interacting elsewhere
+    // Close the menu on a click anywhere else, or Esc
     useEffect(() => {
         const closeAll = () => setOpenDropdownId(null);
+        const onKey = (e) => { if (e.key === 'Escape') closeAll(); };
         document.addEventListener('click', closeAll);
-        return () => document.removeEventListener('click', closeAll);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('click', closeAll);
+            document.removeEventListener('keydown', onKey);
+        };
     }, []);
 
     const toggleDropdown = (id, e) => {
         e.stopPropagation();
-        setOpenDropdownId(openDropdownId === id ? null : id);
+        setOpenDropdownId((current) => (current === id ? null : id));
     };
+
+    const closeDropdown = () => setOpenDropdownId(null);
 
     const handleReprint = (tx) => {
         const docType = tx.doc_type || (tx.si_no?.startsWith('DR') ? 'D.R.' : tx.si_no?.startsWith('CR') ? 'C.R.' : 'S.I.');
@@ -51,17 +61,21 @@ export default function HistoryTable({
             buyerTin: tx.customer?.tin || '',
             buyerAddress: tx.customer?.address || '',
             items: tx.items || [],
-            total: tx.total_amount || tx.amount,
-            discountAmount: Number(tx.discount_amount || tx.discount || 0),
+            // A reprint is a copy of the original invoice: use the frozen sale total, not the
+            // net left after later refunds (that is shown on the refund's own OR).
+            total: tx.original_amount ?? tx.total_amount ?? tx.amount,
+            // Every peso discount on the invoice: order discount plus each line's item discount.
+            discountAmount: Number(tx.discount_amount || 0)
+                + (tx.items || []).reduce((sum, item) => sum + Number(item.discount || 0), 0),
             payment: tx.payment_method || 'Cash',
             tendered: tx.amount_tendered || 0,
-            change: tx.change || Math.max(0, (tx.amount_tendered || 0) - (tx.total_amount || tx.amount || 0)),
+            change: tx.change || Math.max(0, (tx.amount_tendered || 0) - Number(tx.original_amount ?? tx.total_amount ?? tx.amount ?? 0)),
             servedBy: tx.checker?.name || tx.cashier?.name || 'Cashier',
             docType: docType,
             businessInfo: tx.business_snapshot || {},
             logoUrl: logoUrl,
         });
-        setOpenDropdownId(null);
+        closeDropdown();
     };
 
     if (loading) return <LoadingSpinner text="Loading history..." minHeight="200px" />;
@@ -75,7 +89,7 @@ export default function HistoryTable({
     }
 
     return (
-        <div className="card table-card">
+        <div className="card table-card" style={{ overflow: 'visible', paddingBottom: '120px' }}>
             <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                 <table className="data-table" style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead style={{ borderBottom: '2px solid var(--table-border)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B', background: 'var(--table-header-bg)' }}>
@@ -87,7 +101,8 @@ export default function HistoryTable({
                             <th style={{ padding: '12px 16px', fontWeight: '600' }}>Payment Method</th>
                             <th style={{ padding: '12px 16px', fontWeight: '600' }}>Status</th>
                             <th style={{ padding: '12px 16px', fontWeight: '600' }}>Reason</th>
-                            <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'center' }}>Actions</th>
+                            {/* Same as Product Management: centered in a fixed-width column, so the buttons keep a margin from the right edge */}
+                            <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'center', whiteSpace: 'nowrap', width: '120px', minWidth: '120px' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody style={{ fontSize: '15px' }}>
@@ -97,6 +112,7 @@ export default function HistoryTable({
                             const [displayDate, ...timeParts] = fullDate.split(', ');
                             const displayTime = timeParts.join(', ');
 
+                            // Same rule as Product Management: the last two rows open the menu upward.
                             const isBottomRow = idx >= transactions.length - 2 && transactions.length > 2;
 
                             const isRestock = tx.status === 'RESTOCKED' || tx.status === 'Restocked' || tx.type === 'inventory' || tx.type === 'restock' || (tx.si_no && tx.si_no.startsWith('INV-RESTOCK'));
@@ -154,13 +170,13 @@ export default function HistoryTable({
                                     <td style={{ padding: '16px', color: '#64748B', fontSize: '12px' }}>
                                         {reasonVal}
                                     </td>
-                                    <td style={{ padding: '16px', textAlign: 'center', verticalAlign: 'middle' }}>
-                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                                    <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap', width: '120px', minWidth: '120px' }}>
+                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
                                             <button 
                                                 className="action-trigger-btn" 
                                                 data-tooltip="View Transaction"
                                                 onClick={() => {
-                                                    setOpenDropdownId(null);
+                                                    closeDropdown();
                                                     handleOpenView(tx);
                                                 }}
                                             >
@@ -169,10 +185,15 @@ export default function HistoryTable({
                                                     <circle cx="12" cy="12" r="3"></circle>
                                                 </svg>
                                             </button>
-                                            <div className="actions-dropdown-container" style={{ position: 'relative' }}>
+                                            <div className="actions-dropdown-container">
                                                 <button 
+                                                    type="button"
                                                     className="action-trigger-btn" 
-                                                    data-tooltip="More actions"
+                                                    data-tooltip={openDropdownId === tx.id ? undefined : 'More actions'}
+                                                    data-tooltip-align="right"
+                                                    aria-label="More actions"
+                                                    aria-haspopup="true"
+                                                    aria-expanded={openDropdownId === tx.id ? 'true' : 'false'}
                                                     onClick={(e) => toggleDropdown(tx.id, e)}
                                                 >
                                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -182,32 +203,46 @@ export default function HistoryTable({
                                                     </svg>
                                                 </button>
                                                 {openDropdownId === tx.id && (
-                                                    <div style={{
-                                                        position: 'absolute', right: 0,
-                                                        ...(isBottomRow ? { bottom: 'calc(100% + 6px)' } : { top: 'calc(100% + 6px)' }),
-                                                        zIndex: 9999,
-                                                        background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px',
-                                                        boxShadow: 'var(--shadow-lg)', padding: '6px', minWidth: '160px'
-                                                    }}>
+                                                    <div
+                                                        className="actions-dropdown-menu show"
+                                                        role="menu"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            right: 0,
+                                                            ...(isBottomRow ? { bottom: 'calc(100% + 6px)', top: 'auto' } : { top: 'calc(100% + 6px)', bottom: 'auto' }),
+                                                            zIndex: 9999,
+                                                            background: 'var(--bg-card)',
+                                                            border: '1px solid var(--border)',
+                                                            borderRadius: '8px',
+                                                            boxShadow: 'var(--shadow-lg)',
+                                                            padding: '6px',
+                                                            minWidth: '160px',
+                                                        }}
+                                                    >
                                                         {canEdit && tx.status === 'Pending' && (
                                                             <>
-                                                                <button style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--success)', borderRadius: '4px', fontWeight: '600' }} onClick={() => { handleOpenPay(tx); setOpenDropdownId(null); }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--success-light)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                                                <button type="button" role="menuitem" className="actions-dropdown-item success" onClick={() => { closeDropdown(); handleOpenPay(tx); }}>
                                                                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                                                                     Pay P.O.
                                                                 </button>
-                                                                <div style={{ margin: '4px 0', borderTop: '1px solid var(--border)' }}></div>
+                                                                <div className="actions-dropdown-divider" role="separator" style={{ margin: '4px 0', borderTop: '1px solid var(--border)' }}></div>
                                                             </>
                                                         )}
-                                                        <button style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', borderRadius: '4px' }} onClick={() => handleReprint(tx)} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                                        <button type="button" role="menuitem" className="actions-dropdown-item" onClick={() => handleReprint(tx)}>
                                                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                                                             Reprint SI
                                                         </button>
-                                                        {canEdit && tx.status === 'Completed' && (
+                                                        {canEdit && (tx.status === 'Completed' || tx.status === 'Pending') && (
                                                             <>
-                                                                <div style={{ margin: '4px 0', borderTop: '1px solid var(--border)' }}></div>
-                                                                <button style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)', borderRadius: '4px' }} onClick={() => { handleOpenVoid(tx); setOpenDropdownId(null); }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--danger-light)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
-                                                                    Void Transaction
+                                                                <div className="actions-dropdown-divider" role="separator" style={{ margin: '4px 0', borderTop: '1px solid var(--border)' }}></div>
+                                                                <button type="button" role="menuitem" className="actions-dropdown-item danger" onClick={() => { closeDropdown(); handleOpenVoid(tx); }}>
+                                                                    {tx.status === 'Pending' ? (
+                                                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                                                                    ) : (
+                                                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                                                                    )}
+                                                                    {tx.status === 'Pending' ? 'Cancel P.O.' : 'Void Transaction'}
                                                                 </button>
                                                             </>
                                                         )}

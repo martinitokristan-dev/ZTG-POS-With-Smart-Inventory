@@ -9,6 +9,7 @@ import api from '../../../../shared/api';
 import { usePOSProducts } from './usePOSProducts';
 import { usePOSCustomer } from './usePOSCustomer';
 import { usePOSCart } from './usePOSCart';
+import { hasPoPrice } from '../../../../shared/utils/price';
 
 const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-US')}`;
 
@@ -25,11 +26,15 @@ export default function usePOS() {
     const processCheckout = async (payload) => {
         try {
             // Map cart items for backend CheckoutRequest validator
+            // P.O. sale: every line uses the P.O. price; a product without one sends the typed price.
             const mappedCart = cartHook.cart.map(item => ({
                 product_id: item.id,
                 qty: item.qty,
-                price_tier: item.priceTier || 'price1',
-                item_discount: parseFloat(item.item_discount || 0)
+                price_tier: cartHook.poMode ? 'po' : (item.priceTier || 'price1'),
+                ...(cartHook.poMode && !hasPoPrice(item.po_price)
+                    ? { po_price: parseFloat(cartHook.poPrices[item.id]) || null }
+                    : {}),
+                item_discount: cartHook.discountOf(item)
             }));
 
             const paymentObj = payload.payment || payload;
@@ -81,7 +86,7 @@ export default function usePOS() {
                 return { success: true, transaction: res.data.transaction };
             }
         } catch (err) {
-            console.error("Checkout failed:", err);
+            // err.message is already plain language (shared/api.js interceptor).
             return { success: false, error: err.response?.data?.message || err.message };
         }
     };
@@ -107,6 +112,13 @@ export default function usePOS() {
         setItemDiscount: cartHook.setItemDiscount,
         clearCart: cartHook.clearCart,
         cartTotals: cartHook.cartTotals,
+        poMode: cartHook.poMode,
+        setPoMode: cartHook.setPoMode,
+        poPrices: cartHook.poPrices,
+        setPoPrice: cartHook.setPoPrice,
+        poPriceMissing: cartHook.poPriceMissing,
+        unitPriceOf: cartHook.unitPriceOf,
+        discountOf: cartHook.discountOf,
         orderDiscountType: cartHook.orderDiscountType,
         setOrderDiscountType: cartHook.setOrderDiscountType,
         isOrderDiscountActive: cartHook.isOrderDiscountActive,

@@ -82,11 +82,13 @@ class CartProcessor
      *   item_discount?: float
      * }> $cart Cart items from the validated checkout request.
      * @param Collection<int, Product> $products Products keyed by ID (must already be locked via lockForUpdate()).
+     * @param bool $isPo True when the payment method is P.O.: every line is then sold at the P.O. price
+     *                   (the product's own, or the one the cashier typed when the product has none).
      * @return self Fluent interface — allows chaining.
      * @throws ValidationException When a product is missing, stock is insufficient, the chosen
      *                             price is empty, or an item discount exceeds its line total.
      */
-    public function process(array $cart, Collection $products): self
+    public function process(array $cart, Collection $products, bool $isPo = false): self
     {
         foreach ($cart as $cartItem) {
             $product = $products->get($cartItem['product_id']);
@@ -109,13 +111,7 @@ class CartProcessor
             }
 
             // Guard 3: The chosen price must be set. An empty price is never sold as ₱0.
-            $tier = PriceTier::tryFrom($cartItem['price_tier'] ?? '') ?? PriceTier::PRICE1;
-            if ($product->{$tier->value} === null) {
-                $label = $this->priceLabel($tier);
-                throw ValidationException::withMessages([
-                    'cart' => ["{$product->snapshotName()} has no {$label}. Set a price in Inventory before selling it at this price."],
-                ]);
-            }
+            $cartItem = $isPo ? $this->withPoPrice($cartItem, $product) : $this->withShelfPrice($cartItem, $product);
 
             $dto = new CartItemDTO($cartItem, $product);
 
@@ -159,6 +155,57 @@ class CartProcessor
         }
 
         return $this;
+    }
+
+    /**
+     * P.O. sale line: the product's own P.O. price wins; only a product without one may use the
+     * price the cashier typed. A line with neither is refused (an empty price is never sold).
+     *
+     * @param array   $cartItem Cart line from the checkout request.
+     * @param Product $product  The locked product.
+     * @return array The cart line with price_tier 'po' and the resolved po_price.
+     * @throws ValidationException When neither the product nor the cashier gives a P.O. price.
+     */
+    private function withPoPrice(array $cartItem, Product $product): array
+    {
+        $typed = isset($cartItem['po_price']) ? (float) $cartItem['po_price'] : null;
+        $price = $product->po_price !== null ? (float) $product->po_price : $typed;
+
+        if ($price === null || $price <= 0) {
+            throw ValidationException::withMessages([
+                'cart' => ["{$product->snapshotName()} has no P.O. price. Type its P.O. price at checkout."],
+            ]);
+        }
+
+        return [...$cartItem, 'price_tier' => PriceTier::PO->value, 'po_price' => $price];
+    }
+
+    /**
+     * Normal sale line (Cash, GCash, Bank, Cheque): Price 1 or Price 2 only, and that price must be set.
+     *
+     * @param array   $cartItem Cart line from the checkout request.
+     * @param Product $product  The locked product.
+     * @return array The cart line, unchanged.
+     * @throws ValidationException When the line asks for the P.O. price or the chosen price is empty.
+     */
+    private function withShelfPrice(array $cartItem, Product $product): array
+    {
+        $tier = PriceTier::tryFrom($cartItem['price_tier'] ?? '') ?? PriceTier::PRICE1;
+
+        if ($tier === PriceTier::PO) {
+            throw ValidationException::withMessages([
+                'cart' => ['The P.O. price can only be used with the P.O. (Pending) payment method.'],
+            ]);
+        }
+
+        if ($product->{$tier->value} === null) {
+            $label = $this->priceLabel($tier);
+            throw ValidationException::withMessages([
+                'cart' => ["{$product->snapshotName()} has no {$label}. Set a price in Inventory before selling it at this price."],
+            ]);
+        }
+
+        return $cartItem;
     }
 
     // Shop's name for a price tier (Settings -> Pricing), read only when an error message needs it.

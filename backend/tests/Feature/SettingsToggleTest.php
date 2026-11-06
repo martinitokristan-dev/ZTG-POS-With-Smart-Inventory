@@ -8,6 +8,7 @@ use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -113,9 +114,7 @@ class SettingsToggleTest extends TestCase
     // 2.  Each toggle can be individually flipped to 'false' and persists in DB
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * @dataProvider toggleKeyProvider
-     */
+    #[DataProvider('toggleKeyProvider')]
     public function test_each_toggle_can_be_disabled_and_persists(string $key)
     {
         $payload = array_fill_keys(self::TOGGLE_KEYS, 'true');
@@ -130,9 +129,7 @@ class SettingsToggleTest extends TestCase
         $this->assertDatabaseHas('settings', ['key' => $key, 'value' => 'false']);
     }
 
-    /**
-     * @dataProvider toggleKeyProvider
-     */
+    #[DataProvider('toggleKeyProvider')]
     public function test_each_toggle_can_be_re_enabled_after_disable(string $key)
     {
         // Disable first

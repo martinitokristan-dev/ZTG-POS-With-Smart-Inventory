@@ -82,7 +82,7 @@ export default function ImportBatchDetails({ batchId, showSummary = true }) {
                                     </button>
                                     {open && (
                                         <table className="ibd-variants">
-                                            <thead><tr><th>Variant</th><th>Part no.</th><th className="is-right">Stock</th><th className="is-right">{price1_label || 'Price 1'}</th><th className="is-right">{price2_label || 'Price 2'}</th></tr></thead>
+                                            <thead><tr><th>Variant</th><th>Part no.</th><th className="is-right">Stock</th><th className="is-right">{price1_label || 'Price 1'}</th><th className="is-right">{price2_label || 'Price 2'}</th><th className="is-right">P.O. Price</th></tr></thead>
                                             <tbody>
                                                 {p.variants.map(v => (
                                                     <tr key={v.id}>
@@ -91,6 +91,7 @@ export default function ImportBatchDetails({ batchId, showSummary = true }) {
                                                         <td className="is-right">{v.stock} {unitShort(v.uom)}</td>
                                                         <td className="is-right">{peso(v.price1)}</td>
                                                         <td className="is-right">{peso(v.price2)}</td>
+                                                        <td className="is-right">{peso(v.po_price)}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>

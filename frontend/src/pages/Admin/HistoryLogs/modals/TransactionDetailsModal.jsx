@@ -88,14 +88,17 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
             ? Number(item.net_qty ?? Math.max(0, rawQty - refundedQty))
             : rawQty;
 
-        const breakdown = calculateItemDiscountBreakdown(item, tx);
+        // Sales and Discount columns: the whole line as sold. Net Sales: what is still sold after a
+        // partial refund (the refunded units take their own share of the discount with them).
+        const breakdown = calculateItemDiscountBreakdown({ ...item, displayQty: rawQty }, tx);
+        const remaining = isPartialRefund
+            ? calculateItemDiscountBreakdown({ ...item, displayQty: displayRemainingQty }, tx)
+            : breakdown;
         const origPrice = breakdown.unitPrice;
-        const lineGross = rawQty * origPrice;
+        const lineGross = breakdown.lineGross;
         const lineDisc = breakdown.totalDiscount;
         const itemOriginalTotal = breakdown.discountedPrice;
-        const lineNet = isPartialRefund 
-            ? Math.max(0, (displayRemainingQty * origPrice) - lineDisc)
-            : itemOriginalTotal;
+        const lineNet = remaining.discountedPrice;
 
         grossSubtotal += lineGross;
         itemDiscountsTotal += lineDisc;
@@ -116,6 +119,18 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
             lineNet
         };
     });
+
+    // After a partial refund the server's net sale is the source of truth. Line amounts are
+    // rounded per line, so put any leftover centavo on the largest line to make the Net Sales
+    // column add up to exactly the "Net Sales Remaining" amount.
+    if (isPartialRefund && processedItems.length > 0) {
+        const lineSum = processedItems.reduce((sum, it) => sum + Number(it.lineNet || 0), 0);
+        const centDiff = Math.round((Number(tx.amount || 0) - lineSum) * 100) / 100;
+        if (centDiff !== 0 && Math.abs(centDiff) < 1) {
+            const largest = processedItems.reduce((best, it) => (it.lineNet > best.lineNet ? it : best), processedItems[0]);
+            largest.lineNet = Math.round((largest.lineNet + centDiff) * 100) / 100;
+        }
+    }
 
     const orderDiscountAmt = Number(tx.discount_amount || 0);
     const directItemDiscTotal = processedItems.reduce((sum, item) => sum + Number(item.directItemDiscount || 0), 0);
@@ -325,7 +340,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 {auditDetailRow('Date & Time', fmtDate(tx.date || tx.created_at))}
                                 {auditDetailRow('Customer', tx.customer_name || tx.customer?.name || 'Walk-in')}
                                 {auditDetailRow('Served By', tx.checker?.name || tx.cashier?.full_name || tx.cashier?.name || '—')}
-                                {auditDetailRow('Gross Sales', fmt(totalOriginalAmount))}
+                                {auditDetailRow('Original Sale (after discount)', fmt(totalOriginalAmount))}
                                 {auditDetailRow('Voided Amount', `-${fmt(totalRefundedAmount)}`, { color: '#DC2626', fontWeight: '700' })}
                                 {auditDetailRow('Net Sales', fmt(0), { color: 'var(--text-primary)', fontWeight: '700' })}
                                 {auditDetailRow('Processed By', tx.approver?.full_name || tx.approver?.name || '—')}
@@ -374,13 +389,13 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 
                                 {isPartialRefund ? (
                                     <>
-                                        {auditDetailRow('Gross Sales', fmt(totalOriginalAmount))}
+                                        {auditDetailRow('Original Sale (after discount)', fmt(totalOriginalAmount))}
                                         {auditDetailRow(isReturnAction ? 'Returned Amount' : 'Refunded Amount', `-${fmt(totalRefundedAmount)}`, { color: '#DC2626', fontWeight: '700' })}
                                         {auditDetailRow('Net Sales Remaining', fmt(netSalesRemaining), { color: 'var(--text-primary)', fontWeight: '700', fontSize: '14px' })}
                                     </>
                                 ) : isFullRefund ? (
                                     <>
-                                        {auditDetailRow('Gross Sales', fmt(totalOriginalAmount))}
+                                        {auditDetailRow('Original Sale (after discount)', fmt(totalOriginalAmount))}
                                         {auditDetailRow(isReturnAction ? 'Returned Amount' : 'Refunded Amount', `-${fmt(totalRefundedAmount)}`, { color: '#DC2626', fontWeight: '700' })}
                                         {auditDetailRow('Net Sales Remaining', fmt(0), { color: 'var(--text-primary)', fontWeight: '700', fontSize: '14px' })}
                                     </>

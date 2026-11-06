@@ -30,6 +30,8 @@ class UpdateProductRequest extends FormRequest
             // A price may be left empty (null = not set yet; that tier cannot be sold at the POS).
             'price1'      => 'present|nullable|numeric|min:0',
             'price2'      => 'present|nullable|numeric|min:0',
+            // P.O. price is optional; when the key is not sent, the saved P.O. price is kept.
+            'po_price'    => 'sometimes|nullable|numeric|min:0.01|max:9999999999.99',
             'status'      => 'required|string|in:Active,Low Stock,No Stock,Disabled',
             'notes'       => 'nullable|string',
             'image'       => 'nullable|string|max:255',
@@ -46,6 +48,7 @@ class UpdateProductRequest extends FormRequest
             'variants.*.alert_limit'  => 'nullable|integer|min:0',
             'variants.*.price1'       => 'present|nullable|numeric|min:0',
             'variants.*.price2'       => 'present|nullable|numeric|min:0',
+            'variants.*.po_price'     => 'sometimes|nullable|numeric|min:0.01|max:9999999999.99',
             'variants.*.image'        => 'nullable|string|max:255',
             'variants.*.chinese_name' => 'nullable|string|max:255',
             'variants.*.notes'        => 'nullable|string',
@@ -63,6 +66,8 @@ class UpdateProductRequest extends FormRequest
             'variants.*.part_no.distinct'       => 'Each variant must have a unique part number.',
             'variants.*.option_ids.required_with'=> 'Please select a variant option for each added variant.',
             'variants.*.option_ids.required'     => 'Please select a variant option for each added variant.',
+            'po_price.min'                       => 'The P.O. price must be more than ₱0. Leave it empty if this item has no P.O. price.',
+            'variants.*.po_price.min'            => 'A variant P.O. price must be more than ₱0. Leave it empty if the variant has no P.O. price.',
         ];
     }
 }

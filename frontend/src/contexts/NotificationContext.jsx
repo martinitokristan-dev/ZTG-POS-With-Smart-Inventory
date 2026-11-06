@@ -25,11 +25,12 @@ const parseNotifDate = (dateVal) => {
 };
 
 /** Map a raw API notification into the shape the UI uses. */
-const mapNotification = (n) => ({
+export const mapNotification = (n) => ({
     id: n.id,
     type: n.type || 'system',
     sub_type: n.sub_type,
-    title: n.title,
+    // Older failed-PIN notifications were saved with the typo title "Security Alert Alert".
+    title: n.title === 'Security Alert Alert' ? 'Failed PIN Attempt' : n.title,
     message: n.message,
     timestamp: parseNotifDate(n.created_at || n.timestamp),
     read: n.is_read || n.read || false,

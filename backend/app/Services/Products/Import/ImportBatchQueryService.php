@@ -77,6 +77,7 @@ class ImportBatchQueryService
             'uom'     => $v->uom,
             'price1'  => $v->price1 === null ? null : (float) $v->price1,
             'price2'  => $v->price2 === null ? null : (float) $v->price2,
+            'po_price' => $v->po_price === null ? null : (float) $v->po_price,
         ])->values();
         $price = fn (string $field) => $variants->isEmpty()
             ? ($product->{$field} === null ? null : (float) $product->{$field})
@@ -93,6 +94,7 @@ class ImportBatchQueryService
             'stock'    => $variants->isEmpty() ? (int) $product->stock : (int) $variants->sum('stock'),
             'price1'   => $price('price1'),
             'price2'   => $price('price2'),
+            'po_price' => $price('po_price'),
             'variants' => $variants,
         ];
     }

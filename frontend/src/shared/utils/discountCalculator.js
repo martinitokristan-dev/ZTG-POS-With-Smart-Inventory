@@ -1,20 +1,86 @@
 /**
  * discountCalculator.js
  *
- * Centralized financial discount computation and multi-item proration engine
- * conforming to retail POS standards (Microsoft Dynamics 365 / BIR RR 7-2024 / EOPT Act).
+ * Per-line money breakdown of a sale, used by Transaction Details, Sales Report, Sales Log,
+ * My Sales and the Excel/clipboard export. It follows the same rule as the server
+ * (TransactionService::paidRatio / paidForUnits), so every screen matches the saved totals.
  *
- * Provides:
- * 1. Proportional weighted proration for whole-order discounts (custom peso or %) across 5+ items.
- * 2. Cent-accurate penny remainder safeguard (Largest Remainder Rule).
- * 3. Exact breakdown: Unit Price, Line Gross, Discount Rate (%), Discount (₱), Discounted Price.
+ * All discounts are stored in pesos (a percent typed at the POS is converted to pesos there),
+ * so peso and percent discounts are computed the same way here.
+ *
+ * For one line of a sale:
+ *   Line gross        = unit price × qty sold
+ *   Item discount     = the line's own peso discount
+ *   Line net          = line gross − item discount
+ *   Order discount    = spread over all lines by their share of the net lines
+ *                       (share = order discount × line net ÷ sum of line nets, cents fixed on the
+ *                       largest line so the shares add up exactly)
+ *   Paid for the line = line net − its order discount share
+ *
+ * Showing only some units (the units left after a partial refund) scales every amount by
+ * units ÷ qty sold, so the refunded units take their own share of the discount with them.
  */
 
+const num = (v) => Number(v) || 0;
+const round2 = (v) => Math.round(v * 100) / 100;
+
+const soldQtyOf = (it) => Math.max(0, num(it?.qty ?? 1));
+const remainingQtyOf = (it) => Math.max(0, num(it?.net_qty ?? (num(it?.qty) - num(it?.refunded_qty))));
+
+/** Unit price before any discount, and the line's own peso discount for the whole sold qty. */
+function linePrices(it) {
+    const sold = soldQtyOf(it);
+    let unitPrice = num(it?.original_price ?? it?.price);
+    let directDiscount = num(it?.discount ?? it?.item_discount);
+
+    // Older sales stored the discounted price as `price` and the list price as `original_price`.
+    if (it?.original_price && num(it.original_price) > num(it.price) && directDiscount === 0) {
+        unitPrice = num(it.original_price);
+        directDiscount = round2((num(it.original_price) - num(it.price)) * sold);
+    }
+
+    const gross = round2(unitPrice * sold);
+    directDiscount = Math.min(gross, Math.max(0, directDiscount));
+    return { sold, unitPrice, gross, directDiscount, net: round2(gross - directDiscount) };
+}
+
+const sameLine = (a, b) => (a?.id != null && b?.id != null ? a.id === b.id : a === b);
+
 /**
- * Computes complete item-level financial and discount metrics.
+ * Order-discount share of `item` for its whole sold qty, spread over every line of the sale.
+ */
+function orderShareOf(item, tx, orderDisc) {
+    if (orderDisc <= 0) return 0;
+    const lines = Array.isArray(tx?.items) && tx.items.length > 0 ? tx.items : [item];
+    if (lines.length === 1) return orderDisc;
+
+    const nets = lines.map((l) => linePrices(l).net);
+    const total = nets.reduce((s, v) => s + v, 0);
+    if (total <= 0) return 0;
+
+    const shares = nets.map((n) => round2(orderDisc * n / total));
+    // Put the leftover centavo(s) on the largest line so the shares add up to the order discount.
+    const diff = round2(orderDisc - shares.reduce((s, v) => s + v, 0));
+    if (diff !== 0) {
+        const largest = nets.indexOf(Math.max(...nets));
+        shares[largest] = round2(shares[largest] + diff);
+    }
+
+    const index = lines.findIndex((l) => sameLine(l, item));
+    if (index !== -1) return shares[index];
+
+    // The line is not in tx.items (e.g. a flattened report row): use its proportional share.
+    return round2(orderDisc * linePrices(item).net / total);
+}
+
+/**
+ * Computes the money breakdown of one line, for the units being shown.
  *
- * @param {Object} item The line item object (from transaction items or report rows)
- * @param {Object} txInput The parent transaction object
+ * Units shown: item.displayQty when given, otherwise the units left after a partial refund
+ * (tx.is_partial_refund), otherwise the qty sold.
+ *
+ * @param {Object} item The line item (transaction item or report row)
+ * @param {Object} txInput The parent transaction (with discount_amount and items)
  * @returns {{
  *   qty: number,
  *   unitPrice: number,
@@ -29,162 +95,58 @@
  * }}
  */
 export const calculateItemDiscountBreakdown = (item, txInput) => {
-  const tx = txInput || (item && (item.tx || item._rawTx)) || {};
-  const isPartialRefund = tx.is_partial_refund === true;
+    const tx = txInput || (item && (item.tx || item._rawTx)) || {};
+    const line = linePrices(item);
+    const orderDisc = num(tx.discount_amount ?? tx.discount ?? tx.discount_val ?? 0);
+    const orderShare = orderShareOf(item, tx, orderDisc);
 
-  // Resolve quantity
-  const qty = Number(
-    item?.displayQty ??
-    (isPartialRefund
-      ? (item?.net_qty ?? Math.max(0, (item?.qty || 0) - (item?.refunded_qty || 0)))
-      : (item?.qty ?? 1))
-  );
+    const qty = item?.displayQty != null
+        ? Math.max(0, num(item.displayQty))
+        : (tx.is_partial_refund === true ? remainingQtyOf(item) : line.sold);
 
-  // Resolve unit price (original list price takes precedence over discounted sold price)
-  let rawPrice = Number(item?.original_price ?? item?.price ?? 0);
-  const directItemDisc = Number(item?.discount ?? item?.item_discount ?? 0);
+    // Whole line shown: use the exact amounts. Fewer units: scale by units ÷ qty sold.
+    const scale = line.sold > 0 ? qty / line.sold : 0;
+    const whole = qty === line.sold;
 
-  // Fallback for older transactions where original_price was stored as price
-  if (item?.original_price && Number(item.original_price) > Number(item.price) && directItemDisc === 0) {
-    rawPrice = Number(item.original_price);
-  }
+    const lineGross = whole ? line.gross : round2(line.unitPrice * qty);
+    const directItemDiscount = whole ? line.directDiscount : round2(line.directDiscount * scale);
+    const proratedOrderDiscount = whole ? orderShare : round2(orderShare * scale);
+    const totalDiscount = Math.min(lineGross, round2(directItemDiscount + proratedOrderDiscount));
+    const discountedPrice = round2(Math.max(0, lineGross - totalDiscount));
 
-  const unitPrice = rawPrice > 0 ? rawPrice : (Number(tx.amount || 0) / Math.max(1, qty));
-  const lineGross = Math.max(0, qty * unitPrice);
+    const discountRate = lineGross > 0 && totalDiscount > 0 ? (totalDiscount / lineGross) * 100 : 0;
 
-  // Direct line-item discount
-  let directDiscount = directItemDisc;
-  if (item?.original_price && Number(item.original_price) > Number(item.price) && directDiscount === 0) {
-    directDiscount = (Number(item.original_price) - Number(item.price)) * qty;
-  }
-
-  // Order-level discount from parent transaction
-  const orderDisc = Number(tx.discount_amount ?? tx.discount ?? tx.discount_val ?? 0);
-  let proratedOrderDiscount = 0;
-
-  if (orderDisc > 0) {
-    const txItems = Array.isArray(tx.items) && tx.items.length > 0 ? tx.items : [];
-    
-    // Filter active items
-    const activeItems = isPartialRefund
-      ? txItems.filter(it => Number(it.net_qty ?? Math.max(0, (it.qty || 0) - (it.refunded_qty || 0))) > 0)
-      : txItems;
-
-    if (activeItems.length <= 1) {
-      // Single active item takes the entire remaining order discount
-      if (isPartialRefund && activeItems.length === 1) {
-        const uPrice = Number(activeItems[0].original_price || activeItems[0].price || 0);
-        const itemQty = Number(activeItems[0].net_qty ?? Math.max(0, (activeItems[0].qty || 0) - (activeItems[0].refunded_qty || 0)));
-        const gross = itemQty * uPrice;
-        const effDisc = Math.max(0, gross - Number(tx.amount || 0));
-        proratedOrderDiscount = effDisc > 0 ? effDisc : orderDisc;
-      } else {
-        proratedOrderDiscount = orderDisc;
-      }
-    } else {
-      // Multi-item cart proration with Largest Remainder Rule cent safeguard
-      let activeRawSubtotal = 0;
-      let maxGross = -1;
-      let maxGrossItemId = null;
-      const computedShares = [];
-
-      activeItems.forEach(it => {
-        const itPrice = Number(it.original_price || it.price || 0);
-        const itQty = isPartialRefund
-          ? Number(it.net_qty ?? Math.max(0, (it.qty || 0) - (it.refunded_qty || 0)))
-          : Number(it.qty || 1);
-        const itGross = itQty * itPrice;
-        activeRawSubtotal += itGross;
-
-        if (itGross > maxGross) {
-          maxGross = itGross;
-          maxGrossItemId = it.id || it.product_id || it.part_no || it.name;
-        }
-      });
-
-      if (activeRawSubtotal > 0) {
-        const currentItemId = item?.id || item?.product_id || item?.part_no || item?.name;
-        const baseShare = (lineGross / activeRawSubtotal) * orderDisc;
-        const roundedBaseShare = Math.round(baseShare * 100) / 100;
-
-        // Cent remainder accumulator adjustment for the highest-grossing item
-        let totalRounded = 0;
-        activeItems.forEach(it => {
-          const itPrice = Number(it.original_price || it.price || 0);
-          const itQty = isPartialRefund
-            ? Number(it.net_qty ?? Math.max(0, (it.qty || 0) - (it.refunded_qty || 0)))
-            : Number(it.qty || 1);
-          const itGross = itQty * itPrice;
-          const share = Math.round(((itGross / activeRawSubtotal) * orderDisc) * 100) / 100;
-          totalRounded += share;
-        });
-
-        const centDiscrepancy = Math.round((orderDisc - totalRounded) * 100) / 100;
-        if (currentItemId === maxGrossItemId && Math.abs(centDiscrepancy) > 0 && Math.abs(centDiscrepancy) < 1) {
-          proratedOrderDiscount = Math.max(0, roundedBaseShare + centDiscrepancy);
-        } else {
-          proratedOrderDiscount = roundedBaseShare;
-        }
-      } else {
-        proratedOrderDiscount = Math.round((orderDisc / activeItems.length) * 100) / 100;
-      }
-    }
-  }
-
-  // Combined line discount (clamped to line gross total)
-  const totalDiscount = Math.min(lineGross, Math.max(0, directDiscount + proratedOrderDiscount));
-
-  // Effective Discount Rate (%)
-  let discountRate = 0;
-  if (lineGross > 0 && totalDiscount > 0) {
-    discountRate = (totalDiscount / lineGross) * 100;
-  }
-
-  // Discounted Price (Net line sales)
-  const discountedPrice = Math.max(0, lineGross - totalDiscount);
-  const discountedUnitPrice = qty > 0 ? (discountedPrice / qty) : unitPrice;
-
-  // Formatted rate string: e.g. "10%", "3%", "1.45%", or "—"
-  let formattedRate = '—';
-  if (discountRate > 0) {
-    const isInteger = Math.abs(discountRate - Math.round(discountRate)) < 0.001;
-    formattedRate = `${isInteger ? Math.round(discountRate) : discountRate.toFixed(2)}%`;
-  }
-
-  return {
-    qty,
-    unitPrice,
-    lineGross,
-    directItemDiscount: directDiscount,
-    proratedOrderDiscount,
-    totalDiscount,
-    discountRate,
-    discountedPrice,
-    discountedUnitPrice,
-    formattedRate,
-  };
+    return {
+        qty,
+        unitPrice: line.unitPrice,
+        lineGross,
+        directItemDiscount,
+        proratedOrderDiscount,
+        totalDiscount,
+        discountRate,
+        discountedPrice,
+        discountedUnitPrice: qty > 0 ? round2(discountedPrice / qty) : line.unitPrice,
+        formattedRate: formatDiscountRate(discountRate),
+    };
 };
 
 /**
- * Backwards-compatible helper returning just the total discount amount for an item.
+ * Total discount (item + order share) for the units shown of one line.
  *
- * @param {Object} item 
- * @param {Object} txInput 
+ * @param {Object} item
+ * @param {Object} txInput
  * @returns {number}
  */
-export const getItemDiscountAmount = (item, txInput) => {
-  const breakdown = calculateItemDiscountBreakdown(item, txInput);
-  return breakdown.totalDiscount;
-};
+export const getItemDiscountAmount = (item, txInput) => calculateItemDiscountBreakdown(item, txInput).totalDiscount;
 
 /**
- * Format discount rate helper.
+ * Format a discount rate: "10%", "3%", "1.45%", or "—".
  *
- * @param {number} rate 
+ * @param {number} rate
  * @returns {string}
  */
-export const formatDiscountRate = (rate) => {
-  if (!rate || rate <= 0) return '—';
-  const isInteger = Math.abs(rate - Math.round(rate)) < 0.001;
-  return `${isInteger ? Math.round(rate) : rate.toFixed(2)}%`;
-};
+export function formatDiscountRate(rate) {
+    if (!rate || rate <= 0) return '—';
+    const isInteger = Math.abs(rate - Math.round(rate)) < 0.001;
+    return `${isInteger ? Math.round(rate) : rate.toFixed(2)}%`;
+}

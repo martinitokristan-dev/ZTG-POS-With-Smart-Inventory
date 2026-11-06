@@ -38,6 +38,8 @@ return [
         'price1'       => ['PRICE 1', 'PRICE1', 'ORIGINAL PRICE', 'ORIG PRICE'],
         'price2'       => ['PRICE 2', 'PRICE2', 'RETAIL PRICE', 'SRP', 'SELLING PRICE'],
         'price'        => ['PRICE', 'UNIT PRICE'],
+        // P.O. price (pending order price): optional, never filled from Price 1 / Price 2.
+        'po_price'     => ['P.O PRICE', 'P.O. PRICE', 'PO PRICE', 'PURCHASE ORDER PRICE'],
         'brand'        => ['BRAND', 'MAKE'],
         'category'     => ['CATEGORY', 'GROUP'],
         'uom'          => ['UOM', 'UNIT', 'UNIT OF MEASURE'],

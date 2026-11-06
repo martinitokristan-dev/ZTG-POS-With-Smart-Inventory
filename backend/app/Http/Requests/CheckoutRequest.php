@@ -19,7 +19,9 @@ class CheckoutRequest extends FormRequest
             'cart'                   => 'required|array|min:1',
             'cart.*.product_id'      => 'required|exists:products,id',
             'cart.*.qty'             => 'required|integer|min:1',
-            'cart.*.price_tier'      => 'required|string|in:price1,price2',
+            'cart.*.price_tier'      => 'required|string|in:price1,price2,po',
+            // P.O. price typed by the cashier, only used for a product that has no P.O. price of its own.
+            'cart.*.po_price'        => 'nullable|numeric|min:0.01|max:9999999999.99',
             'cart.*.item_discount'   => 'nullable|numeric|min:0|max:999999999.99',
 
             // Customer & Checker info

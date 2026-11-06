@@ -6,7 +6,7 @@ import useSystemSettings from '../../../shared/hooks/useSystemSettings';
 import { matchesStatusFilter } from '../../../shared/utils/skuHelpers';
 import CopyableText from '../../../shared/components/CopyableText';
 import FormattedProductName from '../../../shared/components/FormattedProductName';
-import { formatPrice } from '../../../shared/utils/price';
+import { formatPrice, hasPoPrice } from '../../../shared/utils/price';
 
 export default function ProductsTable({
     products,
@@ -146,6 +146,7 @@ export default function ProductsTable({
                 {enable_dual_pricing && (
                     <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', fontWeight: '600', fontSize: '15px', color: 'var(--primary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatPrice(product.price2, {})}</td>
                 )}
+                <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)', fontWeight: '600', fontSize: '15px', color: hasPoPrice(product.po_price) ? 'var(--text-primary)' : 'var(--table-text-secondary)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} title={hasPoPrice(product.po_price) ? undefined : 'No P.O. price: typed at a P.O. checkout'}>{hasPoPrice(product.po_price) ? formatPrice(product.po_price, {}) : '—'}</td>
                 <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--table-border-subtle)' }}>
                     <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'nowrap', alignItems: 'center' }}>
                         <span 
@@ -404,15 +405,16 @@ export default function ProductsTable({
                                 {enable_dual_pricing && (
                                     <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right' }}>{price2_label || 'Retail Price'}</th>
                                 )}
+                                <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'right' }}>P.O. Price</th>
                                 <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'left' }}>Status</th>
                                 <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'center' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={7 + (track_warehouse_locations ? 1 : 0) + (enable_dual_pricing ? 1 : 0)} style={{ padding: '32px' }}><LoadingSpinner text="Loading catalog items..." minHeight="100px" /></td></tr>
+                                <tr><td colSpan={8 + (track_warehouse_locations ? 1 : 0) + (enable_dual_pricing ? 1 : 0)} style={{ padding: '32px' }}><LoadingSpinner text="Loading catalog items..." minHeight="100px" /></td></tr>
                             ) : products.length === 0 ? (
-                                <tr><td colSpan={7 + (track_warehouse_locations ? 1 : 0) + (enable_dual_pricing ? 1 : 0)} className="py-8 text-center text-xs font-semibold text-slate-400">No products found matching criteria.</td></tr>
+                                <tr><td colSpan={8 + (track_warehouse_locations ? 1 : 0) + (enable_dual_pricing ? 1 : 0)} className="py-8 text-center text-xs font-semibold text-slate-400">No products found matching criteria.</td></tr>
                             ) : (() => {
                                 const visibleRows = [];
                                 products.forEach((p) => {

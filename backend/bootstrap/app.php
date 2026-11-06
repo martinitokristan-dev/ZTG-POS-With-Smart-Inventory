@@ -30,5 +30,15 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Every logged error carries the same reference code the user sees on screen.
+        $exceptions->context(fn () => ['error_reference' => \App\Support\ErrorReference::current()]);
+
+        // API errors in plain words (see App\Support\ApiErrorResponse).
+        $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
+            if (!$request->is('api/*') && !$request->expectsJson()) {
+                return null;
+            }
+
+            return \App\Support\ApiErrorResponse::for($e);
+        });
     })->create();

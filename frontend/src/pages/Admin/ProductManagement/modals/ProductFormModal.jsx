@@ -5,7 +5,7 @@ import api from '../../../../shared/api';
 import useSystemSettings from '../../../../shared/hooks/useSystemSettings';
 import VariantGeneratorPanel from './VariantGeneratorPanel';
 import { showToast } from '../../../../utils/toast';
-import { priceInputValue, priceForApi } from '../../../../shared/utils/price';
+import { priceInputValue, priceForApi, poPriceForApi } from '../../../../shared/utils/price';
 
 const VariantImageUpload = ({ variant, idx, onUpdateVariantImage, baseImage }) => {
     const [uploading, setUploading] = useState(false);
@@ -261,6 +261,7 @@ export default function ProductFormModal({
         part_no: generateNextVariantPartNo(formData.part_no, rowIndex),
         // New variant rows start with the product's prices; an empty price stays empty (never 0).
         price1: priceForApi(formData.price1), price2: priceForApi(formData.price2),
+        po_price: poPriceForApi(formData.po_price),
         stock: 0, alert_limit: formData.alert_limit || 5, option_ids: optionIds
     });
 
@@ -499,7 +500,7 @@ export default function ProductFormModal({
 
                         {/* Pricing & Stock Alert levels */}
                         <div className="section-header">Pricing & Stock Alerts</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: enable_dual_pricing ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: enable_dual_pricing ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
                             <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label">{price1_label || 'Original Price'}</label>
                                 {/* Blank = no price yet (saved empty, cannot be sold at this price). 0 stays 0. */}
@@ -544,6 +545,25 @@ export default function ProductFormModal({
                                     />
                                 </div>
                             )}
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label">P.O. Price</label>
+                                {/* Optional. Blank = no P.O. price: the cashier types it at a P.O. checkout. */}
+                                <input
+                                    type="number"
+                                    className="form-control"
+                                    min="0.01"
+                                    step="any"
+                                    placeholder="None"
+                                    title="Price for P.O. (pending order) sales. Leave blank if this item has none."
+                                    value={priceInputValue(formData.po_price)}
+                                    onChange={(e) => setFormData({ ...formData, po_price: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+                                    onKeyDown={(e) => {
+                                        if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+                                            e.preventDefault();
+                                        }
+                                    }}
+                                />
+                            </div>
                             <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label">{mode === 'edit' ? 'Current Stock' : 'Initial Stock'} {mode !== 'edit' && <span style={{ color: 'red' }}>*</span>}</label>
                                 <input
@@ -741,7 +761,7 @@ export default function ProductFormModal({
                                                     </div>
                                                 </div>
 
-                                                <div className="grid-4" style={{ gap: '12px', marginBottom: '12px' }}>
+                                                <div className="grid-4" style={{ gap: '12px', marginBottom: '12px', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
                                                     <div className="form-group" style={{ marginBottom: 0 }}>
                                                         <label className="form-label">Orig. Price</label>
                                                         <input type="number" className="form-control" min="0" placeholder="No price" value={priceInputValue(variant.price1)} onChange={(e) => {
@@ -752,6 +772,13 @@ export default function ProductFormModal({
                                                         <label className="form-label">Retail Price</label>
                                                         <input type="number" className="form-control" min="0" placeholder="No price" value={priceInputValue(variant.price2)} onChange={(e) => {
                                                             const nv = [...formData.variants]; nv[idx].price2 = e.target.value === '' ? '' : parseFloat(e.target.value); setFormData({ ...formData, variants: nv });
+                                                        }} />
+                                                    </div>
+                                                    <div className="form-group" style={{ marginBottom: 0 }}>
+                                                        <label className="form-label">P.O. Price</label>
+                                                        {/* Optional per variant; blank = typed by the cashier at a P.O. checkout. */}
+                                                        <input type="number" className="form-control" min="0.01" step="any" placeholder="None" value={priceInputValue(variant.po_price)} onChange={(e) => {
+                                                            const nv = [...formData.variants]; nv[idx] = { ...nv[idx], po_price: e.target.value === '' ? '' : parseFloat(e.target.value) }; setFormData({ ...formData, variants: nv });
                                                         }} />
                                                     </div>
                                                     <div className="form-group" style={{ marginBottom: 0 }}>

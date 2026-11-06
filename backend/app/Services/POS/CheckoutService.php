@@ -56,20 +56,22 @@ class CheckoutService
                 ->keyBy('id');
 
             // 2. SINGLE-PASS processing: validate + calculate + prepare
+            //    A P.O. (pending order) is sold at the P.O. price; every other method at Price 1 / Price 2.
+            $isPo = $data['payment_method'] === InvoiceConstants::PAYMENT_METHOD_PO;
             $processor = (new CartProcessor($this->productService))
-                ->process($cart, $products);
+                ->process($cart, $products, $isPo);
 
-            $subtotal = $processor->getSubtotal();
+            $subtotal = round($processor->getSubtotal(), 2);
 
-            // 3. Validate order-level discount
-            $orderDiscount = (float)($data['discount_amount'] ?? 0);
+            // 3. Validate order-level discount (always a peso amount, rounded to the centavo)
+            $orderDiscount = round((float)($data['discount_amount'] ?? 0), 2);
             if ($orderDiscount > $subtotal) {
                 throw ValidationException::withMessages([
                     'discount_amount' => ['Order discount (₱' . number_format($orderDiscount, 2) . ') cannot exceed the subtotal of ₱' . number_format($subtotal, 2) . '.'],
                 ]);
             }
 
-            $grandTotal = max(0, $subtotal - $orderDiscount);
+            $grandTotal = max(0, round($subtotal - $orderDiscount, 2));
 
             // 4. Validate payment amounts
             $this->validatePayment($data, $grandTotal);
@@ -95,7 +97,7 @@ class CheckoutService
             // 9. Determine Amount Tendered
             $amountTendered = match ($data['payment_method']) {
                 'Cash', 'GCash', 'Bank Transfer', 'Bank' => (float) ($data['amount_tendered'] ?? $grandTotal),
-                'P.O. (Pending)'                          => 0,
+                InvoiceConstants::PAYMENT_METHOD_PO       => 0,
                 'Cheque'                                  => (float) ($data['amount_tendered'] ?? $grandTotal),
                 default                                   => (float) ($data['amount_tendered'] ?? $grandTotal),
             };
@@ -122,7 +124,7 @@ class CheckoutService
                 'payment_method'    => $paymentMethodStr,
                 'cheque_number'     => $data['cheque_number'] ?? null,
                 'doc_type'          => $data['doc_type'],
-                'status'            => $data['payment_method'] === 'P.O. (Pending)' ? TransactionStatus::PENDING->value : TransactionStatus::COMPLETED->value,
+                'status'            => $isPo ? TransactionStatus::PENDING->value : TransactionStatus::COMPLETED->value,
                 'type'              => TransactionType::SALE->value,
                 'business_snapshot' => Setting::getBusinessSnapshot(), // Write-once BIR compliance snapshot
             ]);

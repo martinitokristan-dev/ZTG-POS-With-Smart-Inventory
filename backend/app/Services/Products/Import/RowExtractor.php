@@ -12,7 +12,7 @@ namespace App\Services\Products\Import;
 class RowExtractor
 {
     /** Fields a column can be mapped to, in the order shown on the mapping screen. */
-    public const FIELDS = ['name', 'part_no', 'chinese_name', 'brand', 'category', 'address', 'stock', 'uom', 'price1', 'price2', 'price', 'image', 'notes'];
+    public const FIELDS = ['name', 'part_no', 'chinese_name', 'brand', 'category', 'address', 'stock', 'uom', 'price1', 'price2', 'price', 'po_price', 'image', 'notes'];
 
     public function __construct(private HeaderDetector $detector)
     {
@@ -185,6 +185,7 @@ class RowExtractor
                 'price1'    => $get('price1'),
                 'price2'    => $get('price2'),
                 'price'     => $get('price'),
+                'po_price'  => $get('po_price'),
                 'notes'     => $get('notes'),
                 'image'     => $pendingImage ?? $image,
                 'section'   => $section,
@@ -199,7 +200,7 @@ class RowExtractor
     // A row with only a title (no part no., price or stock, one distinct value) is a section heading.
     private function isHeading(array $cells, string $part, callable $get): bool
     {
-        if ($part !== '' || $get('price1') . $get('price2') . $get('price') . $get('stock') !== '') {
+        if ($part !== '' || $get('price1') . $get('price2') . $get('price') . $get('po_price') . $get('stock') !== '') {
             return false;
         }
         $values = array_unique(array_filter(array_map([TextNormalizer::class, 'clean'], $cells), fn ($v) => $v !== ''));

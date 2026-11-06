@@ -96,6 +96,7 @@ class ImportProductWriter
             // Empty price stays empty (null), as in the file.
             'price1'            => isset($item['price1']) ? (float) $item['price1'] : null,
             'price2'            => isset($item['price2']) ? (float) $item['price2'] : null,
+            'po_price'          => isset($item['po_price']) ? (float) $item['po_price'] : null,
             'status'            => $this->productService->calculateStatus($stock, $alertLimit),
             'notes'             => $item['notes'] ?? null,
             'image'             => !empty($item['image']) ? $item['image'] : null,

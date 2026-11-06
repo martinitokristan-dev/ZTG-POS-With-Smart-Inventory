@@ -5,7 +5,7 @@ import { showToast } from '../../../../utils/toast';
 import { useImportReview, isSelected } from './useImportReview';
 import { IMPORT_CHUNK_SIZE, IMPORT_MAX_FILE_MB, importErrorMessage } from './importConstants';
 import { useImportDecisions } from './useImportDecisions';
-import { priceForApi } from '../../../../shared/utils/price';
+import { priceForApi, poPriceForApi } from '../../../../shared/utils/price';
 
 /**
  * Smart Excel import flow: upload -> review (products / new items / columns) -> importing -> done.
@@ -274,6 +274,8 @@ function toPayload(f) {
             include: true, name: v.name || null, part_no: v.part_no || null, chinese_name: v.chinese_name || null,
             // An empty price is sent as null and saved empty, exactly as in the file (never 0).
             stock: Math.max(0, parseInt(v.stock, 10) || 0), price1: priceForApi(v.price1), price2: priceForApi(v.price2),
+            // Optional P.O. price: empty (or 0) is saved as "no P.O. price".
+            po_price: poPriceForApi(v.po_price),
             uom: v.uom || null, address: v.address || null, notes: v.notes || null,
             options: (v.options || []).filter(o => o.value && o.type),
         })),

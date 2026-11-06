@@ -164,9 +164,17 @@ export default function POS() {
 
             <CheckoutModal 
                 isOpen={pos.showCheckoutModal}
-                onClose={() => pos.setShowCheckoutModal(false)}
+                onClose={() => { pos.setPoMode(false); pos.setShowCheckoutModal(false); }}
                 cart={pos.cart}
                 cartTotals={pos.cartTotals}
+                poPricing={{
+                    setPoMode: pos.setPoMode,
+                    poPrices: pos.poPrices,
+                    setPoPrice: pos.setPoPrice,
+                    poPriceMissing: pos.poPriceMissing,
+                    unitPriceOf: pos.unitPriceOf,
+                    discountOf: pos.discountOf,
+                }}
                 setItemDiscount={pos.setItemDiscount}
                 orderDiscountType={pos.orderDiscountType}
                 setOrderDiscountType={pos.setOrderDiscountType}
