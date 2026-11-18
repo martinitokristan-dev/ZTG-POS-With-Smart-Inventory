@@ -84,6 +84,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
             'password'          => 'hashed',
             'pin'               => 'hashed',
             'status'            => UserStatus::class,

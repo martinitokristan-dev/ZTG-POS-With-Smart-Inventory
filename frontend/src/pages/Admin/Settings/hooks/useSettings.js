@@ -22,7 +22,7 @@ export default function useSettings() {
         if (tabParam === 'activity' || tabParam === 'alerts' || tabParam === 'profile' || tabParam === 'account') {
             return 'account';
         }
-        if (tabParam && ['general', 'products', 'employees', 'checkers'].includes(tabParam)) {
+        if (tabParam && ['general', 'products', 'employees', 'checkers', 'legal'].includes(tabParam)) {
             return tabParam;
         }
         const saved = localStorage.getItem('settingsActiveTab');

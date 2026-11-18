@@ -3,6 +3,7 @@ import useSettings from './hooks/useSettings';
 import ProfileTab from './tabs/ProfileTab';
 import GeneralTab from './tabs/GeneralTab';
 import ProductsTab from './tabs/ProductsTab';
+import LegalTab from './tabs/LegalTab';
 import ActivityLogs from '../ActivityLogs/index.jsx';
 import CategoryModal from './modals/CategoryModal';
 import BrandModal from './modals/BrandModal';
@@ -51,12 +52,24 @@ export default function SettingsView() {
     const userRole = profileData?.role || authUser?.role;
     const isAdmin = userRole === 'Admin' || userRole === 'Administrator';
 
-    // Force active tab to account if not Admin
+    // Non-admins only have My Account and Privacy and Terms.
     React.useEffect(() => {
-        if (!isAdmin && activeTab !== 'account') {
+        if (!isAdmin && activeTab !== 'account' && activeTab !== 'legal') {
             setActiveTab('account');
         }
     }, [isAdmin, activeTab, setActiveTab]);
+
+    const primaryTabs = isAdmin
+        ? [
+            { id: 'account', label: 'My Account' },
+            { id: 'general', label: 'General' },
+            { id: 'products', label: 'Products Settings' },
+            { id: 'legal', label: 'Privacy and Terms' },
+        ]
+        : [
+            { id: 'account', label: 'My Account' },
+            { id: 'legal', label: 'Privacy and Terms' },
+        ];
 
     return (
         <>
@@ -77,24 +90,19 @@ export default function SettingsView() {
                     <LoadingSpinner text={!isAdmin ? 'Loading account...' : 'Loading settings...'} />
                 ) : (
                     <div className="settings-tabs-wrap" style={{ paddingBottom: '60px' }}>
-                        {/* Primary Navigation Tabs Header (Admin only) */}
-                        {isAdmin && (
-                            <div className="tabs-header">
-                                {[
-                                    { id: 'account', label: 'My Account' },
-                                    { id: 'general', label: 'General' },
-                                    { id: 'products', label: 'Products Settings' },
-                                ].map(tab => (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
-                                    >
-                                        {tab.label}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                        {/* Primary Navigation Tabs Header (every role sees My Account and Privacy and Terms) */}
+                        <div className="tabs-header">
+                            {primaryTabs.map(tab => (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
 
                         {/* TAB 1: MY ACCOUNT (UNIFIED VERTICAL SUB-TABS: PROFILE, INVENTORY ALERTS, TRANSACTION ALERTS, RESERVATION ALERTS, REPORTS, ACTIVITY LOGS) */}
                         <div className={`tab-content ${activeTab === 'account' ? 'active' : ''}`}>
@@ -434,6 +442,11 @@ export default function SettingsView() {
 
                             </>
                         )}
+
+                        {/* PRIVACY AND TERMS (every role, read-only) */}
+                        <div className={`tab-content ${activeTab === 'legal' ? 'active' : ''}`}>
+                            {activeTab === 'legal' && <LegalTab />}
+                        </div>
                     </div>
                 )}
             </div>

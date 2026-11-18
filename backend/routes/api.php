@@ -26,6 +26,7 @@ use App\Http\Controllers\StaffVerificationController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserPermissionController;
 use App\Http\Controllers\InvoiceNumberingController;
+use App\Http\Controllers\TermsAcceptanceController;
 use App\Enums\UserRole;
 use Illuminate\Support\Facades\Route;
 
@@ -46,6 +47,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
     Route::get('/user/permissions', [UserPermissionController::class, 'me']);
+    // Privacy Policy and Terms: every role accepts once, on the first sign-in of the account.
+    Route::post('/user/accept-terms', [TermsAcceptanceController::class, 'accept'])->middleware('throttle:10,1');
 
     // System health diagnostics (Admin & Technical Operations / users with system_status permission)
     Route::middleware('permission:system_status,can_view')->group(function () {

@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import NotificationsDropdown from './NotificationsDropdown';
 import ThemeToggleButton from './ThemeToggleButton';
+import TermsGate from './components/TermsGate';
 
 /**
  * AppShell — persistent authenticated layout.
@@ -164,6 +165,9 @@ export default function AppShell() {
             <div className="main-workspace">
                 <Outlet />
             </div>
+
+            {/* Privacy Policy and Terms: shown once, on the first sign-in of an account */}
+            <TermsGate />
         </div>
     );
 }

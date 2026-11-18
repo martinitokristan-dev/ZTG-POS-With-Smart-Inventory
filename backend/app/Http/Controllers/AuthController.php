@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\ActivityLogs\ActivityLogService;
+use App\Services\UserManagement\TermsAcceptanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
@@ -14,9 +15,12 @@ class AuthController extends Controller
 {
     protected ActivityLogService $activityLogService;
 
-    public function __construct(ActivityLogService $activityLogService)
+    protected TermsAcceptanceService $termsAcceptanceService;
+
+    public function __construct(ActivityLogService $activityLogService, TermsAcceptanceService $termsAcceptanceService)
     {
         $this->activityLogService = $activityLogService;
+        $this->termsAcceptanceService = $termsAcceptanceService;
     }
 
     /**
@@ -163,6 +167,7 @@ class AuthController extends Controller
                 'profile_photo' => $user->profile_photo,
                 'name'          => $user->full_name,
                 'permissions'   => $user->getEffectivePermissions(),
+                'terms'         => $this->termsAcceptanceService->status($user),
             ],
         ]);
     }
@@ -212,6 +217,7 @@ class AuthController extends Controller
                 'profile_photo' => $user->profile_photo,
                 'name'          => $user->full_name,
                 'permissions'   => $user->getEffectivePermissions(),
+                'terms'         => $this->termsAcceptanceService->status($user),
             ]
         ]);
     }
