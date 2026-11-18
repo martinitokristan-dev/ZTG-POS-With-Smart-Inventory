@@ -40,7 +40,7 @@ export default function SalesTable({ loading, items, fmt, fmtDate, highlightedId
                     <tbody style={{ fontSize: '14.5px' }}>
                         {items.map((item, i) => {
                             const amountColor = 'var(--success, #16A34A)';
-                            const qty = Number(item.qty || 1);
+                            const qty = Number(item.displayQty ?? item.qty ?? 1);
                             const breakdown = calculateItemDiscountBreakdown(item, item._rawTx || item.tx);
                             const unitPrice = breakdown.unitPrice;
                             const discountVal = breakdown.totalDiscount;

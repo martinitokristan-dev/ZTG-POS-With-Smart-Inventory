@@ -13,6 +13,59 @@ use Carbon\Carbon;
 
 class ReportService
 {
+    /** Statuses of a normal sale ('Deposit'/'Paid' only exist on older records). */
+    private const SALE_STATUSES = ['Completed', 'Deposit', 'Paid'];
+
+    /** Statuses after money was given back; such a sale still counts while part of it was kept (amount > 0). */
+    private const GIVEN_BACK_STATUSES = ['Refund', 'Return', 'Void'];
+
+    /**
+     * Money really paid for the units of a line that were not given back, in pesos.
+     *
+     * Same rule as TransactionService::paidRatio / paidForUnits: line net (price × qty − item
+     * discount) times the sale's paid share (original_amount ÷ sum of line nets, at most 1, which
+     * spreads the order discount), times units kept ÷ units sold. Needs the `tx_lines` join from
+     * lineTotalsSubquery(). The "* 1.0" keeps SQLite from dividing whole numbers.
+     */
+    private const PAID_REVENUE_SQL = 'CASE WHEN tx_lines.lines_net > 0 AND transaction_items.qty > 0 THEN '
+        . '(transaction_items.price * transaction_items.qty - COALESCE(transaction_items.discount, 0)) * 1.0'
+        . ' * (transaction_items.qty - COALESCE(transaction_items.refunded_qty, 0)) / transaction_items.qty'
+        . ' * (CASE WHEN COALESCE(transactions.original_amount, transactions.amount) < tx_lines.lines_net'
+        . ' THEN COALESCE(transactions.original_amount, transactions.amount) * 1.0 / tx_lines.lines_net ELSE 1 END)'
+        . ' ELSE 0 END';
+
+    /**
+     * Keep only sales that still hold money: normal sales, plus partly refunded or returned sales
+     * at the amount the customer kept. Full refunds and voids have amount 0 and drop out.
+     *
+     * @param  mixed  $query  Eloquent or query builder on (or joined with) transactions.
+     * @param  string $prefix Column prefix, e.g. 'transactions.' when other tables are joined.
+     * @return void
+     */
+    private function whereCountsAsSale($query, string $prefix = ''): void
+    {
+        $query->where(function ($q) use ($prefix) {
+            $q->whereIn("{$prefix}status", self::SALE_STATUSES)
+                ->orWhere(function ($kept) use ($prefix) {
+                    $kept->whereIn("{$prefix}status", self::GIVEN_BACK_STATUSES)
+                        ->where("{$prefix}amount", '>', 0);
+                });
+        });
+    }
+
+    /**
+     * Sum of line nets (price × qty − item discount) per transaction, joined as `tx_lines`
+     * so PAID_REVENUE_SQL can spread the order discount over the lines.
+     *
+     * @return \Illuminate\Database\Query\Builder
+     */
+    private function lineTotalsSubquery()
+    {
+        return DB::table('transaction_items')
+            ->select('transaction_id', DB::raw('SUM(price * qty - COALESCE(discount, 0)) as lines_net'))
+            ->groupBy('transaction_id');
+    }
+
     /**
      * Get Sales Summary metrics.
      */
@@ -42,62 +95,30 @@ class ReportService
             ? $endDate
             : ($endDate ? Carbon::createFromFormat('Y-m-d H:i:s', $endDate . $endSuffix, 'Asia/Manila')->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s') : null);
 
-        $completedQuery = Transaction::whereIn('status', ['Completed', 'Deposit', 'Paid']);
-
-        // Partial refunds: status Refund/Return/Void but net amount > 0 (partial sale still occurred)
-        $partialRefundQuery = Transaction::whereIn('status', ['Refund', 'Return', 'Void'])
-            ->where('amount', '>', 0);
-
+        // Every number below uses this same set of sales, so they all add up to Total Revenue:
+        // normal sales, plus partly refunded/returned sales at the amount the customer kept.
+        $salesQuery = Transaction::query();
+        $this->whereCountsAsSale($salesQuery);
         if ($utcStart && $utcEnd) {
-            $completedQuery->whereBetween('date', [$utcStart, $utcEnd]);
-            $partialRefundQuery->whereBetween('date', [$utcStart, $utcEnd]);
+            $salesQuery->whereBetween('date', [$utcStart, $utcEnd]);
         }
 
-        // Revenue = completed sales + partial refund net amounts
-        $completedRevenue = (float) $completedQuery->sum('amount');
-        $partialRefundRevenue = (float) $partialRefundQuery->sum('amount');
-        $totalRevenue = max(0, $completedRevenue + $partialRefundRevenue);
-
-        // Transaction count includes partial refunds (they are still real net sales)
-        $txCount = $completedQuery->count() + $partialRefundQuery->count();
+        $totalRevenue = max(0, (float) (clone $salesQuery)->sum('amount'));
+        $txCount = (clone $salesQuery)->count();
         $averageTx = $txCount > 0 ? round($totalRevenue / $txCount, 2) : 0.00;
 
-        try {
-            \Illuminate\Support\Facades\Log::info('[ReportService] Sales summary computed', [
-                'completed_revenue'      => $completedRevenue,
-                'partial_refund_revenue' => $partialRefundRevenue,
-                'total_revenue'          => $totalRevenue,
-                'tx_count'               => $txCount,
-            ]);
-        } catch (\Throwable $logE) {
-        }
-
-        // Total items sold
-        $completedItemsQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-            ->whereIn('transactions.status', ['Completed', 'Deposit', 'Paid']);
-
-        // For partial refunds: net qty = qty - refunded_qty per line-item
-        $partialRefundItemsQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-            ->whereIn('transactions.status', ['Refund', 'Return', 'Void'])
-            ->where('transactions.amount', '>', 0);
-
+        // Units still sold (qty − units given back)
+        $itemsQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id');
+        $this->whereCountsAsSale($itemsQuery, 'transactions.');
         if ($utcStart && $utcEnd) {
-            $completedItemsQuery->whereBetween('transactions.date', [$utcStart, $utcEnd]);
-            $partialRefundItemsQuery->whereBetween('transactions.date', [$utcStart, $utcEnd]);
+            $itemsQuery->whereBetween('transactions.date', [$utcStart, $utcEnd]);
         }
-
-        $completedItemsSold = (int) $completedItemsQuery->sum('transaction_items.qty');
-        $partialNetQty = max(0, (int) $partialRefundItemsQuery
+        $totalItemsSold = max(0, (int) $itemsQuery
             ->sum(DB::raw('transaction_items.qty - COALESCE(transaction_items.refunded_qty, 0)')));
-        $totalItemsSold = max(0, $completedItemsSold + $partialNetQty);
 
         // Top cashier
-        $topCashierQuery = Transaction::with(['cashier'])->select('cashier_id', DB::raw('SUM(amount) as total_sales'))
-            ->whereIn('status', ['Completed', 'Deposit', 'Paid']);
-        if ($utcStart && $utcEnd) {
-            $topCashierQuery->whereBetween('date', [$utcStart, $utcEnd]);
-        }
-        $topCashierRow = $topCashierQuery
+        $topCashierRow = (clone $salesQuery)
+            ->select('cashier_id', DB::raw('SUM(amount) as total_sales'))
             ->groupBy('cashier_id')
             ->orderByDesc('total_sales')
             ->first();
@@ -113,16 +134,12 @@ class ReportService
         }
 
         // Revenue by payment method
-        $paymentMethodsQuery = Transaction::select(
-            DB::raw("CASE WHEN payment_method LIKE 'Cheque%' THEN 'Cheque' ELSE payment_method END as payment_method_normalized"),
-            DB::raw('SUM(amount) as total_sales'),
-            DB::raw('COUNT(*) as tx_count')
-        )
-            ->whereIn('status', ['Completed', 'Deposit', 'Paid']);
-        if ($utcStart && $utcEnd) {
-            $paymentMethodsQuery->whereBetween('date', [$utcStart, $utcEnd]);
-        }
-        $paymentMethods = $paymentMethodsQuery
+        $paymentMethods = (clone $salesQuery)
+            ->select(
+                DB::raw("CASE WHEN payment_method LIKE 'Cheque%' THEN 'Cheque' ELSE payment_method END as payment_method_normalized"),
+                DB::raw('SUM(amount) as total_sales'),
+                DB::raw('COUNT(*) as tx_count')
+            )
             ->groupBy('payment_method_normalized')
             ->get()
             ->map(fn($row) => [
@@ -132,14 +149,11 @@ class ReportService
             ])
             ->toArray();
 
-        // Revenue trend based on timeframe
+        // Revenue trend based on timeframe (same sales as Total Revenue, so the chart adds up to it)
         $last7Days = [];
+        $trendRaw = (clone $salesQuery)->get(['date', 'amount']);
 
         if ($norm === 'today') {
-            $trendRaw = Transaction::whereIn('status', ['Completed', 'Deposit', 'Paid'])
-                ->whereBetween('date', [$utcStart, $utcEnd])
-                ->get();
-
             $trendMap = [];
             foreach ($trendRaw as $tx) {
                 $localHour = Carbon::parse($tx->date, config('app.timezone'))->setTimezone('Asia/Manila')->hour;
@@ -155,10 +169,6 @@ class ReportService
                 ];
             }
         } elseif ($norm === 'thismonth') {
-            $trendRaw = Transaction::whereIn('status', ['Completed', 'Deposit', 'Paid'])
-                ->whereBetween('date', [$utcStart, $utcEnd])
-                ->get();
-
             $trendMap = [];
             foreach ($trendRaw as $tx) {
                 $localDateStr = Carbon::parse($tx->date, config('app.timezone'))->setTimezone('Asia/Manila')->format('Y-m-d');
@@ -177,10 +187,6 @@ class ReportService
                 ];
             }
         } elseif ($norm === 'thisyear') {
-            $trendRaw = Transaction::whereIn('status', ['Completed', 'Deposit', 'Paid'])
-                ->whereBetween('date', [$utcStart, $utcEnd])
-                ->get();
-
             $trendMap = [];
             foreach ($trendRaw as $tx) {
                 $localMonth = Carbon::parse($tx->date, config('app.timezone'))->setTimezone('Asia/Manila')->month;
@@ -197,10 +203,6 @@ class ReportService
             }
         } else {
             // Default to this week: Sunday to Saturday
-            $trendRaw = Transaction::whereIn('status', ['Completed', 'Deposit', 'Paid'])
-                ->whereBetween('date', [$utcStart, $utcEnd])
-                ->get();
-
             $trendMap = [];
             foreach ($trendRaw as $tx) {
                 $localDateStr = Carbon::parse($tx->date, config('app.timezone'))->setTimezone('Asia/Manila')->format('Y-m-d');
@@ -281,29 +283,51 @@ class ReportService
         $actualStart = ($startDate && strpos($startDate, ' ') !== false) ? $startDate : ($startDate ? $startDate . $startSuffix : null);
         $actualEnd = ($endDate && strpos($endDate, ' ') !== false) ? $endDate : ($endDate ? $endDate . $endSuffix : null);
 
-        // Top 10 selling products (computed from transactions in date range)
-        $topSellersQuery = TransactionItem::select(
-                'product_id', 
-                DB::raw('SUM(transaction_items.qty - COALESCE(transaction_items.refunded_qty, 0)) as sales_count'), 
-                DB::raw('SUM((transaction_items.qty - COALESCE(transaction_items.refunded_qty, 0)) * transaction_items.price) as revenue')
+        // Sold lines in the date range from the same sales as Total Revenue, joined with their
+        // sale's line totals so PAID_REVENUE_SQL gives what was really paid (after discounts).
+        $soldLines = function () use ($actualStart, $actualEnd) {
+            $query = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+                ->joinSub($this->lineTotalsSubquery(), 'tx_lines', 'tx_lines.transaction_id', '=', 'transactions.id');
+            $this->whereCountsAsSale($query, 'transactions.');
+            if ($actualStart && $actualEnd) {
+                $query->whereBetween('transactions.date', [$actualStart, $actualEnd]);
+            }
+
+            return $query;
+        };
+        $paidRevenueSum = DB::raw('SUM(' . self::PAID_REVENUE_SQL . ') as revenue');
+
+        // Units given back per product and kind (Refund / Return), in one query. A partial refund
+        // only gives back refunded_qty units, never the whole line.
+        $givenBackQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+            ->whereIn('transactions.status', ['Refund', 'Return'])
+            ->select(
+                'transaction_items.product_id',
+                'transactions.status',
+                DB::raw('SUM(COALESCE(transaction_items.refunded_qty, 0)) as units')
             )
-            ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-            ->where(function ($query) {
-                $query->whereIn('transactions.status', ['Completed', 'Deposit', 'Paid'])
-                    ->orWhere(function ($q) {
-                        $q->whereIn('transactions.status', ['Refund', 'Return'])
-                          ->where('transactions.amount', '>', 0);
-                    });
-            });
+            ->groupBy('transaction_items.product_id', 'transactions.status');
         if ($actualStart && $actualEnd) {
-            $topSellersQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
+            $givenBackQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
         }
-        $topSellers = $topSellersQuery->groupBy('product_id')
+        $givenBack = $givenBackQuery->toBase()->get();
+        $unitsGivenBack = fn (?int $productId, string $status) => (int) $givenBack
+            ->filter(fn ($row) => $row->status === $status && ($productId === null || (int) $row->product_id === $productId))
+            ->sum('units');
+
+        // Top 10 selling products (computed from transactions in date range)
+        $topSellers = $soldLines()
+            ->select(
+                'transaction_items.product_id',
+                DB::raw('SUM(transaction_items.qty - COALESCE(transaction_items.refunded_qty, 0)) as sales_count'),
+                $paidRevenueSum
+            )
+            ->groupBy('transaction_items.product_id')
             ->havingRaw('sales_count > 0')
             ->orderByDesc('sales_count')
             ->limit(10)
             ->get()
-            ->map(function ($row) use ($actualStart, $actualEnd) {
+            ->map(function ($row) use ($unitsGivenBack) {
                 $prod = Product::with(['category', 'variantOptions'])->find($row->product_id);
 
                 $variantStr = '';
@@ -323,15 +347,9 @@ class ReportService
                     ? ($variantStr ? "{$prod->name} ({$variantStr})" : $prod->name)
                     : 'Deleted Product';
 
-                // Get returns and refunds for this product in the date range
-                $retRefQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-                    ->where('product_id', $row->product_id);
-                if ($actualStart && $actualEnd) {
-                    $retRefQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
-                }
-
-                $returns = (clone $retRefQuery)->where('transactions.status', 'Return')->sum('qty');
-                $refunds = (clone $retRefQuery)->where('transactions.status', 'Refund')->sum('qty');
+                // Units of this product given back in the date range
+                $returns = $unitsGivenBack((int) $row->product_id, 'Return');
+                $refunds = $unitsGivenBack((int) $row->product_id, 'Refund');
 
                 return [
                     'product_id' => $row->product_id,
@@ -339,7 +357,7 @@ class ReportService
                     'part_no' => $prod ? $prod->part_no : 'N/A',
                     'category' => $prod && $prod->category ? $prod->category->name : 'Uncategorized',
                     'sales_count' => (int) $row->sales_count,
-                    'revenue' => (float) $row->revenue,
+                    'revenue' => round((float) $row->revenue, 2),
                     'uom' => $prod ? ($prod->uom ?: 'pcs') : 'pcs',
                     'stock' => $prod ? $prod->stock : 0,
                     'returns_count' => (int) $returns,
@@ -350,22 +368,9 @@ class ReportService
             ->toArray();
 
         // Revenue per product (from Completed/Deposit/Paid & Partial Refund transactions) - Top 50 by revenue
-        $revenuePerProductQuery = TransactionItem::select(
-                'product_id', 
-                DB::raw('SUM((transaction_items.qty - COALESCE(transaction_items.refunded_qty, 0)) * transaction_items.price) as revenue')
-            )
-            ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-            ->where(function ($query) {
-                $query->whereIn('transactions.status', ['Completed', 'Deposit', 'Paid'])
-                    ->orWhere(function ($q) {
-                        $q->whereIn('transactions.status', ['Refund', 'Return'])
-                          ->where('transactions.amount', '>', 0);
-                    });
-            });
-        if ($actualStart && $actualEnd) {
-            $revenuePerProductQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
-        }
-        $revenuePerProduct = $revenuePerProductQuery->groupBy('product_id')
+        $revenuePerProduct = $soldLines()
+            ->select('transaction_items.product_id', $paidRevenueSum)
+            ->groupBy('transaction_items.product_id')
             ->havingRaw('revenue > 0')
             ->orderByDesc('revenue')
             ->limit(50)
@@ -376,16 +381,15 @@ class ReportService
                     'product_id' => $row->product_id,
                     'name' => $prod ? $prod->name : 'Deleted Product',
                     'part_no' => $prod ? $prod->part_no : 'N/A',
-                    'revenue' => (float) $row->revenue,
+                    'revenue' => round((float) $row->revenue, 2),
                 ];
             })
             ->toArray();
 
-        // Dead stock (sales_count = 0 and created before X days) - Top 100 items
+        // Dead stock (no sale that still counts, created before X days) - Top 100 items.
+        // A partly refunded sale still sold units, so its products are not dead stock.
         $deadStock = Product::whereDoesntHave('transactionItems', function ($q) {
-            $q->whereHas('transaction', function ($tq) {
-                $tq->whereIn('status', ['Completed', 'Deposit', 'Paid']);
-            });
+            $q->whereHas('transaction', fn ($tq) => $this->whereCountsAsSale($tq));
         })
             ->where('created_at', '<', now()->subDays($deadStockDays))
             ->orderBy('name')
@@ -393,49 +397,24 @@ class ReportService
             ->get(['id', 'name', 'part_no', 'stock', 'created_at'])
             ->toArray();
 
-        // Calculate store-wide totals for items (not transactions)
-        $returnsQtyQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-            ->where('transactions.status', 'Return');
-        if ($actualStart && $actualEnd) {
-            $returnsQtyQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
-        }
-        $totalReturnsQty = (int) $returnsQtyQuery->sum('transaction_items.qty');
-
-        $refundsQtyQuery = TransactionItem::join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-            ->where('transactions.status', 'Refund');
-        if ($actualStart && $actualEnd) {
-            $refundsQtyQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
-        }
-        $totalRefundsQty = (int) $refundsQtyQuery->sum('transaction_items.qty');
+        // Store-wide units given back in the date range (not whole sale lines)
+        $totalReturnsQty = $unitsGivenBack(null, 'Return');
+        $totalRefundsQty = $unitsGivenBack(null, 'Refund');
 
         $totalDamaged = (int) Product::sum('damaged');
 
         // ── Top Categories by revenue ────────────────────────────────────────────
-        $catQuery = TransactionItem::select(
-                'categories.id as category_id',
-                'categories.name as category_name',
-                DB::raw('SUM((transaction_items.qty - COALESCE(transaction_items.refunded_qty, 0)) * transaction_items.price) as revenue')
-            )
-            ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+        $catRows = $soldLines()
             ->join('products', 'transaction_items.product_id', '=', 'products.id')
             ->join('categories', 'products.category_id', '=', 'categories.id')
-            ->where(function ($query) {
-                $query->whereIn('transactions.status', ['Completed', 'Deposit', 'Paid'])
-                    ->orWhere(function ($q) {
-                        $q->whereIn('transactions.status', ['Refund', 'Return'])
-                          ->where('transactions.amount', '>', 0);
-                    });
-            });
-
-        if ($actualStart && $actualEnd) {
-            $catQuery->whereBetween('transactions.date', [$actualStart, $actualEnd]);
-        }
-
-        $catRows = $catQuery
+            ->select('categories.id as category_id', 'categories.name as category_name', $paidRevenueSum)
             ->groupBy('categories.id', 'categories.name')
             ->havingRaw('revenue > 0')
             ->orderByDesc('revenue')
-            ->get();
+            ->get()
+            ->each(function ($row) {
+                $row->revenue = round((float) $row->revenue, 2);
+            });
 
         $totalCatRevenue = $catRows->sum('revenue');
         $top3 = $catRows->take(3);
@@ -496,7 +475,8 @@ class ReportService
 
         $refundCount = $refundQuery->count();
         $voidCount = $voidQuery->count();
-        $refundAmount = (float) $refundQuery->sum('amount');
+        // Money given back (refunded_amount), not what the customer kept (amount)
+        $refundAmount = round((float) $refundQuery->sum('refunded_amount'), 2);
 
         // Top refund reasons
         $topRefundReasonsQuery = Transaction::select('refund_reason', DB::raw('COUNT(*) as count'))
@@ -543,12 +523,12 @@ class ReportService
             'customers.name',
             'customers.phone',
             DB::raw('COUNT(*) as tx_count'),
-            DB::raw('SUM(amount) as total_spent'),
-            DB::raw('MIN(date) as first_transaction'),
-            DB::raw('MAX(date) as last_transaction')
+            DB::raw('SUM(transactions.amount) as total_spent'),
+            DB::raw('MIN(transactions.date) as first_transaction'),
+            DB::raw('MAX(transactions.date) as last_transaction')
         )
             ->join('customers', 'transactions.customer_id', '=', 'customers.id')
-            ->where('status', 'Completed')
+            ->where(fn ($query) => $this->whereCountsAsSale($query, 'transactions.'))
             ->groupBy('customer_id', 'customers.name', 'customers.phone')
             ->orderByDesc('total_spent')
             ->get()

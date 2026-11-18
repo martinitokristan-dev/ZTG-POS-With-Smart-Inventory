@@ -15,19 +15,19 @@ class TransactionCreated implements ShouldBroadcast, ShouldDispatchAfterCommit
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    /** @var array{id: int, cashier_id: int|null, status: string|null} */
     public array $transaction;
 
     /**
      * Create a new event instance.
+     *
+     * Every Admin, Supervisor and Cashier on the channel receives this, so it carries only a
+     * "something changed" signal. Screens refetch through the API, which applies cashier
+     * isolation; customer names, items and amounts never travel to other cashiers' browsers.
      */
     public function __construct(Transaction $transaction)
     {
-        // Load relationships needed by Sales Log, History Logs, and Daily Sales
-        if (!$transaction->relationLoaded('customer') || !$transaction->relationLoaded('cashier')) {
-            $transaction->load(['customer', 'cashier', 'items.product']);
-        }
-        
-        $this->transaction = $transaction->toArray();
+        $this->transaction = TransactionUpdated::signal($transaction);
     }
 
     /**

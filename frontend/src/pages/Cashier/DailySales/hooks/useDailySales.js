@@ -60,7 +60,7 @@ export default function useDailySales() {
         return params;
     }, [timeFilter, cashierId]);
 
-    const { data: transactions, loading, page, setPage, pagination, refetch } = usePaginatedCache(
+    const { data: transactions, loading, page, setPage, pagination, summary, refetch } = usePaginatedCache(
         `daily-sales-${cashierId || 'all'}-${timeFilter}`,
         '/transactions',
         queryParams
@@ -135,7 +135,9 @@ export default function useDailySales() {
                 const resolvedBrand = item.product?.brand || item.brand || item.product?.parent?.brand;
                 result.push({
                     ...item,
-                    qty: netQty,
+                    // Keep the sold qty; show only the units left. The discount calculator scales the
+                    // line's discount by displayQty ÷ qty, so a partly refunded line shows what was kept.
+                    displayQty: netQty,
                     name: resolvedName,
                     part_no: resolvedPartNo,
                     brand: resolvedBrand,
@@ -173,8 +175,10 @@ export default function useDailySales() {
         return items;
     }, [flattenedItems, searchQuery]);
 
-    // Gross sales from unique Completed/Paid transactions in current page
+    // Gross sales for the whole time filter (every page), computed by the server for this
+    // cashier only. The page sum below is only a fallback for an older server.
     const grossSales = useMemo(() => {
+        if (summary && summary.sales_total != null) return Number(summary.sales_total);
         const seenIds = new Set();
         let total = 0;
         filteredItems.forEach(item => {
@@ -185,7 +189,7 @@ export default function useDailySales() {
             }
         });
         return total;
-    }, [filteredItems, transactions]);
+    }, [summary, filteredItems, transactions]);
 
     return {
         loading,

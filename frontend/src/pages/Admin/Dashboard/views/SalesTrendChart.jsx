@@ -31,42 +31,42 @@ export default function SalesTrendChart({ last7Days = [], timeRange = 'Today' })
     const startX = 36; // Pushed further left to give max width to chart
     const endX = width - 6;
 
-    // Format Y-axis count without ₱ symbol (20k, 40k, 60k, 80k, 100k)
+    // Format Y-axis count without ₱ symbol (e.g. 500, 1k, 1.5k, 20k, 1.2M)
     const formatYAxisLabel = (val) => {
         if (val === 0) return '0';
-        if (val >= 1000000) return `${(val / 1000000).toFixed(val % 1000000 === 0 ? 0 : 1)}M`;
-        if (val >= 1000) return `${Math.round(val / 1000)}k`;
-        return `${val}`;
+        if (val >= 1000000) return `${Number((val / 1000000).toFixed(1))}M`;
+        if (val >= 1000) return `${Number((val / 1000).toFixed(1))}k`;
+        return `${Math.round(val)}`;
     };
 
-    // Scale ceiling (defaults to 100k scale: 20k, 40k, 60k, 80k, 100k)
+    // Scale ceiling: the smallest "clean" number (1, 2, 2.5 or 5 × 10ⁿ) at or above the busiest
+    // point, so a ₱4,200 day fills the chart instead of being a flat line under a ₱100k scale.
+    // An empty chart keeps the 100k scale.
     const getCleanUpperBound = (maxVal) => {
-        if (!maxVal || maxVal <= 100000) return 100000;
-        return Math.ceil(maxVal / 100000) * 100000;
+        if (!maxVal || maxVal <= 0) return 100000;
+        const magnitude = Math.pow(10, Math.floor(Math.log10(maxVal)));
+        const step = [1, 2, 2.5, 5, 10].find(m => m * magnitude >= maxVal) || 10;
+        return step * magnitude;
     };
 
-    const todayLabels = ['8AM', '9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM'];
     const isToday = timeRange === 'Today';
+
+    // Whole day for Today: 24 hourly points, 12 AM to 11 PM (the server sends all 24), so a sale
+    // at any hour shows on the chart and the chart adds up to Today's Revenue.
+    const hourLabel = (h) => (h === 0 ? '12AM' : h < 12 ? `${h}AM` : h === 12 ? '12PM' : `${h - 12}PM`);
 
     let chartDataset = [];
     if (isToday) {
-        // Strictly use 10 hourly points for Today (8AM to 5PM)
-        if (hasData && last7Days.length === 10) {
-            chartDataset = last7Days.map((d, i) => ({
-                label: todayLabels[i] || d.day,
-                revenue: d.revenue || 0,
-                date: d.date || ''
-            }));
-        } else {
-            chartDataset = todayLabels.map((lbl) => {
-                const match = hasData ? last7Days.find(d => String(d.day || '').replace(/\s+/g, '').toUpperCase() === lbl) : null;
-                return {
-                    label: lbl,
-                    revenue: match ? match.revenue : 0,
-                    date: match ? match.date : ''
-                };
-            });
-        }
+        chartDataset = Array.from({ length: 24 }, (_, h) => {
+            const match = hasData
+                ? last7Days.find(d => String(d.day || '').replace(/\s+/g, '').toUpperCase() === hourLabel(h))
+                : null;
+            return {
+                label: hourLabel(h),
+                revenue: match ? Number(match.revenue || 0) : 0,
+                date: match ? match.date : ''
+            };
+        });
     } else if (hasData) {
         chartDataset = last7Days.map(d => ({
             label: d.day,
@@ -275,7 +275,7 @@ export default function SalesTrendChart({ last7Days = [], timeRange = 'Today' })
                 {points.map((p, idx) => {
                     let showLabel = false;
                     if (timeRange === 'Today') {
-                        showLabel = idx % 2 === 0 && idx <= 8; // Shows 8AM, 10AM, 12PM, 2PM, 4PM
+                        showLabel = idx % 3 === 0; // 12AM, 3AM, 6AM, 9AM, 12PM, 3PM, 6PM, 9PM
                     } else if (timeRange === 'This Month') {
                         showLabel = idx === 0 || idx === 9 || idx === 19 || idx === actualNumPoints - 1;
                     } else if (timeRange === 'This Year') {

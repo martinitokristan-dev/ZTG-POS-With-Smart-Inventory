@@ -27,9 +27,13 @@ class TransactionController extends Controller
      */
     public function index(ListTransactionsRequest $request): JsonResponse
     {
-        $transactions = $this->transactionService->getAll($this->listFilters($request));
+        $filters = $this->listFilters($request);
+        $transactions = $this->transactionService->getAll($filters);
 
-        return response()->json($transactions);
+        // Page of rows plus the Sales Log totals over every page (same filters and isolation).
+        return response()->json($transactions->toArray() + [
+            'summary' => $this->transactionService->salesSummary($filters),
+        ]);
     }
 
     /**

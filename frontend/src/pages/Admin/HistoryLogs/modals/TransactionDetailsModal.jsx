@@ -84,21 +84,21 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
     const processedItems = txItems.map(item => {
         const rawQty = Number(item.qty || 1);
         const refundedQty = Number(item.refunded_qty || (isFullRefund || isVoid ? rawQty : 0));
-        const displayRemainingQty = isPartialRefund
-            ? Number(item.net_qty ?? Math.max(0, rawQty - refundedQty))
-            : rawQty;
+        // Units still sold: none after a full refund/return or a void.
+        const displayRemainingQty = (isFullRefund || isVoid)
+            ? 0
+            : (isPartialRefund ? Number(item.net_qty ?? Math.max(0, rawQty - refundedQty)) : rawQty);
 
         // Sales and Discount columns: the whole line as sold. Net Sales: what is still sold after a
-        // partial refund (the refunded units take their own share of the discount with them).
+        // refund/return/void (the units given back take their own share of the discount with them).
         const breakdown = calculateItemDiscountBreakdown({ ...item, displayQty: rawQty }, tx);
-        const remaining = isPartialRefund
-            ? calculateItemDiscountBreakdown({ ...item, displayQty: displayRemainingQty }, tx)
-            : breakdown;
         const origPrice = breakdown.unitPrice;
         const lineGross = breakdown.lineGross;
         const lineDisc = breakdown.totalDiscount;
         const itemOriginalTotal = breakdown.discountedPrice;
-        const lineNet = remaining.discountedPrice;
+        const lineNet = displayRemainingQty === rawQty
+            ? itemOriginalTotal
+            : calculateItemDiscountBreakdown({ ...item, displayQty: displayRemainingQty }, tx).discountedPrice;
 
         grossSubtotal += lineGross;
         itemDiscountsTotal += lineDisc;
@@ -131,6 +131,13 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
             largest.lineNet = Math.round((largest.lineNet + centDiff) * 100) / 100;
         }
     }
+
+    // Money given back per line = what was paid for the line − what is still sold. The lines add
+    // up to the "Refunded / Returned / Voided Amount" shown above the table.
+    processedItems.forEach(it => {
+        it.lineRefunded = Math.max(0, Math.round((Number(it.itemOriginalTotal || 0) - Number(it.lineNet || 0)) * 100) / 100);
+    });
+    const totalLineRefunded = processedItems.reduce((sum, it) => sum + it.lineRefunded, 0);
 
     const orderDiscountAmt = Number(tx.discount_amount || 0);
     const directItemDiscTotal = processedItems.reduce((sum, item) => sum + Number(item.directItemDiscount || 0), 0);
@@ -241,9 +248,14 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                         {hasRefundOrReturn && (
                                             <td style={{ padding: '10px 10px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                                                 {refundedQty > 0 || isFullRefund || isVoid ? (
-                                                    <span className={`status-badge ${isVoid ? 'status-void' : (isReturnAction ? 'status-return' : 'status-refund')}`} style={{ textTransform: 'none' }}>
-                                                        {refundedQty > 0 ? `${refundedQty} pcs` : `${item.qty || 1} pcs`}
-                                                    </span>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                                        <span className={`status-badge ${isVoid ? 'status-void' : (isReturnAction ? 'status-return' : 'status-refund')}`} style={{ textTransform: 'none' }}>
+                                                            {refundedQty > 0 ? `${refundedQty} pcs` : `${item.qty || 1} pcs`}
+                                                        </span>
+                                                        {item.lineRefunded > 0 && (
+                                                            <span style={{ color: '#DC2626', fontWeight: '700', fontSize: '13px' }}>-{fmt(item.lineRefunded)}</span>
+                                                        )}
+                                                    </div>
                                                 ) : (
                                                     <span style={{ color: 'var(--table-text-muted)' }}>—</span>
                                                 )}
@@ -276,7 +288,14 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 </td>
                                 {hasRefundOrReturn && (
                                     <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '800', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                        {totalRefundedQty > 0 ? `${totalRefundedQty} pcs` : '—'}
+                                        {totalRefundedQty > 0 ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                                <span>{totalRefundedQty} pcs</span>
+                                                {totalLineRefunded > 0 && (
+                                                    <span style={{ color: '#DC2626' }}>-{fmt(totalLineRefunded)}</span>
+                                                )}
+                                            </div>
+                                        ) : '—'}
                                     </td>
                                 )}
                                 <td style={{ padding: '12px 12px', textAlign: 'right', fontWeight: '800', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>

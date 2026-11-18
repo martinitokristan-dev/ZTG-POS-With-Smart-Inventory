@@ -86,6 +86,36 @@ class TransactionService
         return $paginator;
     }
 
+    /** Statuses the Sales Log counts as money in (with amount > 0; a full refund has amount 0). */
+    private const SALES_LOG_STATUSES = ['Completed', 'Paid', 'Deposit', 'Refund', 'Return'];
+
+    /**
+     * Totals of the Sales Log for the same filters as getAll(), over EVERY page.
+     *
+     * The screens used to add up only the 20 rows on screen, so a busy day showed too little.
+     * Counts the same sales the Sales Log rows show: normal sales and partly refunded/returned
+     * sales at the amount kept (pending P.O.s, voids and full refunds have no money left in them).
+     *
+     * @param  array $filters Same filters as getAll() (cashier isolation already applied).
+     * @return array{sales_count: int, sales_total: float, items_sold: int}
+     */
+    public function salesSummary(array $filters = []): array
+    {
+        $sales = $this->buildListQuery($filters)
+            ->reorder()
+            ->whereIn('status', self::SALES_LOG_STATUSES)
+            ->where('amount', '>', 0);
+
+        $itemsSold = TransactionItem::whereIn('transaction_id', (clone $sales)->select('id'))
+            ->sum(DB::raw('qty - COALESCE(refunded_qty, 0)'));
+
+        return [
+            'sales_count' => (clone $sales)->count(),
+            'sales_total' => round((float) (clone $sales)->sum('amount'), 2),
+            'items_sold'  => max(0, (int) $itemsSold),
+        ];
+    }
+
     /**
      * Find which page of the filtered, sorted transaction list holds a transaction.
      *

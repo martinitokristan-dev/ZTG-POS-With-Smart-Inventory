@@ -87,7 +87,7 @@ export default function useSalesLog() {
         };
     }, [statusParam, paymentParam, searchParam, sortFilter, timeFilter, cashierFilter]);
 
-    const { data: transactions, loading, page, setPage, pagination, refetch } = usePaginatedCache('sales', '/transactions', queryParams);
+    const { data: transactions, loading, page, setPage, pagination, summary, refetch } = usePaginatedCache('sales', '/transactions', queryParams);
 
     useEffect(() => {
         const token = (sessionStorage.getItem('auth_token') ?? localStorage.getItem('auth_token'));
@@ -154,7 +154,9 @@ export default function useSalesLog() {
             
             flattenedItems.push({
                 ...item,
-                qty: netQty,
+                // Keep the sold qty; show only the units left (the discount calculator scales by
+                // displayQty ÷ qty, so a partly refunded line shows what was kept).
+                displayQty: netQty,
                 price: resolvedPrice,
                 name: resolvedName,
                 part_no: resolvedPartNo,
@@ -188,8 +190,16 @@ export default function useSalesLog() {
     });
 
     filteredItems.forEach(item => {
-        totalItemsSold += Number(item.qty || 0);
+        totalItemsSold += Number(item.displayQty ?? item.qty ?? 0);
     });
+
+    // Cards show every page for the current filters (the server's summary); the sums of the rows
+    // on this page above are only a fallback for an older server.
+    if (summary && summary.sales_total != null) {
+        count = Number(summary.sales_count || 0);
+        totalSales = Number(summary.sales_total || 0);
+        totalItemsSold = Number(summary.items_sold || 0);
+    }
 
     const avgSale = count > 0 ? totalSales / count : 0;
     const metrics = { totalTx: count, totalSales, totalItemsSold, avgSale };

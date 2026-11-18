@@ -38,7 +38,8 @@ export default function PaymentMethodsTab({ salesSummary, employees = [], fmt, s
         if (!salesSummary?.transactions) return [];
         return salesSummary.transactions.filter(tx => {
             if (selectedCashier !== 'All') {
-                const cashierName = tx.checker?.name || tx.cashier?.name || '';
+                // The cashier who made the sale (same as the Sales Report filter), never the checker.
+                const cashierName = (tx.cashier?.full_name || tx.cashier?.name || '').trim();
                 if (cashierName !== selectedCashier) return false;
             }
             return true;

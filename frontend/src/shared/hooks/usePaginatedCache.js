@@ -41,6 +41,8 @@ export default function usePaginatedCache(storeName, endpoint, params) {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
+    // Totals over every page for the same filters (sent by /transactions), or null.
+    const [summary, setSummary] = useState(null);
     const [refreshKey, setRefreshKey] = useState(0);
 
     const paramsStr = JSON.stringify(params);
@@ -79,6 +81,7 @@ export default function usePaginatedCache(storeName, endpoint, params) {
                 if (isMounted) {
                     setData(cached.data);
                     setPagination(cached.pagination);
+                    setSummary(cached.summary ?? null);
                 }
                 
                 // Update LRU
@@ -101,6 +104,7 @@ export default function usePaginatedCache(storeName, endpoint, params) {
                 // It can be a paginated response or just an array (fallback)
                 let pageData = [];
                 let pageInfo = { current_page: 1, last_page: 1, total: 0 };
+                const pageSummary = res.data?.summary ?? null;
 
                 if (res.data && res.data.data) {
                     pageData = res.data.data;
@@ -121,11 +125,13 @@ export default function usePaginatedCache(storeName, endpoint, params) {
                 if (isMounted) {
                     setData(pageData);
                     setPagination(pageInfo);
+                    setSummary(pageSummary);
                 }
 
                 caches[storeName].pages[page] = {
                     data: pageData,
                     pagination: pageInfo,
+                    summary: pageSummary,
                     ts: now
                 };
                 
@@ -148,5 +154,5 @@ export default function usePaginatedCache(storeName, endpoint, params) {
         return () => { isMounted = false; };
     }, [page, paramsStr, storeName, endpoint, refreshKey]);
 
-    return { data, loading, page, setPage, pagination, refetch };
+    return { data, loading, page, setPage, pagination, summary, refetch };
 }
