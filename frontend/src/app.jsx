@@ -129,7 +129,7 @@ function App() {
                                     </PrivateRoute>
                                 } />
 
-                                {/* Order-Based / Reservations */}
+                                {/* Customer Reservations */}
                                 <Route path="/reservations" element={
                                     <PrivateRoute requiredModule="reservations">
                                         <Reservations />

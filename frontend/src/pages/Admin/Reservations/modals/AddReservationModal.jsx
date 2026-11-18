@@ -65,7 +65,7 @@ export default function AddReservationModal({
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
             <div className="modal-card" style={{ maxWidth: '1050px' }}>
                 <div className="modal-header">
-                    <h3 className="modal-title">New Order-Based</h3>
+                    <h3 className="modal-title">New Customer Reservation</h3>
                     <button className="modal-close" onClick={onClose}>
                         <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>

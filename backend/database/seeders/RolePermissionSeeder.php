@@ -15,7 +15,7 @@ class RolePermissionSeeder extends Seeder
         'dashboard'       => ['label' => 'Dashboard', 'description' => 'Business overview and KPI metrics'],
         'products'        => ['label' => 'Product Management', 'description' => 'Product catalog, pricing, and categories'],
         'inventory'       => ['label' => 'Inventory', 'description' => 'Stock levels, restocks, and warehouse locations'],
-        'reservations'    => ['label' => 'Order Based', 'description' => 'Customer holds, reservations, and fulfilled orders'],
+        'reservations'    => ['label' => 'Customer Reservations', 'description' => 'Customer reservations, deposits, supplier deliveries, and pickups'],
         'pos'             => ['label' => 'Point of Sale (POS)', 'description' => 'Checkout terminal and cash register'],
         'history_logs'    => ['label' => 'History Logs', 'description' => 'Audit logs and item price/stock change history'],
         'sales_log'       => ['label' => 'Sales Log', 'description' => 'Daily sales records, transactions, and receipts'],

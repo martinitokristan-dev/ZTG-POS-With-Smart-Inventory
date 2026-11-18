@@ -22,7 +22,7 @@ export default function Forbidden() {
         else if (path === '/pos') label = 'Back to POS';
         else if (path === '/inventory') label = 'Back to Inventory';
         else if (path === '/product-management') label = 'Back to Products';
-        else if (path === '/reservations') label = 'Back to Order Based';
+        else if (path === '/reservations') label = 'Back to Customer Reservations';
         else if (path === '/sales-log' || path === '/daily-sales') label = 'Back to Sales Log';
         else if (path === '/reports') label = 'Back to Reports';
         else if (path === '/settings') label = 'Back to Settings';

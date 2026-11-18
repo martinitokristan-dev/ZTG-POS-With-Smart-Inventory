@@ -28,7 +28,7 @@ export default function CancelReservationModal({
                 <div className="modal-footer" style={{ justifyContent: 'flex-end', gap: '12px' }}>
                     <button className="btn btn-secondary" onClick={onClose}>Keep Reservation</button>
                     <button className="btn btn-danger" onClick={onSubmit} disabled={cancelLoading}>
-                        {cancelLoading ? 'Cancelling...' : 'Yes, Cancel Order'}
+                        {cancelLoading ? 'Cancelling...' : 'Yes, Cancel Reservation'}
                     </button>
                 </div>
             </div>

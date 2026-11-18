@@ -15,7 +15,7 @@ class SeedScalabilityData extends Command
     protected $signature = 'db:seed-scalability 
                             {--products=50000 : Number of products to generate} 
                             {--transactions=70000 : Total transactions (sales, refunds, returns, voids)} 
-                            {--reservations=10000 : Total order-based reservations}';
+                            {--reservations=10000 : Total customer reservations}';
 
     protected $description = 'High-performance bulk seeder for scalability testing (50k products, 70k transactions, 10k orders)';
 
@@ -222,7 +222,7 @@ class SeedScalabilityData extends Command
         $this->info("✔ Finished seeding {$numTransactions} transactions!");
 
         // 4. Generate Reservations (10k orders)
-        $this->info("\nStep 4/4: Bulk seeding {$numReservations} order-based reservations...");
+        $this->info("\nStep 4/4: Bulk seeding {$numReservations} customer reservations...");
         $resStatuses = ['Pending', 'Claimed', 'Cancelled', 'Expired'];
         $resBatch = [];
         $resItemBatch = [];

@@ -30,9 +30,9 @@ export default function Reservations() {
                 {/* Top Bar */}
                 <div className="top-bar">
                     <div>
-                        <h1 style={{ fontSize: '20px', marginBottom: '2px' }}>Order Based Reservations</h1>
+                        <h1 style={{ fontSize: '20px', marginBottom: '2px' }}>Customer Reservations</h1>
                         <div className="page-description" style={{ marginTop: 0, fontSize: '12px' }}>
-                            Track deposits, expected pickup dates, and fulfill client product holds.
+                            Record deposits for parts ordered from the supplier, track their arrival, and release them when the customer claims and pays.
                         </div>
                     </div>
                     <div className="top-bar-actions" style={{ display: 'flex', gap: '8px' }}>

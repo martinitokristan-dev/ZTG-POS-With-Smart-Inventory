@@ -73,11 +73,11 @@ class CheckPermission
                 'can_delete' => 'Permission Required. Your account does not have authorization to remove inventory records.',
             ],
             'reservations' => [
-                'has_access' => 'Permission Required. Your account does not have authorization to access Order-Based reservations.',
-                'can_view'   => 'Permission Required. Your account does not have authorization to view customer reservation orders.',
-                'can_create' => 'Permission Required. Your account does not have authorization to create new reservation orders.',
-                'can_edit'   => 'Permission Required. Your account does not have authorization to modify or fulfill customer reservation orders.',
-                'can_delete' => 'Permission Required. Your account does not have authorization to cancel or delete customer reservation orders.',
+                'has_access' => 'Permission Required. Your account does not have authorization to access customer reservations.',
+                'can_view'   => 'Permission Required. Your account does not have authorization to view customer reservations.',
+                'can_create' => 'Permission Required. Your account does not have authorization to create customer reservations.',
+                'can_edit'   => 'Permission Required. Your account does not have authorization to update or fulfill customer reservations.',
+                'can_delete' => 'Permission Required. Your account does not have authorization to cancel customer reservations.',
             ],
             'pos' => [
                 'has_access' => 'Permission Required. Your account does not have authorization to access the Point of Sale (POS) terminal.',

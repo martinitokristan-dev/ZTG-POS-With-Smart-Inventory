@@ -21,7 +21,7 @@ export default function FulfillOrderModal({
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
             <div className="modal-card" style={{ maxWidth: '1050px' }}>
                 <div className="modal-header">
-                    <h3 className="modal-title">Fulfill Order — Customer Pickup</h3>
+                    <h3 className="modal-title">Fulfill Reservation: Customer Pickup</h3>
                     <button className="modal-close" onClick={onClose}>
                         <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
@@ -41,7 +41,7 @@ export default function FulfillOrderModal({
                         gap: '8px'
                     }}>
                         <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', flexShrink: 0, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                        <span>Customer is here to pick up their order. Collect the balance due and complete the transaction to release items from warehouse.</span>
+                        <span>The customer is here to claim the reserved items. Collect the balance due and complete the reservation to release the items from the warehouse.</span>
                     </div>
 
                     {ffError && (

@@ -79,7 +79,7 @@ export default function ReservationsTable({
                     <table className="data-table" style={{ minWidth: '950px', width: '100%' }}>
                         <thead>
                             <tr>
-                                <th style={{ textAlign: 'left' }}>Date Order</th>
+                                <th style={{ textAlign: 'left' }}>Date Reserved</th>
                                 <th style={{ textAlign: 'left' }}>Part Number</th>
                                 <th style={{ textAlign: 'left', maxWidth: '170px' }}>Description / Part Name</th>
                                 <th style={{ textAlign: 'left' }}>Engine Plate No.</th>
@@ -461,7 +461,7 @@ export default function ReservationsTable({
                                                                                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                                                                     <polyline points="20 6 9 17 4 12"></polyline>
                                                                                 </svg>
-                                                                                <span>Fulfill Order</span>
+                                                                                <span>Fulfill Reservation</span>
                                                                             </button>
                                                                         )}
 
@@ -532,7 +532,7 @@ export default function ReservationsTable({
                                                                                         <line x1="15" y1="9" x2="9" y2="15"></line>
                                                                                         <line x1="9" y1="9" x2="15" y2="15"></line>
                                                                                     </svg>
-                                                                                    <span>Cancel Order</span>
+                                                                                    <span>Cancel Reservation</span>
                                                                                 </button>
                                                                             </>
                                                                         )}

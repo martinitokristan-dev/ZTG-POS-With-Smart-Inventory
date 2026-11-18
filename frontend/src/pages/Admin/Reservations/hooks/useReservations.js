@@ -382,7 +382,7 @@ export default function useReservations() {
     const handleAddReservation = async (e) => {
         e.preventDefault();
         setAddError('');
-        if (cartItems.length === 0) { setAddError('Please add at least one item to the order.'); return; }
+        if (cartItems.length === 0) { setAddError('Please add at least one item to the reservation.'); return; }
         if (paymentMethod === 'Cheque' && !custChequeNumber.trim()) {
             setAddError('Please enter the Cheque Number.');
             return;
@@ -641,10 +641,10 @@ export default function useReservations() {
                 return r;
             }));
             resetReservationsCache();
-            showToast(`✓ Order status updated to "${newStatus}"!`);
+            showToast(`Reservation status updated to "${newStatus}".`);
         } catch (err) {
             console.error('Failed to update status:', err);
-            const msg = err.response?.data?.message || 'Failed to update order status.';
+            const msg = err.response?.data?.message || 'Failed to update the reservation status.';
             showToast(msg, 'error');
         }
     };
