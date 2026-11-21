@@ -7,6 +7,28 @@ import CancelReservationModal from './modals/CancelReservationModal';
 import SuccessModal from './modals/SuccessModal';
 import ReservationDetailsModal from './modals/ReservationDetailsModal';
 import { useModulePermission } from '../../../shared/hooks/useModulePermission';
+import SegmentedControl from '../../../shared/components/SegmentedControl';
+
+const reservationOptions = [
+    {
+        value: 'deposit',
+        label: 'For Order In China',
+        icon: (
+            <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', fill: 'none', stroke: 'currentColor', strokeWidth: 2 }}>
+                <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        )
+    },
+    {
+        value: 'completed',
+        label: 'Order Claimed And Paid',
+        icon: (
+            <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', fill: 'none', stroke: 'currentColor', strokeWidth: 2 }}>
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        )
+    }
+];
 
 export default function Reservations() {
     const res = useReservations();
@@ -82,52 +104,15 @@ export default function Reservations() {
 
                 {/* Content Body */}
                 <div className="content-body">
-                    {/* 2-Tab Navigation Matching Excel Sheet Names with Visible Borders */}
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
-                        <button
-                            type="button"
-                            onClick={() => handleTabSwitch('deposit')}
-                            style={{
-                                padding: '10px 20px',
-                                borderRadius: '8px',
-                                fontWeight: '700',
-                                fontSize: '14px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                backgroundColor: activeTab === 'deposit' ? 'var(--primary)' : 'var(--bg-card)',
-                                color: activeTab === 'deposit' ? '#FFFFFF' : 'var(--text-secondary)',
-                                border: activeTab === 'deposit' ? '1px solid var(--primary)' : '1px solid var(--border)',
-                                boxShadow: activeTab === 'deposit' ? '0 1px 3px rgba(37,99,235,0.3)' : '0 1px 2px rgba(0,0,0,0.04)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px'
-                            }}
-                        >
-                            <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', fill: 'none', stroke: 'currentColor', strokeWidth: 2 }}><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            For Order In China
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleTabSwitch('completed')}
-                            style={{
-                                padding: '10px 20px',
-                                borderRadius: '8px',
-                                fontWeight: '700',
-                                fontSize: '14px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                backgroundColor: activeTab === 'completed' ? '#10B981' : 'var(--bg-card)',
-                                color: activeTab === 'completed' ? '#FFFFFF' : 'var(--text-secondary)',
-                                border: activeTab === 'completed' ? '1px solid #10B981' : '1px solid var(--border)',
-                                boxShadow: activeTab === 'completed' ? '0 1px 3px rgba(16,185,129,0.3)' : '0 1px 2px rgba(0,0,0,0.04)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px'
-                            }}
-                        >
-                            <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', fill: 'none', stroke: 'currentColor', strokeWidth: 2 }}><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            Order Claimed And Paid
-                        </button>
+                    <div style={{ marginBottom: '16px' }}>
+                        <SegmentedControl
+                            semantics="filter"
+                            ariaLabel="Reservation status"
+                            idPrefix="reservations"
+                            options={reservationOptions}
+                            value={activeTab}
+                            onChange={handleTabSwitch}
+                        />
                     </div>
 
                     <ReservationsTable

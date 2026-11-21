@@ -106,18 +106,23 @@ export default function SegmentedControl({
                     user-select: none;
                     line-height: 1.25;
                 }
-                .segmented-control-item:hover:not(.active) {
+                .segmented-control-item:hover:not(.is-active) {
                     background-color: var(--border);
                     color: var(--text-primary);
                 }
-                .segmented-control-item.active {
+                .segmented-control-item.is-active {
                     background-color: var(--segmented-active-bg);
                     color: #FFFFFF;
                     font-weight: 600;
                     box-shadow: none;
                 }
-                .segmented-control-item.active:hover {
+                .segmented-control-item.is-active:hover {
                     background-color: var(--primary-solid);
+                }
+                .segmented-control-item.is-active .segmented-control-icon,
+                .segmented-control-item.is-active .segmented-control-icon svg {
+                    color: #FFFFFF;
+                    stroke: #FFFFFF;
                 }
                 .segmented-control-item:focus-visible {
                     outline: 2px solid var(--segmented-active-bg);
@@ -160,7 +165,7 @@ export default function SegmentedControl({
                         tabIndex={tabIndex}
                         onClick={() => onChange && onChange(option.value)}
                         onKeyDown={(e) => handleKeyDown(e, index)}
-                        className={`segmented-control-item ${isActive ? 'active' : ''}`}
+                        className={`segmented-control-item ${isActive ? 'is-active' : ''}`}
                         {...itemProps}
                     >
                         {option.icon && (

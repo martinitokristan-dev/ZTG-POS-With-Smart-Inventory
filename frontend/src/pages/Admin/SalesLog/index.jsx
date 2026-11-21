@@ -3,6 +3,12 @@ import useSalesLog from './hooks/useSalesLog';
 import SalesTable from './views/SalesTable';
 import IOSSelect from '../../../shared/components/IOSSelect';
 import TablePagination from '../../../shared/components/TablePagination';
+import SegmentedControl from '../../../shared/components/SegmentedControl';
+
+const statusOptions = [
+    { value: 'All', label: 'All' },
+    { value: 'Completed', label: 'Completed' }
+];
 
 export default function SalesLog() {
     const sl = useSalesLog();
@@ -119,21 +125,15 @@ export default function SalesLog() {
                             </div>
                         </div>
                         
-                        {/* Tabs */}
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-                            {['All', 'Completed'].map(tab => (
-                                <button 
-                                    key={tab}
-                                    className={`status-tab ${sl.activeTab === tab ? 'active' : ''}`}
-                                    onClick={() => sl.setActiveTab(tab)}
-                                    style={{
-                                        padding: '8px 16px', borderRadius: '20px', 
-                                        fontSize: '13px', fontWeight: '600', cursor: 'pointer'
-                                    }}
-                                >
-                                    {tab}
-                                </button>
-                            ))}
+                        {/* Status Filter */}
+                        <div style={{ marginTop: '16px' }}>
+                            <SegmentedControl
+                                semantics="filter"
+                                ariaLabel="Sales status"
+                                options={statusOptions}
+                                value={sl.activeTab}
+                                onChange={sl.setActiveTab}
+                            />
                         </div>
                     </div>
 
