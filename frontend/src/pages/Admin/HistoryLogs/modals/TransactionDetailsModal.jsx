@@ -1,9 +1,334 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import CopyableText from '../../../../shared/components/CopyableText';
 import FormattedProductName from '../../../../shared/components/FormattedProductName';
 import { calculateItemDiscountBreakdown, formatDiscountRate } from '../../../../shared/utils/discountCalculator';
 import { getLineItemName, getLineItemPartNo } from '../../../../shared/utils/lineItemDisplay';
 import ImportBatchDetails from '../../../../shared/components/ImportBatchDetails';
+import { showToast } from '../../../../utils/toast';
+
+/**
+ * Snapshot product name without variant label.
+ *
+ * @param {object} item
+ * @param {string} fallback
+ * @returns {string}
+ */
+function getLineItemBaseName(item, fallback = 'Unknown Part') {
+    if (!item) return fallback;
+    const raw = item.item_name || item.name || item.product?.name || fallback;
+    const label = item.variant_label;
+    if (label) {
+        const escaped = String(label).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const stripped = raw.replace(new RegExp(`\\s*\\(${escaped}\\)`, 'i'), '').trim();
+        if (stripped) return stripped;
+    }
+    const match = raw.match(/^(.*?)\s*\((.*?)\)$/);
+    if (match && match[1]?.trim()) {
+        return match[1].trim();
+    }
+    return raw;
+}
+
+function ItemsPurchasedSection({
+    processedItems,
+    tx,
+    status,
+    isPartialRefund,
+    isFullRefund,
+    isVoid,
+    isReturnAction,
+    fmt,
+    totalLineGross,
+    totalDiscounts,
+    totalRefundedQty,
+}) {
+    const [copiedPartNo, setCopiedPartNo] = useState(null);
+
+    const hasDiscounts = useMemo(() => {
+        return processedItems.some(it => Number(it.itemDisc || 0) > 0);
+    }, [processedItems]);
+
+    const isRefundOrReturn = isFullRefund || isPartialRefund;
+    const isStandardSale = !isRefundOrReturn && !isVoid;
+
+    const word = isReturnAction ? 'returned' : 'refunded';
+    const wordCapitalized = isReturnAction ? 'Returned' : 'Refunded';
+
+    const visibleColumnsCount = 3 + (hasDiscounts ? 1 : 0) + (isRefundOrReturn ? 1 : 0) + 1;
+
+    let headerPill = null;
+    const itemsCount = processedItems.length;
+    const refundedItemsCount = processedItems.filter(it => Number(it.refundedQty || 0) > 0).length;
+
+    if (isVoid) {
+        headerPill = (
+            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: 'var(--border)', color: 'var(--text-secondary)' }}>
+                Voided
+            </span>
+        );
+    } else if (isFullRefund) {
+        const pillText = isReturnAction ? 'Full return' : 'Full refund';
+        headerPill = (
+            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' }}>
+                {pillText}
+            </span>
+        );
+    } else if (isPartialRefund) {
+        const actionPillWord = isReturnAction ? 'Partial return' : 'Partial refund';
+        headerPill = (
+            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#FFFBEB', color: '#B45309', border: '1px solid #FDE68A' }}>
+                {actionPillWord} · {refundedItemsCount} of {itemsCount} {itemsCount === 1 ? 'item' : 'items'}
+            </span>
+        );
+    }
+
+    const handleCopyPartNo = (e, partNo) => {
+        e.stopPropagation();
+        if (!partNo || partNo === '—' || partNo === 'N/A') return;
+        const copyText = String(partNo).trim();
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(copyText);
+        } else {
+            const textArea = document.createElement('textarea');
+            textArea.value = copyText;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-9999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+            } catch (err) {
+                console.error('Fallback copy failed:', err);
+            }
+            document.body.removeChild(textArea);
+        }
+        setCopiedPartNo(partNo);
+        showToast(`Copied Part No. "${partNo}" to clipboard`);
+        setTimeout(() => setCopiedPartNo(null), 1600);
+    };
+
+    return (
+        <div className="audit-detail-section" style={{ marginTop: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Items Purchased ({itemsCount})
+                </span>
+                {headerPill}
+            </div>
+
+            <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflowX: 'auto', overflowY: 'auto', maxHeight: '50vh', background: 'var(--bg-card)' }}>
+                <table className="modal-table data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                    <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--table-header-bg)', borderBottom: '1px solid var(--border)', fontSize: '12px', color: 'var(--table-text-secondary)' }}>
+                        <tr>
+                            <th style={{ padding: '10px 14px', fontWeight: '600', minWidth: '200px' }}>Item</th>
+                            <th style={{ padding: '10px 8px', fontWeight: '600', textAlign: 'center', width: '100px', whiteSpace: 'nowrap' }}>Qty</th>
+                            <th style={{ padding: '10px 12px', fontWeight: '600', textAlign: 'right', width: '95px' }}>Unit price</th>
+                            {hasDiscounts && (
+                                <th style={{ padding: '10px 12px', fontWeight: '600', textAlign: 'right', width: '100px' }}>Discount</th>
+                            )}
+                            {isRefundOrReturn && (
+                                <th style={{ padding: '10px 12px', fontWeight: '600', textAlign: 'right', width: '105px' }}>{wordCapitalized}</th>
+                            )}
+                            <th style={{ padding: '10px 14px', fontWeight: '600', textAlign: 'right', width: '105px' }}>
+                                {isStandardSale ? 'Total' : 'Net'}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody style={{ fontSize: '13px' }}>
+                        {processedItems.length === 0 ? (
+                            <tr>
+                                <td colSpan={visibleColumnsCount} style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                                    No items
+                                </td>
+                            </tr>
+                        ) : (
+                            processedItems.map((item, index) => {
+                                const partNo = getLineItemPartNo(item);
+                                const baseName = getLineItemBaseName(item, 'Unknown Part');
+                                const variantText = item.variant_label || (() => {
+                                    const raw = item.item_name || item.name || item.product?.name || '';
+                                    const match = raw.match(/\((.*?)\)$/);
+                                    return match ? match[1].trim() : '';
+                                })();
+                                const refundedQty = Number(item.refundedQty || 0);
+
+                                return (
+                                    <tr key={index} style={{ borderBottom: '1px solid var(--border)' }}>
+                                        {/* 1. Item: Base name line 1, Part no pill + variant line 2 */}
+                                        <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+                                            <div
+                                                style={{
+                                                    fontWeight: '500',
+                                                    color: 'var(--text-primary)',
+                                                    lineHeight: '1.35',
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: 'vertical',
+                                                    overflow: 'hidden',
+                                                }}
+                                                title={baseName}
+                                            >
+                                                {baseName}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', fontSize: '11px', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
+                                                <span
+                                                    style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                        padding: '1px 6px',
+                                                        borderRadius: '4px',
+                                                        background: 'var(--table-header-bg)',
+                                                        border: '1px solid var(--border)',
+                                                        fontFamily: 'var(--font-mono, monospace)',
+                                                        fontSize: '11px',
+                                                        fontWeight: '600',
+                                                        color: 'var(--text-primary)',
+                                                        whiteSpace: 'nowrap',
+                                                        userSelect: 'none',
+                                                    }}
+                                                >
+                                                    <span>{partNo}</span>
+                                                    {partNo !== '—' && partNo !== 'N/A' && (
+                                                        <button
+                                                            type="button"
+                                                            aria-label={`Copy part number ${partNo}`}
+                                                            title={`Copy ${partNo}`}
+                                                            onClick={(e) => handleCopyPartNo(e, partNo)}
+                                                            style={{
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
+                                                                padding: '1px',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                color: copiedPartNo === partNo ? '#10B981' : 'var(--text-muted)',
+                                                                transition: 'color 0.15s ease',
+                                                            }}
+                                                        >
+                                                            {copiedPartNo === partNo ? (
+                                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <polyline points="20 6 9 17 4 12" />
+                                                                </svg>
+                                                            ) : (
+                                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                                                </svg>
+                                                            )}
+                                                        </button>
+                                                    )}
+                                                </span>
+                                                {variantText && (
+                                                    <>
+                                                        <span style={{ color: 'var(--text-muted)' }}>·</span>
+                                                        <span style={{ color: 'var(--text-secondary)' }}>{variantText}</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+
+                                        {/* 2. Qty: sold quantity centered, subtext only when refunded_qty > 0 */}
+                                        <td style={{ padding: '12px 8px', textAlign: 'center', verticalAlign: 'middle', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                            <div style={{ fontWeight: '500', color: 'var(--text-primary)', fontSize: '13px' }}>
+                                                {item.qty}
+                                            </div>
+                                            {!isVoid && isRefundOrReturn && refundedQty > 0 && (
+                                                <div style={{ fontSize: '11px', marginTop: '2px', color: '#DC2626', fontWeight: '500', whiteSpace: 'nowrap' }}>
+                                                    {refundedQty} {word}
+                                                </div>
+                                            )}
+                                        </td>
+
+                                        {/* 3. Unit price: right-aligned */}
+                                        <td style={{ padding: '12px 12px', textAlign: 'right', verticalAlign: 'middle', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                                            {fmt(item.unitPrice)}
+                                        </td>
+
+                                        {/* 4. Discount: right-aligned (only if hasDiscounts) */}
+                                        {hasDiscounts && (
+                                            <td style={{ padding: '12px 12px', textAlign: 'right', verticalAlign: 'middle', fontVariantNumeric: 'tabular-nums', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                                                {item.itemDisc > 0 ? (
+                                                    <div>
+                                                        <div style={{ fontWeight: '500', color: 'var(--text-primary)' }}>
+                                                            −{fmt(item.itemDisc)}
+                                                        </div>
+                                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                            {item.formattedRate}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <span style={{ color: 'var(--text-muted)' }}>—</span>
+                                                )}
+                                            </td>
+                                        )}
+
+                                        {/* 5. Refunded: right-aligned (only if isRefundOrReturn) */}
+                                        {isRefundOrReturn && (
+                                            <td style={{ padding: '12px 12px', textAlign: 'right', verticalAlign: 'middle', fontVariantNumeric: 'tabular-nums', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                                                {item.lineRefunded > 0 ? (
+                                                    <span style={{ color: '#DC2626', fontWeight: '500' }}>
+                                                        −{fmt(item.lineRefunded)}
+                                                    </span>
+                                                ) : (
+                                                    <span style={{ color: 'var(--text-muted)' }}>—</span>
+                                                )}
+                                            </td>
+                                        )}
+
+                                        {/* 6. Net: right-aligned, font-medium */}
+                                        <td style={{ padding: '12px 14px', textAlign: 'right', verticalAlign: 'middle', color: 'var(--text-primary)', fontWeight: '500', fontVariantNumeric: 'tabular-nums', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                                            {fmt(item.lineNet)}
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Totals Footer: Pinned below the scroll area */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
+                <div style={{ width: '100%', maxWidth: '280px', background: 'var(--table-header-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                        <span>Subtotal</span>
+                        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: '500', color: 'var(--text-primary)' }}>
+                            {fmt(totalLineGross)}
+                        </span>
+                    </div>
+                    {hasDiscounts && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                            <span>Discounts</span>
+                            <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: '500', color: 'var(--text-primary)' }}>
+                                −{fmt(totalDiscounts)}
+                            </span>
+                        </div>
+                    )}
+                    {isRefundOrReturn && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                            <span>Total {word} ({totalRefundedQty} {totalRefundedQty === 1 ? 'pc' : 'pcs'})</span>
+                            <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: '500', color: '#DC2626' }}>
+                                −{fmt(Number(tx.refunded_amount || 0))}
+                            </span>
+                        </div>
+                    )}
+                    <div style={{ borderTop: '1px solid var(--border)', margin: '8px 0 6px 0' }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', alignItems: 'center' }}>
+                        <span style={{ fontWeight: '500', color: 'var(--text-primary)' }}>
+                            {isStandardSale ? 'Total' : 'Net sales remaining'}
+                        </span>
+                        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: '600', color: 'var(--text-primary)', fontSize: '15px' }}>
+                            {fmt(isVoid ? 0 : Number(tx.amount || 0))}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function TransactionDetailsModal({ isOpen, onClose, transaction, fmtDate, fmt }) {
     if (!isOpen || !transaction) return null;
@@ -169,8 +494,8 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
         discountTypeLabel = ` (${formattedOverallRate})`;
     }
 
-    const totalOriginalAmount = (tx.original_amount != null && Number(tx.original_amount) > 0) 
-        ? Number(tx.original_amount) 
+    const totalOriginalAmount = (tx.original_amount != null && Number(tx.original_amount) > 0)
+        ? Number(tx.original_amount)
         : (grossSubtotal > 0 ? Math.max(0, grossSubtotal - totalDiscounts) : Number(tx.amount || tx.total || 0));
 
     const totalRefundedAmount = (tx.refunded_amount != null && Number(tx.refunded_amount) > 0)
@@ -183,129 +508,21 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
     const totalLineNet = processedItems.reduce((sum, item) => sum + Number(item.lineNet || 0), 0);
     const totalRefundedQty = processedItems.reduce((sum, item) => sum + Number(item.refundedQty || 0), 0);
 
-    if (status !== 'Restocked' && status !== 'Damaged' && processedItems.length > 0) {
+    if (status !== 'Restocked' && status !== 'Damaged') {
         itemsBlock = (
-            <div className="audit-detail-section" style={{ marginTop: '14px' }}>
-                <span className="audit-detail-section-title" style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', marginBottom: '8px', display: 'block', letterSpacing: '0.5px' }}>Items Purchased</span>
-                <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflowX: 'auto', overflowY: 'auto', background: 'var(--bg-card)', maxHeight: '280px' }}>
-                    <table className="modal-table data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', tableLayout: 'fixed' }}>
-                        <thead style={{ background: 'var(--table-header-bg)', borderBottom: '2px solid var(--table-border)', fontSize: '12px', color: 'var(--table-text-secondary)' }}>
-                            <tr>
-                                <th style={{ padding: '10px 12px', fontWeight: '700', letterSpacing: '0.04em', verticalAlign: 'bottom', width: hasRefundOrReturn ? '95px' : '105px' }}>PART NO.</th>
-                                <th style={{ padding: '10px 12px', fontWeight: '700', letterSpacing: '0.04em', verticalAlign: 'bottom' }}>PRODUCT / BRAND</th>
-                                <th style={{ padding: '10px 6px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'center', verticalAlign: 'bottom', width: '45px' }}>QTY</th>
-                                <th style={{ padding: '10px 8px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'right', verticalAlign: 'bottom', width: '75px' }}>PRICE</th>
-                                <th style={{ padding: '10px 8px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'right', verticalAlign: 'bottom', width: '85px' }}>SALES</th>
-                                <th style={{ padding: '10px 8px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'center', verticalAlign: 'bottom', width: '85px', lineHeight: '1.25' }}>
-                                    <span style={{ display: 'block' }}>DISCOUNT</span>
-                                    <span style={{ display: 'block' }}>%</span>
-                                </th>
-                                <th style={{ padding: '10px 8px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'right', verticalAlign: 'bottom', width: hasRefundOrReturn ? '100px' : '110px' }}>DISCOUNT</th>
-                                {hasRefundOrReturn && (
-                                    <th style={{ padding: '10px 10px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'center', verticalAlign: 'bottom', width: '95px', lineHeight: '1.25' }}>
-                                        {refundReturnColumnHeader.toUpperCase().split(' ').map((word, wIdx) => (
-                                            <span key={wIdx} style={{ display: 'block' }}>{word}</span>
-                                        ))}
-                                    </th>
-                                )}
-                                <th style={{ padding: '10px 12px', fontWeight: '700', letterSpacing: '0.04em', textAlign: 'right', verticalAlign: 'bottom', width: hasRefundOrReturn ? '115px' : '125px', lineHeight: '1.25' }}>
-                                    <span style={{ display: 'block' }}>NET</span>
-                                    <span style={{ display: 'block' }}>SALES</span>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody style={{ fontSize: '14px' }}>
-                             {processedItems.map((item, index) => {
-                                const partNo = getLineItemPartNo(item);
-                                const name = getLineItemName(item, 'Unknown Part');
-                                const brandVal = item.product?.brand || item.brand || item.product?.parent?.brand;
-                                const itemDiscTotal = item.itemDisc;
-                                const refundedQty = item.refundedQty;
-
-                                return (
-                                    <tr key={index} style={{ borderBottom: '1px solid var(--table-border-subtle)', minHeight: '44px' }}>
-                                        <td style={{ padding: '10px 12px', fontVariantNumeric: 'tabular-nums', fontWeight: '600', overflow: 'hidden' }}>
-                                            <CopyableText text={partNo} label="Part No." codeStyle={{ fontSize: '14px', fontWeight: '600' }} />
-                                        </td>
-                                        <td style={{ padding: '10px 12px', color: 'var(--table-text-primary)', overflow: 'hidden' }}>
-                                            <div style={{ fontSize: '14px', overflow: 'hidden' }}><FormattedProductName name={name} brand={brandVal} /></div>
-                                        </td>
-                                        <td style={{ padding: '10px 6px', textAlign: 'center', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>
-                                            {item.qty}
-                                        </td>
-                                        <td style={{ padding: '10px 8px', textAlign: 'right', color: 'var(--table-text-secondary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                            {fmt(item.unitPrice)}
-                                        </td>
-                                        <td style={{ padding: '10px 8px', textAlign: 'right', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                            {fmt(item.lineGross)}
-                                        </td>
-                                        <td style={{ padding: '10px 8px', textAlign: 'center', color: item.discountRate > 0 ? '#2563EB' : 'var(--table-text-muted)', fontWeight: item.discountRate > 0 ? '600' : '500', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                            {item.formattedRate}
-                                        </td>
-                                        <td style={{ padding: '10px 8px', textAlign: 'right', color: itemDiscTotal > 0 ? '#2563EB' : 'var(--table-text-muted)', fontWeight: itemDiscTotal > 0 ? '600' : '500', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                            {itemDiscTotal > 0 ? `-${fmt(itemDiscTotal)}` : fmt(0)}
-                                        </td>
-                                        {hasRefundOrReturn && (
-                                            <td style={{ padding: '10px 10px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                                {refundedQty > 0 || isFullRefund || isVoid ? (
-                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                                                        <span className={`status-badge ${isVoid ? 'status-void' : (isReturnAction ? 'status-return' : 'status-refund')}`} style={{ textTransform: 'none' }}>
-                                                            {refundedQty > 0 ? `${refundedQty} pcs` : `${item.qty || 1} pcs`}
-                                                        </span>
-                                                        {item.lineRefunded > 0 && (
-                                                            <span style={{ color: '#DC2626', fontWeight: '700', fontSize: '13px' }}>-{fmt(item.lineRefunded)}</span>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <span style={{ color: 'var(--table-text-muted)' }}>—</span>
-                                                )}
-                                            </td>
-                                        )}
-                                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--table-text-primary)', fontWeight: '600', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                            {fmt(item.lineNet)}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                        <tfoot style={{ borderTop: '2px solid var(--table-border)', fontSize: '13px', fontWeight: '700', background: 'var(--table-header-bg)' }}>
-                            <tr>
-                                <td colSpan={2} style={{ padding: '12px 12px', fontWeight: '800', color: 'var(--table-text-primary)', letterSpacing: '0.04em' }}>
-                                    TOTAL
-                                </td>
-                                <td style={{ padding: '12px 6px', textAlign: 'center', fontWeight: '800', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                    {totalQty}
-                                </td>
-                                <td style={{ padding: '12px 8px' }}></td>
-                                <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '800', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                    {fmt(totalLineGross)}
-                                </td>
-                                <td style={{ padding: '12px 8px', textAlign: 'center', fontWeight: '800', color: totalLineDiscount > 0 ? '#2563EB' : 'var(--table-text-muted)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                    {formattedOverallRate}
-                                </td>
-                                <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '800', color: totalLineDiscount > 0 ? '#2563EB' : 'var(--table-text-muted)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                    {totalLineDiscount > 0 ? `-${fmt(totalLineDiscount)}` : fmt(0)}
-                                </td>
-                                {hasRefundOrReturn && (
-                                    <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '800', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                        {totalRefundedQty > 0 ? (
-                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                                                <span>{totalRefundedQty} pcs</span>
-                                                {totalLineRefunded > 0 && (
-                                                    <span style={{ color: '#DC2626' }}>-{fmt(totalLineRefunded)}</span>
-                                                )}
-                                            </div>
-                                        ) : '—'}
-                                    </td>
-                                )}
-                                <td style={{ padding: '12px 12px', textAlign: 'right', fontWeight: '800', color: 'var(--table-text-primary)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                    {fmt(totalLineNet)}
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
+            <ItemsPurchasedSection
+                processedItems={processedItems}
+                tx={tx}
+                status={status}
+                isPartialRefund={isPartialRefund}
+                isFullRefund={isFullRefund}
+                isVoid={isVoid}
+                isReturnAction={isReturnAction}
+                fmt={fmt}
+                totalLineGross={totalLineGross}
+                totalDiscounts={totalDiscounts}
+                totalRefundedQty={totalRefundedQty}
+            />
         );
     }
 
@@ -321,10 +538,10 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
         );
     };
 
-    const statusDisplayLabel = isPartialRefund 
-        ? (status === 'Return' ? 'Partial Return' : 'Partial Refund') 
+    const statusDisplayLabel = isPartialRefund
+        ? (status === 'Return' ? 'Partial Return' : 'Partial Refund')
         : (isFullRefund ? (status === 'Return' ? 'Full Return' : 'Full Refund') : status);
-    
+
     const resolvedCustomer = tx.customer_name || tx.customer?.name || (tx.customer_id ? `Customer #${tx.customer_id}` : null);
 
     return (
@@ -352,7 +569,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 {auditDetailRow('Reason', reason)}
                             </>
                         )}
-                        
+
                         {status === 'Void' && (
                             <>
                                 {auditDetailRow('Invoice No.', tx.si_no || '—')}
@@ -405,7 +622,7 @@ export default function TransactionDetailsModal({ isOpen, onClose, transaction, 
                                 {(tx.customer?.phone || tx.customer_phone) && auditDetailRow('Contact Phone', tx.customer?.phone || tx.customer_phone)}
                                 {auditDetailRow('Payment Method', (tx.payment_method || 'Cash').replace(/\s*\([^)]*\)/g, '').trim())}
                                 {chequeNo && auditDetailRow('Cheque Number', chequeNo)}
-                                
+
                                 {isPartialRefund ? (
                                     <>
                                         {auditDetailRow('Original Sale (after discount)', fmt(totalOriginalAmount))}

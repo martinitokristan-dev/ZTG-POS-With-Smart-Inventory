@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
 import LoadingSpinner from '../../../shared/components/LoadingSpinner';
+import SegmentedControl from '../../../shared/components/SegmentedControl';
 import useReports from './hooks/useReports';
 import SalesReportTab from './views/SalesReportTab';
 import ProductReportTab from './views/ProductReportTab';
 import PaymentMethodsTab from './views/PaymentMethodsTab';
+
+const REPORT_TABS = [
+    { value: 'sales', label: 'Sales Report' },
+    { value: 'products', label: 'Product Report' },
+    { value: 'payments', label: 'Payment Methods' }
+];
 
 export default function Reports() {
     const rep = useReports();
@@ -23,42 +30,31 @@ export default function Reports() {
 
                 <div className="content-body" style={{ padding: '20px 24px', minHeight: 'calc(100vh - 120px)' }}>
                     
-                    <div className="reports-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-                        {[
-                            { id: 'sales', label: 'Sales Report' },
-                            { id: 'products', label: 'Product Report' },
-                            { id: 'payments', label: 'Payment Methods' }
-                        ].map(t => (
-                            <button 
-                                key={t.id}
-                                className={`reports-tab-btn ${activeTab === t.id ? 'active' : ''}`} 
-                                style={{ 
-                                    padding: '9px 18px', 
-                                    fontSize: '13px', 
-                                    fontWeight: '600', 
-                                    cursor: 'pointer', 
-                                    borderRadius: '8px' 
-                                }}
-                                onClick={() => setActiveTab(t.id)}
-                            >
-                                {t.label}
-                            </button>
-                        ))}
+                    <div style={{ marginBottom: '24px' }}>
+                        <SegmentedControl
+                            semantics="tabs"
+                            idPrefix="reports"
+                            ariaLabel="Report type"
+                            options={REPORT_TABS}
+                            value={activeTab}
+                            onChange={setActiveTab}
+                        />
                     </div>
 
-                    {rep.loading ? (
-                        <LoadingSpinner text="Loading reports data..." minHeight="200px" />
-                    ) : (
-                        <>
-                            {activeTab === 'sales' && <SalesReportTab salesSummary={rep.salesSummary} employees={rep.employees} fmt={rep.fmt} fmtDate={rep.fmtDate} isReportGenerated={rep.isReportGenerated} setIsReportGenerated={rep.setIsReportGenerated} startDate={rep.startDate} setStartDate={rep.setStartDate} endDate={rep.endDate} setEndDate={rep.setEndDate} />}
-                            {activeTab === 'products' && <ProductReportTab productPerformance={rep.productPerformance} refundVoidAnalysis={rep.refundVoidAnalysis} startDate={rep.startDate} setStartDate={rep.setStartDate} endDate={rep.endDate} setEndDate={rep.setEndDate} />}
-                            {activeTab === 'payments' && <PaymentMethodsTab salesSummary={rep.salesSummary} employees={rep.employees} fmt={rep.fmt} startDate={rep.startDate} setStartDate={rep.setStartDate} endDate={rep.endDate} setEndDate={rep.setEndDate} />}
-                        </>
-                    )}
+                    <div role="tabpanel" id={`reports-panel-${activeTab}`} aria-labelledby={`reports-tab-${activeTab}`}>
+                        {rep.loading ? (
+                            <LoadingSpinner text="Loading reports data..." minHeight="200px" />
+                        ) : (
+                            <>
+                                {activeTab === 'sales' && <SalesReportTab salesSummary={rep.salesSummary} employees={rep.employees} fmt={rep.fmt} fmtDate={rep.fmtDate} isReportGenerated={rep.isReportGenerated} setIsReportGenerated={rep.setIsReportGenerated} startDate={rep.startDate} setStartDate={rep.setStartDate} endDate={rep.endDate} setEndDate={rep.setEndDate} />}
+                                {activeTab === 'products' && <ProductReportTab productPerformance={rep.productPerformance} refundVoidAnalysis={rep.refundVoidAnalysis} startDate={rep.startDate} setStartDate={rep.setStartDate} endDate={rep.endDate} setEndDate={rep.setEndDate} />}
+                                {activeTab === 'payments' && <PaymentMethodsTab salesSummary={rep.salesSummary} employees={rep.employees} fmt={rep.fmt} startDate={rep.startDate} setStartDate={rep.setStartDate} endDate={rep.endDate} setEndDate={rep.setEndDate} />}
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
             <style>{`
-                .reports-tab-btn:hover { color: var(--text-primary); }
                 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 20px; }
                 .kpi-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; transition: border-top 0.2s ease; }
                 .kpi-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; margin-bottom: 6px; }
@@ -71,9 +67,6 @@ export default function Reports() {
                 .section-card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 15px; font-weight: 700; color: var(--text-primary); background: var(--bg-card); }
                 @media (max-width: 768px) {
                     .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
-                    .reports-tabs { overflow-x: auto !important; white-space: nowrap !important; scrollbar-width: none !important; }
-                    .reports-tabs::-webkit-scrollbar { display: none !important; }
-                    .reports-tab-btn { padding: 8px 12px !important; font-size: 13px !important; flex-shrink: 0 !important; }
                 }
             `}</style>
         </div>

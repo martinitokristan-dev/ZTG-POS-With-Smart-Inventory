@@ -12,6 +12,7 @@ import PasswordModal from './modals/PasswordModal';
 import CheckerModal from './modals/CheckerModal';
 import ConfirmSaveModal from './modals/ConfirmSaveModal';
 import LoadingSpinner from '../../../shared/components/LoadingSpinner';
+import SegmentedControl from '../../../shared/components/SegmentedControl';
 
 export default function SettingsView() {
     const {
@@ -61,14 +62,14 @@ export default function SettingsView() {
 
     const primaryTabs = isAdmin
         ? [
-            { id: 'account', label: 'My Account' },
-            { id: 'general', label: 'General' },
-            { id: 'products', label: 'Products Settings' },
-            { id: 'legal', label: 'Privacy and Terms' },
+            { value: 'account', label: 'My Account' },
+            { value: 'general', label: 'General' },
+            { value: 'products', label: 'Products Settings' },
+            { value: 'legal', label: 'Privacy and Terms' },
         ]
         : [
-            { id: 'account', label: 'My Account' },
-            { id: 'legal', label: 'Privacy and Terms' },
+            { value: 'account', label: 'My Account' },
+            { value: 'legal', label: 'Privacy and Terms' },
         ];
 
     return (
@@ -91,20 +92,20 @@ export default function SettingsView() {
                 ) : (
                     <div className="settings-tabs-wrap" style={{ paddingBottom: '60px' }}>
                         {/* Primary Navigation Tabs Header (every role sees My Account and Privacy and Terms) */}
-                        <div className="tabs-header">
-                            {primaryTabs.map(tab => (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
+                        <div style={{ marginBottom: 24 }}>
+                            <SegmentedControl
+                                semantics="tabs"
+                                idPrefix="settings"
+                                ariaLabel="Settings sections"
+                                options={primaryTabs}
+                                value={activeTab}
+                                onChange={setActiveTab}
+                            />
                         </div>
 
-                        {/* TAB 1: MY ACCOUNT (UNIFIED VERTICAL SUB-TABS: PROFILE, INVENTORY ALERTS, TRANSACTION ALERTS, RESERVATION ALERTS, REPORTS, ACTIVITY LOGS) */}
+                        {/* Active Tab Panel */}
+                        <div role="tabpanel" id={`settings-panel-${activeTab}`} aria-labelledby={`settings-tab-${activeTab}`}>
+                            {/* TAB 1: MY ACCOUNT (UNIFIED VERTICAL SUB-TABS: PROFILE, INVENTORY ALERTS, TRANSACTION ALERTS, RESERVATION ALERTS, REPORTS, ACTIVITY LOGS) */}
                         <div className={`tab-content ${activeTab === 'account' ? 'active' : ''}`}>
                             {activeTab === 'account' && (
                                 <>
@@ -447,6 +448,7 @@ export default function SettingsView() {
                         <div className={`tab-content ${activeTab === 'legal' ? 'active' : ''}`}>
                             {activeTab === 'legal' && <LegalTab />}
                         </div>
+                    </div>
                     </div>
                 )}
             </div>

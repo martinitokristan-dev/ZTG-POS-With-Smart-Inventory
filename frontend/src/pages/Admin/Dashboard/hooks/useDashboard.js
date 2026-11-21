@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useInventory } from '../../../../contexts/InventoryContext';
 import { useNotifications } from '../../../../contexts/NotificationContext';
 import { fetchDashboardData } from '../../../../shared/hooks/useDashboardCache';
@@ -8,6 +8,7 @@ export function useDashboard() {
     const userStr = (sessionStorage.getItem('auth_user') ?? localStorage.getItem('auth_user'));
     const user = userStr ? JSON.parse(userStr) : null;
     const name = user ? user.full_name || user.name : 'Administrator';
+    const role = user?.role || 'Admin';
     const [loading, setLoading] = useState(true);
 
     const [currentTimeRange, setCurrentTimeRange] = useState('Today');
@@ -24,6 +25,43 @@ export function useDashboard() {
     // Replace local fetch with context
     const { unreadCount: notificationsCount } = useNotifications();
     const { inventory: products, refreshIfStale: refreshInventoryIfStale } = useInventory();
+
+    // Compute criticalItems centrally so StatCards and CriticalStockAlerts never disagree
+    const criticalItems = useMemo(() => {
+        if (!products || !products.length) return [];
+        const flatSKUs = flattenToSellableSKUs(products);
+
+        return flatSKUs
+            .filter(item => item.status !== 'Disabled' && (item.stock === 0 || item.stock <= (item.alert_limit || 5)))
+            .map(item => {
+                let displayName = item.name;
+                const parent = item.parent_product_id ? products.find(p => p.id === item.parent_product_id) : null;
+                if (parent) {
+                    const optionValues = Array.isArray(item.variant_options)
+                        ? item.variant_options.map(opt => opt.value).join(', ')
+                        : (Array.isArray(item.variantOptions) ? item.variantOptions.map(opt => opt.value).join(', ') : '');
+                    const nameToUse = item.name || parent.name;
+                    displayName = optionValues && !nameToUse.includes(optionValues) ? `${nameToUse} (${optionValues})` : nameToUse;
+                }
+
+                const rawSku = item.part_no || item.partNo || '';
+                const cleanSku = (rawSku && rawSku !== 'N/A' && rawSku !== '—') ? rawSku : '';
+
+                return {
+                    id: item.id,
+                    name: displayName,
+                    chineseName: item.chinese_name || parent?.chinese_name || null,
+                    sku: cleanSku,
+                    stock: item.stock,
+                    isOut: item.stock === 0
+                };
+            })
+            .sort((a, b) => {
+                if (a.isOut && !b.isOut) return -1;
+                if (!a.isOut && b.isOut) return 1;
+                return a.stock - b.stock;
+            });
+    }, [products]);
 
     // Top selling products state
     const [topProducts, setTopProducts] = useState([]);
@@ -108,11 +146,13 @@ export function useDashboard() {
 
     return {
         name,
+        role,
         loading,
         currentTimeRange,
         setCurrentTimeRange,
         stats,
         notificationsCount,
-        topProducts
+        topProducts,
+        criticalItems
     };
 }

@@ -16,6 +16,8 @@
   --text-muted: #64748B;
   --primary: #3B82F6;
   --primary-hover: #60A5FA;
+  --primary-solid: #2563EB;
+  --primary-solid-hover: #1D4ED8;
   --primary-light: rgba(59, 130, 246, 0.18);
   --success: #10B981;
   --success-hover: #34D399;

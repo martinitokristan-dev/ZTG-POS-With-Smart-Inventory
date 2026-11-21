@@ -7,8 +7,33 @@ import VoidModal from './modals/VoidModal';
 import TransactionDetailsModal from './modals/TransactionDetailsModal';
 import PayModal from './modals/PayModal';
 import IOSSelect from '../../../shared/components/IOSSelect';
+import SegmentedControl from '../../../shared/components/SegmentedControl';
 import TablePagination from '../../../shared/components/TablePagination';
 import { useModulePermission } from '../../../shared/hooks/useModulePermission';
+
+const historyTabs = [
+    { value: 'All', label: 'All' },
+    {
+        value: 'Refund',
+        label: 'Refund',
+        icon: <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+    },
+    {
+        value: 'Return',
+        label: 'Return',
+        icon: <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    },
+    {
+        value: 'Void',
+        label: 'Void',
+        icon: <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+    },
+    {
+        value: 'Pending',
+        label: 'Pending Order',
+        icon: <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    }
+];
 
 export default function HistoryLogs() {
     const hl = useHistoryLogs();
@@ -74,21 +99,13 @@ export default function HistoryLogs() {
                             )}
                         </div>
 
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
-                            {['All', 'Refund', 'Return', 'Void', 'Pending'].map(tab => (
-                                <button 
-                                    key={tab}
-                                    className={`status-tab ${hl.activeTab === tab ? 'active' : ''}`}
-                                    style={{ padding: '8px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                    onClick={() => hl.setActiveTab(tab)}
-                                >
-                                    {tab === 'Refund' && <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>}
-                                    {tab === 'Return' && <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>}
-                                    {tab === 'Void' && <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>}
-                                    {tab === 'Pending' && <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
-                                    {tab === 'Pending' ? 'Pending Order' : tab}
-                                </button>
-                            ))}
+                        <div style={{ marginTop: '16px' }}>
+                            <SegmentedControl
+                                options={historyTabs}
+                                value={hl.activeTab}
+                                onChange={(tab) => hl.setActiveTab(tab)}
+                                ariaLabel="Transaction type filter"
+                            />
                         </div>
 
                         <div style={{ marginTop: '12px', background: 'var(--primary-light)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '6px', padding: '10px 16px', fontSize: '11px', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
