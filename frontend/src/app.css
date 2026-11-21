@@ -1628,29 +1628,17 @@ tr:hover td {
             flex-shrink: 0;
             white-space: nowrap;
         }
-        .status-tab {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            transition: all 0.2s ease;
-        }
-        .tab-btn:hover,
-        .status-tab:hover {
+        .tab-btn:hover {
             color: var(--text-primary);
             background-color: var(--bg-secondary);
             border-color: var(--border-hover);
         }
-        .tab-btn.active,
-        .status-tab.active {
+        .tab-btn.active {
             color: #FFFFFF !important;
             background-color: var(--primary) !important;
             border-color: var(--primary) !important;
             box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
             font-weight: 700;
-        }
-        .status-tab.active svg {
-            color: #FFFFFF !important;
-            stroke: #FFFFFF !important;
         }
         .tab-content {
             display: none;

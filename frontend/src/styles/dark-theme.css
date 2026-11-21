@@ -425,14 +425,12 @@
 }
 
 /* 7.6 Filter Tabs & Status Pills */
-[data-theme="dark"] .status-tab:not(.active),
 [data-theme="dark"] .tab-btn:not(.active) {
   background-color: #151F38 !important;
   border: 1px solid #263354 !important;
   color: #94A3B8 !important;
 }
 
-[data-theme="dark"] .status-tab:not(.active):hover,
 [data-theme="dark"] .tab-btn:not(.active):hover {
   background-color: #1E293B !important;
   border-color: #3B4D7A !important;
@@ -440,7 +438,6 @@
 }
 
 [data-theme="dark"] button.active,
-[data-theme="dark"] .status-tab.active,
 [data-theme="dark"] .tab-btn.active {
   background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
   color: #FFFFFF !important;
@@ -449,7 +446,6 @@
 }
 
 [data-theme="dark"] button.active svg,
-[data-theme="dark"] .status-tab.active svg,
 [data-theme="dark"] .tab-btn.active svg {
   color: #FFFFFF !important;
   stroke: #FFFFFF !important;
