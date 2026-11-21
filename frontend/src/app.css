@@ -21,7 +21,6 @@
   --primary: #3B82F6;
   --primary-hover: #2563EB;
   --primary-solid: #2563EB;
-  --primary-solid-hover: #1D4ED8;
   --primary-light: #EFF6FF;
   --success: #10B981;
   --success-hover: #059669;
@@ -1616,16 +1615,6 @@ tr:hover td {
 
 /* Settings Styles */
 
-        .tabs-header {
-            display: flex;
-            gap: 8px;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            overflow-x: auto;
-            white-space: nowrap;
-            -webkit-overflow-scrolling: touch;
-        }
         .tab-btn {
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -1639,31 +1628,27 @@ tr:hover td {
             flex-shrink: 0;
             white-space: nowrap;
         }
-        .status-tab,
-        .reports-tab-btn {
+        .status-tab {
             background-color: var(--bg-card);
             border: 1px solid var(--border);
             color: var(--text-secondary);
             transition: all 0.2s ease;
         }
         .tab-btn:hover,
-        .status-tab:hover,
-        .reports-tab-btn:hover {
+        .status-tab:hover {
             color: var(--text-primary);
             background-color: var(--bg-secondary);
             border-color: var(--border-hover);
         }
         .tab-btn.active,
-        .status-tab.active,
-        .reports-tab-btn.active {
+        .status-tab.active {
             color: #FFFFFF !important;
             background-color: var(--primary) !important;
             border-color: var(--primary) !important;
             box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
             font-weight: 700;
         }
-        .status-tab.active svg,
-        .reports-tab-btn.active svg {
+        .status-tab.active svg {
             color: #FFFFFF !important;
             stroke: #FFFFFF !important;
         }
@@ -2855,16 +2840,12 @@ td:last-child [data-tooltip]:last-child:hover::after {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 10px !important;
   }
-  .tabs-header::-webkit-scrollbar,
-  .prod-vtab-sidebar::-webkit-scrollbar,
-  .reports-tabs::-webkit-scrollbar {
+  .prod-vtab-sidebar::-webkit-scrollbar {
     display: none !important;
     width: 0 !important;
     height: 0 !important;
   }
-  .tabs-header,
-  .prod-vtab-sidebar,
-  .reports-tabs {
+  .prod-vtab-sidebar {
     scrollbar-width: none !important;
   }
   .pos-header-search-container {

@@ -17,7 +17,6 @@
   --primary: #3B82F6;
   --primary-hover: #60A5FA;
   --primary-solid: #2563EB;
-  --primary-solid-hover: #1D4ED8;
   --primary-light: rgba(59, 130, 246, 0.18);
   --success: #10B981;
   --success-hover: #34D399;
@@ -62,8 +61,6 @@
 [data-theme="dark"] .stat-box,
 [data-theme="dark"] .settings-section,
 [data-theme="dark"] .table-card,
-[data-theme="dark"] .dashboard-card,
-[data-theme="dark"] .critical-stock-card,
 [data-theme="dark"] .cat-card,
 [data-theme="dark"] .modal-card,
 [data-theme="dark"] .modal-content,
@@ -429,18 +426,14 @@
 
 /* 7.6 Filter Tabs & Status Pills */
 [data-theme="dark"] .status-tab:not(.active),
-[data-theme="dark"] .pill-btn:not(.active),
-[data-theme="dark"] .tab-btn:not(.active),
-[data-theme="dark"] .reports-tab-btn:not(.active) {
+[data-theme="dark"] .tab-btn:not(.active) {
   background-color: #151F38 !important;
   border: 1px solid #263354 !important;
   color: #94A3B8 !important;
 }
 
 [data-theme="dark"] .status-tab:not(.active):hover,
-[data-theme="dark"] .pill-btn:not(.active):hover,
-[data-theme="dark"] .tab-btn:not(.active):hover,
-[data-theme="dark"] .reports-tab-btn:not(.active):hover {
+[data-theme="dark"] .tab-btn:not(.active):hover {
   background-color: #1E293B !important;
   border-color: #3B4D7A !important;
   color: #F8FAFC !important;
@@ -448,8 +441,6 @@
 
 [data-theme="dark"] button.active,
 [data-theme="dark"] .status-tab.active,
-[data-theme="dark"] .reports-tab-btn.active,
-[data-theme="dark"] .pill-btn.active,
 [data-theme="dark"] .tab-btn.active {
   background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
   color: #FFFFFF !important;
@@ -459,8 +450,6 @@
 
 [data-theme="dark"] button.active svg,
 [data-theme="dark"] .status-tab.active svg,
-[data-theme="dark"] .reports-tab-btn.active svg,
-[data-theme="dark"] .pill-btn.active svg,
 [data-theme="dark"] .tab-btn.active svg {
   color: #FFFFFF !important;
   stroke: #FFFFFF !important;
